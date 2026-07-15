@@ -170,7 +170,7 @@ The normative objects are:
 9. `CapturedObservation`: post-capture-policy channels, typed trial control, bounded artifact digests, and teardown eligibility. Use “raw” only for unchanged persisted bytes.
 10. `ProjectionDefinition` and `ProjectionResult`: pure, versioned, visible operations ending in exact canonical bytes or typed rejection.
 11. `StableBatch` and `CandidateOutcomeMap`: tagged repeated trials, a shared ordered per-repetition admission-digest set across candidate batches, explicit exclusions, globally unique evidence identities, and the canonical sorted `candidate_execution_key -> projection_fingerprint` map. Display clusters are derived views with no identity.
-12. `ReductionRun`: future U5 durable transcript/grade wire target. U1 owns only logical tri-valued evaluations and sweep relations.
+12. `ReductionRun`: U5's inert bounded-run body with a separate `ReductionTranscript`; it carries only `UNCHANGED` or `BEST_KNOWN`. Transcript bytes reconstruct intent but cannot execute replay without the exact compare-owned divergent baseline, and replay receipts establish only bounded same-domain digest noncollision. `CompletedSweepDraft` is separately persisted, and only the outward store-backed `ReductionGrade` may carry `ONE_MINIMAL_UNDER`.
 13. `Choicepoint`: immutable fresh-confirmed decision-ready revision with original/minimized stimuli, exact maps, evidence, exclusions, and a U5 reduction grade.
 14. `DecisionRecord`: blind/reveal facts, human action, selected and nonasserted fields, exact scope, rationale, and verbatim receipt references. Derived wire booleans such as `compilable` are reconstructed, never emitter inputs.
 15. `ContractBundle`: deterministic six-file Node-core source bundle with a typed exact predicate.
@@ -203,13 +203,13 @@ Every adapter provides a deterministic finite neighbor function and a strictly d
 - `PRESERVES` when comparable maps have equal exact complete eligible labeled-map digests; or
 - `CHANGES` when comparable maps have different exact complete eligible labeled-map digests.
 
-The only grades are:
+The only grades are, in precedence order:
 
-- `UNCHANGED` — no accepted smaller stimulus;
-- `BEST_KNOWN` — smaller preserving stimulus found, but a budget ended, sweep was incomplete, or any direct neighbor was unresolved; and
-- `ONE_MINIMAL_UNDER(reducer_set_digest)` — one constructible state backed by a durable complete sweep whose enumerated direct-neighbor set equals its fresh `CHANGES` results.
+- `UNCHANGED` — no smaller preserving stimulus was accepted; limitations remain explicit and this is not a minimality claim;
+- `BEST_KNOWN` — at least one smaller preserving stimulus was accepted, but the strong durable authority was not supplied, including when a budget ended, the sweep was incomplete, a final direct neighbor was unresolved, or the logical sweep completed without a supplied authority; and
+- `ONE_MINIMAL_UNDER(reducer_set_digest)` — one constructible state backed by the exact compiled-`WorldPlan` shrink budget, a limitation-free logical sweep whose enumerated direct-neighbor set equals its typed `CHANGES` evaluations, and a matching durable-store authority. The grade establishes content-digest nonoverlap, not physical freshness.
 
-The phrase “smallest behavior” is prohibited. Membership shape and a naked digest are never preservation predicates. Full typed maps or the opaque comparability result cross persistence, reduction, confirmation, API, and UI; the evidence-bearing artifact has a distinct `OutcomeArtifactDigest`, and ordinal group IDs have no semantic authority. Concrete admission artifacts differ across stimuli/repetitions while `ComparisonBasisDigest` remains comparable. The durable proof constructor is intentionally absent from U1 and arrives only with U5's store-backed sweep authority.
+The phrase “smallest behavior” is prohibited. Membership shape and a naked digest are never preservation predicates. Full typed maps or the opaque comparability result cross persistence, reduction, confirmation, API, and UI; the evidence-bearing artifact has a distinct `OutcomeArtifactDigest`, and ordinal group IDs have no semantic authority. Concrete admission artifacts differ across stimuli/repetitions while `ComparisonBasisDigest` remains comparable. The reducer-set digest binds rule versions, the adapter-owned measure, and a policy scope that fixes semantic anchors, pins, execution shape, and enabled transform classes. Exact reducible member values are instead bound by the run's stimulus identities and proposal chain. The durable proof constructor is intentionally absent from U1; U5 places it in the outward `internal/reduction` composition edge, which also requires the live compiled-`WorldPlan`-bound budget and the opaque capability returned by `internal/store` after atomic publication and reopen of an exact logical sweep draft.
 
 No execution evidence is reused. Pure parsing/canonical/projection transforms of immutable bytes may be memoized. Fresh confirmation requires newly created attempt artifacts before spawn, fresh roots/process lifecycles, fixture-observed invocation evidence, and a rotated schedule.
 
@@ -295,7 +295,8 @@ internal/adapters/cli/  typed CLI stimulus/capture/projection/reducers
 internal/adapters/http/ typed HTTP stimulus/capture/projection/reducers
 internal/observe/       eligibility, schedules, repeated classification
 internal/compare/       exact fingerprints, comparison basis, and CandidateOutcomeMap
-internal/reduce/        bounded tri-valued orchestration and final sweep
+internal/reduce/        pure bounded tri-valued search and logical sweep drafts
+internal/reduction/     outward reducer/store composition and authoritative grades
 internal/choice/        immutable lineage and ruling validation
 internal/emit/node/     deterministic standalone source
 internal/store/         content-addressed artifacts and atomic heads

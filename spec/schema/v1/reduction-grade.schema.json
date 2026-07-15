@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://countershape.dev/spec/schema/v1/reduction-grade.schema.json",
+  "title": "Countershape ReductionGrade v1 canonical body",
+  "description": "The exact outward grade field set constructed by internal/reduction. A valid in-memory ONE_MINIMAL_UNDER grade is created only after store.Validate reopens the exact CompletedSweepDraft and the finalizer binds it to the live ReductionRun. This schema and its example are inert documentation; no parser or public grade constructor accepts these bytes.",
+  "$comment": "Weak grades bind the run and reducer set but carry an empty completed_sweep_digest plus the explicit missing-authority limitation. Strong grade bytes record a completed-sweep digest but cannot recreate the opaque store capability that authorized construction.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "status",
+    "run_digest",
+    "reducer_set_digest",
+    "completed_sweep_digest",
+    "limitations",
+    "global_minimum_claimed",
+    "root_cause_claimed"
+  ],
+  "properties": {
+    "schema_version": { "const": "countershape/v1" },
+    "kind": { "const": "ReductionGrade" },
+    "status": { "enum": ["UNCHANGED", "BEST_KNOWN", "ONE_MINIMAL_UNDER"] },
+    "run_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "reducer_set_digest": {
+      "description": "The exact governing reducer-set identity. It is the displayed quantifier only for ONE_MINIMAL_UNDER.",
+      "$ref": "common.schema.json#/$defs/Digest"
+    },
+    "completed_sweep_digest": { "type": "string" },
+    "limitations": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "global_minimum_claimed": { "const": false },
+    "root_cause_claimed": { "const": false }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "status": { "const": "ONE_MINIMAL_UNDER" } },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "completed_sweep_digest": { "$ref": "common.schema.json#/$defs/Digest" }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "status": { "enum": ["UNCHANGED", "BEST_KNOWN"] } },
+        "required": ["status"]
+      },
+      "then": {
+        "properties": {
+          "completed_sweep_digest": { "const": "" },
+          "limitations": { "contains": { "const": "DURABLE_SWEEP_AUTHORITY_ABSENT" } }
+        }
+      }
+    }
+  ]
+}

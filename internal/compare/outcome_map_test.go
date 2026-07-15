@@ -61,7 +61,7 @@ func comparisonEnvelope(t *testing.T) domain.ComparisonEnvelope {
 	return value
 }
 
-func comparisonPlan(t *testing.T, envelopeValue domain.ComparisonEnvelope, salt int) domain.WorldPlan {
+func comparisonPlan(t *testing.T, envelopeValue domain.ComparisonEnvelope, salt, confirmationRepeats int) domain.WorldPlan {
 	t.Helper()
 	base := 1000 + salt*100
 	plan, err := domain.NewWorldPlan(domain.WorldPlanConfig{
@@ -91,7 +91,7 @@ func comparisonPlan(t *testing.T, envelopeValue domain.ComparisonEnvelope, salt 
 			}
 			return binding
 		}(),
-		RepeatSchedule: domain.RepeatSchedule{DiscoveryRepeats: 3, ConfirmationRepeats: 3,
+		RepeatSchedule: domain.RepeatSchedule{DiscoveryRepeats: 3, ConfirmationRepeats: confirmationRepeats,
 			Concurrency: domain.ScheduleSequential, Rotation: domain.ScheduleRotationStartByRepetitionV1},
 		RequiredTools: []domain.RequiredTool{{Name: "node", VersionConstraint: "executed-major-only"}},
 		Budgets: domain.Budgets{
@@ -130,7 +130,7 @@ func newComparisonFixture(t *testing.T, candidateNumbers ...int) comparisonFixtu
 func newComparisonFixtureWithPlanSalt(t *testing.T, salt int, candidateNumbers ...int) comparisonFixture {
 	t.Helper()
 	envelopeValue := comparisonEnvelope(t)
-	plan := comparisonPlan(t, envelopeValue, salt)
+	plan := comparisonPlan(t, envelopeValue, salt, 3)
 	bindings := make(map[int]domain.CandidateExecutionBinding, len(candidateNumbers))
 	for _, number := range candidateNumbers {
 		binding, err := domain.NewCandidateExecutionBinding(domain.CandidateExecutionIdentity{
@@ -140,6 +140,25 @@ func newComparisonFixtureWithPlanSalt(t *testing.T, salt int, candidateNumbers .
 			AdapterDigest:               plan.AdapterDigest(),
 			RunnerDigest:                plan.Adapter().RunnerDigest,
 			ProjectionDefinitionDigest:  plan.ProjectionDefinitionDigest(),
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		bindings[number] = binding
+	}
+	return comparisonFixture{envelope: envelopeValue, plan: plan, bindings: bindings}
+}
+
+func newComparisonFixtureWithConfirmationRepeats(t *testing.T, confirmationRepeats int, candidateNumbers ...int) comparisonFixture {
+	t.Helper()
+	envelopeValue := comparisonEnvelope(t)
+	plan := comparisonPlan(t, envelopeValue, 0, confirmationRepeats)
+	bindings := make(map[int]domain.CandidateExecutionBinding, len(candidateNumbers))
+	for _, number := range candidateNumbers {
+		binding, err := domain.NewCandidateExecutionBinding(domain.CandidateExecutionIdentity{
+			TreeIdentityDigest: digestNumber(10000 + number), MaterializationPolicyDigest: plan.MaterializationPolicyDigest(),
+			WorldPlanDigest: plan.Digest(), AdapterDigest: plan.AdapterDigest(), RunnerDigest: plan.Adapter().RunnerDigest,
+			ProjectionDefinitionDigest: plan.ProjectionDefinitionDigest(),
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -241,6 +260,8 @@ type trialCoordinate struct {
 type batchRunOptions struct {
 	evidenceSalt        int
 	basisValue          int
+	repetitions         int
+	scheduled           bool
 	attemptOverride     map[trialCoordinate]domain.Digest
 	observationOverride map[trialCoordinate]domain.Digest
 }
@@ -278,7 +299,19 @@ func buildCandidateBatches(
 		roster[index] = fixture.key(t, spec.candidateNumber)
 	}
 
-	for repetition := 0; repetition < 3; repetition++ {
+	repetitions := options.repetitions
+	if repetitions == 0 {
+		repetitions = 3
+	}
+	var schedule observe.RotatedSchedule
+	if options.scheduled {
+		var err error
+		schedule, err = observe.NewRotatedSchedule(roster, repetitions)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	for repetition := 0; repetition < repetitions; repetition++ {
 		worlds := make([]domain.WorldInstance, len(specs))
 		attempts := make([]domain.FinalizedAttempt, len(specs))
 		measurements := make([]domain.InstanceMeasurements, len(specs))
@@ -293,12 +326,20 @@ func buildCandidateBatches(
 			} else {
 				attempts[index] = finalizedClean(t, attemptDigest, purpose)
 			}
+			scheduleOrdinal := options.evidenceSalt*1000 + repetition*10 + index
+			if options.scheduled {
+				slot, present := schedule.Slot(fixture.key(t, spec.candidateNumber), repetition)
+				if !present {
+					t.Fatal("missing scheduled candidate slot")
+				}
+				scheduleOrdinal = slot.Ordinal()
+			}
 			world, err := domain.NewWorldInstance(fixture.plan, fixture.binding(t, spec.candidateNumber), domain.WorldInstanceConfig{
 				StimulusDigest:        stimulus,
 				AttemptArtifactDigest: attemptDigest,
 				Purpose:               purpose,
 				InstanceNonce:         fmt.Sprintf("run:%d:repeat:%d:candidate:%d", options.evidenceSalt, repetition, spec.candidateNumber),
-				ScheduleOrdinal:       options.evidenceSalt*1000 + repetition*10 + index,
+				ScheduleOrdinal:       scheduleOrdinal,
 			})
 			if err != nil {
 				t.Fatal(err)
@@ -360,7 +401,15 @@ func buildCandidateBatches(
 		roster: roster, batches: make([]observe.StableBatch, len(specs)), byNumber: make(map[int]observe.StableBatch, len(specs)),
 	}
 	for index, spec := range specs {
-		batch, err := observe.Classify(observe.BatchInput{Trials: trials[spec.candidateNumber]})
+		var batch observe.StableBatch
+		var err error
+		if options.scheduled {
+			batch, err = observe.ClassifyScheduled(observe.ScheduledBatchInput{
+				Schedule: schedule, CandidateKey: fixture.key(t, spec.candidateNumber), Trials: trials[spec.candidateNumber],
+			})
+		} else {
+			batch, err = observe.Classify(observe.BatchInput{Trials: trials[spec.candidateNumber]})
+		}
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -685,6 +734,25 @@ func TestComparisonBasisIgnoresStimulusAndDiscoveryReductionPhase(t *testing.T) 
 	}
 	if discoveryMap.PlanDigest() != reductionMap.PlanDigest() {
 		t.Fatal("fixture changed plan while testing comparison-basis independence")
+	}
+}
+
+func TestPreservationComparabilityIgnoresPerRunScheduleEvidence(t *testing.T) {
+	fixture := newComparisonFixtureWithConfirmationRepeats(t, 1, 1, 2)
+	discovery := buildCandidateBatches(t, fixture, testStimulus, domain.AttemptDiscovery,
+		batchRunOptions{evidenceSalt: 24, repetitions: 3, scheduled: true}, observed(1, 10), observed(2, 11))
+	reductionStimulus := digestNumber(2)
+	reduction := buildCandidateBatches(t, fixture, reductionStimulus, domain.AttemptFinalSweep,
+		batchRunOptions{evidenceSalt: 25, repetitions: 1, scheduled: true}, observed(1, 10), observed(2, 11))
+	baseline := mapFrom(t, testStimulus, fixture.envelope, discovery.roster, discovery.batches...)
+	observedMap := mapFrom(t, reductionStimulus, fixture.envelope, reduction.roster, reduction.batches...)
+	if baseline.ScheduleDigest() == observedMap.ScheduleDigest() {
+		t.Fatal("fixture did not produce distinct per-run schedule evidence")
+	}
+	assessment := AssessPreservation(baseline, observedMap)
+	if !assessment.Valid() || assessment.Relation() != PreservationEqual ||
+		!ComparableForPreservation(baseline, observedMap) || !SamePreservationMap(baseline, observedMap) {
+		t.Fatalf("per-run schedule evidence contaminated preservation: %#v", assessment)
 	}
 }
 

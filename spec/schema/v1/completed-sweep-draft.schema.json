@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://countershape.dev/spec/schema/v1/completed-sweep-draft.schema.json",
+  "title": "Countershape CompletedSweepDraft v1 canonical body",
+  "description": "The exact pure logical completion-draft field set emitted by internal/reduce. Every enumerated direct neighbor has one evidence-linked FINAL_SWEEP evaluation with decision CHANGES. The draft is not durable authority: copying it, validating it against this schema, or knowing its digest cannot construct ONE_MINIMAL_UNDER.",
+  "$comment": "The owning parser additionally enforces canonical bytes, measure-digest reconstruction, lexical set order, evaluation-to-neighbor equality, and global evidence nonreuse. Durable authority requires atomic publication, reopen, and an opaque store-instance capability.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "run_digest",
+    "transcript_digest",
+    "baseline_outcome_map_digest",
+    "baseline_preservation_map_digest",
+    "current_stimulus_digest",
+    "current_measure_definition_digest",
+    "current_measure_components",
+    "current_measure_digest",
+    "reducer_set_digest",
+    "enumeration_completed",
+    "cancelled",
+    "budget_exhausted",
+    "baseline_stale",
+    "enumerated_neighbor_digests",
+    "evaluations"
+  ],
+  "properties": {
+    "schema_version": { "const": "countershape/v1" },
+    "kind": { "const": "CompletedSweepDraft" },
+    "run_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "transcript_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "baseline_outcome_map_digest": {
+      "description": "Typed OutcomeArtifactDigest of the current minimized baseline used by the final sweep.",
+      "$ref": "common.schema.json#/$defs/Digest"
+    },
+    "baseline_preservation_map_digest": {
+      "description": "Typed PreservationMapDigest of that current complete eligible labeled map; distinct from the outcome artifact digest.",
+      "$ref": "common.schema.json#/$defs/Digest"
+    },
+    "current_stimulus_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "current_measure_definition_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "current_measure_components": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 32,
+      "items": { "type": "integer", "minimum": 0, "maximum": 9007199254740991 }
+    },
+    "current_measure_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "reducer_set_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "enumeration_completed": { "const": true },
+    "cancelled": { "const": false },
+    "budget_exhausted": { "const": false },
+    "baseline_stale": { "const": false },
+    "enumerated_neighbor_digests": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "common.schema.json#/$defs/Digest" }
+    },
+    "evaluations": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/FinalSweepChangeEvaluation" }
+    }
+  },
+  "$defs": {
+    "EvidenceDigests": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "common.schema.json#/$defs/Digest" }
+    },
+    "FinalSweepChangeEvaluation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evaluation_id",
+        "proposal_digest",
+        "neighbor_stimulus_digest",
+        "neighbor_measure_digest",
+        "observed_outcome_map_digest",
+        "observed_preservation_map_digest",
+        "decision",
+        "reason_code",
+        "batch_digests",
+        "attempt_digests",
+        "world_digests",
+        "observation_digests"
+      ],
+      "properties": {
+        "evaluation_id": { "type": "string", "minLength": 1 },
+        "proposal_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+        "neighbor_stimulus_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+        "neighbor_measure_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+        "observed_outcome_map_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+        "observed_preservation_map_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+        "decision": { "const": "CHANGES" },
+        "reason_code": { "const": "EXACT_PRESERVATION_MAP_CHANGED" },
+        "batch_digests": { "$ref": "#/$defs/EvidenceDigests" },
+        "attempt_digests": { "$ref": "#/$defs/EvidenceDigests" },
+        "world_digests": { "$ref": "#/$defs/EvidenceDigests" },
+        "observation_digests": { "$ref": "#/$defs/EvidenceDigests" }
+      }
+    }
+  }
+}

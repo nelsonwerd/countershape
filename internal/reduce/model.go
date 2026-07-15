@@ -4,6 +4,7 @@
 package reduce
 
 import (
+	"bytes"
 	"sort"
 
 	"github.com/nelsonwerd/countershape/internal/compare"
@@ -18,6 +19,117 @@ const (
 	Unresolved Decision = "UNRESOLVED"
 )
 
+// UnresolvedReason is the closed set of edge/control outcomes that may prevent
+// a product comparison. Exact-map incomparability has its own internally
+// derived reason and is never caller-authored through this type.
+type UnresolvedReason string
+
+const (
+	ReasonTimeout             UnresolvedReason = "TIMEOUT"
+	ReasonCancelled           UnresolvedReason = "CANCELLED"
+	ReasonStale               UnresolvedReason = "STALE"
+	ReasonUnstable            UnresolvedReason = "UNSTABLE"
+	ReasonIncomplete          UnresolvedReason = "INCOMPLETE"
+	ReasonTeardownError       UnresolvedReason = "TEARDOWN_ERROR"
+	ReasonEvaluatorError      UnresolvedReason = "EVALUATOR_ERROR"
+	ReasonWallBudgetExhausted UnresolvedReason = "WALL_BUDGET_EXHAUSTED"
+	ReasonReductionCancelled  UnresolvedReason = "REDUCTION_CANCELLED"
+	ReasonNoObservation       UnresolvedReason = "NO_OBSERVATION"
+
+	// These reasons are terminal reducer/evaluator protocol refusals. They make
+	// the attempted proposal visible without upgrading malformed, over-budget,
+	// or reused evaluator output into product evidence.
+	ReasonEvaluatorExceededBudget   UnresolvedReason = "EVALUATOR_EXCEEDED_CANDIDATE_TRIAL_BUDGET"
+	ReasonObservedMapWithoutTrials  UnresolvedReason = "OBSERVED_MAP_WITHOUT_CANDIDATE_TRIALS"
+	ReasonUnresolvedEvidenceMissing UnresolvedReason = "UNRESOLVED_EVALUATION_MISSING_EVIDENCE"
+	ReasonInvalidEvaluatorResult    UnresolvedReason = "INVALID_EVALUATOR_RESULT"
+	ReasonReusedEvaluationEvidence  UnresolvedReason = "REUSED_EVALUATION_EVIDENCE"
+)
+
+func (r UnresolvedReason) Valid() bool {
+	switch r {
+	case ReasonTimeout, ReasonCancelled, ReasonStale, ReasonUnstable, ReasonIncomplete,
+		ReasonTeardownError, ReasonEvaluatorError, ReasonWallBudgetExhausted,
+		ReasonReductionCancelled, ReasonNoObservation, ReasonEvaluatorExceededBudget,
+		ReasonObservedMapWithoutTrials, ReasonUnresolvedEvidenceMissing,
+		ReasonInvalidEvaluatorResult, ReasonReusedEvaluationEvidence:
+		return true
+	default:
+		return false
+	}
+}
+
+func isTerminalProtocolReason(reason UnresolvedReason) bool {
+	switch reason {
+	case ReasonEvaluatorExceededBudget, ReasonObservedMapWithoutTrials,
+		ReasonUnresolvedEvidenceMissing, ReasonInvalidEvaluatorResult,
+		ReasonReusedEvaluationEvidence:
+		return true
+	default:
+		return false
+	}
+}
+
+// UnresolvedEvidence retains fresh control-path lineage when no complete
+// CandidateOutcomeMap exists. It is immutable and construction-safe; every
+// evidence domain must be present together.
+type UnresolvedEvidence struct {
+	batchDigests       []domain.Digest
+	attemptDigests     []domain.Digest
+	worldDigests       []domain.Digest
+	observationDigests []domain.Digest
+}
+
+func NewUnresolvedEvidence(batch, attempt, world, observation []domain.Digest) (UnresolvedEvidence, error) {
+	if len(batch) == 0 || len(attempt) == 0 || len(world) == 0 || len(observation) == 0 ||
+		hasInvalidOrDuplicate(batch) || hasInvalidOrDuplicate(attempt) ||
+		hasInvalidOrDuplicate(world) || hasInvalidOrDuplicate(observation) {
+		return UnresolvedEvidence{}, &domain.Error{Code: "INVALID_UNRESOLVED_EVIDENCE"}
+	}
+	return UnresolvedEvidence{
+		batchDigests: append([]domain.Digest(nil), batch...), attemptDigests: append([]domain.Digest(nil), attempt...),
+		worldDigests: append([]domain.Digest(nil), world...), observationDigests: append([]domain.Digest(nil), observation...),
+	}, nil
+}
+
+func (e UnresolvedEvidence) Present() bool {
+	return len(e.batchDigests) != 0 || len(e.attemptDigests) != 0 || len(e.worldDigests) != 0 || len(e.observationDigests) != 0
+}
+func (e UnresolvedEvidence) Valid() bool {
+	if !e.Present() {
+		return false
+	}
+	rebuilt, err := NewUnresolvedEvidence(e.batchDigests, e.attemptDigests, e.worldDigests, e.observationDigests)
+	return err == nil && slicesEqualDigests(rebuilt.batchDigests, e.batchDigests) &&
+		slicesEqualDigests(rebuilt.attemptDigests, e.attemptDigests) &&
+		slicesEqualDigests(rebuilt.worldDigests, e.worldDigests) &&
+		slicesEqualDigests(rebuilt.observationDigests, e.observationDigests)
+}
+func (e UnresolvedEvidence) BatchDigests() []domain.Digest {
+	return append([]domain.Digest(nil), e.batchDigests...)
+}
+func (e UnresolvedEvidence) AttemptDigests() []domain.Digest {
+	return append([]domain.Digest(nil), e.attemptDigests...)
+}
+func (e UnresolvedEvidence) WorldDigests() []domain.Digest {
+	return append([]domain.Digest(nil), e.worldDigests...)
+}
+func (e UnresolvedEvidence) ObservationDigests() []domain.Digest {
+	return append([]domain.Digest(nil), e.observationDigests...)
+}
+
+func slicesEqualDigests(left, right []domain.Digest) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for index := range left {
+		if left[index] != right[index] {
+			return false
+		}
+	}
+	return true
+}
+
 func unresolvedDecision() Decision {
 	// MUTATION_ANCHOR: unresolved-is-not-changes
 	return Unresolved
@@ -27,37 +139,81 @@ func unresolvedDecision() Decision {
 // stimulus, well-founded measure, and reducer-set identity.
 type Neighbor struct {
 	currentStimulusDigest domain.Digest
-	currentMeasure        int
+	currentMeasure        Measure
 	stimulusDigest        domain.Digest
-	measure               int
+	measure               Measure
+	rule                  ReducerRule
+	locus                 string
+	transformPriority     uint64
 	reducerSetDigest      domain.Digest
+	digest                domain.Digest
+	canonicalBytes        []byte
 }
 
-func NewNeighbor(
-	currentStimulusDigest domain.Digest,
-	currentMeasure int,
-	stimulusDigest domain.Digest,
-	measure int,
-	reducerSetDigest domain.Digest,
-) (Neighbor, error) {
-	if !currentStimulusDigest.Valid() || !stimulusDigest.Valid() || !reducerSetDigest.Valid() ||
-		currentStimulusDigest == stimulusDigest || currentMeasure <= 0 || measure < 0 || measure >= currentMeasure {
+type NeighborInput struct {
+	CurrentStimulus   domain.Digest
+	CurrentMeasure    Measure
+	Stimulus          domain.Digest
+	Measure           Measure
+	Rule              ReducerRule
+	Locus             string
+	TransformPriority uint64
+	ReducerSet        ReducerSet
+}
+
+type neighborIdentity struct {
+	SchemaVersion         string `json:"schema_version"`
+	Kind                  string `json:"kind"`
+	CurrentStimulusDigest string `json:"current_stimulus_digest"`
+	CurrentMeasureDigest  string `json:"current_measure_digest"`
+	StimulusDigest        string `json:"stimulus_digest"`
+	MeasureDigest         string `json:"measure_digest"`
+	RuleName              string `json:"rule_name"`
+	RuleVersion           string `json:"rule_version"`
+	RuleDigest            string `json:"rule_digest"`
+	Locus                 string `json:"locus"`
+	TransformPriority     int64  `json:"transform_priority"`
+	ReducerSetDigest      string `json:"reducer_set_digest"`
+}
+
+const maxReducerTransformPriority = 1024
+
+func NewNeighbor(input NeighborInput) (Neighbor, error) {
+	// MUTATION_ANCHOR: direct-neighbor-measure-must-strictly-decrease
+	if !input.CurrentStimulus.Valid() || !input.Stimulus.Valid() || input.CurrentStimulus == input.Stimulus ||
+		!input.CurrentMeasure.Valid() || !input.Measure.Valid() || !strictlyDecreases(input.CurrentMeasure, input.Measure) ||
+		!input.Rule.Valid() || !reducerLocusPattern.MatchString(input.Locus) || !input.ReducerSet.Valid() ||
+		input.TransformPriority > maxReducerTransformPriority || !input.ReducerSet.Contains(input.Rule) ||
+		input.CurrentMeasure.DefinitionDigest() != input.ReducerSet.MeasureDefinitionDigest() {
 		return Neighbor{}, &domain.Error{Code: "INVALID_DIRECT_NEIGHBOR"}
 	}
+	digest, canonicalBytes, err := digestTyped("ReductionProposal", neighborIdentity{
+		SchemaVersion: domain.SchemaVersion, Kind: "ReductionProposal",
+		CurrentStimulusDigest: input.CurrentStimulus.String(), CurrentMeasureDigest: input.CurrentMeasure.Digest().String(),
+		StimulusDigest: input.Stimulus.String(), MeasureDigest: input.Measure.Digest().String(),
+		RuleName: input.Rule.Name(), RuleVersion: input.Rule.Version(), RuleDigest: input.Rule.Digest().String(),
+		Locus: input.Locus, TransformPriority: int64(input.TransformPriority), ReducerSetDigest: input.ReducerSet.Digest().String(),
+	})
+	if err != nil {
+		return Neighbor{}, err
+	}
 	return Neighbor{
-		currentStimulusDigest: currentStimulusDigest,
-		currentMeasure:        currentMeasure,
-		stimulusDigest:        stimulusDigest,
-		measure:               measure,
-		reducerSetDigest:      reducerSetDigest,
+		currentStimulusDigest: input.CurrentStimulus, currentMeasure: input.CurrentMeasure,
+		stimulusDigest: input.Stimulus, measure: input.Measure, rule: input.Rule, locus: input.Locus,
+		transformPriority: input.TransformPriority, reducerSetDigest: input.ReducerSet.Digest(), digest: digest, canonicalBytes: canonicalBytes,
 	}, nil
 }
 
 func (n Neighbor) CurrentStimulusDigest() domain.Digest { return n.currentStimulusDigest }
-func (n Neighbor) CurrentMeasure() int                  { return n.currentMeasure }
+func (n Neighbor) CurrentMeasure() Measure              { return n.currentMeasure }
 func (n Neighbor) StimulusDigest() domain.Digest        { return n.stimulusDigest }
-func (n Neighbor) Measure() int                         { return n.measure }
+func (n Neighbor) Measure() Measure                     { return n.measure }
+func (n Neighbor) Rule() ReducerRule                    { return n.rule }
+func (n Neighbor) Locus() string                        { return n.locus }
+func (n Neighbor) TransformPriority() uint64            { return n.transformPriority }
 func (n Neighbor) ReducerSetDigest() domain.Digest      { return n.reducerSetDigest }
+func (n Neighbor) Digest() domain.Digest                { return n.digest }
+func (n Neighbor) CanonicalBytes() []byte               { return append([]byte(nil), n.canonicalBytes...) }
 
 type Evaluation struct {
 	id                          string
@@ -68,6 +224,7 @@ type Evaluation struct {
 	observedWorldDigests        []domain.Digest
 	observedObservationDigests  []domain.Digest
 	observedOutcomeMapDigest    *compare.OutcomeArtifactDigest
+	observedPreservationDigest  *compare.PreservationMapDigest
 	decision                    Decision
 	reasonCode                  string
 	logicalNonReuseWithBaseline bool
@@ -82,21 +239,29 @@ type EvaluationInput struct {
 	Baseline           compare.DivergentBaseline
 	Neighbor           Neighbor
 	ObservedOutcomeMap *compare.CandidateOutcomeMap
-	UnresolvedReason   string
+	UnresolvedReason   UnresolvedReason
+	UnresolvedEvidence UnresolvedEvidence
 }
 
 func NewEvaluation(input EvaluationInput) (Evaluation, error) {
-	return newEvaluation(input, domain.AttemptReduction)
+	return newEvaluation(input, domain.AttemptReduction, false)
 }
 
 // NewFinalSweepEvaluation is the only constructor whose observed evidence may
 // carry FINAL_SWEEP purpose. Ordinary reduction and final-sweep evidence are
 // deliberately distinct even when all other structural facts match.
 func NewFinalSweepEvaluation(input EvaluationInput) (Evaluation, error) {
-	return newEvaluation(input, domain.AttemptFinalSweep)
+	return newEvaluation(input, domain.AttemptFinalSweep, false)
 }
 
-func newEvaluation(input EvaluationInput, requiredPurpose domain.AttemptPurpose) (Evaluation, error) {
+func newProtocolRefusalEvaluation(input EvaluationInput, requiredPurpose domain.AttemptPurpose) (Evaluation, error) {
+	if !isTerminalProtocolReason(input.UnresolvedReason) {
+		return Evaluation{}, &domain.Error{Code: "INVALID_REDUCTION_PROTOCOL_REFUSAL_REASON"}
+	}
+	return newEvaluation(input, requiredPurpose, true)
+}
+
+func newEvaluation(input EvaluationInput, requiredPurpose domain.AttemptPurpose, allowTerminalProtocolReason bool) (Evaluation, error) {
 	if input.ID == "" || !input.Baseline.Valid() || !validNeighbor(input.Neighbor) {
 		return Evaluation{}, &domain.Error{Code: "INVALID_REDUCTION_EVALUATION"}
 	}
@@ -114,14 +279,33 @@ func newEvaluation(input EvaluationInput, requiredPurpose domain.AttemptPurpose)
 		candidateRoster:            baseline.CandidateRoster(),
 	}
 	if input.ObservedOutcomeMap == nil {
-		if input.UnresolvedReason == "" {
+		if !input.UnresolvedReason.Valid() {
 			return Evaluation{}, &domain.Error{Code: "MISSING_UNRESOLVED_REASON"}
 		}
+		if isTerminalProtocolReason(input.UnresolvedReason) && !allowTerminalProtocolReason {
+			return Evaluation{}, &domain.Error{Code: "RESERVED_REDUCTION_PROTOCOL_REFUSAL_REASON"}
+		}
+		if input.UnresolvedEvidence.Present() {
+			if !input.UnresolvedEvidence.Valid() {
+				return Evaluation{}, &domain.Error{Code: "INVALID_UNRESOLVED_EVIDENCE"}
+			}
+			if intersects(baseline.BatchDigests(), input.UnresolvedEvidence.batchDigests) ||
+				intersects(baseline.EvidenceAttemptDigests(), input.UnresolvedEvidence.attemptDigests) ||
+				intersects(baseline.EvidenceWorldDigests(), input.UnresolvedEvidence.worldDigests) ||
+				intersects(baseline.EvidenceObservationDigests(), input.UnresolvedEvidence.observationDigests) {
+				return Evaluation{}, &domain.Error{Code: "REUSED_BASELINE_UNRESOLVED_EVIDENCE"}
+			}
+			evaluation.observedBatchDigests = input.UnresolvedEvidence.BatchDigests()
+			evaluation.observedAttemptDigests = input.UnresolvedEvidence.AttemptDigests()
+			evaluation.observedWorldDigests = input.UnresolvedEvidence.WorldDigests()
+			evaluation.observedObservationDigests = input.UnresolvedEvidence.ObservationDigests()
+			evaluation.logicalNonReuseWithBaseline = true
+		}
 		evaluation.decision = unresolvedDecision()
-		evaluation.reasonCode = input.UnresolvedReason
+		evaluation.reasonCode = string(input.UnresolvedReason)
 		return evaluation, nil
 	}
-	if input.UnresolvedReason != "" {
+	if input.UnresolvedReason != "" || input.UnresolvedEvidence.Present() {
 		return Evaluation{}, &domain.Error{Code: "OBSERVED_EVALUATION_HAS_UNRESOLVED_REASON"}
 	}
 	observed := *input.ObservedOutcomeMap
@@ -134,12 +318,6 @@ func newEvaluation(input EvaluationInput, requiredPurpose domain.AttemptPurpose)
 	}
 	if observed.StimulusDigest() != input.Neighbor.stimulusDigest {
 		return Evaluation{}, &domain.Error{Code: "EVALUATION_NEIGHBOR_STIMULUS_MISMATCH"}
-	}
-	if observed.EnvelopeDigest() != baseline.EnvelopeDigest() {
-		return Evaluation{}, &domain.Error{Code: "EVALUATION_ENVELOPE_MISMATCH"}
-	}
-	if !sameRoster(baseline.CandidateRoster(), observed.CandidateRoster()) {
-		return Evaluation{}, &domain.Error{Code: "EVALUATION_CANDIDATE_ROSTER_MISMATCH"}
 	}
 	batchDigests := observed.BatchDigests()
 	if len(batchDigests) != len(observed.CandidateRoster()) || hasInvalidOrDuplicate(batchDigests) {
@@ -166,31 +344,38 @@ func newEvaluation(input EvaluationInput, requiredPurpose domain.AttemptPurpose)
 		return Evaluation{}, &domain.Error{Code: "REUSED_BASELINE_OBSERVATION_EVIDENCE"}
 	}
 	value := observed.ArtifactDigest()
+	preservationValue := observed.PreservationDigest()
 	evaluation.observedOutcomeMapDigest = &value
+	evaluation.observedPreservationDigest = &preservationValue
 	evaluation.observedBatchDigests = append([]domain.Digest(nil), batchDigests...)
 	evaluation.observedAttemptDigests = append([]domain.Digest(nil), attemptDigests...)
 	evaluation.observedWorldDigests = append([]domain.Digest(nil), worldDigests...)
 	evaluation.observedObservationDigests = append([]domain.Digest(nil), observationDigests...)
 	evaluation.logicalNonReuseWithBaseline = true
-	if !compare.ComparableForPreservation(baseline, observed) {
+	assessment := compare.AssessPreservation(baseline, observed)
+	if !assessment.Valid() {
+		return Evaluation{}, &domain.Error{Code: "INVALID_PRESERVATION_ASSESSMENT"}
+	}
+	switch assessment.Relation() {
+	case compare.PreservationUnresolved:
 		evaluation.decision = unresolvedDecision()
-		evaluation.reasonCode = "CANDIDATE_ELIGIBILITY_CHANGED"
-		return evaluation, nil
-	}
-	if compare.SamePreservationMap(baseline, observed) {
+	case compare.PreservationEqual:
 		evaluation.decision = Preserves
-		evaluation.reasonCode = "EXACT_PRESERVATION_MAP_MATCH"
-		return evaluation, nil
+	case compare.PreservationDifferent:
+		evaluation.decision = Changes
+	default:
+		return Evaluation{}, &domain.Error{Code: "INVALID_PRESERVATION_ASSESSMENT"}
 	}
-	evaluation.decision = Changes
-	evaluation.reasonCode = "EXACT_PRESERVATION_MAP_CHANGED"
+	evaluation.reasonCode = assessment.ReasonCode()
 	return evaluation, nil
 }
 
 func validNeighbor(neighbor Neighbor) bool {
-	return neighbor.currentStimulusDigest.Valid() && neighbor.stimulusDigest.Valid() &&
-		neighbor.reducerSetDigest.Valid() && neighbor.currentStimulusDigest != neighbor.stimulusDigest &&
-		neighbor.currentMeasure > 0 && neighbor.measure >= 0 && neighbor.measure < neighbor.currentMeasure
+	return neighbor.currentStimulusDigest.Valid() && neighbor.stimulusDigest.Valid() && neighbor.reducerSetDigest.Valid() &&
+		neighbor.currentStimulusDigest != neighbor.stimulusDigest && neighbor.currentMeasure.Valid() && neighbor.measure.Valid() &&
+		strictlyDecreases(neighbor.currentMeasure, neighbor.measure) && neighbor.rule.Valid() &&
+		reducerLocusPattern.MatchString(neighbor.locus) && neighbor.transformPriority <= maxReducerTransformPriority &&
+		neighbor.digest.Valid() && len(neighbor.canonicalBytes) > 0
 }
 
 func sameRoster(left, right []domain.CandidateExecutionKey) bool {
@@ -237,6 +422,28 @@ func (e Evaluation) Neighbor() Neighbor             { return e.neighbor }
 func (e Evaluation) Purpose() domain.AttemptPurpose { return e.purpose }
 func (e Evaluation) Decision() Decision             { return e.decision }
 func (e Evaluation) ReasonCode() string             { return e.reasonCode }
+func (e Evaluation) BaselineOutcomeMapDigest() compare.OutcomeArtifactDigest {
+	return e.baselineOutcomeMapDigest
+}
+func (e Evaluation) BaselinePreservationDigest() compare.PreservationMapDigest {
+	return e.baselinePreservationDigest
+}
+func (e Evaluation) ComparisonEnvelopeDigest() domain.Digest { return e.comparisonEnvelopeDigest }
+func (e Evaluation) CandidateRoster() []domain.CandidateExecutionKey {
+	return append([]domain.CandidateExecutionKey(nil), e.candidateRoster...)
+}
+func (e Evaluation) ObservedOutcomeMapDigest() (compare.OutcomeArtifactDigest, bool) {
+	if e.observedOutcomeMapDigest == nil {
+		return compare.OutcomeArtifactDigest{}, false
+	}
+	return *e.observedOutcomeMapDigest, true
+}
+func (e Evaluation) ObservedPreservationDigest() (compare.PreservationMapDigest, bool) {
+	if e.observedPreservationDigest == nil {
+		return compare.PreservationMapDigest{}, false
+	}
+	return *e.observedPreservationDigest, true
+}
 
 // LogicalNonReuseWithBaseline reports only content-addressed non-overlap with
 // the baseline batch set. It is not a claim that execution was physically fresh.
@@ -272,7 +479,7 @@ type LogicalSweepInput struct {
 	State               SweepState
 	Baseline            compare.DivergentBaseline
 	CurrentStimulus     domain.Digest
-	CurrentMeasure      int
+	CurrentMeasure      Measure
 	ReducerSetDigest    domain.Digest
 	EnumeratedNeighbors []Neighbor
 	Evaluations         []Evaluation
@@ -285,11 +492,12 @@ type LogicalSweepInput struct {
 // relation. It has no persistence/completion digest and no conversion to a
 // reduction grade. U5/U6 must re-establish this from durable store authority.
 type LogicalCompleteSweep struct {
-	currentStimulus   domain.Digest
-	currentMeasure    int
-	reducerSetDigest  domain.Digest
-	neighborDigests   []domain.Digest
-	baselineMapDigest compare.OutcomeArtifactDigest
+	currentStimulus            domain.Digest
+	currentMeasure             Measure
+	reducerSetDigest           domain.Digest
+	neighborDigests            []domain.Digest
+	baselineMapDigest          compare.OutcomeArtifactDigest
+	baselinePreservationDigest compare.PreservationMapDigest
 }
 
 func NewLogicalCompleteSweep(input LogicalSweepInput) (LogicalCompleteSweep, error) {
@@ -299,22 +507,18 @@ func NewLogicalCompleteSweep(input LogicalSweepInput) (LogicalCompleteSweep, err
 	if input.Cancelled || input.BudgetExhausted || input.BaselineStale {
 		return LogicalCompleteSweep{}, &domain.Error{Code: "FINAL_SWEEP_NOT_CURRENT_AND_COMPLETE"}
 	}
-	if !input.Baseline.Valid() || !input.CurrentStimulus.Valid() || !input.ReducerSetDigest.Valid() || input.CurrentMeasure <= 0 {
+	if !input.Baseline.Valid() || !input.CurrentStimulus.Valid() || !input.ReducerSetDigest.Valid() || !input.CurrentMeasure.Valid() {
 		return LogicalCompleteSweep{}, &domain.Error{Code: "INVALID_LOGICAL_SWEEP_BASELINE"}
 	}
 	baseline := input.Baseline.OutcomeMap()
 	if baseline.StimulusDigest() != input.CurrentStimulus {
 		return LogicalCompleteSweep{}, &domain.Error{Code: "LOGICAL_SWEEP_BASELINE_MISMATCH"}
 	}
-	if len(input.EnumeratedNeighbors) == 0 {
-		return LogicalCompleteSweep{}, &domain.Error{Code: "EMPTY_FINAL_SWEEP"}
-	}
-
 	enumerated := make([]domain.Digest, 0, len(input.EnumeratedNeighbors))
 	neighborByDigest := map[domain.Digest]Neighbor{}
 	for _, neighbor := range input.EnumeratedNeighbors {
 		if !validNeighbor(neighbor) || neighbor.currentStimulusDigest != input.CurrentStimulus ||
-			neighbor.currentMeasure != input.CurrentMeasure || neighbor.reducerSetDigest != input.ReducerSetDigest {
+			neighbor.currentMeasure.digest != input.CurrentMeasure.digest || neighbor.reducerSetDigest != input.ReducerSetDigest {
 			return LogicalCompleteSweep{}, &domain.Error{Code: "LOGICAL_SWEEP_NEIGHBOR_BINDING_MISMATCH"}
 		}
 		if _, duplicate := neighborByDigest[neighbor.stimulusDigest]; duplicate {
@@ -394,11 +598,12 @@ func NewLogicalCompleteSweep(input LogicalSweepInput) (LogicalCompleteSweep, err
 		return LogicalCompleteSweep{}, &domain.Error{Code: "FINAL_SWEEP_NEIGHBOR_SET_MISMATCH"}
 	}
 	return LogicalCompleteSweep{
-		currentStimulus:   input.CurrentStimulus,
-		currentMeasure:    input.CurrentMeasure,
-		reducerSetDigest:  input.ReducerSetDigest,
-		neighborDigests:   append([]domain.Digest(nil), enumerated...),
-		baselineMapDigest: baseline.ArtifactDigest(),
+		currentStimulus:            input.CurrentStimulus,
+		currentMeasure:             input.CurrentMeasure,
+		reducerSetDigest:           input.ReducerSetDigest,
+		neighborDigests:            append([]domain.Digest(nil), enumerated...),
+		baselineMapDigest:          baseline.ArtifactDigest(),
+		baselinePreservationDigest: baseline.PreservationDigest(),
 	}, nil
 }
 
@@ -408,9 +613,11 @@ func sweepStateQualifies(state SweepState) bool {
 }
 
 func sameNeighbor(left, right Neighbor) bool {
-	return left.currentStimulusDigest == right.currentStimulusDigest && left.currentMeasure == right.currentMeasure &&
-		left.stimulusDigest == right.stimulusDigest && left.measure == right.measure &&
-		left.reducerSetDigest == right.reducerSetDigest
+	return left.currentStimulusDigest == right.currentStimulusDigest && left.currentMeasure.digest == right.currentMeasure.digest &&
+		left.stimulusDigest == right.stimulusDigest && left.measure.digest == right.measure.digest &&
+		left.rule.digest == right.rule.digest && left.locus == right.locus && left.transformPriority == right.transformPriority &&
+		left.reducerSetDigest == right.reducerSetDigest &&
+		left.digest == right.digest && bytes.Equal(left.canonicalBytes, right.canonicalBytes)
 }
 
 func sameDigestSet(left, right []domain.Digest) bool {
@@ -429,7 +636,12 @@ func (s LogicalCompleteSweep) NeighborDigests() []domain.Digest {
 	return append([]domain.Digest(nil), s.neighborDigests...)
 }
 
-func (s LogicalCompleteSweep) ReducerSetDigest() domain.Digest { return s.reducerSetDigest }
+func (s LogicalCompleteSweep) CurrentStimulusDigest() domain.Digest { return s.currentStimulus }
+func (s LogicalCompleteSweep) CurrentMeasure() Measure              { return s.currentMeasure }
+func (s LogicalCompleteSweep) ReducerSetDigest() domain.Digest      { return s.reducerSetDigest }
 func (s LogicalCompleteSweep) BaselineMapDigest() compare.OutcomeArtifactDigest {
 	return s.baselineMapDigest
+}
+func (s LogicalCompleteSweep) BaselinePreservationMapDigest() compare.PreservationMapDigest {
+	return s.baselinePreservationDigest
 }

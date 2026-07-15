@@ -1,81 +1,23 @@
 {
   "schema_version": "countershape/v1",
   "kind": "ReductionRun",
-  "artifact_digest": "sha256:6060606060606060606060606060606060606060606060606060606060606060",
-  "baseline_outcome_map_digest": "sha256:5050505050505050505050505050505050505050505050505050505050505050",
-  "original_stimulus_digest": "sha256:7070707070707070707070707070707070707070707070707070707070707070",
-  "minimized_stimulus_digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
-  "reducer_set_digest": "sha256:8080808080808080808080808080808080808080808080808080808080808080",
-  "well_founded_measure": {
-    "name": "http-seed-and-request-node-count/v1",
-    "original": 9,
-    "minimized": 4,
-    "ordering": "STRICTLY_DECREASING_NONNEGATIVE_INTEGER"
-  },
-  "budgets": {
-    "proposal_limit": 40,
-    "trial_limit": 300,
-    "wall_ms": 600000,
-    "proposals_used": 3,
-    "trials_used": 27,
-    "wall_ms_used": 2120
-  },
-  "evaluations": [
-    {
-      "evaluation_id": "eval:accepted-remove-noise-header",
-      "neighbor_stimulus_digest": "sha256:9090909090909090909090909090909090909090909090909090909090909090",
-      "neighbor_measure": 6,
-      "fresh_batch_digests": [
-        "sha256:b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1",
-        "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2",
-        "sha256:b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3b3"
-      ],
-      "observed_outcome_map_digest": "sha256:5050505050505050505050505050505050505050505050505050505050505050",
-      "decision": "PRESERVES",
-      "reason_code": null,
-      "execution_evidence_reused": false
-    },
-    {
-      "evaluation_id": "eval:final-remove-tenant-seed",
-      "neighbor_stimulus_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
-      "neighbor_measure": 3,
-      "fresh_batch_digests": [
-        "sha256:c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1"
-      ],
-      "observed_outcome_map_digest": "sha256:a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2a2",
-      "decision": "CHANGES",
-      "reason_code": "LABELED_MAP_CHANGED",
-      "execution_evidence_reused": false
-    },
-    {
-      "evaluation_id": "eval:final-remove-resource-owner",
-      "neighbor_stimulus_digest": "sha256:a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3",
-      "neighbor_measure": 3,
-      "fresh_batch_digests": [
-        "sha256:c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2"
-      ],
-      "observed_outcome_map_digest": "sha256:a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4a4",
-      "decision": "CHANGES",
-      "reason_code": "LABELED_MAP_CHANGED",
-      "execution_evidence_reused": false
-    }
-  ],
-  "accepted_path": ["eval:accepted-remove-noise-header"],
-  "final_sweep": {
-    "state": "COMPLETE",
-    "enumerated_neighbor_digests": [
-      "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
-      "sha256:a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3a3"
-    ],
-    "evaluation_ids": ["eval:final-remove-tenant-seed", "eval:final-remove-resource-owner"],
-    "unresolved_count": 0,
-    "all_execution_evidence_fresh": true,
-    "durable_completion_digest": "sha256:d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0d0"
-  },
-  "grade": {
-    "status": "ONE_MINIMAL_UNDER",
-    "reducer_set_digest": "sha256:8080808080808080808080808080808080808080808080808080808080808080"
-  },
+  "baseline_outcome_map_digest": "sha256:1010101010101010101010101010101010101010101010101010101010101010",
+  "baseline_preservation_map_digest": "sha256:2020202020202020202020202020202020202020202020202020202020202020",
+  "original_stimulus_digest": "sha256:3030303030303030303030303030303030303030303030303030303030303030",
+  "minimized_stimulus_digest": "sha256:4040404040404040404040404040404040404040404040404040404040404040",
+  "original_measure_digest": "sha256:5050505050505050505050505050505050505050505050505050505050505050",
+  "original_measure_components": [2, 2],
+  "minimized_measure_digest": "sha256:6060606060606060606060606060606060606060606060606060606060606060",
+  "minimized_measure_components": [1, 1],
+  "reducer_set_digest": "sha256:7070707070707070707070707070707070707070707070707070707070707070",
+  "measure_definition_digest": "sha256:8080808080808080808080808080808080808080808080808080808080808080",
+  "scope_digest": "sha256:9090909090909090909090909090909090909090909090909090909090909090",
+  "proposal_limit": 10,
+  "candidate_trial_limit": 20,
+  "wall_limit_ms": 60000,
+  "transcript_digest": "sha256:a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0",
+  "grade": "BEST_KNOWN",
+  "limitations": [],
   "global_minimum_claimed": false,
   "root_cause_claimed": false
 }

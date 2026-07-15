@@ -1,0 +1,11 @@
+{
+  "schema_version": "countershape/v1",
+  "kind": "ReductionGrade",
+  "status": "ONE_MINIMAL_UNDER",
+  "run_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "reducer_set_digest": "sha256:7070707070707070707070707070707070707070707070707070707070707070",
+  "completed_sweep_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "limitations": [],
+  "global_minimum_claimed": false,
+  "root_cause_claimed": false
+}

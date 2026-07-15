@@ -73,9 +73,11 @@ U1 owns only:
 
 U1 owns no reduction grade. In particular it cannot construct `ONE_MINIMAL_UNDER`.
 
-U5 introduces the durable-sweep authority. Only a store-issued capability may construct `ONE_MINIMAL_UNDER(reducer_set_digest)`, and only when the durably reopened enumerated direct-neighbor set exactly equals the set of new `CHANGES` evaluation records. Any omitted, duplicate, stale, preserving, unresolved, cancelled, post-budget, or non-fresh member prevents that grade.
+U5 introduces the durable-sweep authority. `internal/reduce` produces a pure logical completion draft and never imports the store. `internal/store` imports that draft, atomically publishes and reopens its exact canonical bytes, and then returns an opaque capability with no public constructor. The thin outward `internal/reduction` service imports both and is the only package permitted to construct `ONE_MINIMAL_UNDER(reducer_set_digest)`. It may do so only when the durably reopened enumerated direct-neighbor set exactly equals the set of new `CHANGES` evaluation records. Any omitted, duplicate, stale, preserving, unresolved, cancelled, post-budget, or non-fresh member prevents that grade. An empty set qualifies only when the empty enumeration itself was completed and durably reopened.
 
-The U0 `ReductionRun` schema and example are future U5 wire targets. Their shape is not durable authority, and schema validation cannot establish set equality, physical freshness, or local minimality.
+The reducer-set digest binds the finite typed rules, their versions, the adapter-level well-founded measure, and the exact fixed-versus-reducible scope. The local grade never quantifies over stimuli outside that recorded neighborhood. Adapter-level reduction measures are new U5 artifacts; they do not change the sealed CLI or HTTP stimulus digests.
+
+The U5 schemas mirror the inert canonical bodies for `ReductionRun`, `ReductionTranscript`, `CompletedSweepDraft`, and outward `ReductionGrade`. Shape validation is not authority: it cannot establish cross-artifact lineage, set equality, physical freshness, durable publication, or local minimality. The runtime parser and opaque store capability remain required.
 
 ## Nonclaims
 

@@ -69,6 +69,17 @@ type Config struct {
 	ProducerMetadata string
 	StdinPresent     bool
 	StdinBytes       []byte
+	// Purpose is explicit because reducer evaluations and final sweeps must
+	// produce fresh evidence under their own attempt phase.
+	Purpose domain.AttemptPurpose
+	// StimulusOverride is a testkit-only seam for physically executing one
+	// already-validated typed neighbor. Nil selects the locked reference case.
+	StimulusOverride *cli.CLIStimulus
+	// These three values are an all-or-none testkit seam for a U5-capable
+	// compiled plan. Zeroes preserve the sealed observation-only U3 profile.
+	ReductionProposalLimit        int
+	ReductionTotalCandidateTrials int
+	ReductionWallMS               int64
 }
 
 type TrialEvidence struct {
@@ -111,6 +122,7 @@ func DefaultConfig(root, gitExecutable, nodeExecutable string) Config {
 		MaxTotalTrials: 9,
 		WallBudget:     30 * time.Second,
 		Behavior:       BehaviorPrecedence,
+		Purpose:        domain.AttemptDiscovery,
 		ProjectionFields: []cli.CLIFieldID{
 			cli.CLIFieldStdoutJSONMode,
 			cli.CLIFieldStdoutJSONSource,
@@ -120,9 +132,12 @@ func DefaultConfig(root, gitExecutable, nodeExecutable string) Config {
 }
 
 func Run(ctx context.Context, config Config) (study StudyResult, returnErr error) {
-	if ctx == nil || !config.Behavior.valid() || (!config.StdinPresent && len(config.StdinBytes) != 0) ||
+	hasReductionBudget := config.ReductionProposalLimit != 0 || config.ReductionTotalCandidateTrials != 0 || config.ReductionWallMS != 0
+	if ctx == nil || !config.Behavior.valid() || !config.Purpose.Valid() ||
+		(!config.StdinPresent && len(config.StdinBytes) != 0) ||
 		config.Repetitions < 1 || config.Repetitions > 5 ||
-		config.MaxTotalTrials < 1 || config.WallBudget <= 0 {
+		config.MaxTotalTrials < 1 || config.WallBudget <= 0 ||
+		hasReductionBudget && (config.ReductionProposalLimit <= 0 || config.ReductionTotalCandidateTrials <= 0 || config.ReductionWallMS <= 0) {
 		return StudyResult{}, fmt.Errorf("invalid CLI precedence study configuration")
 	}
 	roles, err := normalizeRoles(config.CandidateOrder)
@@ -232,6 +247,12 @@ func Run(ctx context.Context, config Config) (study StudyResult, returnErr error
 	if err != nil {
 		return StudyResult{}, err
 	}
+	if config.StimulusOverride != nil {
+		if !config.StimulusOverride.Valid() {
+			return StudyResult{}, fmt.Errorf("invalid CLI precedence stimulus override")
+		}
+		stimulus = *config.StimulusOverride
+	}
 	capturePolicy, err := cli.NewCLICapturePolicy(cli.CLICapturePolicyConfig{
 		StdoutBytes: 64 << 10,
 		StderrBytes: 64 << 10,
@@ -265,8 +286,10 @@ func Run(ctx context.Context, config Config) (study StudyResult, returnErr error
 		CandidateSetDigest: declaration.Digest(), MaterializationPolicyDigest: materializationPolicy.Digest(),
 		ComparisonEnvelopeDigest: envelope.Digest(), RunnerDigest: runnerDigest,
 		StartArgv: stimulus.BaseLogicalArgv(), FixtureRecipeDigest: fixtureRecipe.Digest(),
-		CapturePolicy: capturePolicy, ProjectionDefinition: projection.Binding(),
-		Repetitions: config.Repetitions, CandidateCount: len(roles), ProbeMS: probeMS,
+			CapturePolicy: capturePolicy, ProjectionDefinition: projection.Binding(),
+			Repetitions: config.Repetitions, CandidateCount: len(roles), ProbeMS: probeMS,
+			ReductionProposalLimit: config.ReductionProposalLimit,
+			ReductionTotalCandidateTrials: config.ReductionTotalCandidateTrials, ReductionWallMS: config.ReductionWallMS,
 	})
 	if err != nil {
 		return StudyResult{}, err
@@ -314,7 +337,7 @@ func Run(ctx context.Context, config Config) (study StudyResult, returnErr error
 	trialEvidence := make([]TrialEvidence, 0, config.Repetitions*len(roster))
 	observationRun, err := observe.RunObservation(ctx, observe.ObservationConfig{
 		Plan:            plan,
-		Purpose:         domain.AttemptDiscovery,
+		Purpose:         config.Purpose,
 		Envelope:        envelope,
 		CandidateRoster: roster,
 		Repetitions:     config.Repetitions,
@@ -329,8 +352,8 @@ func Run(ctx context.Context, config Config) (study StudyResult, returnErr error
 			Candidate:       candidate,
 			Tools:           toolRegistry,
 			AllocationRoot:  allocationRoot,
-			Purpose:         domain.AttemptDiscovery,
-			InstanceNonce:   fmt.Sprintf("u3-discovery-%d-%d", slot.Repetition(), slot.Ordinal()),
+			Purpose:         config.Purpose,
+			InstanceNonce:   fmt.Sprintf("u3-%s-%d-%d", studyPurposeToken(config.Purpose), slot.Repetition(), slot.Ordinal()),
 			ScheduleOrdinal: slot.Ordinal(),
 		})
 		if executeErr != nil {
@@ -437,6 +460,23 @@ func Run(ctx context.Context, config Config) (study StudyResult, returnErr error
 	return study, nil
 }
 
+func studyPurposeToken(purpose domain.AttemptPurpose) string {
+	switch purpose {
+	case domain.AttemptDiscovery:
+		return "discovery"
+	case domain.AttemptReduction:
+		return "reduction"
+	case domain.AttemptFinalSweep:
+		return "final-sweep"
+	case domain.AttemptConfirmation:
+		return "confirmation"
+	case domain.AttemptConformance:
+		return "conformance"
+	default:
+		return "invalid"
+	}
+}
+
 type studyPlanInput struct {
 	CandidateSetDigest          domain.Digest
 	MaterializationPolicyDigest domain.Digest
@@ -449,6 +489,9 @@ type studyPlanInput struct {
 	Repetitions                 int
 	CandidateCount              int
 	ProbeMS                     int64
+	ReductionProposalLimit        int
+	ReductionTotalCandidateTrials int
+	ReductionWallMS               int64
 }
 
 type studySourceAdapter struct {
@@ -483,6 +526,13 @@ type studySourceSpec struct {
 }
 
 func compileStudyPlan(input studyPlanInput) (domain.WorldPlan, domain.Digest, []byte, error) {
+	proposedShrinkStimuli := input.ReductionProposalLimit
+	totalCandidateTrials := input.CandidateCount * input.Repetitions * 2
+	shrinkWallMS := int64(1000)
+	if input.ReductionProposalLimit > 0 {
+		totalCandidateTrials = input.ReductionTotalCandidateTrials
+		shrinkWallMS = input.ReductionWallMS
+	}
 	budgets := domain.Budgets{
 		CandidateCount:            input.CandidateCount,
 		MaterializedEntryCount:    16,
@@ -494,9 +544,9 @@ func compileStudyPlan(input studyPlanInput) (domain.WorldPlan, domain.Digest, []
 		StdoutBytes:               input.CapturePolicy.StdoutBytes(),
 		StderrBytes:               input.CapturePolicy.StderrBytes(),
 		HTTPBodyBytes:             64 << 10,
-		ProposedShrinkStimuli:     0,
-		TotalCandidateTrials:      input.CandidateCount * input.Repetitions * 2,
-		ShrinkWallMS:              1000,
+		ProposedShrinkStimuli:     proposedShrinkStimuli,
+		TotalCandidateTrials:      totalCandidateTrials,
+		ShrinkWallMS:              shrinkWallMS,
 	}
 	sourceIdentity := studySourceSpec{
 		SchemaVersion:               "countershape-source/v1",

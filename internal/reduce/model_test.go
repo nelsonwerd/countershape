@@ -225,11 +225,57 @@ func divergentBaseline(t *testing.T, fixture reductionFixture, stimulus domain.D
 
 func neighborFor(t *testing.T, current, next domain.Digest, measure, nextMeasure int) Neighbor {
 	t.Helper()
-	neighbor, err := NewNeighbor(current, measure, next, nextMeasure, digest(700))
+	definition := digest(690)
+	before, err := NewMeasure(definition, []uint64{uint64(measure)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	after, err := NewMeasure(definition, []uint64{uint64(nextMeasure)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rule, err := NewReducerRule("test-reducer", "v1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	set, err := NewReducerSet("test", definition, digest(699), []ReducerRule{rule})
+	if err != nil {
+		t.Fatal(err)
+	}
+	neighbor, err := NewNeighbor(NeighborInput{
+		CurrentStimulus: current, CurrentMeasure: before, Stimulus: next, Measure: after,
+		Rule: rule, Locus: "test.value", ReducerSet: set,
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	return neighbor
+}
+
+func TestNewNeighborRejectsNondecreasingMeasure(t *testing.T) {
+	definition := digest(690)
+	before, err := NewMeasure(definition, []uint64{2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	equal, err := NewMeasure(definition, []uint64{2})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rule, err := NewReducerRule("test-reducer", "v1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	set, err := NewReducerSet("test", definition, digest(699), []ReducerRule{rule})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := NewNeighbor(NeighborInput{
+		CurrentStimulus: digest(1), CurrentMeasure: before, Stimulus: digest(2), Measure: equal,
+		Rule: rule, Locus: "test.value", ReducerSet: set,
+	}); err == nil {
+		t.Fatal("equal-measure proposal was accepted as a direct reduction neighbor")
+	}
 }
 
 func TestClassifyNeighborIsTriValuedAndUsesExactMap(t *testing.T) {
@@ -267,13 +313,80 @@ func TestUnresolvedNeverCollapsesIntoChanges(t *testing.T) {
 	baseline := divergentBaseline(t, fixture, digest(1), 50)
 	evaluation, err := NewEvaluation(EvaluationInput{
 		ID: "unresolved", Baseline: baseline, Neighbor: neighborFor(t, digest(1), digest(2), 2, 1),
-		ObservedOutcomeMap: nil, UnresolvedReason: "TIMEOUT",
+		ObservedOutcomeMap: nil, UnresolvedReason: ReasonTimeout,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if evaluation.Decision() != Unresolved {
 		t.Fatalf("decision = %s, want UNRESOLVED", evaluation.Decision())
+	}
+}
+
+func TestTypedUnresolvedReasonsRetainFreshPartialEvidence(t *testing.T) {
+	fixture := newReductionFixture(t, "typed-unresolved/v1")
+	baseline := divergentBaseline(t, fixture, digest(1), 55)
+	neighbor := neighborFor(t, digest(1), digest(2), 2, 1)
+	reasons := []UnresolvedReason{
+		ReasonUnstable, ReasonIncomplete, ReasonCancelled, ReasonTimeout, ReasonStale, ReasonTeardownError,
+	}
+	for index, reason := range reasons {
+		t.Run(string(reason), func(t *testing.T) {
+			base := 90_000 + index*10
+			evidence, err := NewUnresolvedEvidence(
+				[]domain.Digest{digest(base + 1)}, []domain.Digest{digest(base + 2)},
+				[]domain.Digest{digest(base + 3)}, []domain.Digest{digest(base + 4)},
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			evaluation, err := NewEvaluation(EvaluationInput{
+				ID: "typed-unresolved:" + string(reason), Baseline: baseline, Neighbor: neighbor,
+				UnresolvedReason: reason, UnresolvedEvidence: evidence,
+			})
+			if err != nil || evaluation.Decision() != Unresolved || evaluation.ReasonCode() != string(reason) ||
+				!evaluation.LogicalNonReuseWithBaseline() || len(evaluation.ObservedBatchDigests()) != 1 ||
+				len(evaluation.ObservedAttemptDigests()) != 1 || len(evaluation.ObservedWorldDigests()) != 1 ||
+				len(evaluation.ObservedObservationDigests()) != 1 {
+				t.Fatalf("typed unresolved evidence was lost: evaluation=%#v err=%v", evaluation, err)
+			}
+		})
+	}
+
+	reused, err := NewUnresolvedEvidence(
+		baseline.OutcomeMap().BatchDigests(), baseline.OutcomeMap().EvidenceAttemptDigests(),
+		baseline.OutcomeMap().EvidenceWorldDigests(), baseline.OutcomeMap().EvidenceObservationDigests(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := NewEvaluation(EvaluationInput{
+		ID: "typed-unresolved:reused", Baseline: baseline, Neighbor: neighbor,
+		UnresolvedReason: ReasonIncomplete, UnresolvedEvidence: reused,
+	}); err == nil {
+		t.Fatal("baseline evidence was relabeled as fresh unresolved evidence")
+	}
+}
+
+func TestTerminalProtocolReasonsAreReservedFromPublicEvaluationConstruction(t *testing.T) {
+	fixture := newReductionFixture(t, "reserved-protocol-reasons/v1")
+	baseline := divergentBaseline(t, fixture, digest(1), 56)
+	neighbor := neighborFor(t, digest(1), digest(2), 2, 1)
+	for _, reason := range []UnresolvedReason{
+		ReasonEvaluatorExceededBudget,
+		ReasonObservedMapWithoutTrials,
+		ReasonUnresolvedEvidenceMissing,
+		ReasonInvalidEvaluatorResult,
+		ReasonReusedEvaluationEvidence,
+	} {
+		t.Run(string(reason), func(t *testing.T) {
+			if _, err := NewEvaluation(EvaluationInput{
+				ID: "caller-authored:" + string(reason), Baseline: baseline, Neighbor: neighbor,
+				UnresolvedReason: reason,
+			}); err == nil {
+				t.Fatal("public evaluation constructor accepted an internal protocol-refusal reason")
+			}
+		})
 	}
 }
 
@@ -288,8 +401,11 @@ func TestEvaluationBindsStimulusEnvelopeRosterAndDerivedBatches(t *testing.T) {
 		t.Fatal("observed map from another stimulus entered evaluation")
 	}
 	wrongEnvelope := candidateMap(t, otherFixture, digest(2), domain.AttemptReduction, 10, 11, 80)
-	if _, err := NewEvaluation(EvaluationInput{ID: "wrong-envelope", Baseline: baseline, Neighbor: neighbor, ObservedOutcomeMap: &wrongEnvelope}); err == nil {
-		t.Fatal("observed map from another envelope entered evaluation")
+	incomparable, err := NewEvaluation(EvaluationInput{ID: "wrong-envelope", Baseline: baseline, Neighbor: neighbor, ObservedOutcomeMap: &wrongEnvelope})
+	if err != nil || incomparable.Decision() != Unresolved ||
+		incomparable.ReasonCode() != "CANDIDATE_ELIGIBILITY_OR_ADMISSION_CHANGED" ||
+		!incomparable.LogicalNonReuseWithBaseline() {
+		t.Fatalf("incomparable map was not retained as typed unresolved evidence: %#v err=%v", incomparable, err)
 	}
 	zero := compare.CandidateOutcomeMap{}
 	if _, err := NewEvaluation(EvaluationInput{ID: "zero-map", Baseline: baseline, Neighbor: neighbor, ObservedOutcomeMap: &zero}); err == nil {
@@ -383,8 +499,8 @@ func logicalSweepInput(t *testing.T, state SweepState) LogicalSweepInput {
 	first := neighborFor(t, current, digest(20), 2, 1)
 	second := neighborFor(t, current, digest(21), 2, 1)
 	return LogicalSweepInput{
-		State: state, Baseline: baseline, CurrentStimulus: current, CurrentMeasure: 2,
-		ReducerSetDigest: digest(700), EnumeratedNeighbors: []Neighbor{second, first},
+		State: state, Baseline: baseline, CurrentStimulus: current, CurrentMeasure: first.CurrentMeasure(),
+		ReducerSetDigest: first.ReducerSetDigest(), EnumeratedNeighbors: []Neighbor{second, first},
 		Evaluations: []Evaluation{
 			changedEvaluation(t, "eval:second", fixture, baseline, second, 120, true),
 			changedEvaluation(t, "eval:first", fixture, baseline, first, 130, true),
@@ -431,8 +547,8 @@ func TestLogicalCompleteSweepRequiresFinalSweepPurposeAndGlobalEvidenceUniquenes
 	firstEvaluation := changedEvaluation(t, "reuse:first", fixture, baseline, first, 510, true)
 	secondEvaluation := changedEvaluation(t, "reuse:second", fixture, baseline, second, 510, true)
 	if _, err := NewLogicalCompleteSweep(LogicalSweepInput{
-		State: SweepComplete, Baseline: baseline, CurrentStimulus: current, CurrentMeasure: 2,
-		ReducerSetDigest: digest(700), EnumeratedNeighbors: []Neighbor{first, second},
+		State: SweepComplete, Baseline: baseline, CurrentStimulus: current, CurrentMeasure: first.CurrentMeasure(),
+		ReducerSetDigest: first.ReducerSetDigest(), EnumeratedNeighbors: []Neighbor{first, second},
 		Evaluations: []Evaluation{firstEvaluation, secondEvaluation},
 	}); err == nil {
 		t.Fatal("cross-neighbor attempt reuse entered logical final completion")
@@ -454,20 +570,51 @@ func FuzzNeighborMeasureAndUnresolvedStaySafe(f *testing.F) {
 	f.Fuzz(func(t *testing.T, currentByte, nextByte uint8) {
 		currentMeasure := int(currentByte % 8)
 		nextMeasure := int(nextByte % 8)
-		neighbor, err := NewNeighbor(digest(1), currentMeasure, digest(2), nextMeasure, digest(700))
-		if err != nil {
+		if currentMeasure <= nextMeasure {
 			return
 		}
-		if neighbor.Measure() >= neighbor.CurrentMeasure() {
+		neighbor := neighborFor(t, digest(1), digest(2), currentMeasure, nextMeasure)
+		comparison, err := neighbor.Measure().Compare(neighbor.CurrentMeasure())
+		if err != nil || comparison >= 0 {
 			t.Fatal("constructed nondecreasing neighbor")
 		}
 		fixture := newReductionFixture(t, "fuzz/v1")
 		baseline := divergentBaseline(t, fixture, digest(1), 200)
 		evaluation, err := NewEvaluation(EvaluationInput{
-			ID: "fuzz", Baseline: baseline, Neighbor: neighbor, UnresolvedReason: "NO_OBSERVATION",
+			ID: "fuzz", Baseline: baseline, Neighbor: neighbor, UnresolvedReason: ReasonNoObservation,
 		})
 		if err != nil || evaluation.Decision() != Unresolved {
 			t.Fatalf("nil observation = %#v, %v", evaluation, err)
 		}
 	})
+}
+
+func TestLogicalCompleteSweepAllowsDurablyMeaningfulEmptyEnumeration(t *testing.T) {
+	fixture := newReductionFixture(t, "empty-sweep/v1")
+	current := digest(1)
+	baseline := divergentBaseline(t, fixture, current, 600)
+	definition := digest(690)
+	measure, err := NewMeasure(definition, []uint64{0, 0})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rule, err := NewReducerRule("test-reducer", "v1")
+	if err != nil {
+		t.Fatal(err)
+	}
+	set, err := NewReducerSet("test", definition, digest(699), []ReducerRule{rule})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sweep, err := NewLogicalCompleteSweep(LogicalSweepInput{
+		State: SweepComplete, Baseline: baseline, CurrentStimulus: current,
+		CurrentMeasure: measure, ReducerSetDigest: set.Digest(),
+		EnumeratedNeighbors: []Neighbor{}, Evaluations: []Evaluation{},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(sweep.NeighborDigests()) != 0 || sweep.CurrentMeasure().Digest() != measure.Digest() {
+		t.Fatal("empty completed enumeration lost exact binding")
+	}
 }

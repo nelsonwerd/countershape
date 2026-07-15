@@ -735,13 +735,21 @@ func statusForRole(t *testing.T, result StudyResult, role httpfixture.CandidateR
 
 func referenceConfig(t *testing.T) Config {
 	t.Helper()
-	git, err := exec.LookPath("git")
+	gitPath, err := exec.LookPath("git")
 	if err != nil {
 		t.Skip("Git is not installed")
 	}
-	node, err := exec.LookPath("node")
+	git, err := filepath.EvalSymlinks(gitPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	nodePath, err := exec.LookPath("node")
 	if err != nil {
 		t.Skip("Node is not installed")
+	}
+	node, err := filepath.EvalSymlinks(nodePath)
+	if err != nil {
+		t.Fatal(err)
 	}
 	return DefaultConfig(t.TempDir(), git, node)
 }

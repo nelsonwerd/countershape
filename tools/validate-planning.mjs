@@ -23,6 +23,9 @@ const OBJECTS = [
   ["StableBatch", "stable-batch", "stable-batch"],
   ["CandidateOutcomeMap", "outcome-map", "outcome-map"],
   ["ReductionRun", "reduction-run", "reduction-run"],
+  ["ReductionTranscript", "reduction-transcript", "reduction-transcript"],
+  ["CompletedSweepDraft", "completed-sweep-draft", "completed-sweep-draft"],
+  ["ReductionGrade", "reduction-grade", "reduction-grade"],
   ["Choicepoint", "choicepoint", "choicepoint"],
   ["DecisionRecord", "decision-record", "decision-record"],
   ["ContractBundle", "contract-bundle", "contract-bundle"],
@@ -45,6 +48,9 @@ const EXACT_OBJECT_CONTRACT = Object.freeze([
   "StableBatch|stable-batch|stable-batch",
   "CandidateOutcomeMap|outcome-map|outcome-map",
   "ReductionRun|reduction-run|reduction-run",
+  "ReductionTranscript|reduction-transcript|reduction-transcript",
+  "CompletedSweepDraft|completed-sweep-draft|completed-sweep-draft",
+  "ReductionGrade|reduction-grade|reduction-grade",
   "Choicepoint|choicepoint|choicepoint",
   "DecisionRecord|decision-record|decision-record",
   "ContractBundle|contract-bundle|contract-bundle",
@@ -56,7 +62,7 @@ if (
   actualObjectContract.length !== EXACT_OBJECT_CONTRACT.length
   || actualObjectContract.some((entry, index) => entry !== EXACT_OBJECT_CONTRACT[index])
 ) {
-  throw new Error("planning object contract drifted from the exact 16-object obligation");
+  throw new Error("planning object contract drifted from the exact 19-object obligation");
 }
 
 const REQUIRED_SCHEMA_FILES = [
@@ -94,12 +100,10 @@ const ENUM_GROUP_BINDINGS = new Map([
     { schema: "stable-batch.schema.json", pointer: "#/properties/classification/oneOf/3/properties/status" },
   ]],
   ["reduction decision", [
-    { schema: "reduction-run.schema.json", pointer: "#/properties/evaluations/items/properties/decision" },
+    { schema: "reduction-transcript.schema.json", pointer: "#/$defs/EvaluationEntry/properties/decision" },
   ]],
   ["reduction grade", [
-    { schema: "reduction-run.schema.json", pointer: "#/properties/grade/oneOf/0/properties/status" },
-    { schema: "reduction-run.schema.json", pointer: "#/properties/grade/oneOf/1/properties/status" },
-    { schema: "reduction-run.schema.json", pointer: "#/properties/grade/oneOf/2/properties/status" },
+    { schema: "reduction-grade.schema.json", pointer: "#/properties/status" },
   ]],
   ["decision action", [
     { schema: "decision-record.schema.json", pointer: "#/properties/action" },
@@ -1607,6 +1611,55 @@ const SELF_TESTS = [
     id: "unresolved-boolean-collapse",
     expectedCode: "ENUM_TERM_MISSING",
     mutate: collapseUnresolved,
+  },
+  {
+    id: "reduction-run-strong-grade-smuggling",
+    expectedCode: "EXAMPLE_SCHEMA_VALIDATION",
+    mutate(root) {
+      const file = path.join(root, "spec/examples/v1/reduction-run.valid.json");
+      rewriteJsonObject(file, (value) => {
+        if (value.grade !== "BEST_KNOWN") throw new Error("self-test mutation anchor is absent: weak ReductionRun grade");
+        value.grade = "ONE_MINIMAL_UNDER";
+      });
+    },
+  },
+  {
+    id: "reduction-grade-missing-completed-sweep",
+    expectedCode: "EXAMPLE_SCHEMA_VALIDATION",
+    mutate(root) {
+      const file = path.join(root, "spec/examples/v1/reduction-grade.valid.json");
+      rewriteJsonObject(file, (value) => {
+        if (value.status !== "ONE_MINIMAL_UNDER" || typeof value.completed_sweep_digest !== "string") {
+          throw new Error("self-test mutation anchor is absent: strong ReductionGrade completion");
+        }
+        value.completed_sweep_digest = "";
+      });
+    },
+  },
+  {
+    id: "completed-sweep-cancelled-smuggling",
+    expectedCode: "EXAMPLE_SCHEMA_VALIDATION",
+    mutate(root) {
+      const file = path.join(root, "spec/examples/v1/completed-sweep-draft.valid.json");
+      rewriteJsonObject(file, (value) => {
+        if (value.cancelled !== false) throw new Error("self-test mutation anchor is absent: completed sweep cancellation flag");
+        value.cancelled = true;
+      });
+    },
+  },
+  {
+    id: "reduction-transcript-partial-map-digests",
+    expectedCode: "EXAMPLE_SCHEMA_VALIDATION",
+    mutate(root) {
+      const file = path.join(root, "spec/examples/v1/reduction-transcript.valid.json");
+      rewriteJsonObject(file, (value) => {
+        const entry = value.entries?.[0];
+        if (entry?.decision !== "PRESERVES" || typeof entry.observed_preservation_map_digest !== "string") {
+          throw new Error("self-test mutation anchor is absent: observed transcript map pair");
+        }
+        entry.observed_preservation_map_digest = "";
+      });
+    },
   },
   {
     id: "symlink-acceptance",

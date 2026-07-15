@@ -1,0 +1,19 @@
+{
+  "schema_version": "countershape/v1",
+  "kind": "CompletedSweepDraft",
+  "run_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "transcript_digest": "sha256:a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0",
+  "baseline_outcome_map_digest": "sha256:c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0",
+  "baseline_preservation_map_digest": "sha256:2020202020202020202020202020202020202020202020202020202020202020",
+  "current_stimulus_digest": "sha256:4040404040404040404040404040404040404040404040404040404040404040",
+  "current_measure_definition_digest": "sha256:8080808080808080808080808080808080808080808080808080808080808080",
+  "current_measure_components": [1, 1],
+  "current_measure_digest": "sha256:6060606060606060606060606060606060606060606060606060606060606060",
+  "reducer_set_digest": "sha256:7070707070707070707070707070707070707070707070707070707070707070",
+  "enumeration_completed": true,
+  "cancelled": false,
+  "budget_exhausted": false,
+  "baseline_stale": false,
+  "enumerated_neighbor_digests": [],
+  "evaluations": []
+}

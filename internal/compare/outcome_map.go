@@ -33,11 +33,27 @@ func (d OutcomeArtifactDigest) Valid() bool                 { return d.digest.Va
 func (d OutcomeArtifactDigest) String() string              { return d.digest.String() }
 func (d OutcomeArtifactDigest) DomainDigest() domain.Digest { return d.digest }
 
+func ParseOutcomeArtifactDigest(raw string) (OutcomeArtifactDigest, error) {
+	digest, err := domain.ParseDigest(raw)
+	if err != nil {
+		return OutcomeArtifactDigest{}, err
+	}
+	return OutcomeArtifactDigest{digest: digest}, nil
+}
+
 type PreservationMapDigest struct{ digest domain.Digest }
 
 func (d PreservationMapDigest) Valid() bool                 { return d.digest.Valid() }
 func (d PreservationMapDigest) String() string              { return d.digest.String() }
 func (d PreservationMapDigest) DomainDigest() domain.Digest { return d.digest }
+
+func ParsePreservationMapDigest(raw string) (PreservationMapDigest, error) {
+	digest, err := domain.ParseDigest(raw)
+	if err != nil {
+		return PreservationMapDigest{}, err
+	}
+	return PreservationMapDigest{digest: digest}, nil
+}
 
 // CandidateOutcomeMap covers exactly one declared candidate roster. It may be
 // nondivergent or contain exclusions; a separate DivergentBaseline authority
@@ -564,6 +580,66 @@ func SamePreservationMap(left, right CandidateOutcomeMap) bool {
 		left.preservationDigest.Valid() && left.preservationDigest == right.preservationDigest
 }
 
+type PreservationRelation string
+
+const (
+	PreservationUnresolved PreservationRelation = "UNRESOLVED"
+	PreservationEqual      PreservationRelation = "PRESERVES"
+	PreservationDifferent  PreservationRelation = "CHANGES"
+)
+
+// PreservationAssessment is the opaque comparability-first result consumed
+// by the reducer. It binds both full evidence-bearing maps as well as the exact
+// labeled-map digests; callers cannot manufacture it from a naked digest.
+type PreservationAssessment struct {
+	relation             PreservationRelation
+	reasonCode           string
+	baselineArtifact     OutcomeArtifactDigest
+	observedArtifact     OutcomeArtifactDigest
+	baselinePreservation PreservationMapDigest
+	observedPreservation PreservationMapDigest
+}
+
+func AssessPreservation(baseline, observed CandidateOutcomeMap) PreservationAssessment {
+	assessment := PreservationAssessment{
+		relation: PreservationUnresolved, reasonCode: "CANDIDATE_ELIGIBILITY_OR_ADMISSION_CHANGED",
+		baselineArtifact: baseline.artifactDigest, observedArtifact: observed.artifactDigest,
+		baselinePreservation: baseline.preservationDigest, observedPreservation: observed.preservationDigest,
+	}
+	if !ComparableForPreservation(baseline, observed) {
+		return assessment
+	}
+	if baseline.preservationDigest.Valid() && baseline.preservationDigest == observed.preservationDigest {
+		assessment.relation = PreservationEqual
+		assessment.reasonCode = "EXACT_PRESERVATION_MAP_MATCH"
+		return assessment
+	}
+	assessment.relation = PreservationDifferent
+	assessment.reasonCode = "EXACT_PRESERVATION_MAP_CHANGED"
+	return assessment
+}
+
+func (a PreservationAssessment) Valid() bool {
+	return a.baselineArtifact.Valid() && a.observedArtifact.Valid() &&
+		a.baselinePreservation.Valid() && a.observedPreservation.Valid() &&
+		(a.relation == PreservationUnresolved || a.relation == PreservationEqual || a.relation == PreservationDifferent) &&
+		a.reasonCode != ""
+}
+func (a PreservationAssessment) Relation() PreservationRelation { return a.relation }
+func (a PreservationAssessment) ReasonCode() string             { return a.reasonCode }
+func (a PreservationAssessment) BaselineArtifactDigest() OutcomeArtifactDigest {
+	return a.baselineArtifact
+}
+func (a PreservationAssessment) ObservedArtifactDigest() OutcomeArtifactDigest {
+	return a.observedArtifact
+}
+func (a PreservationAssessment) BaselinePreservationDigest() PreservationMapDigest {
+	return a.baselinePreservation
+}
+func (a PreservationAssessment) ObservedPreservationDigest() PreservationMapDigest {
+	return a.observedPreservation
+}
+
 // ComparableForPreservation requires the same policy, exact expected roster,
 // and the same eligible/excluded candidate disposition. A changed eligibility
 // set is UNRESOLVED, not a different product outcome.
@@ -572,7 +648,6 @@ func ComparableForPreservation(baseline, observed CandidateOutcomeMap) bool {
 		baseline.planDigest != observed.planDigest ||
 		baseline.comparisonEnvelopeDigest != observed.comparisonEnvelopeDigest ||
 		baseline.comparisonBasisDigest != observed.comparisonBasisDigest ||
-		baseline.scheduleDigest != observed.scheduleDigest || baseline.rotation != observed.rotation ||
 		!sameRoster(baseline.roster, observed.roster) || len(baseline.entries) != len(observed.entries) ||
 		len(baseline.exclusions) != len(observed.exclusions) {
 		return false

@@ -1,0 +1,74 @@
+{
+  "schema_version": "countershape/v1",
+  "kind": "ReductionTranscript",
+  "reducer_set_digest": "sha256:7070707070707070707070707070707070707070707070707070707070707070",
+  "measure_definition_digest": "sha256:8080808080808080808080808080808080808080808080808080808080808080",
+  "scope_digest": "sha256:9090909090909090909090909090909090909090909090909090909090909090",
+  "baseline_outcome_map_digest": "sha256:a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0",
+  "baseline_preservation_map_digest": "sha256:a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1a1",
+  "baseline_batch_digests": [
+    "sha256:0101010101010101010101010101010101010101010101010101010101010101",
+    "sha256:0202020202020202020202020202020202020202020202020202020202020202"
+  ],
+  "baseline_attempt_digests": [
+    "sha256:0303030303030303030303030303030303030303030303030303030303030303",
+    "sha256:0404040404040404040404040404040404040404040404040404040404040404"
+  ],
+  "baseline_world_digests": [
+    "sha256:0505050505050505050505050505050505050505050505050505050505050505",
+    "sha256:0606060606060606060606060606060606060606060606060606060606060606"
+  ],
+  "baseline_observation_digests": [
+    "sha256:0707070707070707070707070707070707070707070707070707070707070707",
+    "sha256:0808080808080808080808080808080808080808080808080808080808080808"
+  ],
+  "proposal_limit": 10,
+  "candidate_trial_limit": 20,
+  "wall_limit_ms": 60000,
+  "entries": [
+    {
+      "evaluation_id": "eval:000001-reduction",
+      "proposal_digest": "sha256:b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0",
+      "parent_stimulus_digest": "sha256:3030303030303030303030303030303030303030303030303030303030303030",
+      "neighbor_stimulus_digest": "sha256:4040404040404040404040404040404040404040404040404040404040404040",
+      "before_measure_digest": "sha256:5050505050505050505050505050505050505050505050505050505050505050",
+      "before_measure_components": [2, 2],
+      "after_measure_digest": "sha256:6060606060606060606060606060606060606060606060606060606060606060",
+      "after_measure_components": [1, 1],
+      "rule_name": "drop-noise",
+      "rule_version": "v1",
+      "locus": "fixture.noise",
+      "transform_priority": 0,
+      "purpose": "REDUCTION",
+      "decision": "PRESERVES",
+      "reason_code": "EXACT_PRESERVATION_MAP_MATCH",
+      "observed_outcome_map_digest": "sha256:c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0c0",
+      "observed_preservation_map_digest": "sha256:2020202020202020202020202020202020202020202020202020202020202020",
+      "batch_digests": [
+        "sha256:b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1",
+        "sha256:b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2"
+      ],
+      "attempt_digests": [
+        "sha256:d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1",
+        "sha256:d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2"
+      ],
+      "world_digests": [
+        "sha256:e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1",
+        "sha256:e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2"
+      ],
+      "observation_digests": [
+        "sha256:f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1",
+        "sha256:f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2"
+      ],
+      "proposal_count": 1,
+      "total_candidate_trials": 2,
+      "candidate_trials": 2
+    }
+  ],
+  "accepted_proposal_digests": [
+    "sha256:b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0"
+  ],
+  "limitations": [],
+  "final_sweep_state": "COMPLETE",
+  "final_neighbor_digests": []
+}
