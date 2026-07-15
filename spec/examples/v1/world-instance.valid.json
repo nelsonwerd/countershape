@@ -3,53 +3,11 @@
   "kind": "WorldInstance",
   "artifact_digest": "sha256:9999999999999999999999999999999999999999999999999999999999999999",
   "world_plan_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
-  "candidate_execution_key": "candidate:http-b",
-  "attempt_id": "attempt:confirmation-b-0",
-  "attempt_phase": "CONFIRMATION",
+  "candidate_execution_key": "candidate:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "candidate_execution_binding_digest": "sha256:abababababababababababababababababababababababababababababababab",
+  "stimulus_digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
   "attempt_artifact_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "attempt_purpose": "CONFIRMATION",
   "instance_nonce": "0123456789abcdef0123456789abcdef",
-  "roots": {
-    "materialized": "/private/tmp/countershape/confirmation-b-0/tree",
-    "home": "/private/tmp/countershape/confirmation-b-0/home",
-    "tmp": "/private/tmp/countershape/confirmation-b-0/tmp",
-    "state": "/private/tmp/countershape/confirmation-b-0/state",
-    "mode": "0700"
-  },
-  "allocated_resources": {
-    "loopback_port": 43127
-  },
-  "platform": {
-    "os": "darwin",
-    "architecture": "arm64",
-    "kernel": "Darwin",
-    "filesystem": "apfs"
-  },
-  "resolved_tools": [
-    {
-      "name": "node",
-      "path": "/opt/homebrew/bin/node",
-      "version": "v25.2.1",
-      "binary_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
-    }
-  ],
-  "schedule_ordinal": 5,
-  "uncontrolled_dimensions": ["scheduler timing", "ambient kernel state"],
-  "process_lifecycle": {
-    "state": "FINALIZED",
-    "process_group_id": 48001,
-    "direct_child_pid": 48001,
-    "started_monotonic_ns": 100000000,
-    "finished_monotonic_ns": 101500000
-  },
-  "invocation_evidence_digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
-  "teardown": {
-    "status": "SUCCEEDED",
-    "group_probe": "NO_PROCESS_FOUND"
-  },
-  "envelope_admission": {
-    "comparison_envelope_digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
-    "status": "ADMITTED",
-    "reason_codes": []
-  },
-  "evidence_reuse": "NONE"
+  "schedule_ordinal": 5
 }

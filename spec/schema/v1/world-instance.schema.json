@@ -2,14 +2,13 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://countershape.dev/spec/schema/v1/world-instance.schema.json",
   "title": "Countershape WorldInstance v1",
-  "description": "Measured evidence for one physically new attempt. A WorldInstance never upgrades a declared envelope to behavioral compatibility.",
+  "description": "Structural declared-consistency identity for one attempt. It binds plan, opaque candidate binding, stimulus, attempt, purpose, nonce, and ordinal; it contains no caller-selected admission and establishes no host truth or physical freshness.",
   "type": "object",
   "additionalProperties": false,
   "required": [
     "schema_version", "kind", "artifact_digest", "world_plan_digest", "candidate_execution_key",
-    "attempt_id", "attempt_phase", "attempt_artifact_digest", "instance_nonce", "roots", "allocated_resources",
-    "platform", "resolved_tools", "schedule_ordinal", "uncontrolled_dimensions", "process_lifecycle",
-    "invocation_evidence_digest", "teardown", "envelope_admission", "evidence_reuse"
+    "candidate_execution_binding_digest", "stimulus_digest", "attempt_artifact_digest",
+    "attempt_purpose", "instance_nonce", "schedule_ordinal"
   ],
   "properties": {
     "schema_version": { "const": "countershape/v1" },
@@ -17,101 +16,11 @@
     "artifact_digest": { "$ref": "common.schema.json#/$defs/Digest" },
     "world_plan_digest": { "$ref": "common.schema.json#/$defs/Digest" },
     "candidate_execution_key": { "$ref": "common.schema.json#/$defs/CandidateExecutionKey" },
-    "attempt_id": { "type": "string", "pattern": "^attempt:[a-z0-9][a-z0-9._-]{0,127}$" },
-    "attempt_phase": { "enum": ["DISCOVERY", "REDUCTION", "FINAL_SWEEP", "CONFIRMATION", "CONFORMANCE"] },
+    "candidate_execution_binding_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "stimulus_digest": { "$ref": "common.schema.json#/$defs/Digest" },
     "attempt_artifact_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "attempt_purpose": { "$ref": "common.schema.json#/$defs/AttemptPurpose" },
     "instance_nonce": { "type": "string", "pattern": "^[0-9a-f]{32,128}$" },
-    "roots": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["materialized", "home", "tmp", "state", "mode"],
-      "properties": {
-        "materialized": { "type": "string", "minLength": 1 },
-        "home": { "type": "string", "minLength": 1 },
-        "tmp": { "type": "string", "minLength": 1 },
-        "state": { "type": "string", "minLength": 1 },
-        "mode": { "const": "0700" }
-      }
-    },
-    "allocated_resources": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["loopback_port"],
-      "properties": {
-        "loopback_port": {
-          "oneOf": [
-            { "type": "integer", "minimum": 1, "maximum": 65535 },
-            { "type": "null" }
-          ]
-        }
-      }
-    },
-    "platform": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["os", "architecture", "kernel", "filesystem"],
-      "properties": {
-        "os": { "enum": ["darwin", "linux", "windows", "other"] },
-        "architecture": { "type": "string", "minLength": 1 },
-        "kernel": { "type": "string", "minLength": 1 },
-        "filesystem": { "type": "string", "minLength": 1 }
-      }
-    },
-    "resolved_tools": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["name", "path", "version", "binary_digest"],
-        "properties": {
-          "name": { "type": "string", "minLength": 1 },
-          "path": { "type": "string", "minLength": 1 },
-          "version": { "type": "string", "minLength": 1 },
-          "binary_digest": { "$ref": "common.schema.json#/$defs/Digest" }
-        }
-      }
-    },
-    "schedule_ordinal": { "type": "integer", "minimum": 0 },
-    "uncontrolled_dimensions": {
-      "type": "array",
-      "minItems": 1,
-      "items": { "type": "string", "minLength": 1 }
-    },
-    "process_lifecycle": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["state", "process_group_id", "direct_child_pid", "started_monotonic_ns", "finished_monotonic_ns"],
-      "properties": {
-        "state": { "enum": ["FINALIZED", "CONTROL_TERMINATED"] },
-        "process_group_id": { "type": "integer", "minimum": 1 },
-        "direct_child_pid": { "type": "integer", "minimum": 1 },
-        "started_monotonic_ns": { "type": "integer", "minimum": 0 },
-        "finished_monotonic_ns": { "type": "integer", "minimum": 0 }
-      }
-    },
-    "invocation_evidence_digest": { "$ref": "common.schema.json#/$defs/Digest" },
-    "teardown": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["status", "group_probe"],
-      "properties": {
-        "status": { "enum": ["SUCCEEDED", "ORPHAN_RISK", "FAILED"] },
-        "group_probe": { "enum": ["NO_PROCESS_FOUND", "PROCESS_REMAINS", "UNKNOWN"] }
-      }
-    },
-    "envelope_admission": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["comparison_envelope_digest", "status", "reason_codes"],
-      "properties": {
-        "comparison_envelope_digest": { "$ref": "common.schema.json#/$defs/Digest" },
-        "status": { "enum": ["ADMITTED", "REJECTED"] },
-        "reason_codes": {
-          "type": "array",
-          "items": { "type": "string", "minLength": 1 }
-        }
-      }
-    },
-    "evidence_reuse": { "const": "NONE" }
+    "schedule_ordinal": { "type": "integer", "minimum": 0 }
   }
 }

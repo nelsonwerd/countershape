@@ -72,7 +72,7 @@
       "minItems": 1,
       "items": { "type": "string", "minLength": 1 }
     },
-    "admission_claim": { "const": "INSTANCES_ADMITTED_BY_DECLARED_ENVELOPE" },
+    "admission_claim": { "const": "MEASURED_ASSESSMENT_ONLY" },
     "behavioral_compatibility_established": { "const": false },
     "placeholder_control_flow_irrelevance_established": { "const": false }
   }

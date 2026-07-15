@@ -2,7 +2,7 @@
 
 - **Contract version:** U0 / `state-machines-v1`
 - **Target:** narrowed Darwin reference instrument
-- **Status:** normative transition contract; implementation is `UNRECEIPTED`
+- **Status:** normative transition contract; U1 pure-constructor command receipts are enumerated in `status/U1.md`, while edge execution, persistence, and product transitions remain `UNRECEIPTED`
 
 Countershape state is a set of immutable semantic artifacts connected by validated transitions. State names are not presentation copy. The Go domain model, JSON schemas, API DTOs, CLI, studio, generated residue, examples, and tests must agree on these names and preconditions.
 
@@ -29,6 +29,9 @@ The happy-path semantic lineage is:
 SOURCE_SPEC
   -> COMPILED_PLAN
   -> MATERIALIZED_CANDIDATE_SET
+  -> STRUCTURAL_WORLD_INSTANCES
+  -> INSTANCE_MEASUREMENTS
+  -> COMPARISON_ADMISSION | REJECTED_COMPARISON
   -> BASELINE_OBSERVATION
   -> DIVERGENCE
   -> REDUCTION_RESULT
@@ -45,9 +48,9 @@ Each name denotes a distinct immutable object kind, not a mutable phase field.
 | --- | --- | --- | --- |
 | `SOURCE_SPEC` | `COMPILED_PLAN` | inert spec parses strictly; every default/budget is materialized; adapter and projection profiles are supported | typed spec refusal |
 | `COMPILED_PLAN` | `MATERIALIZED_CANDIDATE_SET` | 2–4 refs pin to supported immutable trees; every required blob is verified; no candidate slot ambiguity | typed source/materialization refusal |
-| `MATERIALIZED_CANDIDATE_SET` | `BASELINE_OBSERVATION` | all required fresh batches reach an honest classification under one envelope | partial/control artifacts; no baseline |
+| `MATERIALIZED_CANDIDATE_SET` | `BASELINE_OBSERVATION` | opaque bindings plus matching plans allocate structural worlds; complete measurement matrices are admitted; peer candidate batches share the exact per-repetition admission set; all required batches reach an honest classification | rejected comparison, partial/control artifacts; no token, batch, or baseline as applicable |
 | `BASELINE_OBSERVATION` | `DIVERGENCE` | at least two eligible candidates are `OBSERVED_STABLE(k/k,h)` and at least two fingerprints exist | no-divergence disposition |
-| `DIVERGENCE` | `REDUCTION_RESULT` | typed reducer has a decreasing measure; all accepted proposals preserve the exact baseline map; grade construction succeeds | cancelled/partial/best available grade according to rules |
+| `DIVERGENCE` | `REDUCTION_RESULT` | typed reducer has a decreasing measure; every accepted proposal passes full-map comparability and preserves the exact eligible labeled map; U5 grade construction succeeds | cancelled/partial/best available grade according to rules |
 | `REDUCTION_RESULT` | `FRESH_CONFIRMATION` | new attempts, roots, process lifecycles, invocation evidence, and rotated schedule reproduce the exact minimized map | confirmation refusal |
 | `FRESH_CONFIRMATION` | `CHOICEPOINT_READY` | all candidates included in the map remain eligible; confirmation map equals reduction baseline map; all semantic ancestors are current | stale/ineligible Choicepoint draft |
 | `CHOICEPOINT_READY` | `RULING` | authenticated human protocol completes against current digest; action and selected/context fields are valid | deferred/refine/nonadvancing or typed decision refusal |
@@ -143,7 +146,7 @@ phase == FINALIZED
 trial_control == BEHAVIOR_CAPTURED
 required_capture == COMPLETE
 teardown == CLEAN
-comparison_envelope == ADMITTED
+admission_token == PRESENT_FROM_ASSESS_COMPARISON
 ```
 
 Every other finalized attempt is ineligible. `FINALIZED` means the attempt record is complete; it does not mean the candidate passed.
@@ -152,7 +155,7 @@ Illegal attempt transitions include starting before materialization verification
 
 ## Stable-batch and candidate-eligibility state machine
 
-For one candidate execution key, stimulus, envelope, repeat policy, and schedule:
+For one candidate binding/key, plan, stimulus, envelope, stimulus-independent comparison basis, exact admission roster, ordered per-repetition admission-digest set, repeat policy, purpose, and schedule:
 
 ```text
 BATCH_CREATED
@@ -163,20 +166,25 @@ BATCH_CREATED
 
 The batch schedules exactly `k` required new trials within declared budgets. Classification is construction-safe and mutually exclusive:
 
-1. `UNCOMPARABLE(reasons)` if the tree/envelope is ineligible or any required attempted trial has a detected ineligible control/projection result.
+1. `UNCOMPARABLE(reasons)` if an already-admitted required trial has a detected source/control/projection result that cannot contribute. Envelope/matrix rejection happened earlier and cannot create a batch.
 2. `UNSTABLE(histogram)` as soon as at least two eligible fingerprints have occurred and no ineligible control has taken precedence. Every trial actually run remains in the histogram; the batch need not spend the remaining repeat budget merely to establish finite disagreement.
 3. `INCOMPLETE` if the budget/cancellation ends before `k` eligible trials, only one eligible fingerprint has occurred, and no stronger explicit source/envelope/control refusal already determines `UNCOMPARABLE`.
 4. `OBSERVED_STABLE(k/k,h)` if exactly `k` required new trials are eligible and every fingerprint is `h`.
 
-The classification records every attempt, so a UI cannot hide a control or incomplete trial behind an aggregate. Extra opportunistic trials do not repair a failed required batch; a new repeat policy creates a new batch.
+Before `BATCH_CREATED`, `AssessComparison` must have persisted one admission matrix per repetition. A rejected matrix is terminal for that study path and produces no row token or batch. The classification records every tagged captured-or-controlled trial, so a UI cannot hide a control or incomplete trial behind an aggregate. Extra opportunistic trials do not repair a failed required batch; a new repeat policy creates a new batch.
 
-Only `OBSERVED_STABLE(k/k,h)` candidates enter an `OutcomeMap`. The others remain explicitly excluded with their classification and reasons. `OutcomeMap` construction requires:
+Only `OBSERVED_STABLE(k/k,h)` candidates enter a `CandidateOutcomeMap`. The others remain explicitly excluded with their classification and reasons. Construction requires:
 
 ```text
 eligible_candidate_count >= 2
-distinct_projection_fingerprint_count >= 2
+entries union exclusions == exact expected candidate roster
 one canonical sorted candidate_execution_key -> projection_fingerprint map
+same ordered comparison_admission_digest set in every candidate batch
+globally unique world_instance_digest and attempt_artifact_digest evidence
+plan + comparison_basis + phase bound explicitly
 ```
+
+A nondivergent neighbor may still construct a `CandidateOutcomeMap` so the comparability-first reduction operation can classify a collapsed split as `CHANGES`. Entering the baseline divergence/Choicepoint path requires the sealed `DivergentBaseline` refinement with `distinct_projection_fingerprint_count >= 2`. Rejecting a comparable nondivergent map at base construction would misclassify a real collapse as `UNRESOLVED`.
 
 Candidate label/order/producer/support does not enter the map digest. Display groups are recomputed views and cannot cross back into semantic input.
 
@@ -207,7 +215,7 @@ REDUCTION_CREATED
   -> GRADED
 ```
 
-`BASELINE_BOUND` fixes the exact baseline `OutcomeMap`, original stimulus, reducer-set digest, strictly decreasing measure, budgets, and candidate set. They cannot change in place.
+`BASELINE_BOUND` fixes the full typed baseline `CandidateOutcomeMap`, original stimulus, plan, envelope, stimulus-independent comparison basis, reducer-set digest, strictly decreasing measure, budgets, exact candidate roster, eligible set, and exclusions. It retains the baseline preservation digest as a derived value, not a standalone predicate. Concrete admission matrices and purpose change for each newly measured neighbor; requiring their artifact digests to equal the baseline would be a category error.
 
 Each proposed neighbor has its own state:
 
@@ -218,7 +226,7 @@ PROPOSED
   -> PRESERVES | CHANGES | UNRESOLVED
 ```
 
-An invalid or nondecreasing proposal is recorded as `REJECTED_NEIGHBOR` and never executes. A proposal is accepted into the path only from `PRESERVES`. `CHANGES` and `UNRESOLVED` are never interchangeable.
+An invalid or nondecreasing proposal is recorded as `REJECTED_NEIGHBOR` and never executes. After execution, compare full typed maps first. A plan, envelope, comparison-basis, roster, eligibility, or exclusion mismatch is `UNRESOLVED`; comparable maps with equal exact eligible labeled-map digests are `PRESERVES`, and comparable maps with different digests are `CHANGES`. A proposal is accepted into the path only from `PRESERVES`. `CHANGES` and `UNRESOLVED` are never interchangeable, and a naked digest never chooses among them.
 
 Grade construction is exact:
 
@@ -230,7 +238,9 @@ Grade construction is exact:
 
 If no smaller proposal was accepted and the run is partial/unresolved, the truthful grade is `UNCHANGED` with transcript/budget limitations; it is not promoted to `BEST_KNOWN` merely to sound more informative.
 
-The following edges to `ONE_MINIMAL_UNDER(...)` are illegal: from `SEARCHING`; from an incomplete/cancelled sweep; with an exhausted budget before durable completion; with any `UNRESOLVED` neighbor; with a stale baseline; with changed candidate eligibility; with an execution reused from another evaluation; or when only display-group shape was compared.
+The following edges to `ONE_MINIMAL_UNDER(...)` are illegal: from `SEARCHING`; from an incomplete/cancelled sweep; with an exhausted budget before durable completion; with any `UNRESOLVED` neighbor; with a stale baseline; with changed candidate eligibility; with an execution reused from another evaluation; when only display-group shape or a naked digest was compared; or when concrete admission matrices were incorrectly required to match across different stimuli/phases.
+
+U1 can model logical proposals, evaluations, and sweep completeness, but cannot construct this proof-bearing grade. U5 adds the durable store and the only constructor that can consume its completion authority. A caller-authored boolean, digest, or list is never a substitute for that authority.
 
 ## Fresh-confirmation state machine
 
@@ -240,7 +250,7 @@ CONFIRMATION_NOT_STARTED
   -> CONFIRMED_EXACT_MAP | CONFIRMATION_REFUSED(reason)
 ```
 
-Entry requires a graded reduction result. Each trial must reference an attempt artifact created before spawn, new private roots, a new process lifecycle, fixture-observed invocation evidence outside the selected predicate, and a candidate schedule rotated from discovery/reduction. The exact minimized `OutcomeMap` must be recreated from `OBSERVED_STABLE(k/k,h)` batches.
+Entry requires a U5-graded reduction result. Each trial must reference an attempt artifact created before spawn, new private roots, a new process lifecycle, fixture-observed invocation evidence outside the selected predicate, and a candidate schedule rotated from discovery/reduction. The minimized `CandidateOutcomeMap` must be reconstructed from newly admitted `OBSERVED_STABLE(k/k,h)` batches, pass full-map comparability with the reduced baseline, and then match its exact eligible labeled-map digest.
 
 `CONFIRMATION_REFUSED` is terminal for that confirmation object. A retry creates a successor confirmation with entirely new attempts. A new nonce attached to copied capture, projection, or process evidence is an illegal transition.
 
@@ -402,8 +412,9 @@ A crash may leave finalized immutable semantic objects and a `PARTIAL` study sta
 | --- | --- |
 | eligible HTTP `500` -> projected value | transport/control succeeded; status is program behavior |
 | candidate -> `UNSTABLE(histogram)` | all required trials eligible and at least two fingerprints observed |
-| candidate -> `UNCOMPARABLE(reasons)` | source/envelope/control/projection prevents comparison |
-| neighbor -> `UNRESOLVED` | no eligible exact map can classify it as preserves/changes |
+| admitted candidate -> `UNCOMPARABLE(reasons)` | source/control/projection prevents its tagged trials from contributing |
+| measurement matrix -> `RejectedComparison` | envelope assessment refused before tokens or batches existed |
+| neighbor -> `UNRESOLVED` | no complete map exists or the full maps fail plan/basis/roster/eligibility/exclusion comparability |
 | incomplete final sweep -> `BEST_KNOWN` | a smaller preserving witness exists, but local proof is incomplete |
 | complete all-`CHANGES` sweep -> `ONE_MINIMAL_UNDER(R)` | construction invariant has all required durable evidence |
 | confirmed Choicepoint -> `DEFERRED` | authenticated human chose no ruling; no source created |
@@ -417,17 +428,21 @@ A crash may leave finalized immutable semantic objects and a `PARTIAL` study sta
 | Attempted transition | Required refusal | Reason |
 | --- | --- | --- |
 | moving display ref changes pinned candidate | keep original identity or create new lineage | ref spelling is not execution identity |
+| `CandidateExecutionKey` or copied digests -> evidence allocation | typed binding refusal | allocation requires opaque `CandidateExecutionBinding` plus actual matching `WorldPlan` |
 | unsupported Git entry omitted and remaining tree runs | `UNCOMPARABLE` | partial tree would misrepresent source |
 | `STARTING` before verified materialization | attempt control failure | execution source is not established |
 | projection before clean `FINALIZED` teardown | ineligible control | behavior cannot outrun lifecycle evidence |
 | timeout/output/teardown reason -> outcome fingerprint | reject construction | controls are not behavior values |
-| `UNSTABLE`, `UNCOMPARABLE`, or `INCOMPLETE` candidate -> `OutcomeMap` | list as excluded | only `OBSERVED_STABLE(k/k,h)` enters the map |
-| ordinal group ID or membership shape -> preservation | reject comparison | the complete labeled map is authoritative |
+| `RejectedComparison` -> token/trial/batch/map | pre-batch study refusal | assessment did not admit the matrix |
+| `UNSTABLE`, `UNCOMPARABLE`, or `INCOMPLETE` candidate -> eligible map entry | list as excluded | only `OBSERVED_STABLE(k/k,h)` enters the eligible labeled map |
+| candidate batches with different admission-digest sets -> one map | reject construction | all candidates must share one exact matrix per repetition |
+| duplicate world/attempt evidence identities across candidate batches -> one map | reject construction | outcome-map evidence identities are globally unique |
+| ordinal group ID, membership shape, or naked preservation digest -> preservation | reject comparison | full-map comparability precedes exact labeled-map equality |
 | boolean false substitutes for `CHANGES`/`UNRESOLVED` | reject schema/type | unresolved evidence blocks local grade |
 | any unresolved neighbor -> `ONE_MINIMAL_UNDER(...)` | grade at most `BEST_KNOWN` when a smaller witness exists | final sweep is incomplete |
 | copied capture + new nonce -> fresh confirmation | `CONFIRMATION_REFUSED` | metadata is not execution |
 | changed plan/projection/candidate under old reduction | mark descendants `STALE` | semantic ancestry changed |
-| add a candidate under an existing OutcomeMap | new baseline lineage | exact candidate set is map identity |
+| add a candidate under an existing `CandidateOutcomeMap` | new baseline lineage | exact candidate set is map identity |
 | ruling before exact fresh confirmation | no `DECISION_READY` | historical/discovery evidence is insufficient |
 | finalization before required presentation/reveal | decision refusal | human protocol incomplete |
 | stale tab writes a ruling | `CAS_CONFLICT` | current lineage changed |
@@ -452,7 +467,7 @@ Additional prohibited transitions include promoting an unqualified `STABLE` labe
 | Unit | State-machine authority added | Gate before next unit |
 | --- | --- | --- |
 | U0 | normative enums, legal/illegal edges, schemas, examples, planning validator | all controlling artifacts agree; negative planning mutations fail |
-| U1 | canonical object construction, domain sums, plan compilation, map/decision invariants, model state tests | required truth-kernel mutants die; no subprocess exists |
+| U1 | canonical object construction, binding/structural-world/measurement/admission sums, logical map/reduction/decision invariants, model state tests; no grade constructor | required truth-kernel mutants die under the root-serialized didrun gate; until then U1 is `UNRECEIPTED`; no subprocess exists |
 | U2 | attempt phases through `FINALIZED`, Git/materialization refusals, Darwin teardown controls | native hostile fixtures and freshness facts pass |
 | U3 | CLI projection and stable-batch classifications | constant/alternating/control/incomplete fixtures classify exactly |
 | U4 | HTTP phases/readiness/capture using the same eligibility service | no HTTP branch enters generic compare/reduce/choice truth |
@@ -473,7 +488,7 @@ At U1 and again when each edge gains I/O, model/state tests must generate legal 
 - terminal/stale/invalidated objects cannot reenter a current lineage;
 - cancellation at every phase cannot produce eligibility or local-minimality proof;
 - serialization round-trips preserve exact variants without unknown-to-known coercion;
-- candidate permutation never changes an `OutcomeMap` digest;
+- candidate permutation never changes the derived preservation-map digest of a semantically identical `CandidateOutcomeMap`;
 - action/field variants cannot reach emitter types through generic decoding;
 - CAS conflicts are observable and side-effect free; and
 - didrun/Wake strings round-trip without affecting transitions.

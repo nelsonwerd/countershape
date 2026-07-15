@@ -1,0 +1,17 @@
+{
+  "schema_version": "countershape/v1",
+  "kind": "InstanceMeasurements",
+  "artifact_digest": "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+  "comparison_envelope_digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+  "measurement_subject_digest": "sha256:9999999999999999999999999999999999999999999999999999999999999999",
+  "world_plan_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+  "candidate_execution_key": "candidate:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "values": [
+    { "name": "allocated loopback port", "source": "WORLD_INSTANCE", "canonical_json": "43127" },
+    { "name": "node executable digest", "source": "TOOL_RECEIPT", "canonical_json": "\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"" },
+    { "name": "operating system", "source": "WORLD_INSTANCE", "canonical_json": "\"darwin\"" },
+    { "name": "private temporary root", "source": "FILESYSTEM_PROBE", "canonical_json": "\"/private/tmp/countershape/confirmation-b-0\"" },
+    { "name": "teardown status", "source": "PROCESS_RECEIPT", "canonical_json": "\"SUCCEEDED\"" },
+    { "name": "tool binary digest", "source": "TOOL_RECEIPT", "canonical_json": "\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"" }
+  ]
+}

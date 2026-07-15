@@ -2,8 +2,8 @@
 
 - **Contract version:** U0 / `architecture-v1`
 - **Target:** narrowed Darwin reference instrument
-- **Status:** controlling design; implementation and runtime behavior are `UNRECEIPTED`
-- **Authority order:** `CONCEPT_BRIEF.md`, then the stricter rulings in `research/deep-dive/08-RED_TEAM.md`, then this document
+- **Status:** controlling design; U1 command receipts are enumerated without reinterpretation in `status/U1.md`, while later runtime and product capabilities remain `UNRECEIPTED`
+- **Authority order:** `CONCEPT_BRIEF.md`, `SEMANTICS.md`, `PROJECTION_ALGEBRA.md`, then the stricter rulings in `research/deep-dive/08-RED_TEAM.md`, then this document
 
 Countershape is a repository-scale operational composition for resolving one witnessed behavioral disagreement among exact repository candidates. It is not an agent runtime, candidate ranker, generalized workflow runner, correctness oracle, or new disambiguation algorithm. The reference instrument accepts trusted local code from a curated Git repository, performs finite fresh executions, compares exact projected bytes, and preserves a human-authored selected-field decision as standalone Node source.
 
@@ -14,7 +14,7 @@ This document fixes the component boundaries, dependency direction, truth owners
 1. **Different questions have different authorities.** Git selection, materialized bytes, declared execution, measured execution, captured evidence, projected values, observed disagreement, human intent, emitted source, current conformance, and external command receipts are separate objects.
 2. **A comparison envelope is a declaration, not a proof.** It records which measured dimensions were required equal, tolerated, rejected, or left uncontrolled. Admission never establishes that tolerated placeholders were irrelevant to candidate control flow.
 3. **Only exact canonical values compare.** V1 has no tolerance, similarity, wildcard, regex, inferred invariant, or order-dependent cluster identity.
-4. **The labeled map is the preservation predicate.** Reduction, confirmation, persistence, API, and studio all bind one canonical sorted `candidate_execution_key -> projection_fingerprint` map digest. Display groups are derived and carry no identity.
+4. **Comparability precedes labeled-map equality.** Reduction, confirmation, persistence, API, and studio first require the same plan, envelope, stimulus-independent comparison basis, expected roster, eligible set, exclusions, and exclusion classifications. Only then does equality of the canonical sorted `candidate_execution_key -> projection_fingerprint` map digest mean preservation. Display groups and naked digests carry no preservation authority.
 5. **Control failure is not program behavior.** Only eligible finalized attempts can enter projection and a stable batch. Explicit setup, start, readiness, transport, timeout, output, projection, orphan, teardown, or cancellation failures remain typed controls.
 6. **Every evidentiary execution is new.** Discovery, each reduction proposal, final sweep, confirmation, and current conformance allocate new attempt artifacts, private roots, and process lifecycles. Only pure transformations of immutable bytes may be memoized.
 7. **Human scope is exact and narrow.** A compilable decision covers one witnessed stimulus and an explicit nonempty set of selected typed fields. Nonasserted fields remain visible and intentionally unconstrained.
@@ -29,11 +29,13 @@ This document fixes the component boundaries, dependency direction, truth owners
 | Which source was selected? | `TreeIdentity` | repository fingerprint, object format, immutable commit/tree OIDs | materialized bytes, dependencies, or behavior |
 | Which supported entries were written? | `MaterializationManifest` | policy digest, sorted blob/mode records, byte verification, portable tree digest | a complete checkout, expanded Git forms, or containment |
 | What execution was declared? | `WorldPlan` | deterministic argv, roots policy, sparse environment, fixture/readiness recipes, capture/projection, schedules, budgets | actual host resources or runtime facts |
-| What execution occurred? | `WorldInstance` | plan digest, new attempt identity, roots, resources, tool and platform facts, lifecycle and teardown | equivalence to any other real execution |
-| Why may instances contribute together? | `ComparisonEnvelope` | measured, required-equal, tolerated, rejected, and uncontrolled dimensions | behavioral equivalence or placeholder irrelevance |
+| What structural attempt was declared consistent? | `WorldInstance` | exact plan and candidate binding, stimulus, attempt artifact, purpose, nonce, ordinal | process execution, host facts, freshness, admission, or equivalence |
+| What runtime dimensions were reported for that attempt? | `InstanceMeasurements` and edge receipts | exact structural instance, envelope, complete policy-bound row, measurement provenance | honest host measurement or comparison admission |
+| Why may one exact measurement matrix proceed? | `ComparisonAdmission` produced by `AssessComparison` | plan, envelope, exact digest-sorted measurement set, candidate roster, equality basis, derived comparison-basis digest | behavioral equivalence, physical freshness, or placeholder irrelevance |
+| Why did a matrix stop before batching? | `RejectedComparison` produced by `AssessComparison` | exact measurement digests and typed reasons | any token, trial, batch, or outcome |
 | What bytes or channels were retained? | `CapturedObservation` | capture policy, tagged channels, control result, bounded artifact digests | discarded pre-capture bytes or semantic meaning |
 | What values compared equal? | `ProjectionDefinition` and `ProjectionResult` | visible versioned operations and exact canonical bytes | correctness, safety, or semantic equivalence |
-| What finite split was observed? | `StableBatch` and `OutcomeMap` | eligible repetitions and the exact labeled map | determinism, majority truth, or complete intent |
+| What finite split was observed? | `StableBatch` and `CandidateOutcomeMap` | tagged trials, shared per-repetition admission set, exact labeled map, exclusions, and global evidence identities | determinism, physical freshness, majority truth, or complete intent |
 | What was locally reduced? | `ReductionRun` | typed neighbors, decreasing measure, fresh batches, transcript, budgets, complete sweep if present | root cause, global minimum, or comprehension |
 | What is ready for a human decision? | `Choicepoint` | fresh-confirmed lineage and all governing artifact digests | a recommendation or branch endorsement |
 | What did the human state? | `DecisionRecord` | exact Choicepoint, blind/reveal facts, action, selected and nonasserted fields | intent outside the witness or security approval |
@@ -45,16 +47,17 @@ Git remains the content authority for selected objects. Countershape is authorit
 
 ## Canonical identity boundary
 
-Every persisted semantic object has:
+Every persisted semantic object has a canonical semantic body and an external storage/wire envelope:
 
 ```text
 schema_version
 kind
-canonical_bytes
-digest = SHA-256("countershape/v1/" + kind + NUL + canonical_bytes)
+semantic_fields
+canonical_body_bytes = canonical(schema_version, kind, semantic_fields)
+artifact_digest = SHA-256("countershape/v1/" + kind + NUL + canonical_body_bytes)
 ```
 
-The Go identity layer must reject information loss before a typed value is constructed: duplicate object names, invalid UTF-8, lone surrogates, non-finite numbers, negative zero, unsafe internal integers, and unsupported numeric forms. It never performs Unicode normalization. Durations are integer milliseconds. Exact external decimals, if a later profile admits them, are tagged canonical strings rather than binary floating-point values.
+The digest accompanies the body in the wire envelope and is never part of its own hash preimage. Derived companions such as `preservation_map_digest` are recomputed from their named semantic projection and never trusted as caller input. The Go identity layer must reject information loss before a typed value is constructed: duplicate object names, invalid UTF-8, lone surrogates, non-finite numbers, negative zero, unsafe internal integers, and unsupported numeric forms. It never performs Unicode normalization. Durations are integer milliseconds. Exact external decimals, if a later profile admits them, are tagged canonical strings rather than binary floating-point values.
 
 The studio never computes identity-bearing bytes or digests. JSON serialization from a browser is transport only. Server application services parse typed requests, validate the current head with compare-and-swap, and create the canonical object.
 
@@ -72,7 +75,7 @@ internal/spec/             inert JSON specification -> deterministic WorldPlan
 internal/gitobj/           immutable ref selection and supported blob materialization
 internal/world/            fresh attempts and Darwin process ownership
 internal/observe/          eligibility, schedules, repeated classification
-internal/compare/          projection fingerprints and exact OutcomeMap
+internal/compare/          projection fingerprints, comparison basis, and complete CandidateOutcomeMap
 internal/reduce/           bounded tri-valued orchestration and complete sweep
 internal/choice/           lineage, decision actions, field-separation validation
 internal/emit/node/        deterministic six-file standalone source emitter
@@ -129,17 +132,23 @@ The source path is Git-object based, not working-tree based:
 7. Refuse symbolic links, gitlinks, LFS pointers, unsafe or non-UTF-8 paths, path aliases/collisions, unsupported modes, and missing objects.
 8. Write only into a new mode-0700 attempt-owned root, preserving the supported executable bit.
 
-Materialization is offline. A missing promisor object is a refusal, never permission to fetch. The portable tree digest excludes absolute root, current time, random attempt identity, and target-specific inode facts. Those belong to `WorldInstance`.
+Materialization is offline. A missing promisor object is a refusal, never permission to fetch. The portable tree digest excludes absolute root, current time, random attempt identity, and target-specific inode facts. Attempt allocation and host facts belong to U2 measurement/process artifacts, not the structural `WorldInstance` identity.
 
 Two candidate slots resolving to the same executable tree are rejected or explicitly coalesced before observation. Branch names and producer labels never become execution identity.
 
 ## World plan, instance, and comparison envelope
 
-`WorldPlan` contains every deterministic choice that should survive clean reproduction: candidate set, materialization policy, adapter and runner digests, direct argv arrays, cwd policy, sparse nonsecret environment, secret-slot presence policy, private-root rules, fixture/readiness recipes, `HOST_ALLOWED`, capture and projection definitions, repeat counts, schedule, tool requirements, concurrency mode, and all budgets with defaults materialized. It contains no shell string, current time, temp path, allocated port, PID, or ambient interpolation.
+`SourceSpec` is a strict inert input, not an evidence artifact. Its only constructor tokenizes through the lossless canonical parser and applies a closed nested field grammar; ordinary JSON decoding and exported Go structs are not production inputs. Source bytes, strings, argv, environment entries, secret slots, and required tools all have pre-execution bounds. Missing optional budgets/repeat counts are materialized by compilation, while explicit zero remains explicit and is refused where invalid. Unknown keys and semantically impossible adapter/readiness/version combinations fail before a usable `ParsedSource` capability or `WorldPlan` can exist. Multiple refusals are selected in a fixed field order.
 
-`WorldInstance` records what the host actually supplied: a new attempt nonce created before spawn, private root paths and permissions, allocated resources, measured OS/kernel/architecture/filesystem, resolved tool paths and versions, schedule position, invocation evidence, uncontrolled dimensions, process-group lifecycle, and teardown outcome.
+`WorldPlan` contains every deterministic choice that should survive clean reproduction: candidate set digest, declared candidate count, materialization policy, adapter and runner digests, direct logical argv arrays, cwd policy, a closed reference-environment profile (`LANG=C`, `LC_ALL=C`, `TZ=UTC`, `NO_COLOR=1`, `NODE_NO_WARNINGS=1`), secret-slot presence policy, private-root rules, fixture/readiness recipes, `HOST_ALLOWED`, capture and projection definitions, repeat counts, schedule, tool requirements, concurrency mode, and all budgets with defaults materialized. V1 permits only a bare declared tool as argv zero and a bounded closed argument grammar; resolution to an absolute executable is a later measured tool/process fact. It refuses other environment names or values rather than pretending a name heuristic establishes nonsecret content. It contains no wrapper or shell string, current time, host path, temp path, allocated port, PID, or ambient interpolation. The declared candidate count is budget input only; equality with the exact selected roster is deferred to the U2 candidate-set gate and is never inferred from the opaque set digest.
 
-`ComparisonEnvelope` is a versioned measured admission record with five explicit sets:
+`CandidateExecutionKey` is the exact wire/display reference. It is not allocation authority. `CandidateExecutionBinding` is opaque and retains immutable tree identity, materialization policy, the exact `WorldPlan`, adapter, runner, and projection definition. Allocating structural evidence requires that binding plus the actual matching plan; a key or copied digest fields cannot substitute.
+
+`WorldInstance` records declared structural consistency only: plan digest, candidate key and binding digest, stimulus digest, attempt-artifact digest, purpose, nonce, and ordinal. It has no roots, ports, PIDs, clocks, platform/tools, lifecycle, teardown, measurement values, or admission status. U2 edges record those runtime observations in `InstanceMeasurements` and process/materialization receipts.
+
+`ComparisonEnvelopePolicy` declares which dimensions must be measured and how variance is treated. `InstanceMeasurements` is one exact complete policy-bound row for one structural instance. `AssessComparison` is the sole constructor that evaluates the complete candidate matrix and persists either `ComparisonAdmission` or `RejectedComparison`. An admitted artifact includes the exact candidate roster and exact digest-sorted measurement set. Each concrete repetition therefore has a unique admission artifact. A derived `ComparisonBasisDigest` covers only plan, envelope, roster, and the required/rejected equality basis, deliberately excluding stimulus, purpose, and measurement rows so distinct runs remain comparable.
+
+The policy and assessment expose five explicit dimension sets:
 
 - `measured`: facts observed for each instance;
 - `required_equal`: dimensions whose variance rejects comparison;
@@ -147,9 +156,9 @@ Two candidate slots resolving to the same executable tree are rejected or explic
 - `rejected_variance`: differences that actually excluded instances; and
 - `uncontrolled`: known or classed dimensions not controlled or fully measured.
 
-Ephemeral roots, ports, PIDs, and timing may be listed as tolerated, while visible occurrences are transformed by a named projection operation. That transformation establishes only equality of projected captured values. It does not establish that those values had no earlier effect on program branches. Curated fixtures may add metamorphic checks; imported repositories receive no stronger language.
+Ephemeral roots, ports, PIDs, and timing may be measured and listed as tolerated, while visible occurrences are transformed by a named projection operation. That transformation establishes only equality of projected captured values. It does not establish that those values had no earlier effect on program branches. Curated fixtures may add metamorphic checks; imported repositories receive no stronger language.
 
-V1 executes sequentially with a recorded, rotated candidate schedule. Concurrency would introduce a new envelope and is out of the reference claim.
+An admitted matrix creates deterministic internal, ephemeral row tokens bound to the concrete admission, measurement row, stimulus, and purpose. Persisted admission and measurement artifacts can reconstruct them. A rejected matrix is a pre-batch refusal and creates no token, trial, stable batch, or outcome map. V1 executes sequentially with a recorded, rotated candidate schedule. Concurrency would introduce a new envelope and is out of the reference claim.
 
 ## Observation, projection, and exact comparison
 
@@ -163,24 +172,26 @@ For `k` required new eligible trials, the only batch classifications are:
 
 - `OBSERVED_STABLE(k/k,h)` when every eligible projection fingerprint is `h`;
 - `UNSTABLE(histogram)` when at least two eligible fingerprints occur;
-- `UNCOMPARABLE(reasons)` when tree, envelope, control, or projection is ineligible; and
+- `UNCOMPARABLE(reasons)` when an admitted trial is later ineligible because its source, control, or projection cannot contribute; and
 - `INCOMPLETE` when the declared budget ends before `k` eligible trials.
 
-Finite agreement is never promoted to determinism. A divergence requires at least two eligible candidates and at least two projection fingerprints.
+Envelope assessment happens before batching. `RejectedComparison` is a study refusal, not `UNCOMPARABLE` behavior: it creates no admission token, tagged trial, batch, or map. For an admitted study, `StableBatch` preserves each captured-or-controlled trial tag, plan, candidate binding, stimulus, comparison basis, exact admission roster, repeat policy, phase, and ordered per-repetition admission digests. Peer candidate batches may join one map only when those admission-digest sets match exactly. Finite agreement is never promoted to determinism. A divergence requires at least two eligible candidates and at least two projection fingerprints.
 
-`OutcomeMap` is a canonical sorted map. A candidate execution key binds the exact tree, materialization policy, plan/adapter/runner identity, stimulus, and projection definition necessary to identify what was executed without using its display label. Candidate order, producer, ref spelling, support count, and display grouping do not affect the digest.
+`CandidateOutcomeMap` is a complete canonical sorted map plus explicit exclusions for the exact candidate roster bound by the plan. It also binds stimulus, envelope, stimulus-independent comparison basis, exact shared per-repetition admission-digest set, phase, contributing batches, and globally unique attempt/world evidence identities. `CandidateExecutionKey` supplies only the stable label inside the map; `CandidateExecutionBinding` retains executable identity. Candidate order, producer, ref spelling, support count, and display grouping do not affect the preservation-map digest. A `DivergentBaseline` is a sealed refinement requiring at least two eligible candidates and two distinct fingerprints; a nondivergent comparable neighbor remains a valid `CandidateOutcomeMap` for a `CHANGES` result.
 
 ## Tri-valued reduction
 
 Each typed adapter supplies a deterministic finite neighbor function and a strictly decreasing well-founded measure. The reducer orchestrator records every proposal and obtains new eligible batches. A proposal is:
 
-- `PRESERVES` only when its fresh batch yields the exact baseline `OutcomeMap`;
-- `CHANGES` only when its fresh batch yields a different stable eligible map; or
-- `UNRESOLVED` for every other result.
+- `UNRESOLVED` when the full typed maps differ in plan, envelope, comparison basis, expected roster, eligible set, exclusions, or exclusion classifications, or when no complete eligible map exists;
+- `PRESERVES` when comparable maps have equal complete sorted eligible candidate-to-projection digests; or
+- `CHANGES` when comparable maps have different complete sorted eligible candidate-to-projection digests.
 
-Membership shape, number of groups, and ordinal group IDs are never compared. The accepted path and final sweep carry the same outcome-map digest type used by persistence, API, and UI.
+Membership shape, number of groups, ordinal group IDs, and a naked `PreservationMapDigest` are never comparison inputs. Persistence, reducer, confirmation, API, and UI carry full typed maps or an opaque result from the comparability-first operation. The evidence-bearing outcome artifact has a distinct `OutcomeArtifactDigest` and cannot be substituted.
 
-The only reduction grades are `UNCHANGED`, `BEST_KNOWN`, and `ONE_MINIMAL_UNDER(reducer_set_digest)`. Construction of the last grade requires a durable complete final sweep whose enumerated valid direct-neighbor set equals its set of fresh `CHANGES` results. A cancelled sweep, exhausted budget, partial record, stale plan, changed eligibility, or any `UNRESOLVED` neighbor cannot construct that type.
+The preservation digest is the complete sorted candidate-key-to-fingerprint map, not the enclosing `CandidateOutcomeMap` artifact digest: enclosing artifacts also bind the particular stimulus, concrete admission matrices, phase, and evidence batches, which must change on a physically fresh shrink evaluation. `ComparisonBasisDigest` remains stable across those runs. Comparing per-run admission artifacts, putting stimulus inside `CandidateExecutionKey`, or comparing full artifact digests would make every nontrivial shrink incomparable or changed by construction and is forbidden.
+
+The only reduction grades are `UNCHANGED`, `BEST_KNOWN`, and `ONE_MINIMAL_UNDER(reducer_set_digest)`. Construction of the last grade requires a durable-store authority over a complete final sweep whose enumerated valid direct-neighbor set equals its set of fresh `CHANGES` results. A cancelled sweep, exhausted budget, partial record, stale plan, changed eligibility, or any `UNRESOLVED` neighbor cannot construct that type. U1 deliberately exposes only logical neighbor/sweep evidence; the proof-bearing durable grade constructor does not exist until U5 adds the store-backed authority in the same package.
 
 The minimized witness must pass a physically new confirmation batch with new attempt artifacts, invocation evidence outside the selected predicate, and a rotated schedule. A new nonce around copied evidence is invalid.
 
@@ -198,7 +209,7 @@ Compilable actions are `ALLOW_OBSERVED` and `CUSTOM_EXPECTATION`. For selected f
 for every a in A and d in D: select_F(a) != select_F(d)
 ```
 
-Missing and present-empty values remain distinct. Allow-many is a canonical set of complete selected-field tuples. It is never a cross-product. Empty selection or failed separation produces `AMBIGUOUS_SCOPE` and no files. `REJECT_ALL`, `DEFER`, and `REFINE` are noncompilable by construction; refine requests a successor study.
+Missing and present-empty values remain distinct. Allow-many is a canonical set of complete selected-field tuples derived from a sealed confirmed-outcome set. It is never a cross-product. Empty selection returns `EMPTY_SELECTED_FIELDS`; failed separation returns `AMBIGUOUS_SCOPE`. Both create no files. `REJECT_ALL`, `DEFER`, and `REFINE` are noncompilable by construction; refine requests a successor study.
 
 ## Standalone residue and Go/Node parity
 
@@ -253,7 +264,7 @@ didrun references are opaque strings associated with their exact external comman
 | U2 | Git-object materializer and fresh Darwin process substrate | supported-source and native process-substrate observations only |
 | U3 | typed CLI observation, rotation, classification, exact map | CLI observation spine |
 | U4 | typed HTTP observation and fixture-owned readiness | two typed observation spines if generic boundaries remain clean |
-| U5 | typed neighbors, tri-valued orchestration, transcript, shape trap, complete sweep | local reduction grades under named rules and budgets |
+| U5 | typed neighbors, tri-valued orchestration, transcript, shape trap, minimal content-addressed durable-sweep authority | local reduction grades under named rules and budgets |
 | U6 | artifact graph/CAS, confirmation, decision records, Go/Node corpus, deterministic residue | DecisionRecord only unless parity and absence gates pass |
 | U7 | complete CLI and both reference studies, repeated clean runs and timing | narrowed Darwin reference studies only |
 | U8 | authenticated decision bench, blind-first flow, visual/accessibility loops | studio-complete only if every security and evidence-parity gate passes |
@@ -266,7 +277,7 @@ No unit inherits a future unit's claim. Honest fallback milestones are truth-ker
 Later implementation review must reject any change that:
 
 - gives the browser canonical or state-transition authority;
-- allows an adapter to construct `OutcomeMap` without the centralized eligibility gate;
+- allows an adapter to construct `CandidateOutcomeMap` without assessment, centralized eligibility, shared admission-set, and global evidence-identity gates;
 - represents reduction as a boolean or compares group shape;
 - uses checkout, worktree, archive, replacement objects, lazy fetch, or network to materialize evidence;
 - accepts source modes outside `100644` and `100755`;

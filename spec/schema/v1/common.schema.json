@@ -10,16 +10,27 @@
     },
     "CandidateExecutionKey": {
       "type": "string",
-      "pattern": "^candidate:[a-z0-9][a-z0-9._-]{0,127}$"
+      "pattern": "^candidate:[0-9a-f]{64}$"
+    },
+    "ProjectionFingerprint": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "AttemptPurpose": {
+      "enum": ["DISCOVERY", "REDUCTION", "FINAL_SWEEP", "CONFIRMATION", "CONFORMANCE"]
     },
     "ArtifactKind": {
       "enum": [
         "WorldPlan",
+        "CandidateExecutionBinding",
         "WorldInstance",
+        "InstanceMeasurements",
         "ComparisonEnvelope",
+        "ComparisonAdmission",
+        "RejectedComparison",
         "CapturedObservation",
         "StableBatch",
-        "OutcomeMap",
+        "CandidateOutcomeMap",
         "ReductionRun",
         "Choicepoint",
         "DecisionRecord",

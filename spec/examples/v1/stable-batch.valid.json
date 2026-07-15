@@ -2,34 +2,71 @@
   "schema_version": "countershape/v1",
   "kind": "StableBatch",
   "artifact_digest": "sha256:1010101010101010101010101010101010101010101010101010101010101010",
-  "candidate_execution_key": "candidate:http-b",
+  "candidate_execution_key": "candidate:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "candidate_execution_binding_digest": "sha256:b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1b1",
+  "world_plan_digest": "sha256:a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0",
   "stimulus_digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
   "comparison_envelope_digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+  "comparison_admission_digests": [
+    "sha256:abababababababababababababababababababababababababababababababa1",
+    "sha256:abababababababababababababababababababababababababababababababa2",
+    "sha256:abababababababababababababababababababababababababababababababa3"
+  ],
+  "comparison_basis_digest": "sha256:babababababababababababababababababababababababababababababababa",
+  "comparison_admission_candidate_roster": [
+    "candidate:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "candidate:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  ],
+  "repeat_policy_digest": "sha256:1212121212121212121212121212121212121212121212121212121212121212",
   "required_fresh_trials": 3,
   "schedule": {
     "phase": "CONFIRMATION",
-    "rotation": "RECORDED_SEQUENTIAL",
+    "rotation": "NOT_ESTABLISHED_IN_U1",
     "ordinals": [1, 5, 9]
   },
-  "world_instance_digests": [
-    "sha256:111111111111111111111111111111111111111111111111111111111111111a",
-    "sha256:111111111111111111111111111111111111111111111111111111111111111b",
-    "sha256:111111111111111111111111111111111111111111111111111111111111111c"
-  ],
-  "attempt_artifact_digests": [
-    "sha256:222222222222222222222222222222222222222222222222222222222222222a",
-    "sha256:222222222222222222222222222222222222222222222222222222222222222b",
-    "sha256:222222222222222222222222222222222222222222222222222222222222222c"
-  ],
-  "captured_observation_digests": [
-    "sha256:333333333333333333333333333333333333333333333333333333333333333a",
-    "sha256:333333333333333333333333333333333333333333333333333333333333333b",
-    "sha256:333333333333333333333333333333333333333333333333333333333333333c"
-  ],
-  "projection_result_digests": [
-    "sha256:444444444444444444444444444444444444444444444444444444444444444a",
-    "sha256:444444444444444444444444444444444444444444444444444444444444444b",
-    "sha256:444444444444444444444444444444444444444444444444444444444444444c"
+  "trials": [
+    {
+      "ordinal": 1,
+      "disposition": "BEHAVIOR_CAPTURED",
+      "world_instance_digest": "sha256:111111111111111111111111111111111111111111111111111111111111111a",
+      "attempt_artifact_digest": "sha256:222222222222222222222222222222222222222222222222222222222222222a",
+      "comparison_admission_digest": "sha256:abababababababababababababababababababababababababababababababa1",
+      "admission_token_digest": "sha256:9191919191919191919191919191919191919191919191919191919191919191",
+      "captured": {
+        "captured_observation_digest": "sha256:333333333333333333333333333333333333333333333333333333333333333a",
+        "projection_result_digest": "sha256:444444444444444444444444444444444444444444444444444444444444444a",
+        "projection_fingerprint": "sha256:4040404040404040404040404040404040404040404040404040404040404040"
+      },
+      "control": null
+    },
+    {
+      "ordinal": 5,
+      "disposition": "BEHAVIOR_CAPTURED",
+      "world_instance_digest": "sha256:111111111111111111111111111111111111111111111111111111111111111b",
+      "attempt_artifact_digest": "sha256:222222222222222222222222222222222222222222222222222222222222222b",
+      "comparison_admission_digest": "sha256:abababababababababababababababababababababababababababababababa2",
+      "admission_token_digest": "sha256:9292929292929292929292929292929292929292929292929292929292929292",
+      "captured": {
+        "captured_observation_digest": "sha256:333333333333333333333333333333333333333333333333333333333333333b",
+        "projection_result_digest": "sha256:444444444444444444444444444444444444444444444444444444444444444b",
+        "projection_fingerprint": "sha256:4040404040404040404040404040404040404040404040404040404040404040"
+      },
+      "control": null
+    },
+    {
+      "ordinal": 9,
+      "disposition": "BEHAVIOR_CAPTURED",
+      "world_instance_digest": "sha256:111111111111111111111111111111111111111111111111111111111111111c",
+      "attempt_artifact_digest": "sha256:222222222222222222222222222222222222222222222222222222222222222c",
+      "comparison_admission_digest": "sha256:abababababababababababababababababababababababababababababababa3",
+      "admission_token_digest": "sha256:9393939393939393939393939393939393939393939393939393939393939393",
+      "captured": {
+        "captured_observation_digest": "sha256:333333333333333333333333333333333333333333333333333333333333333c",
+        "projection_result_digest": "sha256:444444444444444444444444444444444444444444444444444444444444444c",
+        "projection_fingerprint": "sha256:4040404040404040404040404040404040404040404040404040404040404040"
+      },
+      "control": null
+    }
   ],
   "classification": {
     "status": "OBSERVED_STABLE",
@@ -38,5 +75,5 @@
     "projection_fingerprint": "sha256:4040404040404040404040404040404040404040404040404040404040404040",
     "bounded_label": "OBSERVED_STABLE(3/3,sha256:4040404040404040404040404040404040404040404040404040404040404040)"
   },
-  "execution_evidence_reused": false
+  "duplicate_evidence_within_batch": false
 }

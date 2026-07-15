@@ -3,7 +3,7 @@
   "kind": "CapturedObservation",
   "artifact_digest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
   "world_instance_digest": "sha256:9999999999999999999999999999999999999999999999999999999999999999",
-  "candidate_execution_key": "candidate:http-b",
+  "candidate_execution_key": "candidate:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
   "stimulus_digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
   "trial_index": 0,
   "attempt_artifact_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",

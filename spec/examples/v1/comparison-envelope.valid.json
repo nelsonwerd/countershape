@@ -5,8 +5,11 @@
   "envelope_version": "http-reference/darwin-v1",
   "measured_dimensions": [
     { "name": "operating system", "source": "WORLD_INSTANCE", "comparison": "EXACT" },
-    { "name": "node executable", "source": "TOOL_RECEIPT", "comparison": "EXACT" },
-    { "name": "process cleanup", "source": "PROCESS_RECEIPT", "comparison": "REJECT_ON_VARIANCE" }
+    { "name": "node executable digest", "source": "TOOL_RECEIPT", "comparison": "EXACT" },
+    { "name": "private temporary root", "source": "FILESYSTEM_PROBE", "comparison": "RECORDED_ONLY" },
+    { "name": "allocated loopback port", "source": "WORLD_INSTANCE", "comparison": "RECORDED_ONLY" },
+    { "name": "tool binary digest", "source": "TOOL_RECEIPT", "comparison": "REJECT_ON_VARIANCE" },
+    { "name": "teardown status", "source": "PROCESS_RECEIPT", "comparison": "REJECT_ON_VARIANCE" }
   ],
   "required_equal_dimensions": [
     { "name": "operating system", "comparator": "EXACT" },
@@ -29,7 +32,7 @@
     { "name": "teardown status", "reason_code": "TEARDOWN_NOT_CLEAN" }
   ],
   "uncontrolled_dimensions": ["scheduler timing", "host file reads by trusted candidate"],
-  "admission_claim": "INSTANCES_ADMITTED_BY_DECLARED_ENVELOPE",
+  "admission_claim": "MEASURED_ASSESSMENT_ONLY",
   "behavioral_compatibility_established": false,
   "placeholder_control_flow_irrelevance_established": false
 }

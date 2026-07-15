@@ -2,7 +2,8 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://countershape.dev/spec/schema/v1/reduction-run.schema.json",
   "title": "Countershape ReductionRun v1",
-  "description": "A bounded tri-valued local reduction transcript preserving the complete labeled OutcomeMap, never membership shape alone.",
+  "description": "Future U5 wire target for a bounded tri-valued local reduction transcript. Its current shape is planning guidance, not implemented durable authority. Preservation is comparability first and then equality of the complete eligible labeled-map digest, never digest equality or membership shape alone.",
+  "$comment": "No U1 constructor emits or validates ReductionRun. A future U5 implementation must reconcile this wire target with executable semantics before claiming durable authority.",
   "type": "object",
   "additionalProperties": false,
   "required": [

@@ -2,7 +2,7 @@
 
 - **Contract version:** U0 / `claim-vocabulary-v1`
 - **Scope:** source, CLI, studio, export, documentation, release notes, and handoff receipts
-- **Status:** controlling language contract; every implementation capability is currently `UNRECEIPTED`
+- **Status:** controlling language contract; receipt state is capability- and unit-specific, and only a sealed per-unit receipt map may state a didrun grade
 
 Countershape's credibility depends on saying exactly what one finite experiment established and refusing every convenient upgrade. This vocabulary is an API: product code emits these terms, schemas constrain them, tests compare them, and public prose may not replace them with stronger synonyms.
 
@@ -57,11 +57,15 @@ When several commands are required, list each command and its verbatim grade. Th
 | `TreeIdentity` | immutable repository/commit/tree object selection | repository fingerprint, object format, OIDs, display ref only as provenance |
 | `supported entries materialized and verified` | named `100644`/`100755` blob bytes were written and rehashed under the policy | manifest, policy digest, portable tree digest, target-filesystem facts |
 | `WorldPlan` | deterministic declared execution configuration | plan digest and fully materialized budgets |
-| `WorldInstance` | measured facts for one physically new attempt | instance digest, roots/resources, platform/tools, lifecycle, teardown |
-| `instances admitted by comparison envelope E` | the instances met E's measured admission rules | measured, required-equal, tolerated, rejected, and uncontrolled dimensions |
+| `CandidateExecutionKey` | stable wire/display reference for one candidate identity | exact key syntax; never evidence-allocation authority |
+| `CandidateExecutionBinding` | opaque full candidate execution identity | tree, materialization, exact plan, adapter, runner, projection; actual matching plan required at allocation |
+| `WorldInstance` | structural declared-consistency identity for one attempted subject | plan, candidate binding, stimulus, attempt artifact, purpose, nonce, ordinal; no runtime or freshness claim |
+| `InstanceMeasurements` | one complete envelope-bound runtime row reported for a structural instance | envelope, instance, exact values and sources; no honest-host or admission claim by itself |
+| `comparison matrix admitted under envelope E` | `AssessComparison` admitted the exact candidate matrix and digest-sorted measurement set | plan, candidate roster, measurement digests, equality basis, stimulus-independent comparison-basis digest |
+| `comparison rejected before batching` | `AssessComparison` refused the exact matrix | measurement digests and typed reasons; no token, trial, batch, or outcome |
 | `HOST_ALLOWED` | candidate retained ordinary host network access | trusted-local/full-user-permission warning |
 
-Admission under an envelope never claims behavioral equivalence. Placeholder projection establishes only a transformation of captured values, not that the placeholder had no earlier effect on control flow.
+Admission under an envelope never claims behavioral equivalence or physical freshness. Each concrete repetition has its own admission artifact; deterministic row tokens are internal and ephemeral. Placeholder projection establishes only a transformation of captured values, not that the placeholder had no earlier effect on control flow.
 
 ### Capture, projection, and observation
 
@@ -84,16 +88,16 @@ An HTTP `500`, CLI exit `2`, or complete empty stdout may be eligible behavior. 
 
 | Use this term | Exact meaning | Required evidence |
 | --- | --- | --- |
-| `OutcomeMap` | canonical sorted `candidate_execution_key -> projection_fingerprint` map | exact candidate set, stimulus, projection, and map digest |
-| `PRESERVES` | a new eligible batch yielded the exact baseline map | fresh attempt references |
-| `CHANGES` | a new eligible batch yielded a different eligible map | fresh attempt references |
-| `UNRESOLVED` | every other neighbor evaluation | typed reasons and budgets |
+| `CandidateOutcomeMap` | complete roster, eligible labeled map, exclusions, plan/basis/phase, shared admission set, and globally unique evidence identities | full typed map plus distinct outcome-artifact and derived preservation-map digests |
+| `PRESERVES` | full typed maps were comparable and their exact complete eligible labeled-map digests matched | opaque comparability result plus new attempt references |
+| `CHANGES` | full typed maps were comparable and their exact complete eligible labeled-map digests differed | opaque comparability result plus new attempt references |
+| `UNRESOLVED` | full maps were not comparable or no complete eligible map existed | typed basis/roster/eligibility/exclusion/control reasons and budgets |
 | `UNCHANGED` | no accepted smaller typed stimulus | reducer set and transcript |
 | `BEST_KNOWN under R and budgets B` | a smaller preserving stimulus exists but the final proof is incomplete | unresolved count, budget/sweep facts, reducer digest |
 | `ONE_MINIMAL_UNDER(R)` | every constructible direct neighbor in the complete durable sweep freshly produced `CHANGES` | exact enumerated neighbor set and sweep completion artifact |
 | `locally reduced witness` | the recorded accepted path preserved the exact map | original/reduced stimuli, measure, transcript |
 
-`ONE_MINIMAL_UNDER(R)` is a local construction-grade label. It does not establish global minimum, root cause, semantic necessity, or human comprehension. Any `UNRESOLVED` direct neighbor, incomplete sweep, cancellation, budget exhaustion, changed ancestor, or reused executed observation makes that grade impossible to construct.
+A naked `PreservationMapDigest`, display grouping, support count, or per-run admission artifact is never enough to claim preservation. `ComparisonBasisDigest` is stable across stimuli/repetitions only because it covers plan, envelope, roster, and equality basis rather than concrete measurement rows. `ONE_MINIMAL_UNDER(R)` is a local construction-grade label. It does not establish global minimum, root cause, semantic necessity, or human comprehension. Any `UNRESOLVED` direct neighbor, incomplete sweep, cancellation, budget exhaustion, changed ancestor, or reused executed observation makes that grade impossible to construct.
 
 ### Human decision and standalone residue
 
@@ -121,7 +125,7 @@ Visited UI panels prove presentation only. They do not prove reading, comprehens
 | Permitted bounded phrase | Prohibited upgrade | Why the upgrade is false |
 | --- | --- | --- |
 | “repository-scale operational composition” after the decisive proof | “new disambiguation algorithm” or “new Choicepoint primitive” | Socrates, TiCoder, ARHF, FlashProg, differential testing, shrinking, approval tests, and contracts establish the semantic lineage |
-| “instances admitted by comparison envelope E” | “compatible worlds” or “reproducible environment” | unmeasured or tolerated dimensions may affect earlier control flow |
+| “comparison matrix admitted under envelope E” | “compatible worlds” or “reproducible environment” | unmeasured or tolerated dimensions may affect earlier control flow |
 | `OBSERVED_STABLE(3/3,h)` | unqualified `STABLE`, “deterministic,” or “reliable” | finite repetitions do not prove future behavior |
 | “exact projection equality” | “semantic equivalence” or “same behavior” | equality covers named projected bytes only |
 | “no observed difference under N named finite probes” | “equivalent implementations” | unprobed behavior remains unknown |
@@ -190,7 +194,7 @@ A receipt for a command that merely lists files cannot support runtime behavior.
 | Unit | Permitted exit language | Prohibited promotion |
 | --- | --- | --- |
 | U0 | “planning artifacts passed the named planning validator” with exact receipt | implemented/runtime behavior |
-| U1 | “truth-kernel vectors/properties/state mutants passed on the named tree” | subprocess, Git import, or standalone claims |
+| U1 | “truth-kernel vectors/properties/state mutants passed on the named tree,” only after the root-serialized didrun gate | subprocess, Git import, physical freshness, comparison runtime, reduction-grade, or standalone claims; until then all U1 capability is `UNRECEIPTED` |
 | U2 | “named source/process fixtures passed natively on Darwin” | hostile containment or other-OS runtime |
 | U3 | “named CLI fixtures received exact batch classifications and map” | HTTP/two-domain or decision claims |
 | U4 | “named HTTP and CLI fixtures reuse the bounded truth kernel” | arbitrary adapter/repository support |

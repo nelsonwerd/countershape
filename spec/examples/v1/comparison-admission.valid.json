@@ -1,0 +1,24 @@
+{
+  "schema_version": "countershape/v1",
+  "kind": "ComparisonAdmission",
+  "artifact_digest": "sha256:dededededededededededededededededededededededededededededededede",
+  "world_plan_digest": "sha256:a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0",
+  "comparison_envelope_digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+  "comparison_basis_digest": "sha256:babababababababababababababababababababababababababababababababa",
+  "measurement_digests": [
+    "sha256:c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+    "sha256:c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2"
+  ],
+  "measurement_order": "CANDIDATE_EXECUTION_KEY_UTF8_LEXICOGRAPHIC",
+  "candidate_roster": [
+    "candidate:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "candidate:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  ],
+  "required_and_rejected_equal_basis": [
+    { "name": "node executable digest", "canonical_json": "\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"" },
+    { "name": "operating system", "canonical_json": "\"darwin\"" },
+    { "name": "teardown status", "canonical_json": "\"SUCCEEDED\"" },
+    { "name": "tool binary digest", "canonical_json": "\"sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb\"" }
+  ],
+  "nonclaim": "BEHAVIORAL_COMPATIBILITY_NOT_ESTABLISHED"
+}

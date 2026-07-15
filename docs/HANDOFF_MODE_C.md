@@ -1,34 +1,36 @@
 # Mode C handoff — Countershape autopilot
 
-> **Live safety handoff.** Update at every verified unit boundary. This file is not the final delivery report yet.
+> **Live safety handoff.** Update at every sealed strict-clean receipt boundary. This file is not the final delivery report yet.
 
 ## Identity and objective
 
 - **Founder persona:** Soren Vale; read `docs/PERSONA_SOREN_VALE.md` before making product or truth-model decisions.
-- **Objective:** autonomously research, design, red-team, prompt-pack, build, and multi-pass verify an ambitious local-first 2026 AI/vibe-coder infrastructure project, with didrun evidence at every shippable build unit.
+- **Objective:** autonomously research, design, red-team, prompt-pack, build, and multi-pass exercise an ambitious local-first 2026 AI/vibe-coder infrastructure project, with didrun evidence at every shippable build unit.
 - **Working product:** **Countershape**, narrowed to a Darwin reference instrument for exact witnessed decisions.
 - **Product verb:** resolve a Choicepoint.
 - **One-line promise:** compare exact repository candidates inside declared fresh comparison envelopes, locally reduce an observed-stable split under named rules, capture one exact human expectation without branch/majority cues, and emit a standalone selected-field regression contract.
 
 ## Current state
 
-- **Pipeline phase:** U0 controlling-contract boundary after completed ideation, six-lane deep dive, adversarial red team, living-brief rewrite, and 13-prompt build pack.
-- **Git:** repository is on `codex/countershape-autopilot`; the first commit is assigned only after U0's final-tree events pass.
+- **Pipeline phase:** U1 truth-kernel commands are sealed, strict-clean, and graded `TREE-EXACT`; P02/U2 Git-world substrate is the only open implementation unit.
+- **Git:** repository is on `codex/countershape-autopilot`; the sealed U1 commit at this document's `HEAD` is the last recorded-exact boundary. Resolve its hash locally instead of trusting a copied mutable hash.
 - **didrun:** installed globally. The first shared pre-commit ledger broke under concurrent writers and is preserved, never claimed or sealed. The replacement ledger is serialized. See `docs/status/DIDRUN_BUGS.md` before recording evidence.
-- **Build:** U0 planning contracts, schemas, examples, refusal vectors, and mutation-tested validator exist. No product runtime exists yet; every product capability remains **UNRECEIPTED**.
+- **Build:** U0 planning contracts and the pure Go U1 identity/classification/ruling kernel are sealed. U1 includes strict canonical identity, inert-spec compilation, sealed control/behavior and eligibility sums, exact candidate outcome maps, tri-valued logical reduction evidence, exact-witness ruling validation, an architectural boundary analyzer, and an exact eighteen-mutant A/B/A gate. No process runtime or product surface exists. Target wire schemas are planning artifacts only until U6 supplies and receipts explicit runtime codecs.
 - **External APIs:** none used in the product. Current web research is read-only. Real model integrations remain human-gated and must never be faked.
 
 ## Read first, in order
 
 1. `docs/PERSONA_SOREN_VALE.md`
 2. `docs/CONCEPT_BRIEF.md`
-3. `research/ideation/07-divergence-and-selection.md`
-4. `research/ideation/06-founder-falsification.md`
-5. `research/ideation/05-counterfactual-prior-art.md`
-6. `research/ideation/04-finalist-duel.md`
-7. `research/ideation/02-wake-overlap-audit.md`
-8. `research/grounding/00-last30days-synthesis.md`
-9. this handoff
+3. `docs/SEMANTICS.md`
+4. `docs/PROJECTION_ALGEBRA.md`
+5. `research/ideation/07-divergence-and-selection.md`
+6. `research/ideation/06-founder-falsification.md`
+7. `research/ideation/05-counterfactual-prior-art.md`
+8. `research/ideation/04-finalist-duel.md`
+9. `research/ideation/02-wake-overlap-audit.md`
+10. `research/grounding/00-last30days-synthesis.md`
+11. this handoff
 
 Read `research/deep-dive/07-SYNTHESIS.md` and `08-RED_TEAM.md` immediately after the brief and before the ideation files.
 
@@ -45,15 +47,16 @@ The behavior-to-code tracing alternative was parked because Repro, Highlight, Op
 A Choicepoint contains:
 
 - exact candidate Git tree ids and a regular/executable-blob-only materialization manifest;
-- deterministic WorldPlan, measured WorldInstances, and a declared ComparisonEnvelope that never claims behavioral compatibility;
+- deterministic `WorldPlan`; opaque `CandidateExecutionBinding`; structural `WorldInstance`; later `InstanceMeasurements` and process receipts; and a declared `ComparisonEnvelope` that never claims behavioral compatibility;
+- persisted per-repetition `ComparisonAdmission` matrices with a stimulus-independent comparison basis, or a pre-batch `RejectedComparison` that creates no token, trial, batch, or map;
 - original and locally minimized replayable stimulus;
 - `OBSERVED_STABLE(k/k)` evidence plus physically new confirmation attempts; no execution-evidence reuse;
-- post-capture-policy CapturedObservation digests and exact projected candidate-to-fingerprint OutcomeMap;
+- post-capture-policy CapturedObservation digests, tagged trials, peer candidate batches with the same ordered admission-digest set, and exact projected `CandidateOutcomeMap` with globally unique attempt/world evidence identities;
 - `UNSTABLE`, `UNCOMPARABLE`, and `INCOMPLETE` members kept explicit and out of outcome cards;
-- tri-valued reduction preserving the complete labeled map, with only `UNCHANGED`, `BEST_KNOWN`, or `ONE_MINIMAL_UNDER` grades;
+- comparability-first tri-valued reduction: U1 owns only `PRESERVES`, `CHANGES`, `UNRESOLVED`, and logical sweep evidence; U5 may later award only `UNCHANGED`, `BEST_KNOWN`, or `ONE_MINIMAL_UNDER` under its durable authority;
 - blind-first human ruling: allow one/many, custom expectation, reject all, or defer; refine derives a successor;
 - exact-witness scope only, no-default selected fields, nonasserted fields, and mandatory allowed/disallowed separation;
-- separate DecisionRecord, deterministic ContractBundle, and fresh ContractExecution;
+- separate DecisionRecord, deterministic ContractBundle, and fresh ContractExecution; derived wire facts such as `compilable` are reconstructed and never accepted as emitter authority;
 - Go/Node semantic parity vectors and physical Countershape-absence proof;
 - receipt references without grade inflation.
 
@@ -98,12 +101,43 @@ For every shippable build unit:
 
 The final commit also needs a didrun HTML report and a receipt table mapping every claimed capability to the **verbatim grade**. Anything not passed through didrun is `UNRECEIPTED`.
 
+## U1 receipt map
+
+The commit-bound manifest is authoritative. This handoff mirrors its display grade exactly; it does not infer success from implementation or prose.
+
+| Claimed capability | didrun claim label | Verbatim grade |
+|---|---|---|
+| Planning schema/example/vector validation | `u1-planning-schema-validator` | `TREE-EXACT` |
+| Seventeen hostile planning-validator selftests | `u1-planning-validator-selftest` | `TREE-EXACT` |
+| Complete Go test suite | `u1-go-test` | `TREE-EXACT` |
+| Complete Go race suite | `u1-go-race` | `TREE-EXACT` |
+| Complete Go vet pass | `u1-go-vet` | `TREE-EXACT` |
+| Two-pass suite with a separate fresh build cache | `u1-go-deterministic-repeat-fresh-cache` | `TREE-EXACT` |
+| Canonical parse/encode idempotence fuzzing | `u1-fuzz-canon-parse-idempotence` | `TREE-EXACT` |
+| Malformed inert-spec no-panic fuzzing | `u1-fuzz-spec-malformed-no-panic` | `TREE-EXACT` |
+| Attempt teardown-transition fuzzing | `u1-fuzz-domain-teardown-state-machine` | `TREE-EXACT` |
+| Control non-promotion fuzzing | `u1-fuzz-observe-controls-never-promote` | `TREE-EXACT` |
+| Candidate-permutation identity fuzzing | `u1-fuzz-compare-candidate-permutation` | `TREE-EXACT` |
+| Tri-valued reducer safety fuzzing | `u1-fuzz-reduce-unresolved-safety` | `TREE-EXACT` |
+| Complete-tuple anti-cross-product fuzzing | `u1-fuzz-choice-complete-tuple-no-cross-product` | `TREE-EXACT` |
+| Exact witnessed-selection/complement fuzzing | `u1-fuzz-choice-exact-observed-complement` | `TREE-EXACT` |
+| Boundary analyzer hostile selftests | `u1-boundary-selftest` | `TREE-EXACT` |
+| Exact U1 architecture boundary | `u1-boundary-analyzer` | `TREE-EXACT` |
+| Mutation-driver hostile selftests | `u1-mutation-driver-selftest` | `TREE-EXACT` |
+| Exact eighteen-mutant A/B/A gate | `u1-exact-18-mutation-aba` | `TREE-EXACT` |
+| Full candidate whitespace check | `u1-full-candidate-diff-check` | `TREE-EXACT` |
+| Staged whitespace check | `u1-staged-diff-check` | `TREE-EXACT` |
+| Staged path inventory | `u1-staged-name-inventory` | `TREE-EXACT` |
+
+The original concurrent ledger and timed-fuzz event `101` are permanent negative history, not supporting evidence. U1's runtime/schema parity, Git roster authority, materialization, execution, adapters, durable grades, store, emitter, CLI, studio, packaging, cross-platform behavior, security, confidentiality, production readiness, adoption, and maintainership are `UNRECEIPTED`.
+
 ## Exact next actions if this task resumes elsewhere
 
-1. Run `git status --short --branch`; confirm no unexpected user changes and no staged `.didrun` path.
-2. Run `didrun show --session`; require an intact chain and do not infer a receipt from prose.
-3. If U0 is not yet sealed, finish its final validator/self-test/staged-diff claims, commit, seal, and loop strict verification to exit 0.
-4. After that gate only, execute `docs/prompts/P01-U1-TRUTH-KERNEL.md`, then continue prompts in order while updating this handoff at each green commit.
+1. Run `git status --short --branch`; confirm the current U1 `HEAD` is clean and no `.didrun` path is staged or tracked.
+2. Run `NO_COLOR=1 didrun verify --strict`; require exit 0 and do not infer a receipt from this prose.
+   If wrapped output is not relayed, inspect the event's `stdout_blob`/`stderr_blob` in `.didrun/session.log` and read the referenced immutable object under `.didrun/objects/`. That is read-only diagnosis, not a receipt; never rerun a load-bearing command unwrapped merely to reveal output.
+3. Read and execute `docs/prompts/P02-U2-GIT-WORLD-SUBSTRATE.md`; lock repository-fingerprint and candidate-set authority semantics before code.
+4. Keep U2 bounded to immutable Git selection/materialization and fresh Darwin attempt/process ownership. Do not manufacture U3 observations or weaken U1's historical boundary analyzer.
 5. Never allow parallel didrun writers in the same repository until S6-01 is fixed upstream.
 6. Run at least three full functional/visual loops; use a real different-model critic for human surfaces and label that external model evidence honestly.
 7. Run the human-cleared S6 disposable real-agent protocol and report what didrun actually captured without upgrading it.
@@ -116,7 +150,7 @@ Before editing, reply in your working notes with:
 1. the one product verb;
 2. the three distinct truth authorities (Git, Choicepoint observations/ruling, didrun receipts);
 3. two things the system must never claim;
-4. the current last green commit and strict didrun verdict; and
+4. the current last recorded-exact commit and strict didrun verdict; and
 5. the next bounded shippable unit.
 
-If any answer is missing, read the files above again. Do not infer a green state from this handoff; verify it locally.
+If any answer is missing, read the files above again. Do not infer a didrun grade from this handoff; run strict verification locally.

@@ -1,37 +1,81 @@
 {
   "schema_version": "countershape/v1",
-  "kind": "OutcomeMap",
+  "kind": "CandidateOutcomeMap",
   "artifact_digest": "sha256:5050505050505050505050505050505050505050505050505050505050505050",
+  "preservation_map_digest": "sha256:5151515151515151515151515151515151515151515151515151515151515151",
+  "world_plan_digest": "sha256:a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0",
   "stimulus_digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
   "comparison_envelope_digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+  "comparison_admission_digests": [
+    "sha256:abababababababababababababababababababababababababababababababa1",
+    "sha256:abababababababababababababababababababababababababababababababa2",
+    "sha256:abababababababababababababababababababababababababababababababa3"
+  ],
+  "comparison_basis_digest": "sha256:babababababababababababababababababababababababababababababababa",
+  "phase": "CONFIRMATION",
+  "expected_candidate_roster": [
+    "candidate:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "candidate:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+    "candidate:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "candidate:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+  ],
   "entries": [
     {
-      "candidate_execution_key": "candidate:http-a",
+      "candidate_execution_key": "candidate:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "projection_fingerprint": "sha256:4030403040304030403040304030403040304030403040304030403040304030",
       "stable_batch_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1"
     },
     {
-      "candidate_execution_key": "candidate:http-b",
+      "candidate_execution_key": "candidate:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       "projection_fingerprint": "sha256:4040404040404040404040404040404040404040404040404040404040404040",
       "stable_batch_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa2"
     },
     {
-      "candidate_execution_key": "candidate:http-c",
+      "candidate_execution_key": "candidate:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
       "projection_fingerprint": "sha256:2000200020002000200020002000200020002000200020002000200020002000",
       "stable_batch_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa3"
     }
   ],
   "excluded_candidates": [
     {
-      "candidate_execution_key": "candidate:http-d",
+      "candidate_execution_key": "candidate:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
       "stable_batch_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa4",
       "classification": "UNSTABLE"
     }
   ],
+  "world_instance_digests": [
+    "sha256:1100000000000000000000000000000000000000000000000000000000000001",
+    "sha256:1100000000000000000000000000000000000000000000000000000000000002",
+    "sha256:1100000000000000000000000000000000000000000000000000000000000003",
+    "sha256:1100000000000000000000000000000000000000000000000000000000000004",
+    "sha256:1100000000000000000000000000000000000000000000000000000000000005",
+    "sha256:1100000000000000000000000000000000000000000000000000000000000006",
+    "sha256:1100000000000000000000000000000000000000000000000000000000000007",
+    "sha256:1100000000000000000000000000000000000000000000000000000000000008",
+    "sha256:1100000000000000000000000000000000000000000000000000000000000009",
+    "sha256:110000000000000000000000000000000000000000000000000000000000000a",
+    "sha256:110000000000000000000000000000000000000000000000000000000000000b",
+    "sha256:110000000000000000000000000000000000000000000000000000000000000c"
+  ],
+  "attempt_artifact_digests": [
+    "sha256:2200000000000000000000000000000000000000000000000000000000000001",
+    "sha256:2200000000000000000000000000000000000000000000000000000000000002",
+    "sha256:2200000000000000000000000000000000000000000000000000000000000003",
+    "sha256:2200000000000000000000000000000000000000000000000000000000000004",
+    "sha256:2200000000000000000000000000000000000000000000000000000000000005",
+    "sha256:2200000000000000000000000000000000000000000000000000000000000006",
+    "sha256:2200000000000000000000000000000000000000000000000000000000000007",
+    "sha256:2200000000000000000000000000000000000000000000000000000000000008",
+    "sha256:2200000000000000000000000000000000000000000000000000000000000009",
+    "sha256:220000000000000000000000000000000000000000000000000000000000000a",
+    "sha256:220000000000000000000000000000000000000000000000000000000000000b",
+    "sha256:220000000000000000000000000000000000000000000000000000000000000c"
+  ],
   "distinct_projection_count": 3,
   "divergence": true,
   "entry_order": "CANDIDATE_EXECUTION_KEY_UTF8_LEXICOGRAPHIC",
-  "identity_basis": "COMPLETE_SORTED_LABELED_MAP",
+  "preservation_identity_basis": "COMPLETE_SORTED_ELIGIBLE_CANDIDATE_TO_PROJECTION_MAP",
+  "duplicate_evidence_across_candidates": false,
   "display_groups_semantic_authority": false,
   "majority_semantic_authority": false
 }

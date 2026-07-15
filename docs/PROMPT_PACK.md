@@ -8,7 +8,7 @@
 
 ## How to run this pack
 
-Execute one prompt at a time, in order, in a fresh chat with the repository root as the working directory. A prompt is independently resumable but not independent of prior artifacts: it must read the brief, latest handoff, owning research, current source, and prior sealed receipt. Do not paste all prompts into one context. Do not begin the next prompt until the current prompt's latest commit is sealed and `NO_COLOR=1 didrun verify --strict` exits 0.
+Execute one prompt at a time, in order, in a fresh chat with the repository root as the working directory. A prompt is independently resumable but not independent of prior artifacts: it must read the brief, `docs/SEMANTICS.md`, `docs/PROJECTION_ALGEBRA.md`, latest handoff, owning research, current source, and prior sealed receipt. Those two semantic documents are mandatory reads for every downstream unit even if an older prompt's inline read list omits them. Do not paste all prompts into one context. Do not begin the next prompt until the current prompt's latest commit is sealed and `NO_COLOR=1 didrun verify --strict` exits 0.
 
 The living authority order is:
 
@@ -20,6 +20,8 @@ The living authority order is:
 If these conflict, preserve the narrower truth claim and record the discrepancy before editing. Never silently broaden scope. The prompt pack may be refined only as a committed U0 contract change with its own receipt.
 
 ## Non-negotiable operating contract
+
+`CandidateExecutionKey` is only a wire/display reference; opaque `CandidateExecutionBinding` plus the actual matching `WorldPlan` allocates structural `WorldInstance` identity. Runtime facts belong to `InstanceMeasurements` and edge receipts. `AssessComparison` persists one exact admission matrix per repetition or a pre-batch rejection. Candidate batches may share a map only with the same ordered admission-digest set. Reduction first checks full-map comparability and only then exact eligible labeled-map equality; a naked digest is never sufficient. U1 owns logical decisions, not reduction grades. Any prompt language to the contrary is superseded.
 
 ### Product and novelty boundaries
 
@@ -64,12 +66,12 @@ If a stop condition fires, commit and receipt the narrowest honest fallback rath
 | Prompt | Shippable slice | Core outcome | Gate before advancing |
 | --- | --- | --- | --- |
 | [P00 — U0 controlling contracts](prompts/P00-U0-CONTROLLING-CONTRACTS.md) | U0 | schemas, examples, states, budgets, threat/fixture contracts, claim vocabulary | contract validators and examples strict-clean |
-| [P01 — U1 truth kernel](prompts/P01-U1-TRUTH-KERNEL.md) | U1 | strict canonical authority, domain digests, eligibility, OutcomeMap, ruling invariants, properties/mutants | no subprocess until all required truth mutants die |
+| [P01 — U1 truth kernel](prompts/P01-U1-TRUTH-KERNEL.md) | U1 | strict canonical authority, candidate binding, structural world/measurement/admission sums, tagged eligibility, comparable exact maps, ruling invariants, properties/mutants; no reduction grade | no subprocess until all required truth mutants die under the root-serialized gate |
 | [P02 — U2 Git/world substrate](prompts/P02-U2-GIT-WORLD-SUBSTRATE.md) | U2 | filter-free regular/executable materialization and fresh Darwin process ownership | hostile Git/process fixtures strict-clean; no containment claim |
 | [P03 — U3 CLI observation](prompts/P03-U3-CLI-OBSERVATION.md) | U3 | typed one-shot CLI stimulus/capture/projection, rotated repeats, control taxonomy | stable/flake/incomplete/control fixtures exact |
 | [P04 — U4 HTTP observation](prompts/P04-U4-HTTP-OBSERVATION.md) | U4 | typed local HTTP readiness/request/capture/projection and contamination proof | same truth algebra; no HTTP coercion in generic kernel |
-| [P05 — U5 bounded reducer](prompts/P05-U5-BOUNDED-REDUCER.md) | U5 | typed terminating neighbors, tri-valued fresh evaluation, full-map preservation, honest grades | shape trap, unresolved, final sweep, both domains |
-| [P06 — U6 Choicepoint store](prompts/P06-U6-CHOICEPOINT-STORE.md) | U6a | immutable artifact graph/CAS, lineage/staleness, fresh confirmation, blind ruling DTO | new physical evidence and illegal-transition refusals |
+| [P05 — U5 bounded reducer](prompts/P05-U5-BOUNDED-REDUCER.md) | U5 | typed terminating neighbors, tri-valued new evaluation, comparability-first exact labeled-map preservation, store-issued durable sweep grade | shape/digest traps, changed basis or eligibility, unresolved, crash/corruption refusal, final sweep, both domains |
+| [P06 — U6 Choicepoint store](prompts/P06-U6-CHOICEPOINT-STORE.md) | U6a | extend U5 object storage with artifact graph/CAS, lineage/staleness, fresh confirmation, blind ruling DTO; reconstruct derived wire facts rather than trusting emitter booleans | new physical evidence and illegal-transition refusals |
 | [P07 — U6 standalone contract](prompts/P07-U6-STANDALONE-CONTRACT.md) | U6b | field separation, Go/Node vectors, deterministic six-file bundle, absence/current execution | parity, selected fields, none-conforms, Countershape absent |
 | [P08 — U7 CLI/reference studies](prompts/P08-U7-CLI-REFERENCE-STUDIES.md) | U7 | safe-next-action CLI and complete HTTP/CLI falsification studies | contamination/flake/projection/shape/freshness/residue proof, three reproductions |
 | [P09 — U8 secure studio](prompts/P09-U8-SECURE-STUDIO.md) | U8a | authenticated loopback API and complete blind-first functional bench | auth/Host/Origin/CSRF/CAS/blind/injection and core flows |

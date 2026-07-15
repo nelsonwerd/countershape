@@ -11,10 +11,11 @@ Turn the functional secure studio into a reference-quality scientific comparison
 Read completely:
 
 1. `docs/CONCEPT_BRIEF.md`, especially Blind-first human protocol, trust copy, surface architecture, and human-surface acceptance.
-2. `research/deep-dive/04-product-dx.md`, `07-SYNTHESIS.md`, and `08-RED_TEAM.md`.
-3. `docs/prompts/P09-U8-SECURE-STUDIO.md`, `docs/build-loop/U8-IMPLEMENTATION-LEDGER.md`, and `docs/HANDOFF_MODE_C.md`.
-4. All current web components/styles, Playwright state fixtures, axe checks, and P09 screenshots.
-5. The complete build-loop and browser-control skill files before tool use. In the ledger, record actions or pauses those skills caused.
+2. `docs/SEMANTICS.md` and `docs/PROJECTION_ALGEBRA.md`; visual grouping and copy remain non-authoritative projections of server facts.
+3. `research/deep-dive/04-product-dx.md`, `07-SYNTHESIS.md`, and `08-RED_TEAM.md`.
+4. `docs/prompts/P09-U8-SECURE-STUDIO.md`, `docs/build-loop/U8-IMPLEMENTATION-LEDGER.md`, and `docs/HANDOFF_MODE_C.md`.
+5. All current web components/styles, Playwright state fixtures, axe checks, and P09 screenshots.
+6. The complete build-loop and browser-control skill files before tool use. In the ledger, record actions or pauses those skills caused.
 
 Before editing, run the prior commit's `NO_COLOR=1 didrun verify --strict` and inspect `git status --short`. If the sealed base is not strict-clean, stop and hand off; visual polish cannot paper over a failed functional/security unit.
 

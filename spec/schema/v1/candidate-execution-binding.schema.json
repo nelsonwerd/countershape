@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://countershape.dev/spec/schema/v1/candidate-execution-binding.schema.json",
+  "title": "Countershape CandidateExecutionBinding v1",
+  "description": "Persisted projection of the opaque full candidate execution binding. CandidateExecutionKey alone is only a wire/display reference and cannot allocate evidence.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "kind", "artifact_digest", "candidate_execution_key", "tree_identity_digest",
+    "materialization_policy_digest", "world_plan_digest", "adapter_digest", "runner_digest",
+    "projection_definition_digest"
+  ],
+  "properties": {
+    "schema_version": { "const": "countershape/v1" },
+    "kind": { "const": "CandidateExecutionBinding" },
+    "artifact_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "candidate_execution_key": { "$ref": "common.schema.json#/$defs/CandidateExecutionKey" },
+    "tree_identity_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "materialization_policy_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "world_plan_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "adapter_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "runner_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "projection_definition_digest": { "$ref": "common.schema.json#/$defs/Digest" }
+  }
+}

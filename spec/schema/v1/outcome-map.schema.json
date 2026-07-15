@@ -1,31 +1,58 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://countershape.dev/spec/schema/v1/outcome-map.schema.json",
-  "title": "Countershape OutcomeMap v1",
-  "description": "The complete sorted candidate_execution_key to projection_fingerprint map. Display groups, ordinals, support counts, and branch labels have no identity.",
+  "title": "Countershape CandidateOutcomeMap v1",
+  "description": "A phase-scoped, admitted candidate roster represented by the complete sorted eligible candidate-to-projection map plus explicit exclusions. artifact_digest identifies the whole wire artifact; preservation_map_digest is only the derived digest of the complete eligible labeled map. Preservation still requires a separate comparability decision before digest equality may be interpreted. Constructor semantics require globally unique world-instance and attempt-artifact evidence across every contributing candidate batch.",
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "schema_version", "kind", "artifact_digest", "stimulus_digest", "comparison_envelope_digest",
-    "entries", "excluded_candidates", "distinct_projection_count", "divergence", "entry_order",
-    "identity_basis", "display_groups_semantic_authority", "majority_semantic_authority"
+    "schema_version", "kind", "artifact_digest", "preservation_map_digest",
+    "world_plan_digest", "stimulus_digest", "comparison_envelope_digest",
+    "comparison_admission_digests", "comparison_basis_digest", "phase", "expected_candidate_roster", "entries",
+    "excluded_candidates", "world_instance_digests", "attempt_artifact_digests",
+    "distinct_projection_count", "divergence", "entry_order", "preservation_identity_basis",
+    "duplicate_evidence_across_candidates", "display_groups_semantic_authority",
+    "majority_semantic_authority"
   ],
   "properties": {
     "schema_version": { "const": "countershape/v1" },
-    "kind": { "const": "OutcomeMap" },
+    "kind": { "const": "CandidateOutcomeMap" },
     "artifact_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "preservation_map_digest": {
+      "description": "Derived digest of the complete sorted eligible candidate_execution_key to projection_fingerprint map. This digest alone never proves comparability or preservation.",
+      "$ref": "common.schema.json#/$defs/Digest"
+    },
+    "world_plan_digest": { "$ref": "common.schema.json#/$defs/Digest" },
     "stimulus_digest": { "$ref": "common.schema.json#/$defs/Digest" },
     "comparison_envelope_digest": { "$ref": "common.schema.json#/$defs/Digest" },
-    "entries": {
+    "comparison_admission_digests": {
+      "description": "Exact ordered per-repetition admission-matrix digest set shared by every contributing candidate batch. The semantic constructor rejects any candidate batch with a different set.",
       "type": "array",
       "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "common.schema.json#/$defs/Digest" }
+    },
+    "comparison_basis_digest": {
+      "description": "Stimulus- and purpose-independent plan/envelope/roster/equality-basis identity used by preservation comparability. It is distinct from the per-run comparison admission artifact digest.",
+      "$ref": "common.schema.json#/$defs/Digest"
+    },
+    "phase": { "$ref": "common.schema.json#/$defs/AttemptPurpose" },
+    "expected_candidate_roster": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 4,
+      "uniqueItems": true,
+      "items": { "$ref": "common.schema.json#/$defs/CandidateExecutionKey" }
+    },
+    "entries": {
+      "type": "array",
       "items": {
         "type": "object",
         "additionalProperties": false,
         "required": ["candidate_execution_key", "projection_fingerprint", "stable_batch_digest"],
         "properties": {
           "candidate_execution_key": { "$ref": "common.schema.json#/$defs/CandidateExecutionKey" },
-          "projection_fingerprint": { "$ref": "common.schema.json#/$defs/Digest" },
+          "projection_fingerprint": { "$ref": "common.schema.json#/$defs/ProjectionFingerprint" },
           "stable_batch_digest": { "$ref": "common.schema.json#/$defs/Digest" }
         }
       }
@@ -43,10 +70,28 @@
         }
       }
     },
-    "distinct_projection_count": { "type": "integer", "minimum": 1 },
+    "world_instance_digests": {
+      "description": "Union of world-instance identities from all contributing batches. Semantic construction requires this list to be complete as well as unique.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "common.schema.json#/$defs/Digest" }
+    },
+    "attempt_artifact_digests": {
+      "description": "Union of attempt-artifact identities from all contributing batches. Semantic construction requires this list to be complete as well as unique.",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "common.schema.json#/$defs/Digest" }
+    },
+    "distinct_projection_count": { "type": "integer", "minimum": 0 },
     "divergence": { "type": "boolean" },
     "entry_order": { "const": "CANDIDATE_EXECUTION_KEY_UTF8_LEXICOGRAPHIC" },
-    "identity_basis": { "const": "COMPLETE_SORTED_LABELED_MAP" },
+    "preservation_identity_basis": { "const": "COMPLETE_SORTED_ELIGIBLE_CANDIDATE_TO_PROJECTION_MAP" },
+    "duplicate_evidence_across_candidates": {
+      "description": "False asserts identity-level nonduplication across the contributing batches, not physical execution freshness or host isolation.",
+      "const": false
+    },
     "display_groups_semantic_authority": { "const": false },
     "majority_semantic_authority": { "const": false }
   }

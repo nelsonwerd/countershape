@@ -13,10 +13,11 @@ This prompt establishes functional and security correctness. P10 performs the fu
 Read completely:
 
 1. `docs/CONCEPT_BRIEF.md`, especially Trusted-local threat boundary, Blind-first human protocol, State machines, and U8 acceptance rows.
-2. `research/deep-dive/04-product-dx.md`, `07-SYNTHESIS.md`, and `08-RED_TEAM.md`.
-3. `docs/prompts/P08-U7-CLI-REFERENCE-STUDIES.md` and the current `docs/HANDOFF_MODE_C.md`.
-4. Existing `internal/domain`, `internal/store`, `internal/choice`, CLI presentation, generated fixtures, and web/build configuration. Inspect; do not create a parallel truth model.
-5. The installed browser-control skill instructions before using the browser. State in the work log when that skill changes an action.
+2. `docs/SEMANTICS.md` and `docs/PROJECTION_ALGEBRA.md`; the browser and DTOs must not recreate or weaken these authorities.
+3. `research/deep-dive/04-product-dx.md`, `07-SYNTHESIS.md`, and `08-RED_TEAM.md`.
+4. `docs/prompts/P08-U7-CLI-REFERENCE-STUDIES.md` and the current `docs/HANDOFF_MODE_C.md`.
+5. Existing `internal/domain`, `internal/store`, `internal/choice`, CLI presentation, generated fixtures, and web/build configuration. Inspect; do not create a parallel truth model.
+6. The installed browser-control skill instructions before using the browser. State in the work log when that skill changes an action.
 
 Confirm the previous sealed unit passes `NO_COLOR=1 didrun verify --strict` before editing. Inspect `git status --short`; preserve unrelated work. If U7 is not sealed and strict-clean, stop and emit Mode C rather than building on an unverified base.
 

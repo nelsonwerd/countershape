@@ -13,9 +13,10 @@ Run at least three passes: export confidentiality/injection correctness; clean-r
 Read completely:
 
 1. `docs/CONCEPT_BRIEF.md`, especially Standalone contract boundary, Execution and security boundary, Budgets, Acceptance matrix, and prohibited claim language.
-2. `research/deep-dive/03-execution-security.md`, `04-product-dx.md`, `06-feasibility-acceptance.md`, `07-SYNTHESIS.md`, and `08-RED_TEAM.md`.
-3. P09 and P10, both U8 ledgers, the current `docs/HANDOFF_MODE_C.md`, and every existing README/security/packaging file.
-4. The actual CLI, report/store, embedded web asset, fixture, contract-bundle, and didrun-receipt integration code. Preserve their truth jurisdictions.
+2. `docs/SEMANTICS.md` and `docs/PROJECTION_ALGEBRA.md`; exports must preserve their distinctions without recomputing authority.
+3. `research/deep-dive/03-execution-security.md`, `04-product-dx.md`, `06-feasibility-acceptance.md`, `07-SYNTHESIS.md`, and `08-RED_TEAM.md`.
+4. P09 and P10, both U8 ledgers, the current `docs/HANDOFF_MODE_C.md`, and every existing README/security/packaging file.
+5. The actual CLI, report/store, embedded web asset, fixture, contract-bundle, and didrun-receipt integration code. Preserve their truth jurisdictions.
 
 Run the prior sealed commit's `NO_COLOR=1 didrun verify --strict` before changes and inspect `git status --short`. If it is nonzero, do not start U9; repair or emit Mode C for the owning unit.
 

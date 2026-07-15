@@ -11,7 +11,7 @@
     "runner_digest": "sha256:5555555555555555555555555555555555555555555555555555555555555555"
   },
   "execution_shape": "ONE_LOOPBACK_HTTP_REQUEST",
-  "start_argv": ["/usr/bin/env", "node", "fixture/server.mjs"],
+  "start_argv": ["node", "fixture/server.mjs"],
   "setup_argv": [],
   "cwd_policy": "MATERIALIZED_ROOT",
   "environment": [
@@ -31,7 +31,7 @@
     "discovery_repeats": 3,
     "confirmation_repeats": 3,
     "concurrency": "SEQUENTIAL",
-    "rotation": "ROTATE_CANDIDATE_ORDER"
+    "rotation": "NOT_ESTABLISHED_IN_U1"
   },
   "required_tools": [
     { "name": "node", "version_constraint": "executed-major-only" }

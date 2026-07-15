@@ -8,7 +8,7 @@ Proceed only from a strict-green U2. Preserve existing work, narrate compact pha
 
 ## Required read set
 
-Read fully: `/Users/drewnelson/.claude/CLAUDE.md`; `docs/CONCEPT_BRIEF.md`; `docs/ARCHITECTURE.md`; `docs/THREAT_MODEL.md`; `docs/STATE_MACHINES.md`; `docs/CLAIM_VOCABULARY.md`; `research/deep-dive/02-architecture-correctness.md`; `research/deep-dive/04-product-dx.md`; `research/deep-dive/05-contract-portability.md`; `research/deep-dive/07-SYNTHESIS.md`; `research/deep-dive/08-RED_TEAM.md`; `docs/status/U1.md`; `docs/status/U2.md`; `docs/HANDOFF_MODE_C.md`; relevant U0 specs/vectors; and U1/U2 public types. Verify branch, working status, U2 seal, and `NO_COLOR=1 didrun verify --strict` before editing.
+Read fully: `/Users/drewnelson/.claude/CLAUDE.md`; `docs/CONCEPT_BRIEF.md`; `docs/ARCHITECTURE.md`; `docs/SEMANTICS.md`; `docs/PROJECTION_ALGEBRA.md`; `docs/THREAT_MODEL.md`; `docs/STATE_MACHINES.md`; `docs/CLAIM_VOCABULARY.md`; `research/deep-dive/02-architecture-correctness.md`; `research/deep-dive/04-product-dx.md`; `research/deep-dive/05-contract-portability.md`; `research/deep-dive/07-SYNTHESIS.md`; `research/deep-dive/08-RED_TEAM.md`; `docs/status/U1.md`; `docs/status/U2.md`; `docs/HANDOFF_MODE_C.md`; relevant U0 specs/vectors; and U1/U2 public types. Verify branch, working status, U2 seal, and `NO_COLOR=1 didrun verify --strict` before editing.
 
 ## Locked semantics and cuts
 
@@ -19,8 +19,8 @@ Read fully: `/Users/drewnelson/.claude/CLAUDE.md`; `docs/CONCEPT_BRIEF.md`; `doc
 - `CapturedObservation` means bytes after the declared capture policy. Call bytes raw only when unchanged and durably persisted. Projection is pure, versioned, visible, and returns exact canonical bytes plus source links or a typed rejection.
 - Use a closed CLI projection field registry sufficient for the reference study: exit kind/code and the exact strict-JSON stdout fields locked by U0 (for example precedence source/value). Do not introduce arbitrary dotted paths, regex, tolerant comparison, implicit JSON coercion, or custom code.
 - Repetition produces only `OBSERVED_STABLE(k/k,h)`, `UNSTABLE(histogram)`, `UNCOMPARABLE(reasons)`, or `INCOMPLETE`. Never say deterministic. A divergence contains at least two eligible candidates and two fingerprints.
-- The canonical candidate-to-fingerprint `OutcomeMap` crosses the adapter boundary. Labels, refs, producer provenance, order, support counts, and ordinal clusters are display-only and cannot alter identity.
-- `ComparisonEnvelope` declares which measured instances are admitted. Root/PID/timing placeholders in a projection never prove those dimensions irrelevant to prior control flow.
+- The complete `CandidateOutcomeMap` crosses the adapter boundary, including plan, comparison basis, phase, exclusions, shared per-repetition admission set, and globally unique evidence identities. Labels, refs, producer provenance, order, support counts, and ordinal clusters are display-only and cannot alter identity.
+- `ComparisonEnvelope` is policy. U3 supplies complete `InstanceMeasurements`; `AssessComparison` persists one exact matrix admission per repetition or refuses before batching. A candidate key cannot substitute for its opaque binding and matching plan. Root/PID/timing placeholders in a projection never prove those dimensions irrelevant to prior control flow.
 
 ## Exact ownership
 
@@ -43,11 +43,11 @@ It may make additive corrections to U1/U2 interfaces only when required by the c
 ## Implementation sequence
 
 1. Define typed `CLIStimulus`, `CLICapturePolicy`, `CLICapturedObservation`, `CLIProjectionDefinition`, and reducer-neutral stimulus measure data. Preserve argv order and all absent/empty distinctions in canonical identity. Validate fixture paths before U2 receives them.
-2. Compile the CLI portion of an inert source spec into a deterministic `WorldPlan`. Resolve an executable from the materialized tree under the locked policy, construct absolute direct argv, private HOME/TMPDIR/state, and sparse environment. Display the trusted-code/`HOST_ALLOWED` warning in plan metadata.
+2. Compile the CLI portion of an inert source spec into a deterministic `WorldPlan` containing only logical tool names and repository-relative argv. Allocate structural `WorldInstance` from the opaque candidate binding plus actual matching plan. Resolve the actual executable and private HOME/TMPDIR/state paths per attempt into `InstanceMeasurements` or U2 process receipts; never rewrite those host facts into stable plan or structural-world identity. Display the trusted-code/`HOST_ALLOWED` warning in plan metadata.
 3. Adapt U2 lifecycle evidence into CLI capture without losing exit-versus-signal, stdout/stderr, byte counts, truncation/control facts, attempt marker, and fixture invocation receipt. Only the central U1 eligibility service may admit projection.
 4. Implement visible pure projection operations: channel requirement, UTF-8 validation where declared, strict JSON token parsing through `internal/canon`, closed field extraction with tagged missing/present-empty, and canonical result encoding. Record every operation and source link. Do not silently delete stderr, paths, or volatile fields.
 5. Implement deterministic sequential schedules with candidate rotation between repeats. Schedule order belongs to evidence but not outcome identity. Enforce disclosed trial/wall/output budgets before and during execution.
-6. Assemble fresh trials into `StableBatch` and then U1 `OutcomeMap`; adapters never construct a looser group representation. Preserve exclusions and reasons separately.
+6. Assess one complete candidate measurement matrix per repetition. A rejection stops before batching. Assemble admitted tagged trials into `StableBatch`, require peer batches to share the exact ordered admission set, and then construct U1 `CandidateOutcomeMap`; adapters never construct a looser group representation. Preserve exclusions and reasons separately.
 7. Build dependency-free Node-core CLI fixture candidates for config precedence: one favors config, one environment, one argv. A private HOME must neutralize an ambient user-config sentinel. Include constant, deliberately alternating, timeout, output-limit, signal, malformed-projection, empty-output, and incomplete-budget fixtures. Invocation instrumentation must prove a process actually ran and remain outside projection.
 8. Produce a test-only study result that makes the precedence split and Captured-to-Projection operations inspectable. This is observation evidence, not a human Choicepoint or contract.
 9. Update status/handoff with the exact fields supported and all nonclaims.

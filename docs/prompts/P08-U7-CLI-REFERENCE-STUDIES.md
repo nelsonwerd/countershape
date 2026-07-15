@@ -1,6 +1,6 @@
 # P08 — U7 reference CLI and falsifiable two-domain studies
 
-Implement Countershape U7 in a fresh chat. Read `docs/CONCEPT_BRIEF.md`, deep-dive reports `06`–`08`, the checked-in study specs, and the Mode C handoff. Confirm P07 is committed, sealed, and green under `NO_COLOR=1 didrun verify --strict`; executed Go/Node parity and absent-runtime results are prerequisites.
+Implement Countershape U7 in a fresh chat. Read `docs/CONCEPT_BRIEF.md`, `docs/SEMANTICS.md`, `docs/PROJECTION_ALGEBRA.md`, deep-dive reports `06`–`08`, the checked-in study specs, and the Mode C handoff. Confirm P07 is committed, sealed, and green under `NO_COLOR=1 didrun verify --strict`; executed Go/Node parity and absent-runtime results are prerequisites.
 
 ## Objective and product milestone
 
@@ -14,7 +14,7 @@ Claim only runtime facts actually exercised on the named Darwin machine. Linux, 
 
 Candidates are trusted local Node-core fixtures materialized from regular/executable Git blobs only. No setup, package install, registry, Docker, external API, TLS, redirects, cookies, compression, WebSockets, browser, database, or model. Every evidentiary trial gets a new root, private `HOME`/`TMPDIR`/state, process attempt, and captured evidence. No execution cache, prepared root, reset hook, snapshot, or reflink.
 
-The exact `OutcomeMap` is the canonical sorted `candidate_execution_key -> projection_fingerprint` map. Every reducer and confirmation step binds it. Candidate order, nickname, producer, support count, partition shape, and cluster ordinal never decide preservation. Evaluation remains `PRESERVES | CHANGES | UNRESOLVED`; unresolved blocks `ONE_MINIMAL_UNDER`.
+Every reducer and confirmation step binds the full typed `CandidateOutcomeMap`. It first checks plan, envelope, stimulus-independent comparison basis, roster, eligibility, and exclusions; only comparable maps compare the exact sorted eligible `candidate_execution_key -> projection_fingerprint` digest. Candidate order, nickname, producer, support count, partition shape, cluster ordinal, and naked digests never decide preservation. Evaluation remains `PRESERVES | CHANGES | UNRESOLVED`; unresolved blocks `ONE_MINIMAL_UNDER`.
 
 Comparison envelopes state measured equalities, tolerated dimensions, rejected variance, and uncontrolled dimensions. They do not prove compatible worlds or that normalized roots/ports did not affect control flow. Use `OBSERVED_STABLE(k/k)`, never deterministic or stable without counts.
 
@@ -72,7 +72,7 @@ Add an architecture test: generic identity/observe/compare/reduce/choice package
 
 ## Exact reproduction and acceptance gates
 
-Run each full study three times from clean fixture repositories. Deterministic source specs, compiled `WorldPlan`, supplied fixture ruling, `DecisionRecord`, and `ContractBundle` bytes must match across runs. `WorldInstance`, attempts, captures, confirmation, and `ContractExecution` evidence must be physically new and linked. Record native OS/kernel/architecture, Git/Go/Node versions, CPU/memory facts available without secrets, per-phase trial counts, budgets consumed, wall time, and peak resource observations.
+Run each full study three times from clean fixture repositories. Deterministic source specs, compiled `WorldPlan`, supplied fixture ruling, `DecisionRecord`, and `ContractBundle` bytes must match across runs. Structural `WorldInstance` identities, attempts, measurements/process receipts, captures, confirmation, and `ContractExecution` evidence must be newly allocated and linked; physical freshness is established only by U2 lifecycle/invocation evidence, never by structural identity alone. Record native OS/kernel/architecture, Git/Go/Node versions, CPU/memory facts available without secrets, per-phase trial counts, budgets consumed, wall time, and peak resource observations.
 
 Each dependency-free study must finish under 15 minutes on the named reference machine. If it does not, report the measured result and revise the metric; never reuse evidence, hide retries, or relax freshness to hit the number. Imported repositories inherit only explicit budgets, not this timing claim.
 

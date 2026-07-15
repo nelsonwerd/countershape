@@ -1,0 +1,12 @@
+{
+  "schema_version": "countershape/v1",
+  "kind": "RejectedComparison",
+  "artifact_digest": "sha256:efefefefefefefefefefefefefefefefefefefefefefefefefefefefefefefef",
+  "world_plan_digest": "sha256:a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0a0",
+  "comparison_envelope_digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+  "measurement_digests": [
+    "sha256:cdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcdcd",
+    "sha256:cececececececececececececececececececececececececececececececece"
+  ],
+  "reason_codes": ["TOOL_MISMATCH"]
+}

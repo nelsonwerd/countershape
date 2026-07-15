@@ -6,6 +6,7 @@
 - **Last updated:** 2026-07-14
 - **Founder persona:** Soren Vale
 - **Confidence:** 8/10 in the truth kernel; 6/10 in the bounded reference instrument; 3/10 in review compression; 3/10 in adoption
+- **Semantic authority:** `docs/SEMANTICS.md` and `docs/PROJECTION_ALGEBRA.md` control structural identity, measurement/admission, and preservation semantics
 
 ## Locked concept
 
@@ -69,7 +70,7 @@ Stop or narrow rather than relabel a failure if:
 - Git materialization invokes checkout/archive policy, replacement objects, lazy promisor fetch, or network;
 - mutable/shared worlds contribute to evidence, or fresh confirmation can reuse execution evidence;
 - setup, readiness, transport, timeout, output, projection, or teardown control failures enter an outcome cluster;
-- any cache, reducer, final sweep, API, or UI path preserves only group shape rather than the complete outcome map;
+- any cache, reducer, final sweep, API, or UI path skips full-map comparability or preserves only group shape rather than the complete eligible labeled map;
 - `UNRESOLVED`, cancellation, staleness, or budget exhaustion can yield `ONE_MINIMAL_UNDER`;
 - selected fields accept a confirmed disallowed outcome, allow-many becomes a cross-product, or an unselected field is asserted;
 - `REJECT_ALL`, `DEFER`, or `REFINE` emits executable code;
@@ -142,10 +143,12 @@ This study proves the second typed adapter while reusing only identity, eligibil
 | Which source objects were selected? | `TreeIdentity` | materialized bytes, dependencies, or behavior |
 | Which supported files were written? | `MaterializationManifest` | complete checkout, symlink/submodule/LFS content, or safety |
 | What execution was declared? | deterministic `WorldPlan` | actual host facts or behavioral equivalence |
-| Which instances were admitted? | measured `WorldInstance` + `ComparisonEnvelope` | no omitted behavior-changing dimension |
+| What structural attempt identity was declared? | `WorldInstance` constructed from the opaque candidate binding and matching plan | process execution, runtime measurement, freshness, or admission |
+| What runtime dimensions were reported? | `InstanceMeasurements` and edge receipts | honest host measurement or admission |
+| Which exact matrix was admitted or rejected? | `AssessComparison` producing `ComparisonAdmission` or `RejectedComparison` | behavioral equivalence or any batch after rejection |
 | What was durably captured? | `CapturedObservation` after named capture policy | bytes discarded before persistence |
 | What compared equal? | `ProjectionDefinition` + exact canonical `ProjectionResult` | correctness or semantic equivalence |
-| What split was observed? | confirmed `OutcomeMap` | majority truth or determinism |
+| What split was observed? | confirmed `CandidateOutcomeMap` after admission and eligibility | majority truth, determinism, or physical freshness from structure alone |
 | What was reduced? | transcript, budgets, reducer set, grade | global minimum, root cause, or comprehension |
 | What did the human state here? | immutable `DecisionRecord` | broader intent, safety, or branch endorsement |
 | What source was emitted? | deterministic `ContractBundle` digest | current conformance or authenticity |
@@ -159,16 +162,19 @@ The normative objects are:
 1. `TreeIdentity`: repository fingerprint, object format, immutable commit/tree OIDs, display ref, and Git version.
 2. `MaterializationManifest`: policy, sorted regular/executable entry records, blob/object verification, portable tree digest, target-filesystem facts, and typed refusal details.
 3. `WorldPlan`: deterministic argv, roots policy, sparse environment, fixture/readiness, `HOST_ALLOWED`, capture/projection, repeats, schedule, tools, and all budgets.
-4. `WorldInstance`: attempt identity, private roots, port/resources, measured platform/tools/filesystem, invocation evidence, uncontrolled dimensions, process lifecycle, and teardown.
-5. `ComparisonEnvelope`: versioned measured equalities, tolerated dimensions, rejected variance, and uncontrolled dimensions. It admits instances for one finite comparison; it never proves compatible worlds or that placeholders did not affect control flow.
-6. `CapturedObservation`: post-capture-policy channels, typed trial control, bounded artifact digests, and teardown eligibility. Use “raw” only for unchanged persisted bytes.
-7. `ProjectionDefinition` and `ProjectionResult`: pure, versioned, visible operations ending in exact canonical bytes or typed rejection.
-8. `StableBatch` and `OutcomeMap`: repeated classifications and the canonical sorted `candidate_execution_key -> projection_fingerprint` map. Display clusters are derived views with no identity.
-9. `ReductionRun`: typed neighbors, well-founded measure, budgets, fresh batches, tri-valued outcomes, accepted path, and final sweep.
-10. `Choicepoint`: immutable fresh-confirmed decision-ready revision with original/minimized stimuli, exact maps, evidence, exclusions, and reduction grade.
-11. `DecisionRecord`: blind/reveal facts, human action, selected and nonasserted fields, exact scope, rationale, and verbatim receipt references.
-12. `ContractBundle`: deterministic six-file Node-core source bundle with a typed exact predicate.
-13. `ContractExecution`: current eligible conformance/contradiction or typed ineligible execution evidence; it never freshens the Choicepoint.
+4. `CandidateExecutionBinding`: opaque tree/materialization/plan/adapter/runner/projection identity. `CandidateExecutionKey` is its wire/display reference and cannot allocate evidence by itself.
+5. `WorldInstance`: structural declared-consistency identity over plan, candidate binding, stimulus, attempt artifact, purpose, nonce, and ordinal. Runtime roots, resources, platform/tools, lifecycle, and teardown are later measurement/receipt facts.
+6. `ComparisonEnvelope`: versioned measurement policy for required-equal, tolerated, rejected-variance, and uncontrolled dimensions.
+7. `InstanceMeasurements`: one complete policy-bound runtime row for one structural instance, supplied by the U2 edge.
+8. `ComparisonAdmission` or `RejectedComparison`: the persisted result of `AssessComparison` over the exact candidate matrix, carrying its digest-sorted measurement set. Admission derives a stimulus-independent comparison basis and internal per-row tokens; rejection stops before any trial or batch.
+9. `CapturedObservation`: post-capture-policy channels, typed trial control, bounded artifact digests, and teardown eligibility. Use “raw” only for unchanged persisted bytes.
+10. `ProjectionDefinition` and `ProjectionResult`: pure, versioned, visible operations ending in exact canonical bytes or typed rejection.
+11. `StableBatch` and `CandidateOutcomeMap`: tagged repeated trials, a shared ordered per-repetition admission-digest set across candidate batches, explicit exclusions, globally unique evidence identities, and the canonical sorted `candidate_execution_key -> projection_fingerprint` map. Display clusters are derived views with no identity.
+12. `ReductionRun`: future U5 durable transcript/grade wire target. U1 owns only logical tri-valued evaluations and sweep relations.
+13. `Choicepoint`: immutable fresh-confirmed decision-ready revision with original/minimized stimuli, exact maps, evidence, exclusions, and a U5 reduction grade.
+14. `DecisionRecord`: blind/reveal facts, human action, selected and nonasserted fields, exact scope, rationale, and verbatim receipt references. Derived wire booleans such as `compilable` are reconstructed, never emitter inputs.
+15. `ContractBundle`: deterministic six-file Node-core source bundle with a typed exact predicate.
+16. `ContractExecution`: current eligible conformance/contradiction or typed ineligible execution evidence; it never freshens the Choicepoint.
 
 Git is content authority. Countershape is authority only for the canonical artifacts and transitions it creates. The human is authority only for the fields and exact witness they explicitly rule on. didrun remains external; an unknown grade round-trips unchanged and missing evidence is `UNRECEIPTED`.
 
@@ -184,18 +190,18 @@ For `k` required new trials:
 
 - `OBSERVED_STABLE(k/k,h)`: every eligible projection fingerprint is `h`;
 - `UNSTABLE(histogram)`: at least two eligible fingerprints occur;
-- `UNCOMPARABLE(reasons)`: the tree, envelope, control, or projection is ineligible; or
+- `UNCOMPARABLE(reasons)`: an admitted trial later cannot contribute because its source, control, or projection is ineligible; or
 - `INCOMPLETE`: the budget ends before `k` eligible trials.
 
-Finite agreement never becomes “deterministic.” A divergence requires at least two eligible candidates and at least two fingerprints. Candidate labels, order, producer, and support counts never change the `OutcomeMap` digest.
+Envelope rejection occurs before this classification and persists as `RejectedComparison`; it produces no token, trial, stable batch, or outcome map. Finite agreement never becomes “deterministic.” A complete `CandidateOutcomeMap` covers the exact expected roster with eligible entries plus explicit exclusions, binds plan/comparison basis/phase, requires the same ordered admission-digest set across candidate batches, and rejects duplicate attempt/world evidence identities. A sealed `DivergentBaseline` additionally requires at least two eligible candidates and at least two fingerprints. Candidate labels, order, producer, and support counts never change the typed preservation-map digest; evidence provenance lives in a distinct outcome-artifact digest.
 
 ### Reduction
 
 Every adapter provides a deterministic finite neighbor function and a strictly decreasing well-founded measure. A neighbor evaluation is:
 
-- `PRESERVES` only when a new eligible batch yields the exact baseline `OutcomeMap`;
-- `CHANGES` only when a new eligible batch yields a different stable eligible map; or
-- `UNRESOLVED` for every other result.
+- `UNRESOLVED` when the full typed maps are not comparable on plan, envelope, stimulus-independent comparison basis, expected roster, eligible set, exclusions, and exclusion classifications, or when no complete eligible map exists;
+- `PRESERVES` when comparable maps have equal exact complete eligible labeled-map digests; or
+- `CHANGES` when comparable maps have different exact complete eligible labeled-map digests.
 
 The only grades are:
 
@@ -203,7 +209,7 @@ The only grades are:
 - `BEST_KNOWN` — smaller preserving stimulus found, but a budget ended, sweep was incomplete, or any direct neighbor was unresolved; and
 - `ONE_MINIMAL_UNDER(reducer_set_digest)` — one constructible state backed by a durable complete sweep whose enumerated direct-neighbor set equals its fresh `CHANGES` results.
 
-The phrase “smallest behavior” is prohibited. Membership shape is never the preservation predicate. One canonical outcome-map digest crosses persistence, reduction, confirmation, API, and UI; ordinal group IDs have no semantic authority.
+The phrase “smallest behavior” is prohibited. Membership shape and a naked digest are never preservation predicates. Full typed maps or the opaque comparability result cross persistence, reduction, confirmation, API, and UI; the evidence-bearing artifact has a distinct `OutcomeArtifactDigest`, and ordinal group IDs have no semantic authority. Concrete admission artifacts differ across stimuli/repetitions while `ComparisonBasisDigest` remains comparable. The durable proof constructor is intentionally absent from U1 and arrives only with U5's store-backed sweep authority.
 
 No execution evidence is reused. Pure parsing/canonical/projection transforms of immutable bytes may be memoized. Fresh confirmation requires newly created attempt artifacts before spawn, fresh roots/process lifecycles, fixture-observed invocation evidence, and a rotated schedule.
 
@@ -225,7 +231,7 @@ For selected fields `F`, allowed outcomes `A`, and disallowed confirmed outcomes
 for every a in A and d in D: select_F(a) != select_F(d)
 ```
 
-Missing remains tagged missing. Failure returns `AMBIGUOUS_SCOPE` and no files. Candidate-neutral differing fields may be suggested but never auto-selected. Allow-many is a canonical set of complete selected-field tuples, never a cross-product. Empty predicates are forbidden. Selected-field scope intentionally permits future changes in nonasserted fields; the UI and emitted README say this directly.
+Missing remains tagged missing. Empty selection returns `EMPTY_SELECTED_FIELDS`; a nonseparating field set returns `AMBIGUOUS_SCOPE`; neither creates files. Candidate-neutral differing fields may be suggested but never auto-selected. Allow-many is a canonical set of complete selected-field tuples derived from confirmed outcomes, never a cross-product. Selected-field scope intentionally permits future changes in nonasserted fields; the UI and emitted README say this directly.
 
 ## Standalone contract boundary
 
@@ -288,7 +294,7 @@ internal/world/         fresh attempts and Darwin process lifecycle
 internal/adapters/cli/  typed CLI stimulus/capture/projection/reducers
 internal/adapters/http/ typed HTTP stimulus/capture/projection/reducers
 internal/observe/       eligibility, schedules, repeated classification
-internal/compare/       exact fingerprints and OutcomeMap
+internal/compare/       exact fingerprints, comparison basis, and CandidateOutcomeMap
 internal/reduce/        bounded tri-valued orchestration and final sweep
 internal/choice/        immutable lineage and ruling validation
 internal/emit/node/     deterministic standalone source
@@ -361,11 +367,11 @@ Each state can terminate in a typed control result. Only eligible `FINALIZED` ev
 Each unit is separately verified, claimed, committed, sealed, and gated on `NO_COLOR=1 didrun verify --strict` before the next unit. Nonzero means the unit is not done; fix the actual problem, rerun through didrun, re-claim, commit, reseal, and repeat. Claims and final receipts retain didrun grades verbatim.
 
 1. **U0 — controlling contracts:** living brief, schemas, comparison-envelope language, state machines, budgets, refusal semantics, fixture/negative-proof specs, architecture rules, claim vocabulary, prompt pack, and machine-readable examples.
-2. **U1 — truth kernel:** strict canonical bytes/digests, plan model, eligibility, OutcomeMap, ruling types, properties, state-machine tests, and required mutants. No subprocess.
+2. **U1 — truth kernel:** strict canonical bytes/digests, plan model, candidate binding, structural-world/measurement/admission sums, eligibility, comparable `CandidateOutcomeMap`, logical reduction decisions without grades, ruling types, properties, state-machine tests, and required mutants. No subprocess.
 3. **U2 — Git and fresh Darwin process substrate:** filter-free regular/executable materializer, private attempts, sparse environment, bounded byte capture, process groups, hostile fixtures, no replacement/fetch/network.
 4. **U3 — CLI observation spine:** typed stimulus/capture/projection, rotated repeats, constant/alternating/control fixtures, exact map.
 5. **U4 — HTTP observation spine:** fixture-owned readiness, one request, typed capture/projection, contamination negative fixture, shared truth services.
-6. **U5 — bounded reducer:** typed neighbors, tri-valued evaluations, map-digest preservation, budgets/transcript, shape trap, final sweep, both honest grades.
+6. **U5 — bounded reducer:** typed neighbors, tri-valued evaluations, map-digest preservation, budgets/transcript, shape trap, and a minimal content-addressed durable-sweep authority required for the local grade.
 7. **U6 — Choicepoint and residue:** immutable store/CAS, new confirmation evidence, blind ruling DTO, separation obligation, Go/Node vector corpus, deterministic six-file bundle, absent-runtime conformance.
 8. **U7 — complete CLI and reference studies:** safe next actions, both end-to-end proofs, allow-many, custom none-conforms, reject/defer, three clean reproductions, named-machine timings.
 9. **U8 — secure decision bench:** authenticated loopback API, complete state renderer, 1440/375 flows, at least three full visual passes, Playwright/axe/manual checks, and a real different-model screenshot critic.
@@ -396,7 +402,7 @@ Honest fallback milestones are allowed: truth-kernel prototype, observation-only
 
 ## Claim language
 
-Allowed: `repository-scale operationalization` only after the decisive proof; `instances admitted by comparison envelope E`; `observed stable k/k`; `no observed difference under N named finite probes`; `exact projection equality`; `BEST_KNOWN under named reducers and budgets`; `ONE_MINIMAL_UNDER the recorded reducer set`; `human-scoped exact-witness ruling`; `standalone selected-field test` after absence/parity receipts.
+Allowed: `repository-scale operationalization` only after the decisive proof; `comparison matrix admitted under envelope E`; `observed stable k/k`; `no observed difference under N named finite probes`; `exact projection equality`; `BEST_KNOWN under named reducers and budgets`; `ONE_MINIMAL_UNDER the recorded reducer set`; `human-scoped exact-witness ruling`; `standalone selected-field test` after absence/parity receipts.
 
 <!-- countershape-validator: allow-prohibited-terms begin -->
 Prohibited: invented disambiguation; new Choicepoint primitive; first implementation-derived intent question; first behavior clustering or feedback-to-test loop; oracle-free verification; compatible/deterministic worlds; raw after redaction; smallest/root cause/global minimum; semantic equivalence; correctness/safety/security approval; winner/best branch; complete intent; universal portability; sandboxed/network blocked; safely shareable; reproducible without a named envelope; or any didrun grade summarized upward.

@@ -1,0 +1,147 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://countershape.dev/spec/schema/v1/source-spec.schema.json",
+  "title": "Countershape SourceSpec v1",
+  "description": "Strict inert input compiled into a fully defaulted WorldPlan. This is not an evidence artifact.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "candidate_set_digest",
+    "materialization_policy_digest",
+    "comparison_envelope_digest",
+    "adapter",
+    "execution_shape",
+    "start_argv",
+    "fixture_recipe_digest",
+    "capture_policy_digest",
+    "projection_definition_digest"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": { "adapter": { "properties": { "domain": { "const": "CLI" } }, "required": ["domain"] } },
+        "required": ["adapter"]
+      },
+      "then": {
+        "properties": {
+          "adapter": { "properties": { "adapter_version": { "const": "cli/v1" } } },
+          "execution_shape": { "const": "ONE_CLI_INVOCATION" },
+          "readiness": { "type": "object", "additionalProperties": false, "required": ["kind"], "properties": { "kind": { "const": "NONE" } } }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": { "adapter": { "properties": { "domain": { "const": "HTTP" } }, "required": ["domain"] } },
+        "required": ["adapter"]
+      },
+      "then": {
+        "required": ["readiness"],
+        "properties": {
+          "adapter": { "properties": { "adapter_version": { "const": "http/v1" } } },
+          "execution_shape": { "const": "ONE_LOOPBACK_HTTP_REQUEST" },
+          "readiness": { "type": "object", "additionalProperties": false, "required": ["kind", "signal_name"], "properties": { "kind": { "const": "FIXTURE_OWNED_SIGNAL" }, "signal_name": { "type": "string", "minLength": 1, "maxLength": 128 } } },
+          "budgets": { "properties": { "readiness_ms": { "type": "integer", "minimum": 1, "maximum": 30000 } } }
+        }
+      }
+    }
+  ],
+  "properties": {
+    "schema_version": { "const": "countershape-source/v1" },
+    "kind": { "const": "SourceSpec" },
+    "candidate_set_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "materialization_policy_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "comparison_envelope_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "adapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["domain", "adapter_version", "runner_digest"],
+      "properties": {
+        "domain": { "enum": ["CLI", "HTTP"] },
+        "adapter_version": { "enum": ["cli/v1", "http/v1"] },
+        "runner_digest": { "$ref": "common.schema.json#/$defs/Digest" }
+      }
+    },
+    "execution_shape": { "enum": ["ONE_CLI_INVOCATION", "ONE_LOOPBACK_HTTP_REQUEST"] },
+    "start_argv": { "type": "array", "minItems": 1, "maxItems": 64, "items": { "type": "string", "maxLength": 4096 } },
+    "setup_argv": { "type": "array", "maxItems": 64, "items": { "type": "string", "maxLength": 4096 } },
+    "environment": {
+      "type": "array",
+      "maxItems": 5,
+      "uniqueItems": true,
+      "items": {
+        "oneOf": [
+          { "type": "object", "additionalProperties": false, "required": ["name", "value"], "properties": { "name": { "const": "LANG" }, "value": { "const": "C" } } },
+          { "type": "object", "additionalProperties": false, "required": ["name", "value"], "properties": { "name": { "const": "LC_ALL" }, "value": { "const": "C" } } },
+          { "type": "object", "additionalProperties": false, "required": ["name", "value"], "properties": { "name": { "const": "TZ" }, "value": { "const": "UTC" } } },
+          { "type": "object", "additionalProperties": false, "required": ["name", "value"], "properties": { "name": { "const": "NO_COLOR" }, "value": { "const": "1" } } },
+          { "type": "object", "additionalProperties": false, "required": ["name", "value"], "properties": { "name": { "const": "NODE_NO_WARNINGS" }, "value": { "const": "1" } } }
+        ]
+      }
+    },
+    "secret_slots": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "presence"],
+        "properties": {
+          "name": { "type": "string", "maxLength": 128, "pattern": "^[A-Z_][A-Z0-9_]*$" },
+          "presence": { "enum": ["ABSENT", "REQUIRED_WITHOUT_VALUE_CAPTURE"] }
+        }
+      }
+    },
+    "fixture_recipe_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "readiness": {
+      "oneOf": [
+        { "type": "object", "additionalProperties": false, "required": ["kind"], "properties": { "kind": { "const": "NONE" } } },
+        { "type": "object", "additionalProperties": false, "required": ["kind", "signal_name"], "properties": { "kind": { "const": "FIXTURE_OWNED_SIGNAL" }, "signal_name": { "type": "string", "minLength": 1, "maxLength": 128 } } }
+      ]
+    },
+    "capture_policy_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "projection_definition_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "repeat_schedule": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "discovery_repeats": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "confirmation_repeats": { "type": "integer", "minimum": 1, "maximum": 5 }
+      }
+    },
+    "required_tools": {
+      "type": "array",
+      "maxItems": 16,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "version_constraint"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 128 },
+          "version_constraint": { "type": "string", "minLength": 1, "maxLength": 256 }
+        }
+      }
+    },
+    "budgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "candidate_count": { "type": "integer", "minimum": 2, "maximum": 4 },
+        "materialized_entry_count": { "type": "integer", "minimum": 1, "maximum": 100000 },
+        "materialized_bytes_per_world": { "type": "integer", "minimum": 1, "maximum": 1073741824 },
+        "single_blob_bytes": { "type": "integer", "minimum": 1, "maximum": 134217728 },
+        "readiness_ms": { "type": "integer", "minimum": 0, "maximum": 30000 },
+        "probe_ms": { "type": "integer", "minimum": 1, "maximum": 30000 },
+        "teardown_ms": { "type": "integer", "minimum": 1, "maximum": 10000 },
+        "stdout_bytes": { "type": "integer", "minimum": 1, "maximum": 16777216 },
+        "stderr_bytes": { "type": "integer", "minimum": 1, "maximum": 16777216 },
+        "http_body_bytes": { "type": "integer", "minimum": 1, "maximum": 16777216 },
+        "proposed_shrink_stimuli": { "type": "integer", "minimum": 0, "maximum": 200 },
+        "total_candidate_trials": { "type": "integer", "minimum": 1, "maximum": 2000 },
+        "shrink_wall_ms": { "type": "integer", "minimum": 1, "maximum": 3600000 }
+      }
+    }
+  }
+}

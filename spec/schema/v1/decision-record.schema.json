@@ -2,7 +2,8 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://countershape.dev/spec/schema/v1/decision-record.schema.json",
   "title": "Countershape DecisionRecord v1",
-  "description": "A human-scoped exact-witness ruling. Only explicit selected fields are asserted; unselected fields remain context.",
+  "description": "Future U5 wire target for a human-scoped exact-witness ruling. Only explicit selected fields are asserted; unselected fields remain context. This schema is planning guidance, not implemented durable authority.",
+  "$comment": "No U1 constructor emits or validates DecisionRecord. In a future U5 implementation, compilable is a deterministic derived wire projection of action and validated oracle content; an emitter must never supply it as independent input.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -108,7 +109,10 @@
       ]
     },
     "human_annotation": { "type": "string" },
-    "compilable": { "type": "boolean" },
+    "compilable": {
+      "description": "Future derived wire projection. It is reconstructed from action and validated oracle content and is never trusted as emitter input.",
+      "type": "boolean"
+    },
     "didrun_receipts": {
       "type": "array",
       "items": { "$ref": "common.schema.json#/$defs/ReceiptReference" }

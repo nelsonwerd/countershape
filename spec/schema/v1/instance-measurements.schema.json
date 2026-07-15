@@ -1,0 +1,40 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://countershape.dev/spec/schema/v1/instance-measurements.schema.json",
+  "title": "Countershape InstanceMeasurements v1",
+  "description": "One exact complete measured-dimension row bound to a ComparisonEnvelope and structural WorldInstance. Its digest establishes recorded structure, not that edge code measured the host honestly.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "kind", "artifact_digest", "comparison_envelope_digest",
+    "measurement_subject_digest", "world_plan_digest", "candidate_execution_key", "values"
+  ],
+  "properties": {
+    "schema_version": { "const": "countershape/v1" },
+    "kind": { "const": "InstanceMeasurements" },
+    "artifact_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "comparison_envelope_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "measurement_subject_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "world_plan_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "candidate_execution_key": { "$ref": "common.schema.json#/$defs/CandidateExecutionKey" },
+    "values": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 64,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "source", "canonical_json"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1, "maxLength": 256 },
+          "source": { "enum": ["WORLD_INSTANCE", "TOOL_RECEIPT", "FILESYSTEM_PROBE", "PROCESS_RECEIPT"] },
+          "canonical_json": {
+            "type": "string",
+            "minLength": 1,
+            "description": "Exact canonical JSON bytes represented as a UTF-8 string and revalidated by the strict parser."
+          }
+        }
+      }
+    }
+  }
+}

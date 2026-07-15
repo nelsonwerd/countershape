@@ -118,7 +118,7 @@ The blind-first boundary is an information-separation boundary inside the API. C
 
 **Threat.** Candidate behavior or disclosure changes because it inherits user configuration, credentials, proxy variables, locale, shell startup, `HOME`, temp state, or tool paths.
 
-**Required controls.** Direct argv execution with no shell. A sparse allowlisted environment with a private `HOME`, `TMPDIR`, and state root. Declare nonsecret values in `WorldPlan`; record secret-slot presence without placing secret bytes in canonical plans. Reference fixtures require no inherited secrets, setup, package installation, registry, or external hostname. Resolved tool paths and versions belong to `WorldInstance` and the comparison envelope.
+**Required controls.** Direct argv execution with no shell or command wrapper. Argv zero is one bare declared tool name; the remaining v1 logical arguments use a bounded closed grammar, while the resolved executable path is a later measured process fact. The declared `WorldPlan` environment is closed to exact public literals: `LANG=C`, `LC_ALL=C`, `TZ=UTC`, `NO_COLOR=1`, and `NODE_NO_WARNINGS=1`; runtime-owned private `HOME`, `TMPDIR`, and state-root values belong to `InstanceMeasurements` or process/materialization receipts, not stable plan bytes or structural `WorldInstance`. Record secret-slot presence without placing secret bytes in canonical plans. This profile avoids claiming that arbitrary caller-authored values are nonsecret. Reference fixtures require no inherited secrets, setup, package installation, registry, or external hostname. Resolved tool paths and versions belong to measurement artifacts and may participate in comparison assessment. Candidate count remains a declared budget input until U2 binds it to an exact roster.
 
 **Refusal.** A required inherited secret or undeclared ambient dependency excludes the reference claim. Imported trusted setup remains a future surface and cannot inherit proof-fixture guarantees.
 
@@ -138,7 +138,7 @@ The blind-first boundary is an information-separation boundary inside the API. C
 
 **Threat.** Candidate code reaches external services, exfiltrates data, binds broadly, follows redirects, or mistakes another local service for the fixture.
 
-**Required controls.** Publicly label the mode `HOST_ALLOWED`. Proof fixtures use no external hostname, TLS, redirect, proxy, cookie jar, compression, WebSocket, streaming body, or database. The HTTP fixture binds loopback and produces a fixture-owned readiness signal tied to its attempt. The one request uses the allocated endpoint recorded in `WorldInstance`.
+**Required controls.** Publicly label the mode `HOST_ALLOWED`. Proof fixtures use no external hostname, TLS, redirect, proxy, cookie jar, compression, WebSocket, streaming body, or database. The HTTP fixture binds loopback and produces a fixture-owned readiness signal tied to its attempt. The allocated endpoint and readiness/runtime facts are recorded in U2 measurement/process artifacts; `WorldInstance` retains only the structural plan/candidate/stimulus/attempt/purpose/nonce/ordinal identity.
 
 **Refusal.** A proof requiring external access, ambiguous readiness, or a response not tied to the owned fixture falls outside the reference study.
 
@@ -148,9 +148,9 @@ The blind-first boundary is an information-separation boundary inside the API. C
 
 **Threat.** Setup, start, readiness, transport, timeout, capture, projection, output, orphan, or teardown failure is encoded as HTTP/CLI program output and appears in an outcome card.
 
-**Required controls.** Only the centralized eligibility service can create a `StableBatch`; adapters cannot create an `OutcomeMap`. Trial control is a closed typed sum separate from domain capture. Only `FINALIZED` attempts with required complete capture and successful teardown can project. Mutation tests must attempt to route every control variant into a projected value and fail.
+**Required controls.** Before any trial exists, `AssessComparison` consumes the complete envelope-bound measurement matrix. It persists `ComparisonAdmission` with the exact candidate roster and digest-sorted measurement set or persists `RejectedComparison`. Rejection creates no row token, trial, stable batch, or outcome map. After admission, only the centralized eligibility service can create a `StableBatch`; adapters cannot create a `CandidateOutcomeMap`. Trial control is a closed typed sum separate from domain capture. Only finalized attempts with required complete capture and successful teardown can project. Mutation tests must attempt to route both pre-batch rejection and every admitted-trial control variant into a projected value and fail.
 
-**Refusal.** Detected control states classify as `UNCOMPARABLE` or contribute to `INCOMPLETE` according to the declared batch contract.
+**Refusal.** A rejected comparison is a pre-batch study refusal. Detected failures after admission classify the tagged trial/batch as `UNCOMPARABLE` or contribute to `INCOMPLETE` according to the declared batch contract.
 
 **Residual risk.** A setup command can exit zero while semantically failing, or readiness can mutate hidden state without detection. Countershape separates detected controls, not every causal failure.
 
@@ -158,7 +158,7 @@ The blind-first boundary is an information-separation boundary inside the API. C
 
 **Threat.** Old captured bytes are copied behind a new nonce, a prior process result is reused for confirmation, or a mutable file changes after hashing.
 
-**Required controls.** No executed-observation reuse path exists in v1. Create an attempt artifact before spawn, allocate new roots, record a new lifecycle, and require fixture-observed invocation evidence outside the selected predicate. Confirmation rotates the schedule. Finalized artifact writes are reopened and rehashed. Pure canonical/projection transforms may reuse results only when the immutable input and implementation/configuration digests match.
+**Required controls.** No executed-observation reuse path exists in v1. Create an attempt artifact before spawn, allocate new roots, record a new lifecycle, and require fixture-observed invocation evidence outside the selected predicate. Confirmation rotates the schedule. Finalized artifact writes are reopened and rehashed. Pure canonical/projection transforms may reuse results only when the immutable input and implementation/configuration digests match. `duplicate_evidence_within_batch:false`, globally unique world/attempt digests, nonces, and admission-token digests establish structural identity checks only; none proves a physically new process, filesystem, host, cache, or network interaction.
 
 **Refusal.** Repeated attempt IDs, roots, process receipts, capture digests without new invocation evidence, or stale ancestor digests prevent confirmation and Choicepoint readiness.
 
@@ -178,7 +178,7 @@ The blind-first boundary is an information-separation boundary inside the API. C
 
 **Threat.** A cache, reducer, API, or UI preserves only group count or membership while candidate outputs change, yielding a false local-reduction grade.
 
-**Required controls.** One canonical outcome-map digest type crosses store, reducer, confirmation, API, and UI. Display aliases and groups have no semantic identity. Reduction uses `PRESERVES`, `CHANGES`, and `UNRESOLVED`. Construction of `ONE_MINIMAL_UNDER(...)` requires a durable complete direct-neighbor sweep whose result set is entirely fresh `CHANGES`.
+**Required controls.** Store, reducer, confirmation, API, and UI carry full typed `CandidateOutcomeMap` values or an opaque result from `ComparableForPreservation`, never a naked `PreservationMapDigest`. Comparability requires equal plan, envelope, stimulus-independent comparison basis, expected roster, eligible set, exclusions, and exclusion classifications. Only comparable maps use the complete sorted candidate-key-to-fingerprint digest: equality is `PRESERVES`, inequality is `CHANGES`; every comparability failure is `UNRESOLVED`. The digest is distinct from the evidence-bearing `OutcomeArtifactDigest`. Concrete per-repetition admission artifacts may differ across stimuli/phases, while each map requires one exact admission-digest set shared by all candidate batches. Display aliases and groups have no semantic identity. Construction of `ONE_MINIMAL_UNDER(...)` requires a durable-store authority over a complete direct-neighbor sweep whose result set is entirely fresh `CHANGES`; this constructor is absent before U5.
 
 **Refusal.** Any unresolved neighbor, exhausted budget, cancellation, partial sweep, changed plan, changed eligibility, or absent durable completion record limits the grade to `BEST_KNOWN` or `UNCHANGED` as defined by the run.
 
@@ -200,7 +200,7 @@ The blind-first boundary is an information-separation boundary inside the API. C
 
 **Required controls.** Authenticated write plus exact Host, Origin, JSON content type, CSRF, and current digest CAS. The server repeats all transition validation. No field is preselected. Missing differs from present-empty. Apply the full field-separation formula to every allowed/disallowed confirmed tuple. Allow-many stores complete tuples. Emitter input is a construction-safe compilable decision type available only for `ALLOW_OBSERVED` or separately reviewed `CUSTOM_EXPECTATION`.
 
-**Refusal.** Stale CAS, empty fields, invalid field path, weak separation, tuple cross-product, absent reveal, or `REJECT_ALL`/`DEFER`/`REFINE` returns a typed refusal and creates no files.
+**Refusal.** Stale CAS, empty fields (`EMPTY_SELECTED_FIELDS`), invalid field path, weak separation (`AMBIGUOUS_SCOPE`), tuple cross-product, absent reveal, or `REJECT_ALL`/`DEFER`/`REFINE` returns a typed refusal and creates no files.
 
 **Residual risk.** The exact selected fields intentionally permit changes in context-only fields. The ruling does not express broader intent or approve a candidate implementation.
 

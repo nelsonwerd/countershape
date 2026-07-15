@@ -8,7 +8,7 @@ Do not declare the active goal complete merely because time or context is low. C
 
 Read completely:
 
-1. `docs/CONCEPT_BRIEF.md`, `docs/PROMPT_PACK.md`, every `docs/prompts/P00…P11` file, and `docs/HANDOFF_MODE_C.md`.
+1. `docs/CONCEPT_BRIEF.md`, `docs/SEMANTICS.md`, `docs/PROJECTION_ALGEBRA.md`, `docs/PROMPT_PACK.md`, every `docs/prompts/P00…P11` file, and `docs/HANDOFF_MODE_C.md`.
 2. `research/deep-dive/07-SYNTHESIS.md` and `08-RED_TEAM.md`.
 3. Every `docs/build-loop/*LEDGER.md`, `docs/PERFORMANCE.md`, `docs/LIMITATIONS.md`, `docs/THREAT_MODEL.md`, `SECURITY.md`, and the current README.
 4. didrun's installed `--help`, global agent discipline, current session/event display, claim types, seal behavior, strict semantics, and HTML option. Do not assume syntax when the installed binary can tell you.

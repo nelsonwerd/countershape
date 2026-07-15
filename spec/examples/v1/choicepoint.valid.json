@@ -15,19 +15,19 @@
   },
   "candidates": [
     {
-      "candidate_execution_key": "candidate:http-a",
+      "candidate_execution_key": "candidate:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
       "tree_identity_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     },
     {
-      "candidate_execution_key": "candidate:http-b",
+      "candidate_execution_key": "candidate:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
       "tree_identity_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
     },
     {
-      "candidate_execution_key": "candidate:http-c",
+      "candidate_execution_key": "candidate:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
       "tree_identity_digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
     },
     {
-      "candidate_execution_key": "candidate:http-d",
+      "candidate_execution_key": "candidate:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
       "tree_identity_digest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
     }
   ],
@@ -71,7 +71,7 @@
   },
   "excluded_candidates": [
     {
-      "candidate_execution_key": "candidate:http-d",
+      "candidate_execution_key": "candidate:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
       "classification": "UNSTABLE",
       "batch_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa4"
     }

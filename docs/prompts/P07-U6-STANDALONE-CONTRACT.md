@@ -1,6 +1,6 @@
 # P07 — U6 deterministic standalone contract residue
 
-Implement the second half of Countershape U6 in a fresh chat. Read `docs/CONCEPT_BRIEF.md`, `research/deep-dive/05-contract-portability.md`, `research/deep-dive/06-feasibility-acceptance.md`, `research/deep-dive/07-SYNTHESIS.md`, `research/deep-dive/08-RED_TEAM.md`, and the Mode C handoff. Verify that P06's Choicepoint/store commit is sealed and `NO_COLOR=1 didrun verify --strict` exits 0. Inspect the installed Node versions before naming support. A design target is not a runtime receipt: if Node 24 is not physically run, Node 24 remains `UNRECEIPTED` even if the bundle compiles or another major passes.
+Implement the second half of Countershape U6 in a fresh chat. Read `docs/CONCEPT_BRIEF.md`, `docs/SEMANTICS.md`, `docs/PROJECTION_ALGEBRA.md`, `research/deep-dive/05-contract-portability.md`, `research/deep-dive/06-feasibility-acceptance.md`, `research/deep-dive/07-SYNTHESIS.md`, `research/deep-dive/08-RED_TEAM.md`, and the Mode C handoff. Verify that P06's Choicepoint/store commit is sealed and `NO_COLOR=1 didrun verify --strict` exits 0. Inspect the installed Node versions before naming support. A design target is not a runtime receipt: if Node 24 is not physically run, Node 24 remains `UNRECEIPTED` even if the bundle compiles or another major passes.
 
 ## Objective
 
@@ -16,7 +16,7 @@ Do not describe the output as a universal specification, semantic equivalence, s
 
 ## Locked compilation boundary
 
-The emitter accepts only a construction-safe `CompilableRuling`: `ALLOW_OBSERVED` or separately reviewed `CUSTOM_EXPECTATION`. `REJECT_ALL`, `DEFER`, and `REFINE` cannot reach it through type assertions, API coercion, or stale replay. Emission checks the current Choicepoint/head digest with compare-and-swap semantics; a changed projection, confirmation, candidate set, selected fields, target, or ruling returns `STALE_CHOICEPOINT` and writes nothing.
+The emitter accepts only a construction-safe `CompilableRuling`: `ALLOW_OBSERVED` or separately reviewed `CUSTOM_EXPECTATION`. A serialized `DecisionRecord.compilable` Boolean is a deterministic derived wire projection, never emitter input or reconstruction authority; rebuild the ruling from validated action and oracle content. `REJECT_ALL`, `DEFER`, and `REFINE` cannot reach it through type assertions, API coercion, or stale replay. Emission checks the current Choicepoint/head digest with compare-and-swap semantics; a changed projection, confirmation, candidate set, selected fields, target, or ruling returns `STALE_CHOICEPOINT` and writes nothing.
 
 The only executable predicate is `one-of-exact/v1` over a closed typed portable field registry. Allow-observed compiles selected behavior tuples, never candidate identities, branch names, producer provenance, first/majority outcomes, or support counts. Allow-many is a canonical set of complete tuples, never a cross-product. Before bytes exist, enforce the separation obligation: every allowed confirmed outcome's selected tuple differs from every disallowed confirmed outcome's tuple. Weak fields return `AMBIGUOUS_SCOPE` and zero artifacts. Empty fields are forbidden. Custom expectation is the only path to an executable `none conforms`; `REJECT_ALL` emits a record only.
 
