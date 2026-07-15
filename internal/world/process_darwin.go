@@ -31,9 +31,38 @@ type waitResult struct {
 	err   error
 }
 
+type stdinWriteResult struct {
+	written   int64
+	complete  bool
+	errorCode string
+}
+
+type stdinWriterStart struct {
+	declared  int64
+	digest    domain.Digest
+	errorCode string
+}
+
 type terminalDecision struct {
 	primary domain.ControlReason
 	waited  *waitResult
+	stdin   *stdinWriteResult
+}
+
+type physicalCapturePair struct {
+	stdout             *cappedCapture
+	stderr             *cappedCapture
+	stdoutReceiptLimit int64
+	stderrReceiptLimit int64
+}
+
+func newPhysicalCapturePair(stdoutLimit, stderrLimit int64, overflowC chan<- struct{}) physicalCapturePair {
+	stdout := newCappedCapture(stdoutLimit, overflowC)
+	stderr := newCappedCapture(stderrLimit, overflowC) // MUTANT_U2_SHARE_OUTPUT_CAP
+	return physicalCapturePair{
+		stdout: stdout, stderr: stderr,
+		stdoutReceiptLimit: stdout.configuredLimit(), stderrReceiptLimit: stderr.configuredLimit(),
+	}
 }
 
 type darwinGroupController interface {
@@ -67,28 +96,53 @@ func (systemDarwinGroups) probe(processGroupID int) (bool, error) {
 
 func newDirectCommand(request processRequest) *exec.Cmd {
 	args := append([]string(nil), request.logicalArgv...)
+	var command *exec.Cmd
 	if !directExecOnly {
-		return &exec.Cmd{
+		command = &exec.Cmd{
 			Path: "/bin/sh", Args: []string{"sh", "-c", strings.Join(args, " ")},
 			Env: append([]string(nil), request.environment...), Dir: request.cwd,
 			SysProcAttr: &syscall.SysProcAttr{Setpgid: true},
 		}
+	} else {
+		command = &exec.Cmd{
+			Path: request.tool.absolutePath, Args: args,
+			Env: append([]string(nil), request.environment...), Dir: request.cwd,
+			SysProcAttr: &syscall.SysProcAttr{Setpgid: true},
+		}
 	}
-	return &exec.Cmd{
-		Path: request.tool.absolutePath, Args: args,
-		Env: append([]string(nil), request.environment...), Dir: request.cwd,
-		SysProcAttr: &syscall.SysProcAttr{Setpgid: true},
-	}
+	return command
 }
 
 func runPlatformProcess(ctx context.Context, request processRequest) physicalProcessResult {
+	overflowC := make(chan struct{}, 2)
+	captures := newPhysicalCapturePair(request.stdoutLimit, request.stderrLimit, overflowC)
+	stdoutCapture := captures.stdout
+	stderrCapture := captures.stderr
+	stdinDigest, stdinDigestErr := digestProcessStdin(request.stdin)
 	result := physicalProcessResult{
-		exitCode: -1, markerBeforeSpawn: request.markerBeforeSpawn,
-		preTermProbe: preTermProbeNotApplicable,
+		// MUTATION_ANCHOR: physical-entry-requires-spawn-attempt
+		physicalExecutionEntered: false,
+		exitCode:                 -1,
+		markerBeforeSpawn:        request.markerBeforeSpawn,
+		preTermProbe:             preTermProbeNotApplicable,
+		stdinPresence:            request.stdin.presence,
+		stdinDeclared:            int64(len(request.stdin.bytes)),
+		stdinDigest:              stdinDigest,
+		stdinComplete:            request.stdin.presence != processStdinPresent,
+	}
+	if stdinDigestErr != nil {
+		result.primary = domain.ControlStartError
+		result.diagnosticCode = "STDIN_IDENTITY_FAILED_BEFORE_SPAWN"
+		return result
 	}
 	if ctx.Err() != nil {
 		result.primary = domain.ControlCancelled
 		result.diagnosticCode = "CONTEXT_CANCELLED_BEFORE_SPAWN"
+		return result
+	}
+	if !request.stdin.valid() {
+		result.primary = domain.ControlStartError
+		result.diagnosticCode = "INVALID_TYPED_STDIN_BEFORE_SPAWN"
 		return result
 	}
 	if err := request.tool.revalidate(); err != nil {
@@ -98,6 +152,14 @@ func runPlatformProcess(ctx context.Context, request processRequest) physicalPro
 		return result
 	}
 	command := newDirectCommand(request)
+	var stdinWriter io.WriteCloser
+	var stdinResultC chan stdinWriteResult
+	stdinWriterOwnedByRunner := false
+	defer func() {
+		if stdinWriterOwnedByRunner && stdinWriter != nil {
+			_ = stdinWriter.Close()
+		}
+	}()
 	stdoutPipe, stdoutWriter, err := os.Pipe()
 	if err != nil {
 		result.primary = domain.ControlStartError
@@ -113,15 +175,46 @@ func runPlatformProcess(ctx context.Context, request processRequest) physicalPro
 		return result
 	}
 	defer stderrPipe.Close()
+	if request.stdin.presence == processStdinPresent {
+		writer, pipeErr := command.StdinPipe()
+		if pipeErr != nil {
+			_ = stdoutWriter.Close()
+			_ = stderrWriter.Close()
+			result.primary = domain.ControlStartError
+			result.diagnosticCode = "STDIN_PIPE_ALLOCATION_FAILED"
+			return result
+		}
+		stdinWriter = writer
+		stdinWriterOwnedByRunner = true
+		result.stdinPipeAllocated = true
+		results := make(chan stdinWriteResult, 1)
+		stdinResultC = results
+	}
 	command.Stdout = stdoutWriter
 	command.Stderr = stderrWriter
+	result.physicalExecutionEntered = true
 	result.spawnAttempted = true
+	result.stdoutCaptureLimit = captures.stdoutReceiptLimit
+	result.stderrCaptureLimit = captures.stderrReceiptLimit
 	if err := command.Start(); err != nil {
 		_ = stdoutWriter.Close()
 		_ = stderrWriter.Close()
 		result.primary = domain.ControlStartError
 		result.diagnosticCode = "SPAWN_FAILED"
 		return result
+	}
+	if stdinWriter != nil {
+		stdinWriterOwnedByRunner = false
+		// MUTATION_ANCHOR: stdin-absence-must-not-collapse-to-present-empty
+		stdinStart := startExactStdinWriter(stdinWriter, request.stdin.bytes, stdinResultC)
+		result.stdinWriterStarted = true
+		result.stdinHandoffAttempted = true
+		result.stdinDeclared = stdinStart.declared
+		result.stdinDigest = stdinStart.digest
+		if stdinStart.errorCode != "" {
+			result.primary = domain.ControlProbeTransportError
+			result.diagnosticCode = "STDIN_DELIVERY_" + stdinStart.errorCode
+		}
 	}
 	_ = stdoutWriter.Close()
 	_ = stderrWriter.Close()
@@ -150,9 +243,6 @@ func runPlatformProcess(ctx context.Context, request processRequest) physicalPro
 		_ = command.Process.Kill()
 	}
 
-	overflowC := make(chan struct{}, 2)
-	stdoutCapture := newCappedCapture(request.stdoutLimit, overflowC)
-	stderrCapture := newCappedCapture(request.stderrLimit, overflowC) // MUTANT_U2_SHARE_OUTPUT_CAP
 	stdoutDone := make(chan time.Time, 1)
 	stderrDone := make(chan time.Time, 1)
 	go stdoutCapture.drain(stdoutPipe, stdoutDone)
@@ -164,9 +254,10 @@ func runPlatformProcess(ctx context.Context, request processRequest) physicalPro
 	}()
 
 	var waited *waitResult
+	var stdinObserved *stdinWriteResult
 	if result.primary == "" {
 		executionTimer := time.NewTimer(time.Duration(request.executionBudgetMS) * time.Millisecond)
-		decision := arbitrateTerminal(ctx, executionTimer.C, overflowC, stdoutCapture, stderrCapture, waitC)
+		decision := arbitrateTerminalWithStdin(ctx, executionTimer.C, overflowC, stdoutCapture, stderrCapture, waitC, stdinResultC)
 		if !executionTimer.Stop() {
 			select {
 			case <-executionTimer.C:
@@ -175,6 +266,7 @@ func runPlatformProcess(ctx context.Context, request processRequest) physicalPro
 		}
 		result.primary = decision.primary
 		waited = decision.waited
+		stdinObserved = decision.stdin
 	}
 
 	teardownDeadline := time.Now().Add(time.Duration(request.teardownBudgetMS) * time.Millisecond)
@@ -196,6 +288,20 @@ func runPlatformProcess(ctx context.Context, request processRequest) physicalPro
 		result.orphanRisk = true
 		result.diagnosticCode = firstDiagnostic(result.diagnosticCode, "DIRECT_CHILD_WAIT_DEADLINE")
 		_ = command.Process.Kill()
+	}
+	stdinDelivery := collectStdinDelivery(stdinObserved, stdinResultC, stdinWriter, teardownDeadline)
+	result.stdinWritten = stdinDelivery.written
+	result.stdinComplete = stdinDelivery.complete
+	result.stdinErrorCode = stdinDelivery.errorCode
+	if request.stdin.presence == processStdinPresent && !stdinDelivery.complete {
+		if result.primary == "" {
+			result.primary = domain.ControlProbeTransportError
+		}
+		result.diagnosticCode = firstDiagnostic(result.diagnosticCode, "STDIN_DELIVERY_"+stdinDelivery.errorCode)
+		if stdinDelivery.errorCode == "WRITER_DRAIN_DEADLINE" {
+			result.teardownError = true
+			result.orphanRisk = true
+		}
 	}
 
 	stdoutDrain, stderrDrain := collectDrainCompletions(stdoutDone, stderrDone, teardownDeadline)
@@ -257,6 +363,112 @@ func runPlatformProcess(ctx context.Context, request processRequest) physicalPro
 		result.orphanRisk = true
 	}
 	return result
+}
+
+func startExactStdinWriter(writer io.WriteCloser, input []byte, resultC chan<- stdinWriteResult) stdinWriterStart {
+	started := make(chan stdinWriterStart, 1)
+	go writeExactStdinObserved(writer, input, started, resultC)
+	return <-started
+}
+
+func writeExactStdin(writer io.WriteCloser, input []byte, resultC chan<- stdinWriteResult) {
+	writeExactStdinObserved(writer, input, nil, resultC)
+}
+
+func writeExactStdinObserved(
+	writer io.WriteCloser,
+	input []byte,
+	started chan<- stdinWriterStart,
+	resultC chan<- stdinWriteResult,
+) {
+	digest, err := digestProcessStdin(processStdin{presence: processStdinPresent, bytes: input})
+	start := stdinWriterStart{declared: int64(len(input)), digest: digest}
+	if err != nil {
+		start.errorCode = "IDENTITY_ERROR"
+	}
+	if started != nil {
+		started <- start
+	}
+	if start.errorCode != "" {
+		_ = writer.Close()
+		resultC <- stdinWriteResult{errorCode: start.errorCode}
+		return
+	}
+	result := stdinWriteResult{}
+	for result.written < int64(len(input)) {
+		count, err := writer.Write(input[result.written:])
+		result.written += int64(count)
+		if err != nil {
+			result.errorCode = classifyStdinWriteError(err)
+			_ = writer.Close()
+			resultC <- result
+			return
+		}
+		if count == 0 {
+			result.errorCode = "NO_PROGRESS"
+			_ = writer.Close()
+			resultC <- result
+			return
+		}
+	}
+	if err := writer.Close(); err != nil {
+		result.errorCode = classifyStdinWriteError(err)
+		resultC <- result
+		return
+	}
+	result.complete = true
+	resultC <- result
+}
+
+func classifyStdinWriteError(err error) string {
+	if errors.Is(err, syscall.EPIPE) || errors.Is(err, io.ErrClosedPipe) {
+		return "EPIPE"
+	}
+	return "WRITE_ERROR"
+}
+
+func collectStdinDelivery(
+	observed *stdinWriteResult,
+	resultC <-chan stdinWriteResult,
+	writer io.WriteCloser,
+	deadline time.Time,
+) stdinWriteResult {
+	if writer == nil {
+		return stdinWriteResult{complete: true}
+	}
+	if observed != nil {
+		return *observed
+	}
+	remaining := time.Until(deadline)
+	if remaining > 0 {
+		timer := time.NewTimer(remaining)
+		select {
+		case result := <-resultC:
+			if !timer.Stop() {
+				select {
+				case <-timer.C:
+				default:
+				}
+			}
+			return result
+		case <-timer.C:
+		}
+	} else {
+		select {
+		case result := <-resultC:
+			return result
+		default:
+		}
+	}
+	_ = writer.Close()
+	timer := time.NewTimer(ownerDrainCloseBudget)
+	defer timer.Stop()
+	select {
+	case result := <-resultC:
+		return result
+	case <-timer.C:
+		return stdinWriteResult{errorCode: "WRITER_DRAIN_DEADLINE"}
+	}
 }
 
 func teardownOwnedProcessGroup(
@@ -326,11 +538,33 @@ func arbitrateTerminal(
 	stdoutCapture, stderrCapture *cappedCapture,
 	waitC <-chan waitResult,
 ) terminalDecision {
+	return arbitrateTerminalWithStdin(ctx, deadlineC, overflowC, stdoutCapture, stderrCapture, waitC, nil)
+}
+
+func arbitrateTerminalWithStdin(
+	ctx context.Context,
+	deadlineC <-chan time.Time,
+	overflowC <-chan struct{},
+	stdoutCapture, stderrCapture *cappedCapture,
+	waitC <-chan waitResult,
+	stdinC <-chan stdinWriteResult,
+) terminalDecision {
 	deadlineObserved := false
 	var waited *waitResult
+	var stdinObserved *stdinWriteResult
 	for {
-		decision, ready, observed := pollOwnerTerminalPriority(
-			ctx, deadlineC, stdoutCapture, stderrCapture, deadlineObserved, waited,
+		// Stdin transport is higher priority than cancellation, deadline, and
+		// child exit. Latch an already-ready writer result before the owner
+		// observes those lower-priority terminal facts.
+		if stdinC != nil && stdinObserved == nil {
+			select {
+			case completed := <-stdinC:
+				stdinObserved = &completed
+			default:
+			}
+		}
+		decision, ready, observed := pollOwnerTerminalPriorityWithStdin(
+			ctx, deadlineC, stdoutCapture, stderrCapture, deadlineObserved, waited, stdinObserved,
 		)
 		deadlineObserved = observed
 		if ready {
@@ -363,6 +597,8 @@ func arbitrateTerminal(
 			deadlineObserved = true
 		case completed := <-waitC:
 			waited = &completed
+		case completed := <-stdinC:
+			stdinObserved = &completed
 		}
 	}
 }
@@ -374,14 +610,30 @@ func pollOwnerTerminalPriority(
 	deadlineObserved bool,
 	waited *waitResult,
 ) (terminalDecision, bool, bool) {
+	return pollOwnerTerminalPriorityWithStdin(
+		ctx, deadlineC, stdoutCapture, stderrCapture, deadlineObserved, waited, nil,
+	)
+}
+
+func pollOwnerTerminalPriorityWithStdin(
+	ctx context.Context,
+	deadlineC <-chan time.Time,
+	stdoutCapture, stderrCapture *cappedCapture,
+	deadlineObserved bool,
+	waited *waitResult,
+	stdin *stdinWriteResult,
+) (terminalDecision, bool, bool) {
 	if !ownerPriorityOutputFirst && ctx.Err() != nil {
-		return terminalDecision{primary: domain.ControlCancelled}, true, deadlineObserved
+		return terminalDecision{primary: domain.ControlCancelled, stdin: stdin}, true, deadlineObserved
 	}
 	if outputOverflowIsPrimaryControl && (stdoutCapture.overflowed() || stderrCapture.overflowed()) {
-		return terminalDecision{primary: domain.ControlOutputLimit}, true, deadlineObserved
+		return terminalDecision{primary: domain.ControlOutputLimit, stdin: stdin}, true, deadlineObserved
+	}
+	if stdin != nil && !stdin.complete {
+		return terminalDecision{primary: domain.ControlProbeTransportError, stdin: stdin}, true, deadlineObserved
 	}
 	if ctx.Err() != nil {
-		return terminalDecision{primary: domain.ControlCancelled}, true, deadlineObserved
+		return terminalDecision{primary: domain.ControlCancelled, stdin: stdin}, true, deadlineObserved
 	}
 	if !deadlineObserved {
 		select {
@@ -391,10 +643,10 @@ func pollOwnerTerminalPriority(
 		}
 	}
 	if deadlineObserved {
-		return terminalDecision{primary: domain.ControlTimeout}, true, true
+		return terminalDecision{primary: domain.ControlTimeout, stdin: stdin}, true, true
 	}
 	if waited != nil {
-		return terminalDecision{waited: waited}, true, false
+		return terminalDecision{waited: waited, stdin: stdin}, true, false
 	}
 	return terminalDecision{}, false, false
 }

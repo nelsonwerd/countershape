@@ -6,9 +6,10 @@ import (
 )
 
 type scheduleIdentity struct {
-	Phase    string `json:"phase"`
-	Rotation string `json:"rotation"`
-	Ordinals []int  `json:"ordinals"`
+	Phase          string `json:"phase"`
+	Rotation       string `json:"rotation"`
+	ScheduleDigest string `json:"schedule_digest"`
+	Ordinals       []int  `json:"ordinals"`
 }
 
 type capturedTrialIdentity struct {
@@ -17,10 +18,13 @@ type capturedTrialIdentity struct {
 	ProjectionDefinitionDigest string `json:"projection_definition_digest"`
 	ProjectionResult           string `json:"projection_result_digest"`
 	ProjectionFingerprint      string `json:"projection_fingerprint"`
+	ProjectionDerivationDigest string `json:"projection_derivation_digest"`
 }
 
 type controlTrialIdentity struct {
-	Reasons []domain.ControlReason `json:"reason_codes"`
+	Reasons                   []domain.ControlReason `json:"reason_codes"`
+	CapturedObservationDigest string                 `json:"captured_observation_digest"`
+	ProjectionRejectionDigest string                 `json:"projection_rejection_evidence_digest"`
 }
 
 type trialIdentity struct {
@@ -68,9 +72,14 @@ func trialIdentityOf(trial TrialFact) trialIdentity {
 			ProjectionDefinitionDigest: trial.capture.projectionDefinitionDigest.String(),
 			ProjectionResult:           trial.capture.projectionDigest.String(),
 			ProjectionFingerprint:      trial.capture.fingerprint.String(),
+			ProjectionDerivationDigest: trial.capture.derivationDigest.String(),
 		}
 	} else {
 		identity.Control = &controlTrialIdentity{Reasons: append([]domain.ControlReason(nil), trial.controls...)}
+		if trial.rejection.Valid() {
+			identity.Control.CapturedObservationDigest = trial.rejection.observationDigest.String()
+			identity.Control.ProjectionRejectionDigest = trial.rejection.digest.String()
+		}
 	}
 	return identity
 }

@@ -146,6 +146,20 @@ func (b ProjectionDefinitionBinding) AdapterDomain() AdapterDomain { return b.ad
 
 func (b ProjectionDefinitionBinding) FieldRegistryDigest() Digest { return b.fieldRegistryDigest }
 
+func (b ProjectionDefinitionBinding) ImplementationDigest() Digest { return b.implementationDigest }
+
+func (b ProjectionDefinitionBinding) ConfigurationDigest() Digest { return b.configurationDigest }
+
+func (b ProjectionDefinitionBinding) AcceptedChannels() []string {
+	return append([]string(nil), b.acceptedChannels...)
+}
+
+func (b ProjectionDefinitionBinding) Operations() []ProjectionOperationBinding {
+	return append([]ProjectionOperationBinding(nil), b.operations...)
+}
+
+func (b ProjectionDefinitionBinding) Comparator() string { return b.comparator }
+
 func (b ProjectionDefinitionBinding) CanonicalBytes() []byte {
 	return append([]byte(nil), b.canonicalBytes...)
 }

@@ -142,7 +142,7 @@
         "discovery_repeats": { "type": "integer", "minimum": 1, "maximum": 5 },
         "confirmation_repeats": { "type": "integer", "minimum": 1, "maximum": 5 },
         "concurrency": { "const": "SEQUENTIAL" },
-        "rotation": { "const": "NOT_ESTABLISHED_IN_U1" }
+        "rotation": { "const": "ROTATE_START_BY_REPETITION_V1" }
       }
     },
     "required_tools": {

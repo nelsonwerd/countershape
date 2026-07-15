@@ -109,8 +109,9 @@ func newExecutionHarness(t *testing.T, executable string, argv []string, probeMS
 		SecretSlots: []domain.SecretSlot{}, FixtureRecipeDigest: worldTestDigest("5"),
 		Readiness: domain.Readiness{Kind: domain.ReadinessNone}, CapturePolicyDigest: worldTestDigest("6"),
 		ProjectionDefinition: worldTestProjection(t),
-		RepeatSchedule:       domain.RepeatSchedule{DiscoveryRepeats: 2, ConfirmationRepeats: 2},
-		RequiredTools:        []domain.RequiredTool{{Name: "fixture", VersionConstraint: "executed-major-only"}},
+		RepeatSchedule: domain.RepeatSchedule{DiscoveryRepeats: 2, ConfirmationRepeats: 2,
+			Concurrency: domain.ScheduleSequential, Rotation: domain.ScheduleRotationStartByRepetitionV1},
+		RequiredTools: []domain.RequiredTool{{Name: "fixture", VersionConstraint: "executed-major-only"}},
 		Budgets: domain.Budgets{
 			CandidateCount: 2, MaterializedEntryCount: 16, MaterializedBytesPerWorld: 1 << 20,
 			SingleBlobBytes: 1 << 18, ReadinessMS: 0, ProbeMS: probeMS, TeardownMS: teardownMS,

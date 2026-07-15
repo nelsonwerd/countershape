@@ -28,6 +28,25 @@ func projectionBytes(number int) []byte {
 	return value.Canonical()
 }
 
+func testProjectionDerivation(
+	t *testing.T,
+	world domain.WorldInstance,
+	observationDigest domain.Digest,
+	projection []byte,
+) observe.ProjectionDerivation {
+	t.Helper()
+	derivation, err := observe.NewProjectionDerivation(
+		observationDigest,
+		world.ProjectionDefinitionDigest(),
+		projection,
+		[]byte(`{"kind":"TEST_PROJECTION_DERIVATION","operations":["test"],"source_links":["test"]}`),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return derivation
+}
+
 func comparisonEnvelope(t *testing.T) domain.ComparisonEnvelope {
 	t.Helper()
 	value, err := domain.NewComparisonEnvelope(domain.ComparisonEnvelopeConfig{
@@ -72,8 +91,9 @@ func comparisonPlan(t *testing.T, envelopeValue domain.ComparisonEnvelope, salt 
 			}
 			return binding
 		}(),
-		RepeatSchedule: domain.RepeatSchedule{DiscoveryRepeats: 3, ConfirmationRepeats: 3},
-		RequiredTools:  []domain.RequiredTool{{Name: "node", VersionConstraint: "executed-major-only"}},
+		RepeatSchedule: domain.RepeatSchedule{DiscoveryRepeats: 3, ConfirmationRepeats: 3,
+			Concurrency: domain.ScheduleSequential, Rotation: domain.ScheduleRotationStartByRepetitionV1},
+		RequiredTools: []domain.RequiredTool{{Name: "node", VersionConstraint: "executed-major-only"}},
 		Budgets: domain.Budgets{
 			CandidateCount:            4,
 			MaterializedEntryCount:    25000,
@@ -319,8 +339,10 @@ func buildCandidateBatches(
 				if !overridden {
 					observationDigest = digestNumber(captureBase + 1)
 				}
+				projectionCanonical := projectionBytes(projection)
 				capture, captureErr := observe.NewStructuralCapture(
-					worlds[index], attempts[index], observationDigest, projectionBytes(projection),
+					worlds[index], attempts[index], observationDigest, projectionCanonical,
+					testProjectionDerivation(t, worlds[index], observationDigest, projectionCanonical),
 				)
 				if captureErr != nil {
 					t.Fatal(captureErr)
@@ -402,10 +424,10 @@ func TestOutcomeMapCandidatePermutationPreservesArtifactIdentity(t *testing.T) {
 func TestCandidateKeyIsPartOfLabeledMapIdentity(t *testing.T) {
 	fixture := newComparisonFixture(t, 1, 2, 3, 4)
 	leftSet := buildCandidateBatches(t, fixture, testStimulus, domain.AttemptDiscovery, batchRunOptions{evidenceSalt: 2},
-		observed(1, 10), observed(2, 11),
+		observed(1, 10), observed(2, 10),
 	)
 	rightSet := buildCandidateBatches(t, fixture, testStimulus, domain.AttemptDiscovery, batchRunOptions{evidenceSalt: 3},
-		observed(3, 10), observed(4, 11),
+		observed(3, 10), observed(4, 10),
 	)
 	left := mapFrom(t, testStimulus, fixture.envelope, leftSet.roster, leftSet.batches...)
 	right := mapFrom(t, testStimulus, fixture.envelope, rightSet.roster, rightSet.batches...)

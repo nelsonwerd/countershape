@@ -24,6 +24,7 @@ const (
 type Roots struct {
 	attempt         string
 	candidateParent string
+	fixture         string
 	home            string
 	temporary       string
 	xdgConfig       string
@@ -37,6 +38,7 @@ type Roots struct {
 
 func (r Roots) Attempt() string         { return r.attempt }
 func (r Roots) CandidateParent() string { return r.candidateParent }
+func (r Roots) Fixture() string         { return r.fixture }
 func (r Roots) Home() string            { return r.home }
 func (r Roots) Temporary() string       { return r.temporary }
 func (r Roots) XDGConfig() string       { return r.xdgConfig }
@@ -130,6 +132,7 @@ func allocateOwnedRoots(rawBase string, marker markerInput) (Roots, domain.Diges
 	roots := Roots{attempt: attemptRoot}
 	for name, target := range map[string]*string{
 		"candidate-parent": &roots.candidateParent,
+		"fixture":          &roots.fixture,
 		"home":             &roots.home,
 		"tmp":              &roots.temporary,
 		"xdg-config":       &roots.xdgConfig,

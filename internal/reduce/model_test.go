@@ -19,6 +19,25 @@ func projectionBytes(number int) []byte {
 	return value.Canonical()
 }
 
+func testProjectionDerivation(
+	t *testing.T,
+	world domain.WorldInstance,
+	observationDigest domain.Digest,
+	projection []byte,
+) observe.ProjectionDerivation {
+	t.Helper()
+	derivation, err := observe.NewProjectionDerivation(
+		observationDigest,
+		world.ProjectionDefinitionDigest(),
+		projection,
+		[]byte(`{"kind":"TEST_PROJECTION_DERIVATION","operations":["test"],"source_links":["test"]}`),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return derivation
+}
+
 type reductionFixture struct {
 	envelope domain.ComparisonEnvelope
 	plan     domain.WorldPlan
@@ -66,8 +85,9 @@ func newReductionFixture(t *testing.T, version string) reductionFixture {
 			}
 			return binding
 		}(),
-		RepeatSchedule: domain.RepeatSchedule{DiscoveryRepeats: 1, ConfirmationRepeats: 1},
-		RequiredTools:  []domain.RequiredTool{{Name: "node", VersionConstraint: "executed-major-only"}},
+		RepeatSchedule: domain.RepeatSchedule{DiscoveryRepeats: 1, ConfirmationRepeats: 1,
+			Concurrency: domain.ScheduleSequential, Rotation: domain.ScheduleRotationStartByRepetitionV1},
+		RequiredTools: []domain.RequiredTool{{Name: "node", VersionConstraint: "executed-major-only"}},
 		Budgets: domain.Budgets{
 			CandidateCount: 2, MaterializedEntryCount: 100, MaterializedBytesPerWorld: 1 << 20,
 			SingleBlobBytes: 1 << 18, ReadinessMS: 0, ProbeMS: 1000, TeardownMS: 1000,
@@ -167,8 +187,11 @@ func candidateMap(
 		if tokenErr != nil {
 			t.Fatal(tokenErr)
 		}
+		observationDigest := digest(20000 + offset*100 + index)
+		projection := projectionBytes(projections[index])
 		capture, captureErr := observe.NewStructuralCapture(
-			worlds[index], attempts[index], digest(20000+offset*100+index), projectionBytes(projections[index]),
+			worlds[index], attempts[index], observationDigest, projection,
+			testProjectionDerivation(t, worlds[index], observationDigest, projection),
 		)
 		if captureErr != nil {
 			t.Fatal(captureErr)

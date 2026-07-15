@@ -45,8 +45,9 @@ func validPlanConfig() WorldPlanConfig {
 		Readiness:                   Readiness{Kind: FixtureOwnedReadiness, SignalName: "ready-byte"},
 		CapturePolicyDigest:         testDigest("6"),
 		ProjectionDefinition:        testProjectionDefinitionBinding(AdapterHTTP),
-		RepeatSchedule:              RepeatSchedule{DiscoveryRepeats: 3, ConfirmationRepeats: 3},
-		RequiredTools:               []RequiredTool{{Name: "node", VersionConstraint: "executed-major-only"}},
+		RepeatSchedule: RepeatSchedule{DiscoveryRepeats: 3, ConfirmationRepeats: 3,
+			Concurrency: ScheduleSequential, Rotation: ScheduleRotationStartByRepetitionV1},
+		RequiredTools: []RequiredTool{{Name: "node", VersionConstraint: "executed-major-only"}},
 		Budgets: Budgets{
 			CandidateCount:            4,
 			MaterializedEntryCount:    25000,
@@ -180,6 +181,26 @@ func TestWorldPlanDeterministicAndImmutable(t *testing.T) {
 	}
 	if changedPlan.Digest() == originalDigest {
 		t.Fatal("ordered argv did not change plan identity")
+	}
+}
+
+func TestWorldPlanRetainsDeclaredSequentialRotationMutationGuard(t *testing.T) {
+	plan, err := NewWorldPlan(validPlanConfig())
+	if err != nil {
+		t.Fatal(err)
+	}
+	canonical := plan.CanonicalBytes()
+	if plan.ScheduleConcurrency() != ScheduleSequential ||
+		plan.ScheduleRotation() != ScheduleRotationStartByRepetitionV1 ||
+		!bytes.Contains(canonical, []byte(`"concurrency":"SEQUENTIAL"`)) ||
+		!bytes.Contains(canonical, []byte(`"rotation":"ROTATE_START_BY_REPETITION_V1"`)) ||
+		bytes.Contains(canonical, []byte("NOT_ESTABLISHED_IN_U1")) {
+		t.Fatalf("world plan lost the declared schedule policy: %s", canonical)
+	}
+	invalid := validPlanConfig()
+	invalid.RepeatSchedule.Rotation = "NOT_ESTABLISHED_IN_U1"
+	if _, err := NewWorldPlan(invalid); err == nil {
+		t.Fatal("world plan accepted a schedule outside the closed declared policy")
 	}
 }
 

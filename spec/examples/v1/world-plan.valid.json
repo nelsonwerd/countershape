@@ -31,7 +31,7 @@
     "discovery_repeats": 3,
     "confirmation_repeats": 3,
     "concurrency": "SEQUENTIAL",
-    "rotation": "NOT_ESTABLISHED_IN_U1"
+    "rotation": "ROTATE_START_BY_REPETITION_V1"
   },
   "required_tools": [
     { "name": "node", "version_constraint": "executed-major-only" }

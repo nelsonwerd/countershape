@@ -21,6 +21,7 @@ type StructuralCapture struct {
 	attemptDigest              domain.Digest
 	capturePolicyDigest        domain.Digest
 	projectionDefinitionDigest domain.Digest
+	derivationDigest           domain.Digest
 	fingerprint                domain.ProjectionFingerprint
 	canonicalProjection        []byte
 }
@@ -30,10 +31,13 @@ func NewStructuralCapture(
 	attempt domain.FinalizedAttempt,
 	observationDigest domain.Digest,
 	canonicalProjection []byte,
+	derivation ProjectionDerivation,
 ) (StructuralCapture, error) {
 	if !world.Digest().Valid() || !attempt.ArtifactDigest().Valid() ||
 		world.AttemptArtifactDigest() != attempt.ArtifactDigest() || world.Purpose() != attempt.Purpose() ||
-		!world.CapturePolicyDigest().Valid() || !world.ProjectionDefinitionDigest().Valid() || !observationDigest.Valid() {
+		!world.CapturePolicyDigest().Valid() || !world.ProjectionDefinitionDigest().Valid() || !observationDigest.Valid() ||
+		!derivation.Valid() || derivation.observationDigest != observationDigest ||
+		derivation.definitionDigest != world.ProjectionDefinitionDigest() {
 		return StructuralCapture{}, &domain.Error{Code: "INCOMPLETE_CAPTURE_PROVENANCE"}
 	}
 	if len(canonicalProjection) > maxProjectionResultCanonicalBytes {
@@ -42,6 +46,9 @@ func NewStructuralCapture(
 	fingerprint, err := domain.NewProjectionFingerprint(canonicalProjection)
 	if err != nil {
 		return StructuralCapture{}, &domain.Error{Code: "NONCANONICAL_CAPTURE_PROJECTION", Detail: err.Error()}
+	}
+	if derivation.projectionFingerprint != fingerprint {
+		return StructuralCapture{}, &domain.Error{Code: "PROJECTION_DERIVATION_RESULT_MISMATCH"}
 	}
 	// A fingerprint groups byte-identical canonical projections. A projection
 	// result is a different artifact: it binds those bytes to the exact world,
@@ -57,6 +64,7 @@ func NewStructuralCapture(
 		CapturePolicyDigest        string `json:"capture_policy_digest"`
 		ProjectionDefinitionDigest string `json:"projection_definition_digest"`
 		ProjectionFingerprint      string `json:"projection_fingerprint"`
+		ProjectionDerivationDigest string `json:"projection_derivation_digest"`
 		CanonicalProjection        string `json:"canonical_projection"`
 	}{
 		SchemaVersion:              domain.SchemaVersion,
@@ -67,6 +75,7 @@ func NewStructuralCapture(
 		CapturePolicyDigest:        world.CapturePolicyDigest().String(),
 		ProjectionDefinitionDigest: world.ProjectionDefinitionDigest().String(),
 		ProjectionFingerprint:      fingerprint.String(),
+		ProjectionDerivationDigest: derivation.Digest().String(),
 		CanonicalProjection:        string(canonicalProjection),
 	}
 	resultDigest, _, err := canon.DigestTyped("ProjectionResult", resultIdentity)
@@ -84,6 +93,7 @@ func NewStructuralCapture(
 		attemptDigest:              attempt.ArtifactDigest(),
 		capturePolicyDigest:        world.CapturePolicyDigest(),
 		projectionDefinitionDigest: world.ProjectionDefinitionDigest(),
+		derivationDigest:           derivation.Digest(),
 		fingerprint:                fingerprint,
 		canonicalProjection:        append([]byte(nil), canonicalProjection...),
 	}, nil
@@ -92,6 +102,8 @@ func NewStructuralCapture(
 func (c StructuralCapture) ProjectionFingerprint() domain.ProjectionFingerprint { return c.fingerprint }
 
 func (c StructuralCapture) ProjectionResultDigest() domain.Digest { return c.projectionDigest }
+
+func (c StructuralCapture) ProjectionDerivationDigest() domain.Digest { return c.derivationDigest }
 
 func (c StructuralCapture) CanonicalProjection() []byte {
 	return append([]byte(nil), c.canonicalProjection...)
@@ -113,6 +125,7 @@ type TrialFact struct {
 	admission domain.AdmissionToken
 	capture   StructuralCapture
 	controls  []domain.ControlReason
+	rejection ProjectionRejectionEvidence
 }
 
 func NewCapturedTrial(
@@ -127,7 +140,8 @@ func NewCapturedTrial(
 	if attempt.HasControls() {
 		return TrialFact{}, &domain.Error{Code: "CAPTURED_TRIAL_HAS_CONTROL"}
 	}
-	if !capture.observationDigest.Valid() || !capture.projectionDigest.Valid() || !capture.fingerprint.Valid() {
+	if !capture.observationDigest.Valid() || !capture.projectionDigest.Valid() ||
+		!capture.derivationDigest.Valid() || !capture.fingerprint.Valid() {
 		return TrialFact{}, &domain.Error{Code: "INCOMPLETE_CAPTURE_PROVENANCE"}
 	}
 	if capture.worldDigest != world.Digest() || capture.attemptDigest != attempt.ArtifactDigest() ||
@@ -155,6 +169,43 @@ func NewControlledTrial(world domain.WorldInstance, attempt domain.FinalizedAtte
 		attempt:   attempt,
 		admission: admission,
 		controls:  append([]domain.ControlReason(nil), controls...),
+	}, nil
+}
+
+// NewProjectionRejectedTrial records the one control that can arise only
+// after an otherwise clean finalized process has crossed the typed adapter
+// boundary. Projection rejection is not allowed to rewrite lifecycle history,
+// and it is never represented by a projection fingerprint.
+//
+// Keeping this constructor narrower than a general caller-authored control
+// prevents adapters from laundering timeouts, output limits, or teardown
+// failures around the FinalizedAttempt authority.
+func NewProjectionRejectedTrial(
+	world domain.WorldInstance,
+	attempt domain.FinalizedAttempt,
+	admission domain.AdmissionToken,
+	rejection ProjectionRejectionEvidence,
+) (TrialFact, error) {
+	if err := validateTrialLineage(world, attempt, admission); err != nil {
+		return TrialFact{}, err
+	}
+	if attempt.HasControls() {
+		return TrialFact{}, &domain.Error{Code: "PROJECTION_REJECTION_HAS_LIFECYCLE_CONTROL"}
+	}
+	if !rejection.Valid() || rejection.worldDigest != world.Digest() ||
+		rejection.attemptArtifactDigest != attempt.ArtifactDigest() ||
+		rejection.candidateKey != world.CandidateKey() ||
+		rejection.capturePolicyDigest != world.CapturePolicyDigest() ||
+		rejection.definitionDigest != world.ProjectionDefinitionDigest() {
+		return TrialFact{}, &domain.Error{Code: "INVALID_PROJECTION_REJECTION_EVIDENCE"}
+	}
+	return TrialFact{
+		kind:      trialControlled,
+		world:     world,
+		attempt:   attempt,
+		admission: admission,
+		controls:  []domain.ControlReason{domain.ControlProjectionRejected},
+		rejection: rejection,
 	}, nil
 }
 
@@ -279,6 +330,18 @@ type BatchInput struct {
 	Trials []TrialFact
 }
 
+// ScheduledBatchInput is the U3 authority-bearing classifier input. Unlike
+// legacy BatchInput, it proves the exact canonical rotation across the full
+// candidate roster and records whether orchestration ended before its declared
+// repetition count. CandidateKey keeps incomplete runs explicit even when a
+// future schema permits zero-trial batch artifacts.
+type ScheduledBatchInput struct {
+	Schedule      RotatedSchedule
+	CandidateKey  domain.CandidateExecutionKey
+	Trials        []TrialFact
+	RunIncomplete bool
+}
+
 type StableBatch struct {
 	digest                     domain.Digest
 	candidateKey               domain.CandidateExecutionKey
@@ -292,6 +355,8 @@ type StableBatch struct {
 	comparisonAdmissionRoster  []domain.CandidateExecutionKey
 	requiredFreshTrials        int
 	phase                      domain.AttemptPurpose
+	scheduleDigest             domain.Digest
+	rotation                   string
 	scheduleOrdinals           []int
 	trials                     []TrialFact
 	observationDigests         []domain.Digest
@@ -300,10 +365,61 @@ type StableBatch struct {
 }
 
 func Classify(input BatchInput) (StableBatch, error) {
+	return classifyBatch(input.Trials, domain.Digest(""), "NOT_ESTABLISHED_IN_U1", false)
+}
+
+// ClassifyScheduled is the only U3 batch constructor. It proves that every
+// supplied trial occupies this candidate's slot in the exact canonical rotated
+// schedule. A run-level stop remains INCOMPLETE when the admitted prefix only
+// agrees; observed agreement is not promoted to stability. Two eligible
+// fingerprints, however, establish UNSTABLE before that stop.
+func ClassifyScheduled(input ScheduledBatchInput) (StableBatch, error) {
+	if !input.Schedule.Valid() || !input.CandidateKey.Valid() {
+		return StableBatch{}, &domain.Error{Code: "INVALID_SCHEDULED_BATCH_AUTHORITY"}
+	}
+	found := false
+	for _, candidate := range input.Schedule.roster {
+		if candidate == input.CandidateKey {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return StableBatch{}, &domain.Error{Code: "SCHEDULED_CANDIDATE_NOT_IN_ROSTER"}
+	}
 	if len(input.Trials) == 0 {
 		return StableBatch{}, &domain.Error{Code: "MISSING_BATCH_EVIDENCE"}
 	}
-	first := input.Trials[0]
+	if len(input.Trials) > input.Schedule.repetitions || (!input.RunIncomplete && len(input.Trials) != input.Schedule.repetitions) {
+		return StableBatch{}, &domain.Error{Code: "SCHEDULED_BATCH_REPEAT_MISMATCH"}
+	}
+	if input.Trials[0].world.RequiredFreshTrials() != input.Schedule.repetitions {
+		return StableBatch{}, &domain.Error{Code: "SCHEDULED_BATCH_REPEAT_AUTHORITY_MISMATCH"}
+	}
+	for repetition, trial := range input.Trials {
+		slot, ok := input.Schedule.Slot(input.CandidateKey, repetition)
+		if !ok || trial.world.CandidateKey() != input.CandidateKey || trial.world.ScheduleOrdinal() != slot.ordinal {
+			return StableBatch{}, &domain.Error{Code: "SCHEDULED_BATCH_SLOT_MISMATCH"}
+		}
+	}
+	return classifyBatch(
+		input.Trials,
+		input.Schedule.digest,
+		string(input.Schedule.Rotation()),
+		input.RunIncomplete,
+	)
+}
+
+func classifyBatch(
+	trials []TrialFact,
+	scheduleDigest domain.Digest,
+	rotation string,
+	forceIncomplete bool,
+) (StableBatch, error) {
+	if len(trials) == 0 {
+		return StableBatch{}, &domain.Error{Code: "MISSING_BATCH_EVIDENCE"}
+	}
+	first := trials[0]
 	candidateKey := first.world.CandidateKey()
 	planDigest := first.world.PlanDigest()
 	stimulusDigest := first.world.StimulusDigest()
@@ -321,12 +437,12 @@ func Classify(input BatchInput) (StableBatch, error) {
 	if requiredFreshTrials < 1 || requiredFreshTrials > 5 {
 		return StableBatch{}, &domain.Error{Code: "INVALID_REPEAT_COUNT", Detail: "plan-derived required trials outside 1..5"}
 	}
-	if len(input.Trials) > requiredFreshTrials {
+	if len(trials) > requiredFreshTrials {
 		return StableBatch{}, &domain.Error{Code: "EXTRA_TRIALS_REQUIRE_NEW_BATCH"}
 	}
-	scheduleOrdinals := make([]int, len(input.Trials))
+	scheduleOrdinals := make([]int, len(trials))
 	seenOrdinals := map[int]struct{}{}
-	for index, trial := range input.Trials {
+	for index, trial := range trials {
 		ordinal := trial.world.ScheduleOrdinal()
 		if ordinal < 0 {
 			return StableBatch{}, &domain.Error{Code: "NEGATIVE_SCHEDULE_ORDINAL"}
@@ -345,13 +461,13 @@ func Classify(input BatchInput) (StableBatch, error) {
 	seenWorlds := map[domain.Digest]struct{}{}
 	seenAdmissions := map[domain.Digest]struct{}{}
 	seenObservations := map[domain.Digest]struct{}{}
-	observationDigests := make([]domain.Digest, 0, len(input.Trials))
-	admissionDigests := make([]domain.Digest, len(input.Trials))
+	observationDigests := make([]domain.Digest, 0, len(trials))
+	admissionDigests := make([]domain.Digest, len(trials))
 	counts := map[domain.ProjectionFingerprint]int{}
 	reasonSet := map[domain.ControlReason]struct{}{}
 	eligibleCount := 0
 	var admissionRoster []domain.CandidateExecutionKey
-	for index, trial := range input.Trials {
+	for index, trial := range trials {
 		world := trial.world
 		attemptDigest := trial.attempt.ArtifactDigest()
 		if !world.Digest().Valid() || !attemptDigest.Valid() {
@@ -395,8 +511,11 @@ func Classify(input BatchInput) (StableBatch, error) {
 		}
 		seenAdmissions[admissionDigest] = struct{}{}
 		admissionDigests[index] = admissionDigest
-		if trial.kind == trialCaptured {
+		if trial.kind == trialCaptured || trial.rejection.Valid() {
 			observationDigest := trial.capture.observationDigest
+			if trial.rejection.Valid() {
+				observationDigest = trial.rejection.observationDigest
+			}
 			if !observationDigest.Valid() {
 				return StableBatch{}, &domain.Error{Code: "INVALID_CAPTURED_OBSERVATION_DIGEST"}
 			}
@@ -426,8 +545,14 @@ func Classify(input BatchInput) (StableBatch, error) {
 		classification.status = Uncomparable
 		classification.reasons = sortedReasons(reasonSet)
 	} else if len(counts) >= 2 {
+		// Once two eligible fingerprints exist, instability is established
+		// evidence. A later orchestration stop can prevent stability from being
+		// established, but cannot erase an observed disagreement.
 		classification.status = Unstable
 		classification.histogram = sortedHistogram(counts)
+	} else if forceIncomplete {
+		classification.status = Incomplete
+		classification.reasons = []domain.ControlReason{domain.ControlBudgetExhausted}
 	} else if eligibleCount < requiredFreshTrials {
 		classification.status = Incomplete
 		classification.reasons = []domain.ControlReason{domain.ControlBudgetExhausted}
@@ -456,16 +581,17 @@ func Classify(input BatchInput) (StableBatch, error) {
 		ComparisonAdmissionRoster:  candidateRosterStrings(admissionRoster),
 		RequiredFreshTrials:        requiredFreshTrials,
 		Schedule: scheduleIdentity{
-			Phase:    string(phase),
-			Rotation: "NOT_ESTABLISHED_IN_U1",
-			Ordinals: append([]int(nil), scheduleOrdinals...),
+			Phase:          string(phase),
+			Rotation:       rotation,
+			ScheduleDigest: scheduleDigest.String(),
+			Ordinals:       append([]int(nil), scheduleOrdinals...),
 		},
-		Trials:                       make([]trialIdentity, len(input.Trials)),
+		Trials:                       make([]trialIdentity, len(trials)),
 		CapturedObservationDigests:   digestStrings(observationDigests),
 		Classification:               classificationIdentity(classification),
 		DuplicateEvidenceWithinBatch: false,
 	}
-	for index, trial := range input.Trials {
+	for index, trial := range trials {
 		identity.Trials[index] = trialIdentityOf(trial)
 	}
 	digest, canonicalBytes, err := digestBatch(identity)
@@ -485,8 +611,10 @@ func Classify(input BatchInput) (StableBatch, error) {
 		comparisonAdmissionRoster:  append([]domain.CandidateExecutionKey(nil), admissionRoster...),
 		requiredFreshTrials:        requiredFreshTrials,
 		phase:                      phase,
+		scheduleDigest:             scheduleDigest,
+		rotation:                   rotation,
 		scheduleOrdinals:           append([]int(nil), scheduleOrdinals...),
-		trials:                     append([]TrialFact(nil), input.Trials...),
+		trials:                     append([]TrialFact(nil), trials...),
 		observationDigests:         append([]domain.Digest(nil), observationDigests...),
 		classification:             classification,
 		canonicalBytes:             canonicalBytes,
@@ -557,6 +685,8 @@ func (b StableBatch) AdmissionRoster() []domain.CandidateExecutionKey {
 	return append([]domain.CandidateExecutionKey(nil), b.comparisonAdmissionRoster...)
 }
 func (b StableBatch) Phase() domain.AttemptPurpose   { return b.phase }
+func (b StableBatch) ScheduleDigest() domain.Digest  { return b.scheduleDigest }
+func (b StableBatch) Rotation() string               { return b.rotation }
 func (b StableBatch) RequiredFreshTrials() int       { return b.requiredFreshTrials }
 func (b StableBatch) Classification() Classification { return b.classification }
 func (b StableBatch) Trials() []TrialFact            { return append([]TrialFact(nil), b.trials...) }

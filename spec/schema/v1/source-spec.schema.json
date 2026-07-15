@@ -108,7 +108,9 @@
       "additionalProperties": false,
       "properties": {
         "discovery_repeats": { "type": "integer", "minimum": 1, "maximum": 5 },
-        "confirmation_repeats": { "type": "integer", "minimum": 1, "maximum": 5 }
+        "confirmation_repeats": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "concurrency": { "const": "SEQUENTIAL" },
+        "rotation": { "const": "ROTATE_START_BY_REPETITION_V1" }
       }
     },
     "required_tools": {

@@ -24,6 +24,11 @@ func newCappedCapture(limit int64, overflowC chan<- struct{}) *cappedCapture {
 	return &cappedCapture{limit: limit, overflowC: overflowC}
 }
 
+// configuredLimit reports the immutable limit owned by this exact physical
+// capture instance. Receipts must use this value, never a second copy of the
+// request, so a miswired stdout/stderr constructor remains observable.
+func (c *cappedCapture) configuredLimit() int64 { return c.limit }
+
 func (c *cappedCapture) drain(reader io.Reader, done chan<- time.Time) {
 	defer func() { done <- time.Now() }()
 	buffer := make([]byte, 32<<10)

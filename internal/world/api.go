@@ -35,12 +35,16 @@ type Request struct {
 }
 
 type Result struct {
-	world           domain.WorldInstance
-	finalized       domain.FinalizedAttempt
-	states          []domain.AttemptState
-	roots           Roots
-	materialization gitobj.MaterializationReceipt
-	process         ProcessReceipt
+	world            domain.WorldInstance
+	finalized        domain.FinalizedAttempt
+	states           []domain.AttemptState
+	roots            Roots
+	materialization  gitobj.MaterializationReceipt
+	process          ProcessReceipt
+	cliFixture       CLIFixtureOverlayReceipt
+	hasCLIFixture    bool
+	cliInvocation    CLIInvocationEvidenceReceipt
+	hasCLIInvocation bool
 }
 
 func (r Result) World() domain.WorldInstance               { return r.world }
@@ -53,6 +57,24 @@ func (r Result) Materialization() gitobj.MaterializationReceipt {
 	return cloneMaterializationReceipt(r.materialization)
 }
 func (r Result) Process() ProcessReceipt { return r.process.clone() }
+func (r Result) CLIFixtureOverlay() (CLIFixtureOverlayReceipt, bool) {
+	if !r.hasCLIFixture {
+		return CLIFixtureOverlayReceipt{}, false
+	}
+	result := r.cliFixture
+	result.canonicalBytes = append([]byte(nil), r.cliFixture.canonicalBytes...)
+	result.entries = append([]CLIFixtureEntryReceipt(nil), r.cliFixture.entries...)
+	return result, true
+}
+func (r Result) CLIInvocationEvidence() (CLIInvocationEvidenceReceipt, bool) {
+	if !r.hasCLIInvocation {
+		return CLIInvocationEvidenceReceipt{}, false
+	}
+	result := r.cliInvocation
+	result.canonicalBytes = append([]byte(nil), r.cliInvocation.canonicalBytes...)
+	result.expectedLogicalArgv = append([]string(nil), r.cliInvocation.expectedLogicalArgv...)
+	return result, true
+}
 
 func Execute(ctx context.Context, request Request) (Result, error) {
 	return executeWithMaterializer(ctx, request, gitobj.DefaultMaterializer{})
@@ -259,6 +281,33 @@ func finalizeWithoutProcessWithMaterialization(
 	primary domain.ControlReason,
 	diagnostic error,
 ) (Result, error) {
+	return finalizeWithoutProcessWithLineage(
+		allocated, attempt, materialization, primary, diagnostic, processCLILineage{},
+	)
+}
+
+func finalizeWithoutProcessWithLineage(
+	allocated allocatedAttempt,
+	attempt domain.Attempt,
+	materialization gitobj.MaterializationReceipt,
+	primary domain.ControlReason,
+	diagnostic error,
+	cli processCLILineage,
+) (Result, error) {
+	return finalizeWithoutProcessWithLineageAndTool(
+		allocated, attempt, materialization, primary, diagnostic, resolvedTool{}, cli,
+	)
+}
+
+func finalizeWithoutProcessWithLineageAndTool(
+	allocated allocatedAttempt,
+	attempt domain.Attempt,
+	materialization gitobj.MaterializationReceipt,
+	primary domain.ControlReason,
+	diagnostic error,
+	tool resolvedTool,
+	cli processCLILineage,
+) (Result, error) {
 	attempt, err := attempt.Fail(primary)
 	if err != nil {
 		return Result{}, err
@@ -273,7 +322,7 @@ func finalizeWithoutProcessWithMaterialization(
 	}
 	process, err := buildProcessReceipt(receiptInput{
 		allocated: allocated, materialization: materialization, attempt: attempt,
-		primary: primary, diagnostic: diagnostic,
+		tool: tool, primary: primary, diagnostic: diagnostic, cli: cli,
 	})
 	if err != nil {
 		return Result{}, err

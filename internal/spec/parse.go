@@ -289,7 +289,12 @@ func parseReadiness(value canon.Value) (domain.Readiness, error) {
 }
 
 func parseRepeats(value canon.Value) (repeatOverrides, error) {
-	object, err := objectAt(value, "$.repeat_schedule", fieldSet("discovery_repeats", "confirmation_repeats"), fieldSet())
+	object, err := objectAt(
+		value,
+		"$.repeat_schedule",
+		fieldSet("discovery_repeats", "confirmation_repeats", "concurrency", "rotation"),
+		fieldSet(),
+	)
 	if err != nil {
 		return repeatOverrides{}, err
 	}
@@ -307,6 +312,22 @@ func parseRepeats(value canon.Value) (repeatOverrides, error) {
 			return result, err
 		}
 		result.ConfirmationRepeats = &parsed
+	}
+	if raw, ok := object["concurrency"]; ok {
+		parsed, err := textValue(raw, "$.repeat_schedule.concurrency")
+		if err != nil {
+			return result, err
+		}
+		value := domain.ScheduleConcurrency(parsed)
+		result.Concurrency = &value
+	}
+	if raw, ok := object["rotation"]; ok {
+		parsed, err := textValue(raw, "$.repeat_schedule.rotation")
+		if err != nil {
+			return result, err
+		}
+		value := domain.ScheduleRotation(parsed)
+		result.Rotation = &value
 	}
 	return result, nil
 }

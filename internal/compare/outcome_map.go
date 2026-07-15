@@ -53,6 +53,8 @@ type CandidateOutcomeMap struct {
 	comparisonAdmissionDigests []domain.Digest
 	comparisonBasisDigest      domain.Digest
 	phase                      domain.AttemptPurpose
+	scheduleDigest             domain.Digest
+	rotation                   string
 	roster                     []domain.CandidateExecutionKey
 	entries                    []Entry
 	exclusions                 []Exclusion
@@ -91,6 +93,8 @@ func NewCandidateOutcomeMap(
 	var capturePolicyDigest domain.Digest
 	var projectionDefinitionDigest domain.Digest
 	var phase domain.AttemptPurpose
+	var scheduleDigest domain.Digest
+	var rotation string
 	seenAttempts := map[domain.Digest]struct{}{}
 	seenWorlds := map[domain.Digest]struct{}{}
 	seenObservations := map[domain.Digest]struct{}{}
@@ -121,10 +125,13 @@ func NewCandidateOutcomeMap(
 			projectionDefinitionDigest = batch.ProjectionDefinitionDigest()
 			basisDigest = batch.ComparisonBasisDigest()
 			phase = batch.Phase()
+			scheduleDigest = batch.ScheduleDigest()
+			rotation = batch.Rotation()
 			// MUTANT_U1_COMPARE_IGNORE_SHARED_ADMISSION_SET: every candidate must come from the same concrete matrices.
 		} else if !sameDigestList(batchAdmissions, admissionDigests) || batch.PlanDigest() != planDigest ||
 			batch.CapturePolicyDigest() != capturePolicyDigest || batch.ProjectionDefinitionDigest() != projectionDefinitionDigest ||
-			batch.ComparisonBasisDigest() != basisDigest || batch.Phase() != phase {
+			batch.ComparisonBasisDigest() != basisDigest || batch.Phase() != phase ||
+			batch.ScheduleDigest() != scheduleDigest || batch.Rotation() != rotation {
 			return CandidateOutcomeMap{}, &domain.Error{Code: "MIXED_BATCH_ADMISSION_OR_PHASE"}
 		}
 		for _, digest := range batch.AttemptDigests() {
@@ -214,6 +221,8 @@ func NewCandidateOutcomeMap(
 		admissionDigests,
 		basisDigest,
 		phase,
+		scheduleDigest,
+		rotation,
 		roster,
 		entries,
 		exclusions,
@@ -235,6 +244,8 @@ func NewCandidateOutcomeMap(
 		comparisonAdmissionDigests: append([]domain.Digest(nil), admissionDigests...),
 		comparisonBasisDigest:      basisDigest,
 		phase:                      phase,
+		scheduleDigest:             scheduleDigest,
+		rotation:                   rotation,
 		roster:                     append([]domain.CandidateExecutionKey(nil), roster...),
 		entries:                    append([]Entry(nil), entries...),
 		exclusions:                 append([]Exclusion(nil), exclusions...),
@@ -421,6 +432,8 @@ func digestOutcomeArtifact(
 	admissionDigests []domain.Digest,
 	basisDigest domain.Digest,
 	phase domain.AttemptPurpose,
+	scheduleDigest domain.Digest,
+	rotation string,
 	roster []domain.CandidateExecutionKey,
 	entries []Entry,
 	exclusions []Exclusion,
@@ -449,6 +462,8 @@ func digestOutcomeArtifact(
 		ComparisonAdmissionDigests     []string            `json:"comparison_admission_digests"`
 		ComparisonBasisDigest          string              `json:"comparison_basis_digest"`
 		Phase                          string              `json:"phase"`
+		ScheduleDigest                 string              `json:"schedule_digest"`
+		Rotation                       string              `json:"rotation"`
 		ExpectedCandidateRoster        []string            `json:"expected_candidate_roster"`
 		Entries                        []artifactEntry     `json:"entries"`
 		Exclusions                     []artifactExclusion `json:"excluded_candidates"`
@@ -472,6 +487,8 @@ func digestOutcomeArtifact(
 		ComparisonAdmissionDigests:     make([]string, len(admissionDigests)),
 		ComparisonBasisDigest:          basisDigest.String(),
 		Phase:                          string(phase),
+		ScheduleDigest:                 scheduleDigest.String(),
+		Rotation:                       rotation,
 		ExpectedCandidateRoster:        make([]string, len(roster)),
 		Entries:                        make([]artifactEntry, len(entries)),
 		Exclusions:                     make([]artifactExclusion, len(exclusions)),
@@ -555,6 +572,7 @@ func ComparableForPreservation(baseline, observed CandidateOutcomeMap) bool {
 		baseline.planDigest != observed.planDigest ||
 		baseline.comparisonEnvelopeDigest != observed.comparisonEnvelopeDigest ||
 		baseline.comparisonBasisDigest != observed.comparisonBasisDigest ||
+		baseline.scheduleDigest != observed.scheduleDigest || baseline.rotation != observed.rotation ||
 		!sameRoster(baseline.roster, observed.roster) || len(baseline.entries) != len(observed.entries) ||
 		len(baseline.exclusions) != len(observed.exclusions) {
 		return false
@@ -667,7 +685,9 @@ func (m CandidateOutcomeMap) ComparisonBasisDigest() domain.Digest { return m.co
 func (m CandidateOutcomeMap) AdmissionDigests() []domain.Digest {
 	return append([]domain.Digest(nil), m.comparisonAdmissionDigests...)
 }
-func (m CandidateOutcomeMap) Phase() domain.AttemptPurpose { return m.phase }
+func (m CandidateOutcomeMap) Phase() domain.AttemptPurpose  { return m.phase }
+func (m CandidateOutcomeMap) ScheduleDigest() domain.Digest { return m.scheduleDigest }
+func (m CandidateOutcomeMap) Rotation() string              { return m.rotation }
 
 func (m CandidateOutcomeMap) CandidateRoster() []domain.CandidateExecutionKey {
 	return append([]domain.CandidateExecutionKey(nil), m.roster...)

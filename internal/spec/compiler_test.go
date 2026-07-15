@@ -83,6 +83,27 @@ func TestParseSourceAndCompileMaterializeEveryDefault(t *testing.T) {
 	}
 }
 
+func TestSourceSpecDeclaresClosedSequentialRotation(t *testing.T) {
+	explicit := strings.Replace(
+		validSource,
+		`"required_tools":[`,
+		`"repeat_schedule":{"discovery_repeats":3,"confirmation_repeats":3,"concurrency":"SEQUENTIAL","rotation":"ROTATE_START_BY_REPETITION_V1"},"required_tools":[`,
+		1,
+	)
+	plan, err := Compile(mustSource(t, explicit), testProjection)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plan.ScheduleConcurrency() != domain.ScheduleSequential ||
+		plan.ScheduleRotation() != domain.ScheduleRotationStartByRepetitionV1 {
+		t.Fatal("compiled plan lost its explicit closed schedule policy")
+	}
+	invalid := strings.Replace(explicit, "ROTATE_START_BY_REPETITION_V1", "NOT_ESTABLISHED_IN_U1", 1)
+	if _, err := ParseSource([]byte(invalid)); err == nil {
+		t.Fatal("source parser admitted a schedule policy outside the closed U3 profile")
+	}
+}
+
 func TestOwnedSourceExampleParsesAndCompiles(t *testing.T) {
 	exact, err := os.ReadFile("../../spec/examples/v1/source-spec.valid.json")
 	if err != nil {

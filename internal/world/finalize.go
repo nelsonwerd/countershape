@@ -14,6 +14,21 @@ func finalizePhysical(
 	environment []string,
 	physical physicalProcessResult,
 ) (Result, error) {
+	return finalizePhysicalWithLineage(
+		allocated, attempt, materialization, tool, logicalArgv, environment, physical, processCLILineage{},
+	)
+}
+
+func finalizePhysicalWithLineage(
+	allocated allocatedAttempt,
+	attempt domain.Attempt,
+	materialization gitobj.MaterializationReceipt,
+	tool resolvedTool,
+	logicalArgv []string,
+	environment []string,
+	physical physicalProcessResult,
+	cli processCLILineage,
+) (Result, error) {
 	var err error
 	if physical.primary != "" {
 		attempt, err = attempt.Fail(physical.primary)
@@ -46,7 +61,7 @@ func finalizePhysical(
 	receipt, err := buildProcessReceipt(receiptInput{
 		allocated: allocated, materialization: materialization, attempt: attempt,
 		tool: tool, logicalArgv: append([]string(nil), logicalArgv...),
-		environment: environment, physical: physical, primary: physical.primary,
+		environment: environment, physical: physical, primary: physical.primary, cli: cli,
 	})
 	if err != nil {
 		return Result{}, err

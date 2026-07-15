@@ -152,8 +152,9 @@ func bindCandidates(t *testing.T, declaration gitobj.CandidateSetDeclaration, ma
 		Readiness:            domain.Readiness{Kind: domain.ReadinessNone},
 		CapturePolicyDigest:  fixedDigest("6"),
 		ProjectionDefinition: projectionBinding(t),
-		RepeatSchedule:       domain.RepeatSchedule{DiscoveryRepeats: 2, ConfirmationRepeats: 2},
-		RequiredTools:        []domain.RequiredTool{{Name: "node", VersionConstraint: "executed-major-only"}},
+		RepeatSchedule: domain.RepeatSchedule{DiscoveryRepeats: 2, ConfirmationRepeats: 2,
+			Concurrency: domain.ScheduleSequential, Rotation: domain.ScheduleRotationStartByRepetitionV1},
+		RequiredTools: []domain.RequiredTool{{Name: "node", VersionConstraint: "executed-major-only"}},
 		Budgets: domain.Budgets{
 			CandidateCount:            declaration.CandidateCount(),
 			MaterializedEntryCount:    64,

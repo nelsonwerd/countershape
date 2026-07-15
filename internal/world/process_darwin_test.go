@@ -3,6 +3,7 @@
 package world
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -160,6 +161,23 @@ func runFixtureProcess(
 	probe time.Duration,
 	teardown time.Duration,
 ) (physicalProcessResult, Roots) {
+	return runFixtureProcessWithStdin(
+		t, ctx, executable, mode, extra, processStdin{}, stdoutLimit, stderrLimit, probe, teardown,
+	)
+}
+
+func runFixtureProcessWithStdin(
+	t *testing.T,
+	ctx context.Context,
+	executable string,
+	mode string,
+	extra []string,
+	stdin processStdin,
+	stdoutLimit int64,
+	stderrLimit int64,
+	probe time.Duration,
+	teardown time.Duration,
+) (physicalProcessResult, Roots) {
 	t.Helper()
 	roots := processRoots(t)
 	logicalArgv := []string{"fixture", "--mode", mode}
@@ -168,6 +186,7 @@ func runFixtureProcess(
 		tool:              admittedFixtureTool(t, executable),
 		logicalArgv:       logicalArgv,
 		environment:       buildEnvironment([]domain.EnvironmentEntry{{Name: "LANG", Value: "C"}}, roots, "attempt:test"),
+		stdin:             stdin,
 		cwd:               roots.candidateParent,
 		stdoutLimit:       stdoutLimit,
 		stderrLimit:       stderrLimit,
@@ -175,6 +194,137 @@ func runFixtureProcess(
 		teardownBudgetMS:  teardown.Milliseconds(),
 	})
 	return result, roots
+}
+
+func TestPreSpawnRefusalDoesNotEnterPhysicalExecutionMutationGuard(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	result := runPlatformProcess(ctx, processRequest{
+		stdin:       processStdin{presence: processStdinAbsent},
+		stdoutLimit: 17, stderrLimit: 29, executionBudgetMS: 100, teardownBudgetMS: 100,
+	})
+	if result.physicalExecutionEntered || result.spawnAttempted || result.started ||
+		result.stdoutCaptureLimit != 0 || result.stderrCaptureLimit != 0 ||
+		result.stdinPipeAllocated || result.stdinWriterStarted || result.stdinHandoffAttempted ||
+		result.stdinWritten != 0 || result.primary != domain.ControlCancelled ||
+		result.diagnosticCode != "CONTEXT_CANCELLED_BEFORE_SPAWN" {
+		t.Fatalf("pre-spawn cancellation forged physical execution facts: %+v", result)
+	}
+}
+
+func TestPhysicalStartFailureRecordsAttemptedButUnstartedExecutionMutationGuard(t *testing.T) {
+	executable := buildProcessFixture(t)
+	roots := processRoots(t)
+	stdin := processStdin{presence: processStdinPresent}
+	result := runPlatformProcess(context.Background(), processRequest{
+		tool: admittedFixtureTool(t, executable), logicalArgv: []string{"fixture", "--mode", "report"},
+		environment: buildEnvironment([]domain.EnvironmentEntry{{Name: "LANG", Value: "C"}}, roots, "attempt:start-failure"),
+		stdin:       stdin, cwd: filepath.Join(roots.candidateParent, "deliberately-missing-cwd"),
+		stdoutLimit: 17, stderrLimit: 29, executionBudgetMS: 100, teardownBudgetMS: 100,
+		markerBeforeSpawn: true,
+	})
+	wantDigest, err := digestProcessStdin(stdin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !result.physicalExecutionEntered || !result.spawnAttempted || result.started ||
+		result.primary != domain.ControlStartError || result.diagnosticCode != "SPAWN_FAILED" ||
+		result.pid != 0 || result.processGroupID != 0 || result.processGroupOwned ||
+		result.stdoutCaptureLimit != 17 || result.stderrCaptureLimit != 29 ||
+		result.stdinPresence != processStdinPresent || result.stdinDeclared != 0 || result.stdinDigest != wantDigest ||
+		!result.stdinPipeAllocated || result.stdinWriterStarted || result.stdinHandoffAttempted ||
+		result.stdinWritten != 0 || result.stdinComplete || result.stdinErrorCode != "" ||
+		result.directChildWaited || result.stdoutDrained || result.stderrDrained || result.finalProbeClean {
+		t.Fatalf("real os/exec Start failure acquired false process or stdin facts: %+v", result)
+	}
+}
+
+func TestPhysicalProcessReceiptsExactStdinAndCaptureAuthorities(t *testing.T) {
+	executable := buildProcessFixture(t)
+	tests := []struct {
+		name  string
+		stdin processStdin
+		want  []byte
+	}{
+		{name: "absent", stdin: processStdin{presence: processStdinAbsent}},
+		{name: "present-empty", stdin: processStdin{presence: processStdinPresent}, want: []byte{}},
+		{name: "present-bytes", stdin: processStdin{presence: processStdinPresent, bytes: []byte("opaque stdin")}, want: []byte("opaque stdin")},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			result, _ := runFixtureProcessWithStdin(
+				t, context.Background(), executable, "echo-stdin", nil, test.stdin,
+				17, 29, time.Second, 400*time.Millisecond,
+			)
+			wantDigest, err := digestProcessStdin(test.stdin)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if result.primary != "" || result.teardownError || result.orphanRisk ||
+				!result.physicalExecutionEntered || !result.started {
+				t.Fatalf("physical stdin fixture did not complete cleanly: %+v", result)
+			}
+			if result.stdoutCaptureLimit != 17 || result.stderrCaptureLimit != 29 {
+				t.Fatalf("physical captures report limits %d/%d, want 17/29", result.stdoutCaptureLimit, result.stderrCaptureLimit)
+			}
+			if result.stdinPresence != test.stdin.presence || result.stdinDeclared != int64(len(test.stdin.bytes)) ||
+				result.stdinDigest != wantDigest {
+				t.Fatalf("physical stdin identity differs: %+v", result)
+			}
+			if !bytes.Equal(result.stdout, test.want) || result.stdoutObserved != int64(len(test.want)) ||
+				result.stdoutOverflow || len(result.stderr) != 0 || result.stderrObserved != 0 || result.stderrOverflow {
+				t.Fatalf("physical stdin was not delivered exactly: stdout=%q result=%+v", result.stdout, result)
+			}
+			if test.stdin.presence == processStdinAbsent {
+				if result.stdinPipeAllocated || result.stdinWriterStarted || result.stdinHandoffAttempted ||
+					result.stdinWritten != 0 || !result.stdinComplete || result.stdinErrorCode != "" {
+					t.Fatalf("absent stdin acquired a physical pipe edge: %+v", result)
+				}
+				return
+			}
+			if !result.stdinPipeAllocated || !result.stdinWriterStarted || !result.stdinHandoffAttempted ||
+				result.stdinWritten != int64(len(test.stdin.bytes)) || !result.stdinComplete || result.stdinErrorCode != "" {
+				t.Fatalf("present stdin lacks exact physical delivery evidence: %+v", result)
+			}
+		})
+	}
+}
+
+// These two top-level guards are intentionally subtest-free. The U3 mutation
+// runner executes exact named tests and treats any unexpected descendant event
+// as an infrastructure failure, so each physical stdin authority has one
+// independently classifiable kill test.
+func TestPhysicalPresentEmptyStdinAuthorityMutationGuard(t *testing.T) {
+	assertPhysicalPresentStdinAuthority(t, []byte{})
+}
+
+func TestPhysicalPresentBytesStdinAuthorityMutationGuard(t *testing.T) {
+	assertPhysicalPresentStdinAuthority(t, []byte("opaque stdin"))
+}
+
+func assertPhysicalPresentStdinAuthority(t *testing.T, input []byte) {
+	t.Helper()
+	executable := buildProcessFixture(t)
+	stdin := processStdin{presence: processStdinPresent, bytes: append([]byte(nil), input...)}
+	result, _ := runFixtureProcessWithStdin(
+		t, context.Background(), executable, "echo-stdin", nil, stdin,
+		17, 29, time.Second, 400*time.Millisecond,
+	)
+	wantDigest, err := digestProcessStdin(stdin)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.primary != "" || result.teardownError || result.orphanRisk ||
+		!result.physicalExecutionEntered || !result.started ||
+		result.stdoutCaptureLimit != 17 || result.stderrCaptureLimit != 29 ||
+		result.stdinPresence != processStdinPresent || result.stdinDeclared != int64(len(input)) ||
+		result.stdinDigest != wantDigest || !result.stdinPipeAllocated || !result.stdinWriterStarted ||
+		!result.stdinHandoffAttempted || result.stdinWritten != int64(len(input)) ||
+		!result.stdinComplete || result.stdinErrorCode != "" || !bytes.Equal(result.stdout, input) ||
+		result.stdoutObserved != int64(len(input)) || result.stdoutOverflow ||
+		len(result.stderr) != 0 || result.stderrObserved != 0 || result.stderrOverflow {
+		t.Fatalf("physical present stdin authority changed for %d bytes: %+v", len(input), result)
+	}
 }
 
 func TestDirectProcessUsesSparseEnvironmentAndMeasuredProcessGroup(t *testing.T) {
@@ -498,6 +648,9 @@ func TestFinalGroupProbeRequiresObservedAbsence(t *testing.T) {
 }
 
 func TestTerminalArbiterUsesFixedOwnerObservedPriority(t *testing.T) {
+	if terminalArbitrationContract != "OWNER_OBSERVED_PRIORITY_OUTPUT_PROBE_TRANSPORT_CANCEL_DEADLINE_WAIT" {
+		t.Fatalf("receipt arbitration contract = %q", terminalArbitrationContract)
+	}
 	overflowC := make(chan struct{}, 2)
 	stdout := newCappedCapture(1, overflowC)
 	stderr := newCappedCapture(1, overflowC)
@@ -515,6 +668,19 @@ func TestTerminalArbiterUsesFixedOwnerObservedPriority(t *testing.T) {
 
 	stdout = newCappedCapture(1, make(chan struct{}, 1))
 	stderr = newCappedCapture(1, make(chan struct{}, 1))
+	deadlineC = make(chan time.Time, 1)
+	deadlineC <- time.Now()
+	waitC = make(chan waitResult, 1)
+	waitC <- waitResult{}
+	stdinC := make(chan stdinWriteResult, 1)
+	stdinC <- stdinWriteResult{complete: false, errorCode: "WRITE_FAILED"}
+	ctx, cancel = context.WithCancel(context.Background())
+	cancel()
+	decision = arbitrateTerminalWithStdin(ctx, deadlineC, make(chan struct{}), stdout, stderr, waitC, stdinC)
+	if decision.primary != domain.ControlProbeTransportError {
+		t.Fatalf("stdin transport/cancel/deadline/wait priority selected %+v", decision)
+	}
+
 	deadlineC = make(chan time.Time, 1)
 	waitC = make(chan waitResult, 1)
 	waitC <- waitResult{}

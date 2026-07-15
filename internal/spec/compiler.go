@@ -25,6 +25,8 @@ type budgetOverrides struct {
 type repeatOverrides struct {
 	DiscoveryRepeats    *int
 	ConfirmationRepeats *int
+	Concurrency         *domain.ScheduleConcurrency
+	Rotation            *domain.ScheduleRotation
 }
 
 // ParsedSource is an immutable source admitted by ParseSource. Its fields are
@@ -115,11 +117,19 @@ func declarationForSource(source ParsedSource) domain.WorldPlanDeclarationConfig
 	applyBudgetOverrides(&budgets, source.budgets)
 	discoveryRepeats := 3
 	confirmationRepeats := 3
+	concurrency := domain.ScheduleSequential
+	rotation := domain.ScheduleRotationStartByRepetitionV1
 	if source.repeats.DiscoveryRepeats != nil {
 		discoveryRepeats = *source.repeats.DiscoveryRepeats
 	}
 	if source.repeats.ConfirmationRepeats != nil {
 		confirmationRepeats = *source.repeats.ConfirmationRepeats
+	}
+	if source.repeats.Concurrency != nil {
+		concurrency = *source.repeats.Concurrency
+	}
+	if source.repeats.Rotation != nil {
+		rotation = *source.repeats.Rotation
 	}
 
 	return domain.WorldPlanDeclarationConfig{
@@ -139,6 +149,8 @@ func declarationForSource(source ParsedSource) domain.WorldPlanDeclarationConfig
 		RepeatSchedule: domain.RepeatSchedule{
 			DiscoveryRepeats:    discoveryRepeats,
 			ConfirmationRepeats: confirmationRepeats,
+			Concurrency:         concurrency,
+			Rotation:            rotation,
 		},
 		RequiredTools: append([]domain.RequiredTool(nil), source.requiredTools...),
 		Budgets:       budgets,

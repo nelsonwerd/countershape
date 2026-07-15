@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -58,6 +59,10 @@ func main() {
 	case "emit":
 		emit(os.Stdout, options.stdoutBytes, 'o')
 		emit(os.Stderr, options.stderrBytes, 'e')
+	case "echo-stdin":
+		if _, err := io.Copy(os.Stdout, os.Stdin); err != nil {
+			fatal(err)
+		}
 	case "emit-both-ignore-term":
 		signal.Ignore(syscall.SIGTERM)
 		done := make(chan struct{}, 2)

@@ -45,10 +45,11 @@
     "schedule": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["phase", "rotation", "ordinals"],
+      "required": ["phase", "rotation", "schedule_digest", "ordinals"],
       "properties": {
         "phase": { "$ref": "common.schema.json#/$defs/AttemptPurpose" },
-        "rotation": { "const": "NOT_ESTABLISHED_IN_U1" },
+        "rotation": { "const": "ROTATE_START_BY_REPETITION_V1" },
+        "schedule_digest": { "$ref": "common.schema.json#/$defs/Digest" },
         "ordinals": {
           "type": "array",
           "minItems": 1,

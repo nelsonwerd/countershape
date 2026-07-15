@@ -10,6 +10,14 @@ import (
 
 const SchemaVersion = "countershape/v1"
 
+type ScheduleConcurrency string
+type ScheduleRotation string
+
+const (
+	ScheduleSequential                  ScheduleConcurrency = "SEQUENTIAL"
+	ScheduleRotationStartByRepetitionV1 ScheduleRotation    = "ROTATE_START_BY_REPETITION_V1"
+)
+
 type AdapterDomain string
 
 const (
@@ -65,8 +73,10 @@ type RequiredTool struct {
 }
 
 type RepeatSchedule struct {
-	DiscoveryRepeats    int `json:"discovery_repeats"`
-	ConfirmationRepeats int `json:"confirmation_repeats"`
+	DiscoveryRepeats    int                 `json:"discovery_repeats"`
+	ConfirmationRepeats int                 `json:"confirmation_repeats"`
+	Concurrency         ScheduleConcurrency `json:"concurrency"`
+	Rotation            ScheduleRotation    `json:"rotation"`
 }
 
 type Budgets struct {
@@ -225,8 +235,9 @@ func NewWorldPlan(config WorldPlanConfig) (WorldPlan, error) {
 		RepeatSchedule: repeatIdentity{
 			DiscoveryRepeats:    config.RepeatSchedule.DiscoveryRepeats,
 			ConfirmationRepeats: config.RepeatSchedule.ConfirmationRepeats,
-			Concurrency:         "SEQUENTIAL",
-			Rotation:            "NOT_ESTABLISHED_IN_U1",
+			Concurrency:         string(config.RepeatSchedule.Concurrency),
+			// MUTATION_ANCHOR: world-plan-must-retain-declared-rotation
+			Rotation: string(config.RepeatSchedule.Rotation),
 		},
 		RequiredTools: requiredTools,
 		Budgets:       config.Budgets,
@@ -313,11 +324,11 @@ func ValidateWorldPlanDeclaration(config WorldPlanDeclarationConfig) error {
 	if len(config.StartArgv) == 0 {
 		return refuse(ErrInvalidWorldPlan, "start argv is empty")
 	}
-	if err := validateDirectArgv(config.StartArgv); err != nil {
+	if err := ValidateDirectArgv(config.StartArgv); err != nil {
 		return err
 	}
 	if len(config.SetupArgv) > 0 {
-		if err := validateDirectArgv(config.SetupArgv); err != nil {
+		if err := ValidateDirectArgv(config.SetupArgv); err != nil {
 			return err
 		}
 	}
@@ -342,6 +353,10 @@ func ValidateWorldPlanDeclaration(config WorldPlanDeclarationConfig) error {
 	if config.RepeatSchedule.DiscoveryRepeats < 1 || config.RepeatSchedule.DiscoveryRepeats > 5 ||
 		config.RepeatSchedule.ConfirmationRepeats < 1 || config.RepeatSchedule.ConfirmationRepeats > 5 {
 		return refuse(ErrInvalidWorldPlan, "repeat count outside 1..5")
+	}
+	if config.RepeatSchedule.Concurrency != ScheduleSequential ||
+		config.RepeatSchedule.Rotation != ScheduleRotationStartByRepetitionV1 {
+		return refuse(ErrInvalidWorldPlan, "schedule policy is outside the closed sequential rotation profile")
 	}
 	if config.Adapter.Domain == AdapterHTTP && config.Budgets.ReadinessMS < 1 {
 		return refuse(ErrInvalidWorldPlan, "HTTP readiness budget must be positive")
@@ -457,7 +472,10 @@ func validReadinessSignal(signal string) bool {
 	return true
 }
 
-func validateDirectArgv(argv []string) error {
+// ValidateDirectArgv applies the single closed v1 direct-execution grammar to
+// a complete logical argv vector. Plans and adapter-owned reducible stimuli
+// must call this same authority after composing every argument.
+func ValidateDirectArgv(argv []string) error {
 	if len(argv) == 0 || argv[0] == "" {
 		return refuse(ErrInvalidWorldPlan, "direct command is empty")
 	}
@@ -646,6 +664,12 @@ func (p WorldPlan) MaterializationPolicyDigest() Digest { return p.materializati
 
 func (p WorldPlan) ComparisonEnvelopeDigest() Digest { return p.comparisonEnvelopeDigest }
 
+func (p WorldPlan) FixtureRecipeDigest() Digest { return p.fixtureRecipeDigest }
+
+func (p WorldPlan) CapturePolicyDigest() Digest { return p.capturePolicyDigest }
+
+func (p WorldPlan) Readiness() Readiness { return p.readiness }
+
 func (p WorldPlan) ProjectionDefinitionDigest() Digest { return p.projectionDefinition.Digest() }
 
 func (p WorldPlan) ProjectionDefinitionBinding() ProjectionDefinitionBinding {
@@ -655,3 +679,7 @@ func (p WorldPlan) ProjectionDefinitionBinding() ProjectionDefinitionBinding {
 func (p WorldPlan) ExecutionShape() ExecutionShape { return p.executionShape }
 
 func (p WorldPlan) RepeatSchedule() RepeatSchedule { return p.repeatSchedule }
+
+func (p WorldPlan) ScheduleConcurrency() ScheduleConcurrency { return p.repeatSchedule.Concurrency }
+
+func (p WorldPlan) ScheduleRotation() ScheduleRotation { return p.repeatSchedule.Rotation }

@@ -1116,8 +1116,9 @@ func choiceTestPlan(t testing.TB, envelope domain.ComparisonEnvelope, projection
 		Environment: []domain.EnvironmentEntry{{Name: "LANG", Value: "C"}}, SecretSlots: []domain.SecretSlot{},
 		FixtureRecipeDigest: testDomainDigest(t, "choice-fixture"), Readiness: domain.Readiness{Kind: domain.ReadinessNone},
 		CapturePolicyDigest: testDomainDigest(t, "choice-capture"), ProjectionDefinition: projectionDefinition,
-		RepeatSchedule: domain.RepeatSchedule{DiscoveryRepeats: 3, ConfirmationRepeats: 3},
-		RequiredTools:  []domain.RequiredTool{{Name: "node", VersionConstraint: "executed-major-only"}},
+		RepeatSchedule: domain.RepeatSchedule{DiscoveryRepeats: 3, ConfirmationRepeats: 3,
+			Concurrency: domain.ScheduleSequential, Rotation: domain.ScheduleRotationStartByRepetitionV1},
+		RequiredTools: []domain.RequiredTool{{Name: "node", VersionConstraint: "executed-major-only"}},
 		Budgets: domain.Budgets{
 			CandidateCount: 4, MaterializedEntryCount: 100, MaterializedBytesPerWorld: 1 << 20, SingleBlobBytes: 1 << 18,
 			ReadinessMS: 0, ProbeMS: 1000, TeardownMS: 1000, StdoutBytes: 1 << 16, StderrBytes: 1 << 16,
@@ -1196,10 +1197,12 @@ func testConfirmationBatches(
 			}
 			ordinal := repeat*len(inputs) + candidateIndex
 			identity := fmt.Sprintf("%s-%d", input.CandidateExecutionKey.String(), ordinal)
+			observationDigest := testDomainDigest(t, "observation-"+identity)
 			capture, captureErr := observe.NewStructuralCapture(
 				worlds[candidateIndex], attempts[candidateIndex],
-				testDomainDigest(t, "observation-"+identity),
+				observationDigest,
 				input.CanonicalProjection,
+				testProjectionDerivation(t, worlds[candidateIndex], observationDigest, input.CanonicalProjection),
 			)
 			if captureErr != nil {
 				t.Fatalf("structural capture: %v", captureErr)
@@ -1266,6 +1269,25 @@ func testDomainDigest(t testing.TB, label string) domain.Digest {
 		t.Fatalf("fixture domain digest %q: %v", label, err)
 	}
 	return parsed
+}
+
+func testProjectionDerivation(
+	t testing.TB,
+	world domain.WorldInstance,
+	observationDigest domain.Digest,
+	projection []byte,
+) observe.ProjectionDerivation {
+	t.Helper()
+	derivation, err := observe.NewProjectionDerivation(
+		observationDigest,
+		world.ProjectionDefinitionDigest(),
+		projection,
+		[]byte(`{"kind":"TEST_PROJECTION_DERIVATION","operations":["test"],"source_links":["test"]}`),
+	)
+	if err != nil {
+		t.Fatalf("projection derivation: %v", err)
+	}
+	return derivation
 }
 
 func projectionBytes(t testing.TB, status, kind string) []byte {

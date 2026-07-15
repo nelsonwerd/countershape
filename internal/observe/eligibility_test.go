@@ -43,6 +43,25 @@ func projectionBytes(number int) []byte {
 	return value.Canonical()
 }
 
+func projectionDerivation(
+	t *testing.T,
+	world domain.WorldInstance,
+	observationDigest domain.Digest,
+	projection []byte,
+) ProjectionDerivation {
+	t.Helper()
+	derivation, err := NewProjectionDerivation(
+		observationDigest,
+		world.ProjectionDefinitionDigest(),
+		projection,
+		[]byte(`{"kind":"TEST_PROJECTION_DERIVATION","operations":["test-projection"],"source_links":["test"]}`),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return derivation
+}
+
 func envelope(t *testing.T) domain.ComparisonEnvelope {
 	t.Helper()
 	value, err := domain.NewComparisonEnvelope(domain.ComparisonEnvelopeConfig{
@@ -90,6 +109,7 @@ func newExecutionFixtureWithMarker(
 		ProjectionDefinition: projectionBinding(8007, domain.AdapterCLI),
 		RepeatSchedule: domain.RepeatSchedule{
 			DiscoveryRepeats: discoveryRepeats, ConfirmationRepeats: confirmationRepeats,
+			Concurrency: domain.ScheduleSequential, Rotation: domain.ScheduleRotationStartByRepetitionV1,
 		},
 		RequiredTools: []domain.RequiredTool{{Name: "fixture", VersionConstraint: "test-only"}},
 		Budgets: domain.Budgets{
@@ -285,7 +305,12 @@ func eligibleTrial(
 	attemptDigest := digest(base + 2)
 	attempt := cleanFinalizedAttempt(t, attemptDigest, purpose)
 	admitted := worldFor(t, index, binding, purpose, ordinal, attemptDigest, fixture)
-	capture, err := NewStructuralCapture(admitted.world, attempt, digest(base+3), projectionBytes(value))
+	observationDigest := digest(base + 3)
+	projection := projectionBytes(value)
+	capture, err := NewStructuralCapture(
+		admitted.world, attempt, observationDigest, projection,
+		projectionDerivation(t, admitted.world, observationDigest, projection),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -315,6 +340,53 @@ func controlledTrial(
 		t.Fatal(err)
 	}
 	return trial
+}
+
+func TestProjectionRejectedTrialRejectsEveryCrossPairedLineage(t *testing.T) {
+	fixture := newExecutionFixture(t, 1, 1)
+	attemptDigest := digest(51001)
+	attempt := cleanFinalizedAttempt(t, attemptDigest, domain.AttemptDiscovery)
+	admitted := worldFor(
+		t, 5100, fixture.binding(t, 1), domain.AttemptDiscovery, 0, attemptDigest, fixture,
+	)
+	base := ProjectionRejectionLineage{
+		WorldDigest:                admitted.world.Digest(),
+		AttemptArtifactDigest:      attempt.ArtifactDigest(),
+		CandidateKey:               admitted.world.CandidateKey(),
+		CapturePolicyDigest:        admitted.world.CapturePolicyDigest(),
+		ObservationDigest:          digest(51002),
+		ProjectionDefinitionDigest: admitted.world.ProjectionDefinitionDigest(),
+	}
+	adapterEvidence := []byte(`{"code":"CLI_PROJECTION_INVALID_STRICT_JSON","kind":"TEST_PROJECTION_REJECTION","operation":"strict-json"}`)
+	baseline, err := NewProjectionRejectionEvidence(base, adapterEvidence)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := NewProjectionRejectedTrial(admitted.world, attempt, admitted.token, baseline); err != nil {
+		t.Fatalf("exact projection-rejection lineage was refused: %v", err)
+	}
+
+	mutations := []struct {
+		name   string
+		mutate func(*ProjectionRejectionLineage)
+	}{
+		{"world", func(lineage *ProjectionRejectionLineage) { lineage.WorldDigest = digest(51003) }},
+		{"attempt", func(lineage *ProjectionRejectionLineage) { lineage.AttemptArtifactDigest = digest(51004) }},
+		{"candidate", func(lineage *ProjectionRejectionLineage) { lineage.CandidateKey = fixture.binding(t, 2).Key() }},
+		{"capture-policy", func(lineage *ProjectionRejectionLineage) { lineage.CapturePolicyDigest = digest(51005) }},
+		{"definition", func(lineage *ProjectionRejectionLineage) { lineage.ProjectionDefinitionDigest = digest(51006) }},
+	}
+	for _, mutation := range mutations {
+		lineage := base
+		mutation.mutate(&lineage)
+		rejection, err := NewProjectionRejectionEvidence(lineage, adapterEvidence)
+		if err != nil || !rejection.Valid() {
+			t.Fatalf("%s: construct independently valid cross-paired evidence: %v", mutation.name, err)
+		}
+		if _, err := NewProjectionRejectedTrial(admitted.world, attempt, admitted.token, rejection); err == nil {
+			t.Fatalf("%s: cross-paired projection rejection entered a direct trial", mutation.name)
+		}
+	}
 }
 
 // capturedTrialPair creates one concrete two-candidate comparison matrix. The
@@ -365,10 +437,13 @@ func capturedTrialPair(
 			t.Fatal(tokenErr)
 		}
 		attempt := cleanFinalizedAttempt(t, attemptDigests[candidateIndex], purpose)
+		observationDigest := digest(21000 + index*20 + candidateIndex)
+		projection := projectionBytes(values[candidateIndex])
 		capture, captureErr := NewStructuralCapture(
 			worlds[candidateIndex], attempt,
-			digest(21000+index*20+candidateIndex),
-			projectionBytes(values[candidateIndex]),
+			observationDigest,
+			projection,
+			projectionDerivation(t, worlds[candidateIndex], observationDigest, projection),
 		)
 		if captureErr != nil {
 			t.Fatal(captureErr)
@@ -409,7 +484,12 @@ func TestCapturedAndControlAreMutuallyExclusive(t *testing.T) {
 	attemptDigest := digest(777)
 	controlled := controlledFinalizedAttempt(t, attemptDigest, domain.AttemptDiscovery, domain.ControlTimeout)
 	world := worldFor(t, 777, binding, domain.AttemptDiscovery, 0, attemptDigest, fixture)
-	capture, err := NewStructuralCapture(world.world, controlled, digest(778), projectionBytes(10))
+	controlledObservation := digest(778)
+	controlledProjection := projectionBytes(10)
+	capture, err := NewStructuralCapture(
+		world.world, controlled, controlledObservation, controlledProjection,
+		projectionDerivation(t, world.world, controlledObservation, controlledProjection),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -424,11 +504,13 @@ func TestCapturedAndControlAreMutuallyExclusive(t *testing.T) {
 	if _, err := NewControlledTrial(cleanWorld.world, clean, cleanWorld.token); err == nil {
 		t.Fatal("constructed control trial without a control")
 	}
-	if _, err := NewStructuralCapture(cleanWorld.world, clean, digest(781), []byte(" 10")); err == nil {
+	validDerivation := projectionDerivation(t, cleanWorld.world, digest(781), projectionBytes(10))
+	if _, err := NewStructuralCapture(cleanWorld.world, clean, digest(781), []byte(" 10"), validDerivation); err == nil {
 		t.Fatal("noncanonical projection entered structural capture")
 	}
 	oversizedProjection := []byte(`"` + strings.Repeat("x", maxProjectionResultCanonicalBytes) + `"`)
-	if _, err := NewStructuralCapture(cleanWorld.world, clean, digest(782), oversizedProjection); err == nil {
+	oversizedDerivation := projectionDerivation(t, cleanWorld.world, digest(782), projectionBytes(10))
+	if _, err := NewStructuralCapture(cleanWorld.world, clean, digest(782), oversizedProjection, oversizedDerivation); err == nil {
 		t.Fatal("projection result consumed the metadata headroom reserved by the canonical profile")
 	}
 	otherAttempt := cleanFinalizedAttempt(t, digest(783), domain.AttemptDiscovery)
@@ -436,7 +518,12 @@ func TestCapturedAndControlAreMutuallyExclusive(t *testing.T) {
 	if _, err := NewCapturedTrial(otherWorld.world, otherAttempt, otherWorld.token, capture); err == nil {
 		t.Fatal("capture bound to another world/attempt was replayed as fresh evidence")
 	}
-	otherCapture, err := NewStructuralCapture(otherWorld.world, otherAttempt, digest(784), projectionBytes(10))
+	otherObservation := digest(784)
+	otherProjection := projectionBytes(10)
+	otherCapture, err := NewStructuralCapture(
+		otherWorld.world, otherAttempt, otherObservation, otherProjection,
+		projectionDerivation(t, otherWorld.world, otherObservation, otherProjection),
+	)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -445,6 +532,27 @@ func TestCapturedAndControlAreMutuallyExclusive(t *testing.T) {
 	}
 	if otherCapture.ProjectionResultDigest() == capture.ProjectionResultDigest() {
 		t.Fatal("distinct world/attempt/observation lineage retained one projection-result identity")
+	}
+	alternateDerivation, err := NewProjectionDerivation(
+		otherObservation,
+		otherWorld.world.ProjectionDefinitionDigest(),
+		otherProjection,
+		[]byte(`{"kind":"TEST_PROJECTION_DERIVATION","operations":["test-projection"],"source_links":["different-source"]}`),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	alternateCapture, err := NewStructuralCapture(
+		otherWorld.world, otherAttempt, otherObservation, otherProjection, alternateDerivation,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if alternateCapture.ProjectionFingerprint() != otherCapture.ProjectionFingerprint() {
+		t.Fatal("derivation transcript changed byte-only projection equality")
+	}
+	if alternateCapture.ProjectionResultDigest() == otherCapture.ProjectionResultDigest() {
+		t.Fatal("changed projection source-link transcript disappeared from projection-result identity")
 	}
 	projection := capture.CanonicalProjection()
 	projection[0] = '9'

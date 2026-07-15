@@ -21,7 +21,8 @@
   "required_fresh_trials": 3,
   "schedule": {
     "phase": "CONFIRMATION",
-    "rotation": "NOT_ESTABLISHED_IN_U1",
+    "rotation": "ROTATE_START_BY_REPETITION_V1",
+    "schedule_digest": "sha256:abababababababababababababababababababababababababababababababab",
     "ordinals": [1, 5, 9]
   },
   "trials": [

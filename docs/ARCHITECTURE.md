@@ -2,7 +2,7 @@
 
 - **Contract version:** U0 / `architecture-v1`
 - **Target:** narrowed Darwin reference instrument
-- **Status:** controlling design; U1 command receipts are enumerated without reinterpretation in `status/U1.md`, while later runtime and product capabilities remain `UNRECEIPTED`
+- **Status:** controlling design; U1 and U2 command receipts are enumerated without reinterpretation in `status/U1.md` and `status/U2.md`; U3 and later runtime/product capabilities remain `UNRECEIPTED` until their own sealed boundary
 - **Authority order:** `CONCEPT_BRIEF.md`, `SEMANTICS.md`, `PROJECTION_ALGEBRA.md`, then the stricter rulings in `research/deep-dive/08-RED_TEAM.md`, then this document
 
 Countershape is a repository-scale operational composition for resolving one witnessed behavioral disagreement among exact repository candidates. It is not an agent runtime, candidate ranker, generalized workflow runner, correctness oracle, or new disambiguation algorithm. The reference instrument accepts trusted local code from a curated Git repository, performs finite fresh executions, compares exact projected bytes, and preserves a human-authored selected-field decision as standalone Node source.
