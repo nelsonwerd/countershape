@@ -617,6 +617,11 @@ func (p WorldPlan) Digest() Digest { return p.digest }
 
 func (p WorldPlan) CanonicalBytes() []byte { return append([]byte(nil), p.canonicalBytes...) }
 
+// CandidateSetDigest exposes the exact pre-plan candidate-set declaration that
+// this immutable plan consumed. It is a reference, not executable authority;
+// an impure substrate must still bind inspected candidates to the actual plan.
+func (p WorldPlan) CandidateSetDigest() Digest { return p.candidateSetDigest }
+
 func (p WorldPlan) StartArgv() []string { return append([]string(nil), p.startArgv...) }
 
 func (p WorldPlan) SetupArgv() []string { return append([]string(nil), p.setupArgv...) }

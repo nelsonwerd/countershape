@@ -42,6 +42,14 @@ This file records didrun behavior observed during a real multi-agent build. It i
 - **Repair and run policy:** fixture construction was moved outside the per-input callback, the exact-complement assertion was strengthened from cardinality to exact outcome-ID set equality, and the same target must pass again for at least 20 seconds through didrun. If native parallel timed fuzzing repeats the teardown race, retain the false-red and rerun with declared `GOMAXPROCS=1` plus `-parallel=1`; this changes scheduling pressure, not the property or duration. Never relabel the failed receipt as success.
 - **Upstream tail:** a production evidence policy should pin a Go release with a verified coordinator fix or prefer an execution-count fuzz budget whose completion does not race a parent deadline. Countershape does not claim to repair the Go toolchain.
 
+## S6-06 — Entropy scanning blocks ordinary cryptographic fixtures
+
+- **Observed:** the first U1 seal attempt for commit `13282ed` stopped with `export blocked: 104 likely secret(s) found (high-entropy)`. U1 intentionally contains many fixed SHA-256 digests, candidate keys, canonical golden values, and evidence identifiers; didrun 0.1.0 reported only the aggregate count and no safe path/line classification with which to distinguish those fixtures from an actual credential.
+- **Response:** the blocked attempt remains part of the live session history. After manually reviewing the staged inventory and repository for credential-bearing files, the exact commit was sealed with `didrun seal --commit 13282ed --allow-secrets`. The resulting strict report truthfully displays `sealed with --allow-secrets (redacted export)`; Countershape does not reinterpret that notice as a secret-free finding.
+- **Impact:** entropy alone produces high false-positive pressure in cryptographic and receipt-heavy repositories, while the aggregate message provides too little locality for a precise repair. The override also coarsens the final evidence statement: it says export redaction was requested, not whether every flagged value was benign.
+- **Run policy:** never use `--allow-secrets` automatically. First inspect the exact staged path inventory and obvious credential filenames/patterns; then record the override verbatim in status and handoff. Public export or repository publication still requires a dedicated human secret scan outside didrun.
+- **Suggested fix:** emit a redacted finding list with file, line, detector kind, and a stable finding fingerprint; support explicit allowlisted fixture regions or semantic digest types without displaying the suspected value.
+
 ## Evidence boundary
 
 These are live product findings, not proof of adversarial tamper resistance, platform portability, or behavior outside this macOS session. The original broken ledger is retained as history rather than rewritten, repaired, or used to support a capability claim.
