@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://countershape.dev/spec/schema/v1/comparison-envelope.schema.json",
+  "title": "Countershape ComparisonEnvelope v1",
+  "description": "A declared finite admission policy. It records measurement and tolerance without claiming compatible worlds or placeholder irrelevance.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "kind", "artifact_digest", "envelope_version", "measured_dimensions",
+    "required_equal_dimensions", "tolerated_dimensions", "rejected_dimensions", "uncontrolled_dimensions",
+    "admission_claim", "behavioral_compatibility_established", "placeholder_control_flow_irrelevance_established"
+  ],
+  "properties": {
+    "schema_version": { "const": "countershape/v1" },
+    "kind": { "const": "ComparisonEnvelope" },
+    "artifact_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "envelope_version": { "type": "string", "pattern": "^[a-z0-9][a-z0-9._/-]{0,127}$" },
+    "measured_dimensions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "source", "comparison"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "source": { "enum": ["WORLD_INSTANCE", "TOOL_RECEIPT", "FILESYSTEM_PROBE", "PROCESS_RECEIPT"] },
+          "comparison": { "enum": ["EXACT", "RECORDED_ONLY", "REJECT_ON_VARIANCE"] }
+        }
+      }
+    },
+    "required_equal_dimensions": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "comparator"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "comparator": { "const": "EXACT" }
+        }
+      }
+    },
+    "tolerated_dimensions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "tolerance", "nonclaim"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "tolerance": { "enum": ["MAY_DIFFER_AND_IS_RECORDED", "PROJECTED_PLACEHOLDER_IN_CAPTURE_ONLY"] },
+          "nonclaim": { "const": "CONTROL_FLOW_IRRELEVANCE_NOT_ESTABLISHED" }
+        }
+      }
+    },
+    "rejected_dimensions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "reason_code"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "reason_code": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "uncontrolled_dimensions": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "admission_claim": { "const": "INSTANCES_ADMITTED_BY_DECLARED_ENVELOPE" },
+    "behavioral_compatibility_established": { "const": false },
+    "placeholder_control_flow_irrelevance_established": { "const": false }
+  }
+}

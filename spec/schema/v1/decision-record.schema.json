@@ -1,0 +1,141 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://countershape.dev/spec/schema/v1/decision-record.schema.json",
+  "title": "Countershape DecisionRecord v1",
+  "description": "A human-scoped exact-witness ruling. Only explicit selected fields are asserted; unselected fields remain context.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "kind", "artifact_digest", "choicepoint_digest", "actor", "interaction_facts",
+    "action", "selected_fields", "nonasserted_fields", "confirmed_allowed_projection_fingerprints",
+    "confirmed_disallowed_projection_fingerprints", "allowed_complete_tuples", "scope", "separation_check",
+    "human_annotation", "compilable", "didrun_receipts"
+  ],
+  "properties": {
+    "schema_version": { "const": "countershape/v1" },
+    "kind": { "const": "DecisionRecord" },
+    "artifact_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "choicepoint_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["actor_id", "attribution"],
+      "properties": {
+        "actor_id": { "type": "string", "minLength": 1 },
+        "attribution": { "const": "HUMAN_OPERATOR" }
+      }
+    },
+    "interaction_facts": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "blind_payload_identity_hidden", "support_counts_absent", "visited_surfaces", "provisional_action",
+        "early_reveal", "provenance_revealed_before_finalization", "post_reveal_action", "post_reveal_change_rationale"
+      ],
+      "properties": {
+        "blind_payload_identity_hidden": { "type": "boolean" },
+        "support_counts_absent": { "type": "boolean" },
+        "visited_surfaces": {
+          "type": "array",
+          "items": {
+            "enum": ["ORIGINAL_AND_MINIMIZED", "REDUCTION_DERIVATION", "CAPTURE_TO_PROJECTION", "NONASSERTED_FIELDS", "PROVENANCE_REVEAL"]
+          }
+        },
+        "provisional_action": { "enum": ["ALLOW_OBSERVED", "CUSTOM_EXPECTATION", "REJECT_ALL", "DEFER", "REFINE"] },
+        "early_reveal": { "type": "boolean" },
+        "provenance_revealed_before_finalization": { "type": "boolean" },
+        "post_reveal_action": { "enum": ["ALLOW_OBSERVED", "CUSTOM_EXPECTATION", "REJECT_ALL", "DEFER", "REFINE"] },
+        "post_reveal_change_rationale": {
+          "oneOf": [
+            { "type": "string", "minLength": 1 },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "action": { "enum": ["ALLOW_OBSERVED", "CUSTOM_EXPECTATION", "REJECT_ALL", "DEFER", "REFINE"] },
+    "selected_fields": {
+      "type": "array",
+      "items": { "$ref": "common.schema.json#/$defs/FieldId" }
+    },
+    "nonasserted_fields": {
+      "type": "array",
+      "items": { "$ref": "common.schema.json#/$defs/FieldId" }
+    },
+    "confirmed_allowed_projection_fingerprints": {
+      "type": "array",
+      "items": { "$ref": "common.schema.json#/$defs/Digest" }
+    },
+    "confirmed_disallowed_projection_fingerprints": {
+      "type": "array",
+      "items": { "$ref": "common.schema.json#/$defs/Digest" }
+    },
+    "allowed_complete_tuples": {
+      "type": "array",
+      "items": { "$ref": "common.schema.json#/$defs/ExactTuple" }
+    },
+    "scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "stimulus_digest", "generalization_claimed"],
+      "properties": {
+        "kind": { "const": "EXACT_WITNESSED_STIMULUS" },
+        "stimulus_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+        "generalization_claimed": { "const": false }
+      }
+    },
+    "separation_check": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "checked_allowed_tuple_count", "checked_disallowed_outcome_count"],
+          "properties": {
+            "status": { "const": "PASSED" },
+            "checked_allowed_tuple_count": { "type": "integer", "minimum": 1 },
+            "checked_disallowed_outcome_count": { "type": "integer", "minimum": 0 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "reason"],
+          "properties": {
+            "status": { "const": "NOT_APPLICABLE" },
+            "reason": { "enum": ["NONCOMPILABLE_ACTION", "NO_POSITIVE_ORACLE"] }
+          }
+        }
+      ]
+    },
+    "human_annotation": { "type": "string" },
+    "compilable": { "type": "boolean" },
+    "didrun_receipts": {
+      "type": "array",
+      "items": { "$ref": "common.schema.json#/$defs/ReceiptReference" }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "action": { "enum": ["ALLOW_OBSERVED", "CUSTOM_EXPECTATION"] } }, "required": ["action"] },
+      "then": {
+        "properties": {
+          "selected_fields": { "minItems": 1 },
+          "allowed_complete_tuples": { "minItems": 1 },
+          "compilable": { "const": true },
+          "separation_check": { "properties": { "status": { "const": "PASSED" } }, "required": ["status"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "action": { "enum": ["REJECT_ALL", "DEFER", "REFINE"] } }, "required": ["action"] },
+      "then": {
+        "properties": {
+          "selected_fields": { "maxItems": 0 },
+          "allowed_complete_tuples": { "maxItems": 0 },
+          "compilable": { "const": false },
+          "separation_check": { "properties": { "status": { "const": "NOT_APPLICABLE" } }, "required": ["status"] }
+        }
+      }
+    }
+  ]
+}

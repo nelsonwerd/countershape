@@ -1,0 +1,37 @@
+{
+  "schema_version": "countershape/v1",
+  "kind": "OutcomeMap",
+  "artifact_digest": "sha256:5050505050505050505050505050505050505050505050505050505050505050",
+  "stimulus_digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "comparison_envelope_digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+  "entries": [
+    {
+      "candidate_execution_key": "candidate:http-a",
+      "projection_fingerprint": "sha256:4030403040304030403040304030403040304030403040304030403040304030",
+      "stable_batch_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1"
+    },
+    {
+      "candidate_execution_key": "candidate:http-b",
+      "projection_fingerprint": "sha256:4040404040404040404040404040404040404040404040404040404040404040",
+      "stable_batch_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa2"
+    },
+    {
+      "candidate_execution_key": "candidate:http-c",
+      "projection_fingerprint": "sha256:2000200020002000200020002000200020002000200020002000200020002000",
+      "stable_batch_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa3"
+    }
+  ],
+  "excluded_candidates": [
+    {
+      "candidate_execution_key": "candidate:http-d",
+      "stable_batch_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa4",
+      "classification": "UNSTABLE"
+    }
+  ],
+  "distinct_projection_count": 3,
+  "divergence": true,
+  "entry_order": "CANDIDATE_EXECUTION_KEY_UTF8_LEXICOGRAPHIC",
+  "identity_basis": "COMPLETE_SORTED_LABELED_MAP",
+  "display_groups_semantic_authority": false,
+  "majority_semantic_authority": false
+}

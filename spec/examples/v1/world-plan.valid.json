@@ -1,0 +1,56 @@
+{
+  "schema_version": "countershape/v1",
+  "kind": "WorldPlan",
+  "artifact_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+  "candidate_set_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+  "materialization_policy_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+  "comparison_envelope_digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+  "adapter": {
+    "domain": "HTTP",
+    "adapter_version": "http/v1",
+    "runner_digest": "sha256:5555555555555555555555555555555555555555555555555555555555555555"
+  },
+  "execution_shape": "ONE_LOOPBACK_HTTP_REQUEST",
+  "start_argv": ["/usr/bin/env", "node", "fixture/server.mjs"],
+  "setup_argv": [],
+  "cwd_policy": "MATERIALIZED_ROOT",
+  "environment": [
+    { "name": "LANG", "value": "C" },
+    { "name": "NODE_NO_WARNINGS", "value": "1" }
+  ],
+  "secret_slots": [],
+  "fixture_recipe_digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+  "readiness": {
+    "kind": "FIXTURE_OWNED_SIGNAL",
+    "signal_name": "ready-byte"
+  },
+  "network_mode": "HOST_ALLOWED",
+  "capture_policy_digest": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+  "projection_definition_digest": "sha256:8888888888888888888888888888888888888888888888888888888888888888",
+  "repeat_schedule": {
+    "discovery_repeats": 3,
+    "confirmation_repeats": 3,
+    "concurrency": "SEQUENTIAL",
+    "rotation": "ROTATE_CANDIDATE_ORDER"
+  },
+  "required_tools": [
+    { "name": "node", "version_constraint": "executed-major-only" }
+  ],
+  "budgets": {
+    "candidate_count": 4,
+    "materialized_entry_count": 25000,
+    "materialized_bytes_per_world": 268435456,
+    "single_blob_bytes": 33554432,
+    "readiness_ms": 5000,
+    "probe_ms": 3000,
+    "teardown_ms": 3000,
+    "stdout_bytes": 1048576,
+    "stderr_bytes": 1048576,
+    "http_body_bytes": 1048576,
+    "proposed_shrink_stimuli": 40,
+    "total_candidate_trials": 300,
+    "shrink_wall_ms": 600000
+  },
+  "evidence_reuse": "FORBIDDEN",
+  "trust_boundary": "TRUSTED_LOCAL_FULL_USER_PERMISSIONS"
+}

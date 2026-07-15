@@ -1,0 +1,69 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://countershape.dev/spec/schema/v1/contract-execution.schema.json",
+  "title": "Countershape ContractExecution v1",
+  "description": "Fresh current-checkout execution evidence. It never rewrites or freshens historical Choicepoint evidence.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "kind", "artifact_digest", "contract_bundle_digest", "current_tree_identity_digest",
+    "world_instance_digest", "attempt_artifact_digest", "runtime", "captured_observation_digest",
+    "projection_result_digest", "result", "historical_execution_evidence_reused", "choicepoint_freshened"
+  ],
+  "properties": {
+    "schema_version": { "const": "countershape/v1" },
+    "kind": { "const": "ContractExecution" },
+    "artifact_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "contract_bundle_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "current_tree_identity_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "world_instance_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "attempt_artifact_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "major", "os", "architecture"],
+      "properties": {
+        "name": { "const": "node" },
+        "major": { "type": "integer", "minimum": 1 },
+        "os": { "enum": ["darwin", "linux", "windows", "other"] },
+        "architecture": { "type": "string", "minLength": 1 }
+      }
+    },
+    "captured_observation_digest": {
+      "oneOf": [
+        { "$ref": "common.schema.json#/$defs/Digest" },
+        { "type": "null" }
+      ]
+    },
+    "projection_result_digest": {
+      "oneOf": [
+        { "$ref": "common.schema.json#/$defs/Digest" },
+        { "type": "null" }
+      ]
+    },
+    "result": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["execution_class", "conformance"],
+          "properties": {
+            "execution_class": { "const": "ELIGIBLE_OBSERVATION" },
+            "conformance": { "enum": ["CONFORMS", "CONTRADICTS"] }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["execution_class", "reason"],
+          "properties": {
+            "execution_class": { "const": "INELIGIBLE_EXECUTION" },
+            "reason": { "$ref": "common.schema.json#/$defs/ControlReason" }
+          }
+        }
+      ]
+    },
+    "historical_execution_evidence_reused": { "const": false },
+    "choicepoint_freshened": { "const": false }
+  }
+}

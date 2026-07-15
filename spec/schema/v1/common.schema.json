@@ -1,0 +1,194 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://countershape.dev/spec/schema/v1/common.schema.json",
+  "title": "Countershape v1 shared schema definitions",
+  "description": "Shared syntax for inert Countershape contract examples. These schemas do not establish runtime canonicalization or semantic correctness.",
+  "$defs": {
+    "Digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "CandidateExecutionKey": {
+      "type": "string",
+      "pattern": "^candidate:[a-z0-9][a-z0-9._-]{0,127}$"
+    },
+    "ArtifactKind": {
+      "enum": [
+        "WorldPlan",
+        "WorldInstance",
+        "ComparisonEnvelope",
+        "CapturedObservation",
+        "StableBatch",
+        "OutcomeMap",
+        "ReductionRun",
+        "Choicepoint",
+        "DecisionRecord",
+        "ContractBundle",
+        "ContractExecution"
+      ]
+    },
+    "ControlReason": {
+      "enum": [
+        "MATERIALIZATION_ERROR",
+        "SETUP_ERROR",
+        "START_ERROR",
+        "READINESS_ERROR",
+        "PROBE_TRANSPORT_ERROR",
+        "TIMEOUT",
+        "CANCELLED",
+        "OUTPUT_LIMIT",
+        "PROJECTION_REJECTED",
+        "ORPHAN_RISK",
+        "TEARDOWN_ERROR",
+        "ENVELOPE_REJECTED",
+        "UNSUPPORTED_GIT_MODE",
+        "MISSING_OBJECT",
+        "BUDGET_EXHAUSTED"
+      ]
+    },
+    "FieldId": {
+      "enum": [
+        "http.status",
+        "http.header.content-type",
+        "http.body.kind",
+        "http.body.metadata",
+        "cli.exit.code",
+        "cli.exit.signal",
+        "cli.stdout.json.mode",
+        "cli.stdout.json.source",
+        "cli.stderr.text"
+      ]
+    },
+    "ExactValue": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tag"],
+          "properties": {
+            "tag": { "const": "MISSING" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tag", "value"],
+          "properties": {
+            "tag": { "const": "STRING" },
+            "value": { "type": "string" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tag", "canonical"],
+          "properties": {
+            "tag": { "const": "INTEGER" },
+            "canonical": {
+              "type": "string",
+              "pattern": "^-?(0|[1-9][0-9]*)$"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tag", "value"],
+          "properties": {
+            "tag": { "const": "BOOLEAN" },
+            "value": { "type": "boolean" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tag"],
+          "properties": {
+            "tag": { "const": "NULL" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tag", "canonical_digest"],
+          "properties": {
+            "tag": { "const": "CANONICAL_JSON" },
+            "canonical_digest": { "$ref": "#/$defs/Digest" }
+          }
+        }
+      ]
+    },
+    "ExactField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field_id", "value"],
+      "properties": {
+        "field_id": { "$ref": "#/$defs/FieldId" },
+        "value": { "$ref": "#/$defs/ExactValue" }
+      }
+    },
+    "ExactTuple": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tuple_digest", "fields"],
+      "properties": {
+        "tuple_digest": { "$ref": "#/$defs/Digest" },
+        "fields": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/ExactField" }
+        }
+      }
+    },
+    "Channel": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "state", "byte_digest", "byte_count"],
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "state": { "const": "PRESENT" },
+            "byte_digest": { "$ref": "#/$defs/Digest" },
+            "byte_count": { "type": "integer", "minimum": 0 }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "state", "reason"],
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "state": { "const": "ABSENT" },
+            "reason": {
+              "enum": ["NOT_PRODUCED", "NOT_CAPTURED_BY_POLICY", "NOT_APPLICABLE"]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "state", "retained_digest", "retained_byte_count", "limit_byte_count"],
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "state": { "const": "TRUNCATED" },
+            "retained_digest": { "$ref": "#/$defs/Digest" },
+            "retained_byte_count": { "type": "integer", "minimum": 0 },
+            "limit_byte_count": { "type": "integer", "minimum": 1 }
+          }
+        }
+      ]
+    },
+    "ReceiptReference": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["authority", "grade_verbatim", "commit_oid", "command_digest"],
+      "properties": {
+        "authority": { "const": "didrun" },
+        "grade_verbatim": { "type": "string", "minLength": 1 },
+        "commit_oid": { "type": "string", "minLength": 1 },
+        "command_digest": { "$ref": "#/$defs/Digest" }
+      }
+    }
+  }
+}

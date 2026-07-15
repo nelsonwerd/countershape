@@ -1,0 +1,168 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://countershape.dev/spec/schema/v1/world-plan.schema.json",
+  "title": "Countershape WorldPlan v1",
+  "description": "Deterministic declared execution. It contains no measured host fact and proves no behavioral compatibility.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "artifact_digest",
+    "candidate_set_digest",
+    "materialization_policy_digest",
+    "comparison_envelope_digest",
+    "adapter",
+    "execution_shape",
+    "start_argv",
+    "setup_argv",
+    "cwd_policy",
+    "environment",
+    "secret_slots",
+    "fixture_recipe_digest",
+    "readiness",
+    "network_mode",
+    "capture_policy_digest",
+    "projection_definition_digest",
+    "repeat_schedule",
+    "required_tools",
+    "budgets",
+    "evidence_reuse",
+    "trust_boundary"
+  ],
+  "properties": {
+    "schema_version": { "const": "countershape/v1" },
+    "kind": { "const": "WorldPlan" },
+    "artifact_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "candidate_set_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "materialization_policy_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "comparison_envelope_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "adapter": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["domain", "adapter_version", "runner_digest"],
+      "properties": {
+        "domain": { "enum": ["CLI", "HTTP"] },
+        "adapter_version": { "type": "string", "minLength": 1 },
+        "runner_digest": { "$ref": "common.schema.json#/$defs/Digest" }
+      }
+    },
+    "execution_shape": { "enum": ["ONE_CLI_INVOCATION", "ONE_LOOPBACK_HTTP_REQUEST"] },
+    "start_argv": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "type": "string" }
+    },
+    "setup_argv": {
+      "type": "array",
+      "items": { "type": "string" }
+    },
+    "cwd_policy": { "const": "MATERIALIZED_ROOT" },
+    "environment": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "value"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[A-Z_][A-Z0-9_]*$" },
+          "value": { "type": "string" }
+        }
+      }
+    },
+    "secret_slots": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "presence"],
+        "properties": {
+          "name": { "type": "string", "pattern": "^[A-Z_][A-Z0-9_]*$" },
+          "presence": { "enum": ["ABSENT", "REQUIRED_WITHOUT_VALUE_CAPTURE"] }
+        }
+      }
+    },
+    "fixture_recipe_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "readiness": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": { "kind": { "const": "NONE" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind", "signal_name"],
+          "properties": {
+            "kind": { "const": "FIXTURE_OWNED_SIGNAL" },
+            "signal_name": { "type": "string", "minLength": 1 }
+          }
+        }
+      ]
+    },
+    "network_mode": { "const": "HOST_ALLOWED" },
+    "capture_policy_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "projection_definition_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "repeat_schedule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["discovery_repeats", "confirmation_repeats", "concurrency", "rotation"],
+      "properties": {
+        "discovery_repeats": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "confirmation_repeats": { "type": "integer", "minimum": 1, "maximum": 5 },
+        "concurrency": { "const": "SEQUENTIAL" },
+        "rotation": { "const": "ROTATE_CANDIDATE_ORDER" }
+      }
+    },
+    "required_tools": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["name", "version_constraint"],
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "version_constraint": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "budgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_count",
+        "materialized_entry_count",
+        "materialized_bytes_per_world",
+        "single_blob_bytes",
+        "readiness_ms",
+        "probe_ms",
+        "teardown_ms",
+        "stdout_bytes",
+        "stderr_bytes",
+        "http_body_bytes",
+        "proposed_shrink_stimuli",
+        "total_candidate_trials",
+        "shrink_wall_ms"
+      ],
+      "properties": {
+        "candidate_count": { "type": "integer", "minimum": 2, "maximum": 4 },
+        "materialized_entry_count": { "type": "integer", "minimum": 1, "maximum": 100000 },
+        "materialized_bytes_per_world": { "type": "integer", "minimum": 1, "maximum": 1073741824 },
+        "single_blob_bytes": { "type": "integer", "minimum": 1, "maximum": 134217728 },
+        "readiness_ms": { "type": "integer", "minimum": 0, "maximum": 30000 },
+        "probe_ms": { "type": "integer", "minimum": 1, "maximum": 30000 },
+        "teardown_ms": { "type": "integer", "minimum": 1, "maximum": 10000 },
+        "stdout_bytes": { "type": "integer", "minimum": 1, "maximum": 16777216 },
+        "stderr_bytes": { "type": "integer", "minimum": 1, "maximum": 16777216 },
+        "http_body_bytes": { "type": "integer", "minimum": 1, "maximum": 16777216 },
+        "proposed_shrink_stimuli": { "type": "integer", "minimum": 0, "maximum": 200 },
+        "total_candidate_trials": { "type": "integer", "minimum": 1, "maximum": 2000 },
+        "shrink_wall_ms": { "type": "integer", "minimum": 1, "maximum": 3600000 }
+      }
+    },
+    "evidence_reuse": { "const": "FORBIDDEN" },
+    "trust_boundary": { "const": "TRUSTED_LOCAL_FULL_USER_PERMISSIONS" }
+  }
+}

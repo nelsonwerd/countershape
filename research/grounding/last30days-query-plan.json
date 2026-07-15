@@ -1,0 +1,43 @@
+{
+  "intent": "concept",
+  "freshness_mode": "evergreen_ok",
+  "cluster_mode": "workflow",
+  "subqueries": [
+    {
+      "label": "primary",
+      "search_query": "AI coding agents vibe coding workflows",
+      "ranking_query": "What workflows, pain points, and infrastructure needs define AI coding agents and vibe coding now?",
+      "sources": [
+        "reddit",
+        "x",
+        "youtube",
+        "tiktok",
+        "instagram",
+        "hackernews",
+        "polymarket"
+      ],
+      "weight": 1.0
+    },
+    {
+      "label": "continuity",
+      "search_query": "coding agent context memory reproducibility",
+      "ranking_query": "How are builders handling context continuity, handoffs, memory, and reproducibility across coding agents?",
+      "sources": ["reddit", "youtube", "hackernews", "github"],
+      "weight": 0.8
+    },
+    {
+      "label": "trust",
+      "search_query": "vibe coding production quality security review",
+      "ranking_query": "What prevents vibe-coded software from being trusted in production, and which verification practices are emerging?",
+      "sources": ["reddit", "youtube", "hackernews", "github"],
+      "weight": 0.8
+    },
+    {
+      "label": "orchestration",
+      "search_query": "multi agent coding orchestration task state handoff",
+      "ranking_query": "Which orchestration, task-state, isolation, and cross-agent handoff patterns are practitioners adopting?",
+      "sources": ["reddit", "youtube", "hackernews", "github"],
+      "weight": 0.7
+    }
+  ]
+}

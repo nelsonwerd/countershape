@@ -1,0 +1,65 @@
+{
+  "schema_version": "countershape/v1",
+  "kind": "DecisionRecord",
+  "artifact_digest": "sha256:e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1",
+  "choicepoint_digest": "sha256:e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0",
+  "actor": {
+    "actor_id": "local-operator",
+    "attribution": "HUMAN_OPERATOR"
+  },
+  "interaction_facts": {
+    "blind_payload_identity_hidden": true,
+    "support_counts_absent": true,
+    "visited_surfaces": [
+      "ORIGINAL_AND_MINIMIZED",
+      "REDUCTION_DERIVATION",
+      "CAPTURE_TO_PROJECTION",
+      "NONASSERTED_FIELDS",
+      "PROVENANCE_REVEAL"
+    ],
+    "provisional_action": "ALLOW_OBSERVED",
+    "early_reveal": false,
+    "provenance_revealed_before_finalization": true,
+    "post_reveal_action": "ALLOW_OBSERVED",
+    "post_reveal_change_rationale": null
+  },
+  "action": "ALLOW_OBSERVED",
+  "selected_fields": ["http.status", "http.body.kind"],
+  "nonasserted_fields": ["http.body.metadata"],
+  "confirmed_allowed_projection_fingerprints": [
+    "sha256:4040404040404040404040404040404040404040404040404040404040404040",
+    "sha256:2000200020002000200020002000200020002000200020002000200020002000"
+  ],
+  "confirmed_disallowed_projection_fingerprints": [
+    "sha256:4030403040304030403040304030403040304030403040304030403040304030"
+  ],
+  "allowed_complete_tuples": [
+    {
+      "tuple_digest": "sha256:4141414141414141414141414141414141414141414141414141414141414141",
+      "fields": [
+        { "field_id": "http.status", "value": { "tag": "INTEGER", "canonical": "404" } },
+        { "field_id": "http.body.kind", "value": { "tag": "STRING", "value": "not_found" } }
+      ]
+    },
+    {
+      "tuple_digest": "sha256:4242424242424242424242424242424242424242424242424242424242424242",
+      "fields": [
+        { "field_id": "http.status", "value": { "tag": "INTEGER", "canonical": "200" } },
+        { "field_id": "http.body.kind", "value": { "tag": "STRING", "value": "authorized_metadata" } }
+      ]
+    }
+  ],
+  "scope": {
+    "kind": "EXACT_WITNESSED_STIMULUS",
+    "stimulus_digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "generalization_claimed": false
+  },
+  "separation_check": {
+    "status": "PASSED",
+    "checked_allowed_tuple_count": 2,
+    "checked_disallowed_outcome_count": 1
+  },
+  "human_annotation": "For this exact cross-tenant witness, either non-disclosure tuple is acceptable; metadata fields remain context only.",
+  "compilable": true,
+  "didrun_receipts": []
+}

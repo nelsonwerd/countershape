@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://countershape.dev/spec/schema/v1/reduction-run.schema.json",
+  "title": "Countershape ReductionRun v1",
+  "description": "A bounded tri-valued local reduction transcript preserving the complete labeled OutcomeMap, never membership shape alone.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "kind", "artifact_digest", "baseline_outcome_map_digest", "original_stimulus_digest",
+    "minimized_stimulus_digest", "reducer_set_digest", "well_founded_measure", "budgets", "evaluations",
+    "accepted_path", "final_sweep", "grade", "global_minimum_claimed", "root_cause_claimed"
+  ],
+  "properties": {
+    "schema_version": { "const": "countershape/v1" },
+    "kind": { "const": "ReductionRun" },
+    "artifact_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "baseline_outcome_map_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "original_stimulus_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "minimized_stimulus_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "reducer_set_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "well_founded_measure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "original", "minimized", "ordering"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "original": { "type": "integer", "minimum": 0 },
+        "minimized": { "type": "integer", "minimum": 0 },
+        "ordering": { "const": "STRICTLY_DECREASING_NONNEGATIVE_INTEGER" }
+      }
+    },
+    "budgets": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["proposal_limit", "trial_limit", "wall_ms", "proposals_used", "trials_used", "wall_ms_used"],
+      "properties": {
+        "proposal_limit": { "type": "integer", "minimum": 0, "maximum": 200 },
+        "trial_limit": { "type": "integer", "minimum": 1, "maximum": 2000 },
+        "wall_ms": { "type": "integer", "minimum": 1, "maximum": 3600000 },
+        "proposals_used": { "type": "integer", "minimum": 0 },
+        "trials_used": { "type": "integer", "minimum": 0 },
+        "wall_ms_used": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "evaluations": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "evaluation_id", "neighbor_stimulus_digest", "neighbor_measure", "fresh_batch_digests",
+          "observed_outcome_map_digest", "decision", "reason_code", "execution_evidence_reused"
+        ],
+        "properties": {
+          "evaluation_id": { "type": "string", "pattern": "^eval:[a-z0-9][a-z0-9._-]{0,127}$" },
+          "neighbor_stimulus_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+          "neighbor_measure": { "type": "integer", "minimum": 0 },
+          "fresh_batch_digests": {
+            "type": "array",
+            "minItems": 1,
+            "items": { "$ref": "common.schema.json#/$defs/Digest" }
+          },
+          "observed_outcome_map_digest": {
+            "oneOf": [
+              { "$ref": "common.schema.json#/$defs/Digest" },
+              { "type": "null" }
+            ]
+          },
+          "decision": { "enum": ["PRESERVES", "CHANGES", "UNRESOLVED"] },
+          "reason_code": {
+            "oneOf": [
+              { "type": "string", "minLength": 1 },
+              { "type": "null" }
+            ]
+          },
+          "execution_evidence_reused": { "const": false }
+        }
+      }
+    },
+    "accepted_path": {
+      "type": "array",
+      "items": { "type": "string", "pattern": "^eval:[a-z0-9][a-z0-9._-]{0,127}$" }
+    },
+    "final_sweep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "state", "enumerated_neighbor_digests", "evaluation_ids", "unresolved_count",
+        "all_execution_evidence_fresh", "durable_completion_digest"
+      ],
+      "properties": {
+        "state": { "enum": ["COMPLETE", "INCOMPLETE", "NOT_RUN"] },
+        "enumerated_neighbor_digests": {
+          "type": "array",
+          "items": { "$ref": "common.schema.json#/$defs/Digest" }
+        },
+        "evaluation_ids": {
+          "type": "array",
+          "items": { "type": "string", "pattern": "^eval:[a-z0-9][a-z0-9._-]{0,127}$" }
+        },
+        "unresolved_count": { "type": "integer", "minimum": 0 },
+        "all_execution_evidence_fresh": { "type": "boolean" },
+        "durable_completion_digest": {
+          "oneOf": [
+            { "$ref": "common.schema.json#/$defs/Digest" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "grade": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status"],
+          "properties": { "status": { "const": "UNCHANGED" } }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "reason_codes"],
+          "properties": {
+            "status": { "const": "BEST_KNOWN" },
+            "reason_codes": {
+              "type": "array",
+              "minItems": 1,
+              "items": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "reducer_set_digest"],
+          "properties": {
+            "status": { "const": "ONE_MINIMAL_UNDER" },
+            "reducer_set_digest": { "$ref": "common.schema.json#/$defs/Digest" }
+          }
+        }
+      ]
+    },
+    "global_minimum_claimed": { "const": false },
+    "root_cause_claimed": { "const": false }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "grade": {
+            "properties": { "status": { "const": "ONE_MINIMAL_UNDER" } },
+            "required": ["status"]
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "final_sweep": {
+            "properties": {
+              "state": { "const": "COMPLETE" },
+              "unresolved_count": { "const": 0 },
+              "all_execution_evidence_fresh": { "const": true },
+              "durable_completion_digest": { "$ref": "common.schema.json#/$defs/Digest" }
+            }
+          }
+        }
+      }
+    }
+  ]
+}

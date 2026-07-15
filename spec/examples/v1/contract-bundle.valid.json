@@ -1,0 +1,57 @@
+{
+  "schema_version": "countershape/v1",
+  "kind": "ContractBundle",
+  "artifact_digest": "sha256:e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2",
+  "decision_record_digest": "sha256:e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1",
+  "decision_action": "ALLOW_OBSERVED",
+  "emitter_version": "node-exact-emitter/v1",
+  "target": {
+    "runtime": "NODE",
+    "major": 25,
+    "os": "darwin",
+    "semantic_profile": "countershape-node-core-exact/v1"
+  },
+  "predicate": {
+    "kind": "one-of-exact/v1",
+    "scope": "EXACT_WITNESSED_STIMULUS",
+    "stimulus_digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "selected_fields": ["http.status", "http.body.kind"],
+    "allowed_tuples": [
+      {
+        "tuple_digest": "sha256:4141414141414141414141414141414141414141414141414141414141414141",
+        "fields": [
+          { "field_id": "http.status", "value": { "tag": "INTEGER", "canonical": "404" } },
+          { "field_id": "http.body.kind", "value": { "tag": "STRING", "value": "not_found" } }
+        ]
+      },
+      {
+        "tuple_digest": "sha256:4242424242424242424242424242424242424242424242424242424242424242",
+        "fields": [
+          { "field_id": "http.status", "value": { "tag": "INTEGER", "canonical": "200" } },
+          { "field_id": "http.body.kind", "value": { "tag": "STRING", "value": "authorized_metadata" } }
+        ]
+      }
+    ]
+  },
+  "artifacts": [
+    { "name": "README.md", "byte_digest": "sha256:5151515151515151515151515151515151515151515151515151515151515151", "byte_count": 640 },
+    { "name": "contract.test.mjs", "byte_digest": "sha256:5252525252525252525252525252525252525252525252525252525252525252", "byte_count": 1024 },
+    { "name": "decision.json", "byte_digest": "sha256:5353535353535353535353535353535353535353535353535353535353535353", "byte_count": 1500 },
+    { "name": "fixture.json", "byte_digest": "sha256:5454545454545454545454545454545454545454545454545454545454545454", "byte_count": 420 },
+    { "name": "harness.mjs", "byte_digest": "sha256:5555555555555555555555555555555555555555555555555555555555555555", "byte_count": 3100 },
+    { "name": "manifest.json", "byte_digest": "sha256:5656565656565656565656565656565656565656565656565656565656565656", "byte_count": 900 }
+  ],
+  "node_core_only": true,
+  "countershape_import_present": false,
+  "package_registry_required": false,
+  "determinism_profile": {
+    "contains_time": false,
+    "contains_random_id": false,
+    "contains_absolute_path": false,
+    "contains_candidate_identity": false,
+    "contains_secret": false
+  },
+  "standalone_absence_receipt": {
+    "status": "UNRECEIPTED"
+  }
+}

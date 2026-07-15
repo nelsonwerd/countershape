@@ -1,0 +1,12 @@
+# didrun self-ignores every ledger entry via .didrun/.gitignore. A root-level
+# .didrun/ rule makes didrun 0.1.0's own temporary-index digest return unknown.
+.didrun-history/
+.countershape/
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+.DS_Store
+*.log
+research/grounding/raw/.last30days-library.db

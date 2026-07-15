@@ -1,0 +1,146 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://countershape.dev/spec/schema/v1/choicepoint.schema.json",
+  "title": "Countershape Choicepoint v1",
+  "description": "An immutable provenance-bound revision. It is a Countershape record format, not a semantic primitive or proof of complete intent.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "kind", "artifact_digest", "lineage_id", "revision", "parent_choicepoint_digest",
+    "state", "semantic_ancestors", "candidates", "original_stimulus_digest", "minimized_stimulus_digest",
+    "baseline_outcome_map_digest", "confirmed_outcome_map_digest", "discovery_batch_digests",
+    "confirmation_batch_digests", "confirmation", "reduction", "excluded_candidates", "evidence_digests",
+    "staleness", "decision_ready"
+  ],
+  "properties": {
+    "schema_version": { "const": "countershape/v1" },
+    "kind": { "const": "Choicepoint" },
+    "artifact_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "lineage_id": { "type": "string", "pattern": "^choicepoint:[a-z0-9][a-z0-9._-]{0,127}$" },
+    "revision": { "type": "integer", "minimum": 1 },
+    "parent_choicepoint_digest": {
+      "oneOf": [
+        { "$ref": "common.schema.json#/$defs/Digest" },
+        { "type": "null" }
+      ]
+    },
+    "state": { "enum": ["DISCOVERED", "DECISION_READY", "RESOLVED", "DEFERRED", "STALE", "INVALIDATED"] },
+    "semantic_ancestors": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_set_digest", "world_plan_digest", "comparison_envelope_digest",
+        "capture_policy_digest", "projection_definition_digest"
+      ],
+      "properties": {
+        "candidate_set_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+        "world_plan_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+        "comparison_envelope_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+        "capture_policy_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+        "projection_definition_digest": { "$ref": "common.schema.json#/$defs/Digest" }
+      }
+    },
+    "candidates": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 4,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["candidate_execution_key", "tree_identity_digest"],
+        "properties": {
+          "candidate_execution_key": { "$ref": "common.schema.json#/$defs/CandidateExecutionKey" },
+          "tree_identity_digest": { "$ref": "common.schema.json#/$defs/Digest" }
+        }
+      }
+    },
+    "original_stimulus_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "minimized_stimulus_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "baseline_outcome_map_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "confirmed_outcome_map_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "discovery_batch_digests": {
+      "type": "array",
+      "minItems": 2,
+      "items": { "$ref": "common.schema.json#/$defs/Digest" }
+    },
+    "confirmation_batch_digests": {
+      "type": "array",
+      "minItems": 2,
+      "items": { "$ref": "common.schema.json#/$defs/Digest" }
+    },
+    "confirmation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status", "attempt_artifact_digests", "world_instance_digests", "invocation_evidence_digests",
+        "schedule_rotated_from_discovery", "execution_evidence_reused"
+      ],
+      "properties": {
+        "status": { "const": "FRESH_CONFIRMED" },
+        "attempt_artifact_digests": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "$ref": "common.schema.json#/$defs/Digest" }
+        },
+        "world_instance_digests": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "$ref": "common.schema.json#/$defs/Digest" }
+        },
+        "invocation_evidence_digests": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "$ref": "common.schema.json#/$defs/Digest" }
+        },
+        "schedule_rotated_from_discovery": { "const": true },
+        "execution_evidence_reused": { "const": false }
+      }
+    },
+    "reduction": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reduction_run_digest", "grade"],
+      "properties": {
+        "reduction_run_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+        "grade": { "enum": ["UNCHANGED", "BEST_KNOWN", "ONE_MINIMAL_UNDER"] }
+      }
+    },
+    "excluded_candidates": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["candidate_execution_key", "classification", "batch_digest"],
+        "properties": {
+          "candidate_execution_key": { "$ref": "common.schema.json#/$defs/CandidateExecutionKey" },
+          "classification": { "enum": ["UNSTABLE", "UNCOMPARABLE", "INCOMPLETE"] },
+          "batch_digest": { "$ref": "common.schema.json#/$defs/Digest" }
+        }
+      }
+    },
+    "evidence_digests": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "common.schema.json#/$defs/Digest" }
+    },
+    "staleness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reason_codes", "replacement_digest"],
+      "properties": {
+        "status": { "enum": ["CURRENT", "STALE", "INVALIDATED"] },
+        "reason_codes": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "replacement_digest": {
+          "oneOf": [
+            { "$ref": "common.schema.json#/$defs/Digest" },
+            { "type": "null" }
+          ]
+        }
+      }
+    },
+    "decision_ready": { "type": "boolean" }
+  }
+}

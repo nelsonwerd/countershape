@@ -1,0 +1,35 @@
+{
+  "schema_version": "countershape/v1",
+  "kind": "ComparisonEnvelope",
+  "artifact_digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+  "envelope_version": "http-reference/darwin-v1",
+  "measured_dimensions": [
+    { "name": "operating system", "source": "WORLD_INSTANCE", "comparison": "EXACT" },
+    { "name": "node executable", "source": "TOOL_RECEIPT", "comparison": "EXACT" },
+    { "name": "process cleanup", "source": "PROCESS_RECEIPT", "comparison": "REJECT_ON_VARIANCE" }
+  ],
+  "required_equal_dimensions": [
+    { "name": "operating system", "comparator": "EXACT" },
+    { "name": "node executable digest", "comparator": "EXACT" }
+  ],
+  "tolerated_dimensions": [
+    {
+      "name": "private temporary root",
+      "tolerance": "PROJECTED_PLACEHOLDER_IN_CAPTURE_ONLY",
+      "nonclaim": "CONTROL_FLOW_IRRELEVANCE_NOT_ESTABLISHED"
+    },
+    {
+      "name": "allocated loopback port",
+      "tolerance": "MAY_DIFFER_AND_IS_RECORDED",
+      "nonclaim": "CONTROL_FLOW_IRRELEVANCE_NOT_ESTABLISHED"
+    }
+  ],
+  "rejected_dimensions": [
+    { "name": "tool binary digest", "reason_code": "TOOL_MISMATCH" },
+    { "name": "teardown status", "reason_code": "TEARDOWN_NOT_CLEAN" }
+  ],
+  "uncontrolled_dimensions": ["scheduler timing", "host file reads by trusted candidate"],
+  "admission_claim": "INSTANCES_ADMITTED_BY_DECLARED_ENVELOPE",
+  "behavioral_compatibility_established": false,
+  "placeholder_control_flow_irrelevance_established": false
+}

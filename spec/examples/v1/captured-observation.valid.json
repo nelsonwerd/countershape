@@ -1,0 +1,39 @@
+{
+  "schema_version": "countershape/v1",
+  "kind": "CapturedObservation",
+  "artifact_digest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+  "world_instance_digest": "sha256:9999999999999999999999999999999999999999999999999999999999999999",
+  "candidate_execution_key": "candidate:http-b",
+  "stimulus_digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "trial_index": 0,
+  "attempt_artifact_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "capture_policy_digest": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+  "trial_control": {
+    "classification": "BEHAVIOR_ELIGIBLE",
+    "behavior_transport": "HTTP_RESPONSE"
+  },
+  "channels": [
+    {
+      "name": "http.body",
+      "state": "PRESENT",
+      "byte_digest": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+      "byte_count": 82
+    },
+    {
+      "name": "stderr",
+      "state": "ABSENT",
+      "reason": "NOT_PRODUCED"
+    }
+  ],
+  "protocol_metadata": {
+    "domain": "HTTP",
+    "status": 404,
+    "header_multimap_digest": "sha256:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+  },
+  "private_artifact_digests": [
+    "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"
+  ],
+  "teardown_eligible": true,
+  "projection_eligibility": "ELIGIBLE",
+  "undetected_control_failure_excluded": false
+}

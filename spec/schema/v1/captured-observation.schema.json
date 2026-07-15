@@ -1,0 +1,103 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://countershape.dev/spec/schema/v1/captured-observation.schema.json",
+  "title": "Countershape CapturedObservation v1",
+  "description": "Durable post-capture-policy evidence. Detected control failures remain ineligible and never become projected behavior.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "kind", "artifact_digest", "world_instance_digest", "candidate_execution_key",
+    "stimulus_digest", "trial_index", "attempt_artifact_digest", "capture_policy_digest", "trial_control",
+    "channels", "protocol_metadata", "private_artifact_digests", "teardown_eligible", "projection_eligibility",
+    "undetected_control_failure_excluded"
+  ],
+  "properties": {
+    "schema_version": { "const": "countershape/v1" },
+    "kind": { "const": "CapturedObservation" },
+    "artifact_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "world_instance_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "candidate_execution_key": { "$ref": "common.schema.json#/$defs/CandidateExecutionKey" },
+    "stimulus_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "trial_index": { "type": "integer", "minimum": 0 },
+    "attempt_artifact_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "capture_policy_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "trial_control": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["classification", "behavior_transport"],
+          "properties": {
+            "classification": { "const": "BEHAVIOR_ELIGIBLE" },
+            "behavior_transport": { "enum": ["CLI_PROCESS_RESULT", "HTTP_RESPONSE"] }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["classification", "reason"],
+          "properties": {
+            "classification": { "const": "CONTROL_INELIGIBLE" },
+            "reason": { "$ref": "common.schema.json#/$defs/ControlReason" }
+          }
+        }
+      ]
+    },
+    "channels": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "common.schema.json#/$defs/Channel" }
+    },
+    "protocol_metadata": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["domain", "exit"],
+          "properties": {
+            "domain": { "const": "CLI" },
+            "exit": {
+              "oneOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["kind", "code"],
+                  "properties": {
+                    "kind": { "const": "EXITED" },
+                    "code": { "type": "integer", "minimum": 0, "maximum": 255 }
+                  }
+                },
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["kind", "signal"],
+                  "properties": {
+                    "kind": { "const": "SIGNALED" },
+                    "signal": { "type": "string", "minLength": 1 }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["domain", "status", "header_multimap_digest"],
+          "properties": {
+            "domain": { "const": "HTTP" },
+            "status": { "type": "integer", "minimum": 100, "maximum": 599 },
+            "header_multimap_digest": { "$ref": "common.schema.json#/$defs/Digest" }
+          }
+        }
+      ]
+    },
+    "private_artifact_digests": {
+      "type": "array",
+      "items": { "$ref": "common.schema.json#/$defs/Digest" }
+    },
+    "teardown_eligible": { "type": "boolean" },
+    "projection_eligibility": { "enum": ["ELIGIBLE", "INELIGIBLE"] },
+    "undetected_control_failure_excluded": { "const": false }
+  }
+}

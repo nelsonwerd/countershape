@@ -1,0 +1,90 @@
+{
+  "schema_version": "countershape/v1",
+  "kind": "Choicepoint",
+  "artifact_digest": "sha256:e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0e0",
+  "lineage_id": "choicepoint:http-invoice-authorization",
+  "revision": 1,
+  "parent_choicepoint_digest": null,
+  "state": "DECISION_READY",
+  "semantic_ancestors": {
+    "candidate_set_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "world_plan_digest": "sha256:1111111111111111111111111111111111111111111111111111111111111111",
+    "comparison_envelope_digest": "sha256:4444444444444444444444444444444444444444444444444444444444444444",
+    "capture_policy_digest": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+    "projection_definition_digest": "sha256:8888888888888888888888888888888888888888888888888888888888888888"
+  },
+  "candidates": [
+    {
+      "candidate_execution_key": "candidate:http-a",
+      "tree_identity_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    },
+    {
+      "candidate_execution_key": "candidate:http-b",
+      "tree_identity_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    },
+    {
+      "candidate_execution_key": "candidate:http-c",
+      "tree_identity_digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+    },
+    {
+      "candidate_execution_key": "candidate:http-d",
+      "tree_identity_digest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+    }
+  ],
+  "original_stimulus_digest": "sha256:7070707070707070707070707070707070707070707070707070707070707070",
+  "minimized_stimulus_digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+  "baseline_outcome_map_digest": "sha256:5050505050505050505050505050505050505050505050505050505050505050",
+  "confirmed_outcome_map_digest": "sha256:5151515151515151515151515151515151515151515151515151515151515151",
+  "discovery_batch_digests": [
+    "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1",
+    "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa2",
+    "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa3"
+  ],
+  "confirmation_batch_digests": [
+    "sha256:f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1",
+    "sha256:f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2",
+    "sha256:f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3"
+  ],
+  "confirmation": {
+    "status": "FRESH_CONFIRMED",
+    "attempt_artifact_digests": [
+      "sha256:111111111111111111111111111111111111111111111111111111111111111a",
+      "sha256:111111111111111111111111111111111111111111111111111111111111111b",
+      "sha256:111111111111111111111111111111111111111111111111111111111111111c"
+    ],
+    "world_instance_digests": [
+      "sha256:222222222222222222222222222222222222222222222222222222222222222a",
+      "sha256:222222222222222222222222222222222222222222222222222222222222222b",
+      "sha256:222222222222222222222222222222222222222222222222222222222222222c"
+    ],
+    "invocation_evidence_digests": [
+      "sha256:333333333333333333333333333333333333333333333333333333333333333a",
+      "sha256:333333333333333333333333333333333333333333333333333333333333333b",
+      "sha256:333333333333333333333333333333333333333333333333333333333333333c"
+    ],
+    "schedule_rotated_from_discovery": true,
+    "execution_evidence_reused": false
+  },
+  "reduction": {
+    "reduction_run_digest": "sha256:6060606060606060606060606060606060606060606060606060606060606060",
+    "grade": "ONE_MINIMAL_UNDER"
+  },
+  "excluded_candidates": [
+    {
+      "candidate_execution_key": "candidate:http-d",
+      "classification": "UNSTABLE",
+      "batch_digest": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa4"
+    }
+  ],
+  "evidence_digests": [
+    "sha256:5050505050505050505050505050505050505050505050505050505050505050",
+    "sha256:5151515151515151515151515151515151515151515151515151515151515151",
+    "sha256:6060606060606060606060606060606060606060606060606060606060606060"
+  ],
+  "staleness": {
+    "status": "CURRENT",
+    "reason_codes": [],
+    "replacement_digest": null
+  },
+  "decision_ready": true
+}
