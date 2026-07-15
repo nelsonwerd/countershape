@@ -11,15 +11,18 @@ import (
 type RefusalCode string
 
 const (
-	CodeInvalidRequest         RefusalCode = "INVALID_WORLD_REQUEST"
-	CodeInvalidAllocation      RefusalCode = "INVALID_ATTEMPT_ALLOCATION"
-	CodeToolRejected           RefusalCode = "EXECUTION_TOOL_REJECTED"
-	CodePlanProfileRejected    RefusalCode = "WORLD_PLAN_PROFILE_REJECTED"
-	CodeMarkerWriteFailed      RefusalCode = "ATTEMPT_MARKER_WRITE_FAILED"
-	CodeUnsupportedPlatform    RefusalCode = "UNSUPPORTED_EXECUTION_PLATFORM"
-	CodeCLIExecutionRejected   RefusalCode = "CLI_EXECUTION_BINDING_REJECTED"
-	CodeCLIEnvironmentRejected RefusalCode = "CLI_RESERVED_ENVIRONMENT_REJECTED"
-	CodeCLIFixtureRejected     RefusalCode = "CLI_FIXTURE_OVERLAY_REJECTED"
+	CodeInvalidRequest          RefusalCode = "INVALID_WORLD_REQUEST"
+	CodeInvalidAllocation       RefusalCode = "INVALID_ATTEMPT_ALLOCATION"
+	CodeToolRejected            RefusalCode = "EXECUTION_TOOL_REJECTED"
+	CodePlanProfileRejected     RefusalCode = "WORLD_PLAN_PROFILE_REJECTED"
+	CodeMarkerWriteFailed       RefusalCode = "ATTEMPT_MARKER_WRITE_FAILED"
+	CodeUnsupportedPlatform     RefusalCode = "UNSUPPORTED_EXECUTION_PLATFORM"
+	CodeCLIExecutionRejected    RefusalCode = "CLI_EXECUTION_BINDING_REJECTED"
+	CodeCLIEnvironmentRejected  RefusalCode = "CLI_RESERVED_ENVIRONMENT_REJECTED"
+	CodeCLIFixtureRejected      RefusalCode = "CLI_FIXTURE_OVERLAY_REJECTED"
+	CodeHTTPExecutionRejected   RefusalCode = "HTTP_EXECUTION_BINDING_REJECTED"
+	CodeHTTPEnvironmentRejected RefusalCode = "HTTP_RESERVED_ENVIRONMENT_REJECTED"
+	CodeHTTPSeedRejected        RefusalCode = "HTTP_SEED_OVERLAY_REJECTED"
 )
 
 type Refusal struct {

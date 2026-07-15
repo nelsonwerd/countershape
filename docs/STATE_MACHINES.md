@@ -2,7 +2,7 @@
 
 - **Contract version:** U0 / `state-machines-v1`
 - **Target:** narrowed Darwin reference instrument
-- **Status:** normative transition contract; U1 pure-constructor command receipts are enumerated in `status/U1.md`, while edge execution, persistence, and product transitions remain `UNRECEIPTED`
+- **Status:** normative transition contract; U1–U3 receipts, including exact Git and CLI edge execution, are enumerated in `status/U1.md` through `status/U3.md`; active U4 HTTP edge work and all persistence/product transitions remain `UNRECEIPTED`
 
 Countershape state is a set of immutable semantic artifacts connected by validated transitions. State names are not presentation copy. The Go domain model, JSON schemas, API DTOs, CLI, studio, generated residue, examples, and tests must agree on these names and preconditions.
 
@@ -134,10 +134,14 @@ The phases have these entry and exit contracts:
 | `READY` | CLI one-shot is ready immediately, or fixture-owned HTTP readiness evidence is present | probe may begin | set `READINESS_ERROR`; route through cleanup |
 | `PROBING` | exact typed stimulus bound to attempt | domain capture completes within caps | set transport/timeout/cancel/output control; route through cleanup |
 | `CAPTURING` | channels and control metadata are bounded | immutable captured artifact prepared | set capture/projection-precondition control; route through cleanup |
-| `TEARING_DOWN` | process/resources may exist; pending control retained | TERM/grace/KILL, child wait, drains, and group probe complete | set/augment `TEARDOWN_ERROR` or `ORPHAN_RISK` |
+| `TEARING_DOWN` | process/resources may exist; pending control retained | spend one bounded cooperative-exit interval; probe the owned group; when present, TERM/grace/KILL; finally require child wait, pipe drains, and observed group absence | set/augment `TEARDOWN_ERROR` or `ORPHAN_RISK` |
 | `FINALIZED` | immutable attempt and teardown facts published | eligibility service may inspect | terminal |
 
-Any detected failure routes to `TEARING_DOWN` when owned resources may exist. It does not jump directly to behavior classification. If teardown itself fails, the teardown/orphan fact is retained even when an earlier control reason already exists.
+For the U4 HTTP reference profile, readiness evidence is one dedicated inherited pipe carrying exactly byte `0x01` followed by EOF within the declared readiness budget (`ONE_BYTE_0X01_THEN_EOF_V1`). It is never an HTTP request. Empty EOF, a different or extra byte, missing EOF, timeout, cancellation, or service exit before the complete signal cannot advance `STARTING -> READY`.
+
+When multiple readiness-terminal facts are owner-visible together, U4 applies fixed precedence: output limit, cancellation, deadline, child exit, then readiness. An owned clean cooperative exit still records an exact pre-TERM group probe of `ABSENT`; `NOT_APPLICABLE` is not a clean owned-HTTP lifecycle result.
+
+Any detected failure routes to `TEARING_DOWN` when owned resources may exist. It does not jump directly to behavior classification. A service that independently exits nonzero or by signal after writing a response is a transport control; only owner-issued TERM/KILL during cleanup is excluded from that rule. If teardown itself fails, the teardown/orphan fact is retained even when an earlier control reason already exists.
 
 An attempt is **eligible for projection** only when all are true:
 

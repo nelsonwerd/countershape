@@ -35,16 +35,24 @@ type Request struct {
 }
 
 type Result struct {
-	world            domain.WorldInstance
-	finalized        domain.FinalizedAttempt
-	states           []domain.AttemptState
-	roots            Roots
-	materialization  gitobj.MaterializationReceipt
-	process          ProcessReceipt
-	cliFixture       CLIFixtureOverlayReceipt
-	hasCLIFixture    bool
-	cliInvocation    CLIInvocationEvidenceReceipt
-	hasCLIInvocation bool
+	world             domain.WorldInstance
+	finalized         domain.FinalizedAttempt
+	states            []domain.AttemptState
+	roots             Roots
+	materialization   gitobj.MaterializationReceipt
+	process           ProcessReceipt
+	cliFixture        CLIFixtureOverlayReceipt
+	hasCLIFixture     bool
+	cliInvocation     CLIInvocationEvidenceReceipt
+	hasCLIInvocation  bool
+	httpSeed          HTTPSeedOverlayReceipt
+	hasHTTPSeed       bool
+	httpReadiness     HTTPReadinessReceipt
+	hasHTTPReadiness  bool
+	httpExchange      HTTPExchangeReceipt
+	hasHTTPExchange   bool
+	httpInvocation    HTTPInvocationEvidenceReceipt
+	hasHTTPInvocation bool
 }
 
 func (r Result) World() domain.WorldInstance               { return r.world }
@@ -73,6 +81,45 @@ func (r Result) CLIInvocationEvidence() (CLIInvocationEvidenceReceipt, bool) {
 	result := r.cliInvocation
 	result.canonicalBytes = append([]byte(nil), r.cliInvocation.canonicalBytes...)
 	result.expectedLogicalArgv = append([]string(nil), r.cliInvocation.expectedLogicalArgv...)
+	return result, true
+}
+
+func (r Result) HTTPSeedOverlay() (HTTPSeedOverlayReceipt, bool) {
+	if !r.hasHTTPSeed {
+		return HTTPSeedOverlayReceipt{}, false
+	}
+	result := r.httpSeed
+	result.canonicalBytes = append([]byte(nil), r.httpSeed.canonicalBytes...)
+	result.entries = append([]HTTPSeedEntryReceipt(nil), r.httpSeed.entries...)
+	return result, true
+}
+
+func (r Result) HTTPReadiness() (HTTPReadinessReceipt, bool) {
+	if !r.hasHTTPReadiness {
+		return HTTPReadinessReceipt{}, false
+	}
+	result := r.httpReadiness
+	result.canonicalBytes = append([]byte(nil), r.httpReadiness.canonicalBytes...)
+	return result, true
+}
+
+func (r Result) HTTPExchange() (HTTPExchangeReceipt, bool) {
+	if !r.hasHTTPExchange {
+		return HTTPExchangeReceipt{}, false
+	}
+	result := r.httpExchange
+	result.canonicalBytes = append([]byte(nil), r.httpExchange.canonicalBytes...)
+	result.requestWire = append([]byte(nil), r.httpExchange.requestWire...)
+	result.responseWire = append([]byte(nil), r.httpExchange.responseWire...)
+	return result, true
+}
+
+func (r Result) HTTPInvocationEvidence() (HTTPInvocationEvidenceReceipt, bool) {
+	if !r.hasHTTPInvocation {
+		return HTTPInvocationEvidenceReceipt{}, false
+	}
+	result := r.httpInvocation
+	result.canonicalBytes = append([]byte(nil), r.httpInvocation.canonicalBytes...)
 	return result, true
 }
 

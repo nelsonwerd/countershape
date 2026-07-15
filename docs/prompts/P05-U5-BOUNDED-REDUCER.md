@@ -41,7 +41,8 @@ Add table, property, state/model, integration, and deterministic mutation tests.
 
 - candidate input permutations yield the same baseline map digest and reducer decision;
 - each emitted neighbor is valid, deterministic, unique, and strictly smaller;
-- a baseline `A=403,B=404,C=404` and neighbor `A=200,B=500,C=500` is `CHANGES`, even though membership shape is identical;
+- the synthetic same-partition baseline `A=403,B=404,C=404` and neighbor `A=200,B=500,C=500` is `CHANGES`, even though both partition as `{A}|{B,C}`;
+- the physical U4 seed-authority neighbor keeps identical request bytes and the same eligible A/B/C roster but changes `403|404|200` to `200|500|500`; it is also `CHANGES`, while its partition is intentionally not claimed identical;
 - candidate labels, order, producer, and support counts cannot change preservation;
 - unstable, incomplete, teardown-error, cancelled, and stale evaluations are `UNRESOLVED` and force `BEST_KNOWN`;
 - exhaustion immediately before, during, and immediately after the apparent last sweep item never fabricates `ONE_MINIMAL_UNDER`;

@@ -2,7 +2,7 @@
 
 - **Contract version:** U0 / `architecture-v1`
 - **Target:** narrowed Darwin reference instrument
-- **Status:** controlling design; U1, U2, and U3 command receipts are enumerated without reinterpretation in `status/U1.md`, `status/U2.md`, and `status/U3.md`; U4 and later capabilities remain `UNRECEIPTED` until their own sealed boundary
+- **Status:** controlling design; U1, U2, and U3 command receipts are enumerated without reinterpretation in `status/U1.md`, `status/U2.md`, and `status/U3.md`; active U4 work is classified in `status/U4.md` and remains `UNRECEIPTED` until its own sealed boundary
 - **Authority order:** `CONCEPT_BRIEF.md`, `SEMANTICS.md`, `PROJECTION_ALGEBRA.md`, then the stricter rulings in `research/deep-dive/08-RED_TEAM.md`, then this document
 
 Countershape is a repository-scale operational composition for resolving one witnessed behavioral disagreement among exact repository candidates. It is not an agent runtime, candidate ranker, generalized workflow runner, correctness oracle, or new disambiguation algorithm. The reference instrument accepts trusted local code from a curated Git repository, performs finite fresh executions, compares exact projected bytes, and preserves a human-authored selected-field decision as standalone Node source.
@@ -115,7 +115,7 @@ The generic kernel may own only:
 
 The CLI adapter owns ordered argv, `Absent` versus `Present("")`, sparse environment, bounded fixture files, exit versus signal, stdout, stderr, CLI projection fields, and CLI neighbors.
 
-The HTTP adapter owns fixture-owned readiness, method/path, ordered query and header multimaps, request body, transport versus response, status, bounded response body, HTTP projection fields, and HTTP neighbors.
+The HTTP adapter owns fixture-owned readiness, method/path, ordered query and header multimaps, request body, transport versus response, status, bounded response body, HTTP projection fields, and HTTP neighbors. Its cycle-free model authority is the only HTTP package the impure world edge may import. A thin `ExecuteHTTP` edge may reuse world allocation, materialization, process-group ownership, and teardown while one private HTTP-specific world sequencer owns inherited readiness plus one direct exchange. This is not a neutral or exported arbitrary service runner, and it does not move HTTP field truth into generic packages. The reference readiness wire is exactly `ONE_BYTE_0X01_THEN_EOF_V1` on a dedicated inherited pipe.
 
 There is no generic JSON observation inside the truth kernel. The adapters may both project to canonical selected-field tuples, but neither is coerced into the other's capture model. Adding HTTP branches to `compare`, `reduce`, or `choice`, or coercing CLI capture into an HTTP-shaped record, fails the two-domain claim and narrows the instrument to one adapter.
 
@@ -164,7 +164,7 @@ An admitted matrix creates deterministic internal, ephemeral row tokens bound to
 
 An execution attempt passes through the centralized eligibility gate. An application response such as HTTP `500`, CLI exit `2`, or complete empty stdout may be eligible behavior. `MATERIALIZATION_ERROR`, `SETUP_ERROR`, `START_ERROR`, `READINESS_ERROR`, `PROBE_TRANSPORT_ERROR`, `TIMEOUT`, `CANCELLED`, `OUTPUT_LIMIT`, `PROJECTION_REJECTED`, `ORPHAN_RISK`, and `TEARDOWN_ERROR` are controls and cannot be represented as projected outcomes.
 
-Countershape separates detected controls only. A declared setup program can exit zero after doing the wrong work, and a readiness mechanism can have hidden side effects. The two proof studies avoid setup and use fixture-owned readiness evidence.
+Countershape separates detected controls only. A declared setup program can exit zero after doing the wrong work, and a readiness mechanism can have hidden side effects. Both proof studies avoid setup. CLI is one-shot-ready; HTTP alone uses fixture-owned inherited-pipe readiness evidence and never an HTTP warm-up request.
 
 `CapturedObservation` is post-capture-policy evidence. Every channel is tagged `Present`, `Absent(reason)`, or `Truncated(digest,count)`. The word “raw” is reserved for persisted bytes unchanged by capture policy. `ProjectionDefinition` is pure, visible, versioned, and names each operation. A successful result ends in strict canonical bytes and a fingerprint; a rejection is an ineligible control.
 

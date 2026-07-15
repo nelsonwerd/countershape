@@ -95,7 +95,7 @@ Use four committed dependency-free Node-core candidates and a finite cross-tenan
 
 Every response also contains a volatile request ID and scratch-root path. Captured evidence preserves them; an explicit projection visibly removes only those noise fields. A mutation that removes status or the disclosure-bearing metadata must fail.
 
-A negative fixture demonstrates why the machinery matters: a deliberately naive shared-root run contaminates state and makes B and C appear equal. That run is labeled non-product negative evidence. Countershape's new private roots eliminate the contamination. Repetition excludes D from the stable map. One reducer proposal removes tenant seed data and preserves only membership shape while changing labeled outputs from `403|404|200` to `200|500|500`; Countershape must reject it. A later typed reduction preserves the exact map and receives only the grade it earns.
+A negative fixture demonstrates why the machinery matters: a deliberately naive shared-root run contaminates state and makes B and C appear equal. That run is labeled non-product negative evidence. Countershape's new private roots eliminate the contamination. Repetition excludes D from the stable map. A physical seed-authority neighbor keeps the request bytes and eligible A/B/C roster identical while changing the exact labeled map from `403|404|200` to `200|500|500`; its partition also changes, so it is not the shape-only oracle. A separate synthetic reducer oracle changes `403|404|404` to `200|500|500`, preserving partition `{A}|{B,C}` while changing labeled outputs. Countershape must reject both. A later typed reduction preserves the exact map and receives only the grade it earns.
 
 A physically new confirmation batch uses new attempt artifacts, invocation counters outside the selected predicate, and a rotated schedule. The blind-first ruling allows the `404` outcome, selects status only, shows the metadata body as nonasserted, and reveals provenance before finalization. A deliberately weak field set must return `AMBIGUOUS_SCOPE`.
 
@@ -184,7 +184,7 @@ Git is content authority. Countershape is authority only for the canonical artif
 
 Only a finalized attempt with complete required capture and successful teardown may enter projection. HTTP `500`, CLI exit `2`, or complete empty stdout may be eligible behavior. `MATERIALIZATION_ERROR`, `SETUP_ERROR`, `START_ERROR`, `READINESS_ERROR`, `PROBE_TRANSPORT_ERROR`, `TIMEOUT`, `CANCELLED`, `OUTPUT_LIMIT`, `PROJECTION_REJECTED`, `ORPHAN_RISK`, and `TEARDOWN_ERROR` are ineligible controls.
 
-Countershape separates only detected control failures. A setup command that exits zero while doing the wrong thing or a readiness check that silently mutates state remains a trusted assumption; the proof fixtures avoid setup and use a fixture-owned readiness signal.
+Countershape separates only detected control failures. A setup command that exits zero while doing the wrong thing or a readiness check that silently mutates state remains a trusted assumption. Both proof fixtures avoid setup: CLI is one-shot-ready, while HTTP uses the fixture-owned inherited-pipe protocol `ONE_BYTE_0X01_THEN_EOF_V1`—exactly byte `0x01`, then EOF, within the readiness budget. The HTTP readiness channel is not a request and cannot warm application state.
 
 For `k` required new trials:
 
@@ -452,4 +452,4 @@ didrun references remain opaque verbatim receipt grades associated with their ex
 
 ## Handoff state
 
-**Ready for U0 prompt-pack and contract locking. Not yet approved to claim implementation.** The deep dive changed the idea materially: no semantic novelty claim, no symlinks, no general compatible-world language, no execution-evidence reuse, no broad imported-repository or cross-platform claim, no safely shareable report, mandatory Go/Node parity, and a falsification-first HTTP study. Build must preserve those cuts even when they make the demo less convenient.
+**U0–U3 are sealed; U4 typed HTTP observation is implemented in the active worktree and remains `UNRECEIPTED` until its final claim/commit/seal/strict gate succeeds. U5 is the next permitted unit only after that boundary.** The deep dive changed the idea materially: no semantic novelty claim, no symlinks, no general compatible-world language, no execution-evidence reuse, no broad imported-repository or cross-platform claim, no safely shareable report, mandatory Go/Node parity, and a falsification-first HTTP study. Build must preserve those cuts even when they make the demo less convenient.
