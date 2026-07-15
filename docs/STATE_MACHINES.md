@@ -2,7 +2,7 @@
 
 - **Contract version:** U0 / `state-machines-v1`
 - **Target:** narrowed Darwin reference instrument
-- **Status:** normative transition contract; U1–U3 receipts, including exact Git and CLI edge execution, are enumerated in `status/U1.md` through `status/U3.md`; active U4 HTTP edge work and all persistence/product transitions remain `UNRECEIPTED`
+- **Status:** normative transition contract; U1–U4 receipts, including exact Git, CLI, and HTTP edge execution, are enumerated in `status/U1.md` through `status/U4.md`; reduction, persistence, and product transitions remain `UNRECEIPTED`
 
 Countershape state is a set of immutable semantic artifacts connected by validated transitions. State names are not presentation copy. The Go domain model, JSON schemas, API DTOs, CLI, studio, generated residue, examples, and tests must agree on these names and preconditions.
 

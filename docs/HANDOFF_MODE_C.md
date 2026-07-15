@@ -12,10 +12,10 @@
 
 ## Current state
 
-- **Pipeline phase:** U1 truth kernel, U2 exact-Git/fresh-Darwin substrate, and P03/U3 typed CLI observation are sealed, strict-clean, and graded `TREE-EXACT`. P04/U4 typed HTTP observation is the only active build unit.
-- **Git:** repository is on `codex/countershape-autopilot`. The last implementation boundary is U3 commit `4a4ce4d6bba6` (`feat: add typed CLI observation`), tree `feb3c4988366`. Treat copied identifiers as orientation only and confirm them locally before relying on them.
+- **Pipeline phase:** U1 truth kernel, U2 exact-Git/fresh-Darwin substrate, U3 typed CLI observation, and U4 typed HTTP observation are sealed, strict-clean, and graded `TREE-EXACT`. P05/U5 bounded reduction is the next build unit.
+- **Git:** repository is on `codex/countershape-autopilot`. The last implementation boundary is U4 commit `8197fd837e7e` (`feat: add typed HTTP observation`), tree `0f3dd7b5939f`. Treat copied identifiers as orientation only and confirm them locally before relying on them.
 - **didrun:** installed globally. The first shared pre-commit ledger broke under concurrent writers and is preserved, never claimed or sealed. The replacement ledger is serialized. See `docs/status/DIDRUN_BUGS.md` before recording evidence.
-- **Build:** U0 planning and U1's pure truth kernel are sealed. U2 is sealed with exact Git-object selection/materialization and trusted-local fresh Darwin process ownership. U3 is sealed with typed CLI observation and the exact receipt boundary in `docs/status/U3.md`. U4's typed HTTP adapter, private service sequencer, raw one-request wire profile, exact inherited-pipe readiness, causal invoice fixture, projection transcript, physical contamination/seed-shape traps, and hardened sixteen-mutant gate exist in the active worktree but remain `UNRECEIPTED` until the final U4 claim/commit/seal/strict loop succeeds. No reducer orchestration, store, emitter, product CLI, dashboard, or report exists. Target wire schemas remain planning artifacts until U6 supplies and receipts runtime codecs.
+- **Build:** U0 planning and U1's pure truth kernel are sealed. U2 is sealed with exact Git-object selection/materialization and trusted-local fresh Darwin process ownership. U3 is sealed with typed CLI observation. U4 is sealed with a typed HTTP adapter, private service sequencer, raw one-request wire profile, exact inherited-pipe readiness, causal invoice fixture, projection transcript, physical contamination/seed-authority traps, and hardened sixteen-mutant gate; see `docs/status/U4.md`. No reducer orchestration, store, emitter, product CLI, dashboard, or report exists. Target wire schemas remain planning artifacts until U6 supplies and receipts runtime codecs.
 - **External APIs:** none used in the product. Current web research is read-only. Real model integrations remain human-gated and must never be faked.
 
 ## Read first, in order
@@ -145,14 +145,22 @@ U3 is sealed at commit `4a4ce4d6bba6`, tree `feb3c4988366`. Strict exited `0` wi
 
 U3 was sealed with `--allow-secrets (redacted export)` after 86 entropy-only findings in controlled argv and mutant identifiers. That disclosure and the scoped staged credential-prefix scan are not a general secret-free or security result. The permanent failed-event ledger is recorded in `docs/status/U3.md` and supports no capability.
 
+## U4 receipt boundary
+
+U4 is sealed at commit `8197fd837e7e`, tree `0f3dd7b5939f`. Strict exited `0` with `ALL RECORDED-EXACT` and `16/16 claims recorded-exact`; every final claim has verbatim grade `TREE-EXACT`. Events `458`–`471` cover fivefold request-causality race stress, the complete physical invoice package repeated ten times, inherited U2 `25/25` and U3 `43/43` mutation closure, the hardened U4 `16/16` behavioral gate, hostile harness/architecture self-tests, the generic-world authority boundary, full repository tests, vet, race, staged diff/inventory, and scoped credential-prefix scan.
+
+The sealed profile is deliberately narrow: one raw cleartext HTTP/1.1 request to an inherited literal-loopback listener after exact `ONE_BYTE_0X01_THEN_EOF_V1` readiness. The reference study proves stable A/B/C, unstable D, visible validate-then-omit projection, test-only shared-root false equality, and the same-request/same-roster tenantless map change. It does not establish general HTTP support, containment, imported-repository comparability, reduction, decision readiness, cross-platform behavior, security, or production readiness.
+
+The ten-pass physical package reported `446.973s`; the U4 mutation gate reported `16/16` killed in a `270.119s` wrapper event. The first ten-pass attempt, event `455`, permanently records the incidental default 10-minute Go alarm before the independent private-root causality cases were safely parallelized; the corrected exact command passed. U4 sealed with `--allow-secrets (redacted export)` after 121 high-entropy findings. The scoped scan and review do not establish a secret-free or security result.
+
 ## Exact next actions if this task resumes elsewhere
 
-1. Run `git status --short --branch`; confirm the last sealed implementation boundary is the U3 commit above, preserve the active U4 worktree, and ensure no `.didrun` path is staged or tracked.
+1. Run `git status --short --branch`; confirm the last sealed implementation boundary is the U4 commit above and ensure no `.didrun` path is staged or tracked.
 2. Run `NO_COLOR=1 didrun verify --strict`; require exit 0 for the current sealed boundary and do not infer a receipt from this prose.
    If wrapped output is not relayed, inspect the event's `stdout_blob`/`stderr_blob` in `.didrun/session.log` and read the referenced immutable object under `.didrun/objects/`. That is read-only diagnosis, not a receipt; never rerun a load-bearing command unwrapped merely to reveal output.
-3. Read `docs/prompts/P04-U4-HTTP-OBSERVATION.md`, `docs/status/U4.md`, the U3 receipt boundary, and the controlling HTTP projection contracts. Finish and seal P04 only; do not broaden into reduction or product surfaces.
-4. Re-run the final integrated U2/U3/U4 manifest and mutation closures plus the U4 physical, race, repeated-study, architecture, full-repository, vet, and hygiene gates through `didrun run --`. A nonzero or mutant survivor is a real failure: repair the implementation/test/contract, rerun through didrun, and preserve failed events as permanent history.
-5. At the shippable boundary, declare only passing final-tree U4 claims, stage the exact intended paths, commit, seal, and loop `NO_COLOR=1 didrun verify --strict` until exit `0`. Then record exact verbatim grades in a separate strict-clean receipt-doc boundary.
+3. Read `docs/prompts/P05-U5-BOUNDED-REDUCER.md`, `docs/status/U4.md`, and the controlling exact-map/reducer contracts. Build P05/U5 only; do not broaden into Choicepoints, persistence, emission, or product surfaces.
+4. Wrap every load-bearing U5 command in `didrun run --`. A nonzero or mutant survivor is a real failure: repair the implementation/test/contract, rerun through didrun, and preserve failed events as permanent history.
+5. At the shippable boundary, declare only passing final-tree U5 claims, stage the exact intended paths, commit, seal, and loop `NO_COLOR=1 didrun verify --strict` until exit `0`. Then record exact verbatim grades in a separate strict-clean receipt-doc boundary.
 6. Never allow parallel didrun writers in the same repository until S6-01 is fixed upstream.
 7. Human surfaces arrive later. When they do, run at least three functional/visual loops and a real different-model critic; label that external evidence honestly.
 8. Before final delivery, run the human-cleared S6 disposable real-agent protocol, produce strict plus HTML didrun reports, map every claim to its verbatim grade, and disclose the adoption, production-hardening, security-review, cross-platform, and maintainership tail.
@@ -164,7 +172,7 @@ Before editing, reply in your working notes with:
 1. the one product verb;
 2. the three distinct truth authorities (Git, Choicepoint observations/ruling, didrun receipts);
 3. two things the system must never claim;
-4. the current last implementation commit (`4a4ce4d6bba6`, verify locally) and strict didrun verdict; and
-5. the next bounded shippable unit (P04/U4 only until strict-clean).
+4. the current last implementation commit (`8197fd837e7e`, verify locally) and strict didrun verdict; and
+5. the next bounded shippable unit (P05/U5 only until strict-clean).
 
 If any answer is missing, read the files above again. Do not infer a didrun grade from this handoff; run strict verification locally.
