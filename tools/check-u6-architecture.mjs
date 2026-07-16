@@ -26,6 +26,9 @@ const reviewedRoots = Object.freeze([
     authority: "authority",
     "internal/publication": "publication",
   }],
+	["internal/portablevalue", { ".": "portablevalue" }],
+	["internal/projectionprofile", { ".": "projectionprofile" }],
+	["internal/projectiontranslate", { ".": "projectiontranslate" }],
   ["internal/choice", {
     ".": "choice",
     promotion: "promotion",
@@ -407,6 +410,9 @@ const exactInternalImports = Object.freeze(new Map([
   ["internal/confirmation", ["internal/canon", "internal/compare", "internal/confirmation/authority", "internal/confirmation/internal/publication", "internal/domain", "internal/observe", "internal/reduce", "internal/reduction", "internal/world"]],
   ["internal/confirmation/authority", ["internal/confirmation/internal/publication"]],
   ["internal/confirmation/internal/publication", ["internal/canon", "internal/domain"]],
+	["internal/portablevalue", ["internal/canon"]],
+	["internal/projectionprofile", ["internal/canon", "internal/domain", "internal/portablevalue"]],
+	["internal/projectiontranslate", ["internal/adapters/cli", "internal/adapters/http", "internal/canon", "internal/compare", "internal/domain", "internal/portablevalue", "internal/projectionprofile"]],
   ["internal/choice", ["internal/canon", "internal/compare", "internal/confirmation", "internal/domain", "internal/reduce"]],
   ["internal/choice/promotion", ["internal/choice", "internal/choice/promotion/internal/publication", "internal/confirmation", "internal/domain", "internal/store"]],
   ["internal/choice/promotion/authority", ["internal/choice/promotion/internal/publication"]],
@@ -430,6 +436,15 @@ function inspectPackageBoundaries(manifest, violations) {
     const packageDirectory = entry.path.slice(0, entry.path.lastIndexOf("/"));
     if (!aggregate.has(packageDirectory)) violations.push(["U6_INTERNAL_PACKAGE_UNMAPPED", entry.path]);
     for (const imported of internalImports) aggregate.get(packageDirectory)?.add(imported);
+		for (const imported of internalImports.filter((candidate) => candidate.startsWith("internal/adapters/"))) {
+			const translatorOwned = packageDirectory === "internal/projectiontranslate" &&
+				(imported === "internal/adapters/cli" || imported === "internal/adapters/http");
+			const worldModelOwned = packageDirectory === "internal/world" &&
+				(imported === "internal/adapters/cli/model" || imported === "internal/adapters/http/model");
+			if (!translatorOwned && !worldModelOwned) {
+				violations.push(["U6_ADAPTER_IMPORT_OUTSIDE_TRANSLATOR_OR_WORLD_MODEL", `${entry.path}: ${imported}`]);
+			}
+		}
     if (entry.path.startsWith("internal/choice/") && !entry.path.startsWith("internal/choice/promotion/") &&
         internalImports.some((candidate) => candidate === "internal/store" || candidate.startsWith("internal/choice/promotion"))) {
       violations.push(["U6_CHOICE_FORBIDDEN_AUTHORITY_IMPORT", entry.path]);
@@ -454,6 +469,43 @@ function inspectPackageBoundaries(manifest, violations) {
       violations.push(["U6_INTERNAL_IMPORT_LATTICE", `${packageDirectory}: ${actual.sort().join(",")}`]);
     }
   }
+}
+
+function inspectPortableAuthorityBoundaries(manifest, violations) {
+	const profileImport = `${modulePrefix}internal/projectionprofile`;
+	const externalReferences = [];
+	for (const entry of productionEntries(manifest)) {
+		const packageDirectory = entry.path.slice(0, entry.path.lastIndexOf("/"));
+		if (packageDirectory === "internal/projectionprofile") continue;
+		for (const imported of importedPackages(entry.lexical.commentless)) {
+			if (imported.path !== profileImport || imported.alias === "_" || imported.alias === ".") continue;
+			const alias = imported.alias || "projectionprofile";
+			const escaped = alias.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+			const references = entry.lexical.code.match(new RegExp(`\\b${escaped}\\s*\\.\\s*NewDerived\\b`, "gu")) ?? [];
+			for (let index = 0; index < references.length; index += 1) externalReferences.push(entry.path);
+		}
+	}
+	if (externalReferences.length !== 1 || externalReferences[0] !== "internal/projectiontranslate/translate.go") {
+		violations.push(["U6_PROFILE_DERIVATION_REFERENCE_SURFACE_NOT_EXACT", externalReferences.join(",") || "absent"]);
+	}
+	const translator = codeAt(manifest, "internal/projectiontranslate/translate.go");
+	const resolverBody = functionBody(translator, /\bfunc\s+newResolvedProfile\s*\(/u) ?? "";
+	if ((resolverBody.match(/\bprojectionprofile\s*\.\s*NewDerived\b/gu) ?? []).length !== 1) {
+		violations.push(["U6_PROFILE_DERIVATION_OUTSIDE_RESOLVER", "internal/projectiontranslate/translate.go:newResolvedProfile"]);
+	}
+	let internalReferences = 0;
+	let internalFiles = [];
+	for (const entry of productionEntries(manifest).filter((candidate) => candidate.path.startsWith("internal/projectionprofile/"))) {
+		const count = entry.lexical.code.match(/\bNewDerived\b/gu)?.length ?? 0;
+		if (count > 0) internalFiles.push(entry.path);
+		internalReferences += count;
+	}
+	const profile = codeAt(manifest, "internal/projectionprofile/profile.go");
+	const validBody = functionBody(profile, /\bfunc\s*\(p\s+Profile\)\s+Valid\s*\(/u) ?? "";
+	if (internalReferences !== 2 || !exactSet(internalFiles, ["internal/projectionprofile/profile.go"]) ||
+		(validBody.match(/\bNewDerived\b/gu) ?? []).length !== 1) {
+		violations.push(["U6_PROFILE_INTERNAL_REBUILD_SURFACE_NOT_EXACT", `${internalReferences}:${internalFiles.join(",")}`]);
+	}
 }
 
 function inspectTypedPublication(manifest, violations) {
@@ -1045,6 +1097,7 @@ function inspectNonclaims(manifest, violations) {
 function inspectManifest(manifest) {
   const violations = [];
   inspectPackageBoundaries(manifest, violations);
+	inspectPortableAuthorityBoundaries(manifest, violations);
   inspectTypedPublication(manifest, violations);
   inspectPromotionAndFreshness(manifest, violations);
   inspectBlindAndDecision(manifest, violations);

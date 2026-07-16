@@ -51,6 +51,7 @@ export const U6_ADDITIONAL_FILES = Object.freeze([
   "internal/choice/promotion/internal/publication/authority.go",
   "internal/choice/promotion/internal/publication/authority_test.go",
   "internal/choice/promotion/service.go",
+	"internal/choice/projectiontranslate_test.go",
   "internal/choice/schema_parity_test.go",
   "internal/choice/session.go",
   "internal/choice/session_roundtrip_test.go",
@@ -64,6 +65,20 @@ export const U6_ADDITIONAL_FILES = Object.freeze([
   "internal/confirmation/service_test.go",
   "internal/confirmation/wire.go",
   "internal/observe/executed_link.go",
+	"internal/portablevalue/fuzz_test.go",
+	"internal/portablevalue/value.go",
+	"internal/portablevalue/value_test.go",
+	"internal/projectionprofile/profile.go",
+	"internal/projectionprofile/profile_test.go",
+	"internal/projectiontranslate/cli.go",
+	"internal/projectiontranslate/cli_test.go",
+	"internal/projectiontranslate/confirmed.go",
+	"internal/projectiontranslate/fuzz_test.go",
+	"internal/projectiontranslate/http.go",
+	"internal/projectiontranslate/http_test.go",
+	"internal/projectiontranslate/resolve_test.go",
+	"internal/projectiontranslate/translate.go",
+	"internal/projectiontranslate/translate_test.go",
   "internal/store/head.go",
   "internal/store/head_darwin.go",
   "internal/store/head_test.go",
@@ -83,6 +98,9 @@ export const U6_SOURCE_SCOPE_ROOTS = Object.freeze([
   ...U5_SOURCE_SCOPE_ROOTS,
   "internal/choice",
   "internal/confirmation",
+	"internal/portablevalue",
+	"internal/projectionprofile",
+	"internal/projectiontranslate",
 ]);
 
 export const REQUIRED_U6_MUTANT_IDS = Object.freeze([
@@ -103,6 +121,18 @@ export const REQUIRED_U6_MUTANT_IDS = Object.freeze([
   "bind-alias-to-first-member",
   "omit-run-challenge-from-nonce",
   "zero-confirmation-schedule-offset",
+	"resolve-http-by-domain-alone",
+	"resolve-binding-by-digest-alone",
+	"skip-exact-projection-canonical-check",
+	"ignore-cli-projection-roster-order",
+	"ignore-http-unused-payload-slots",
+	"sort-ordered-string-list",
+	"join-ordered-string-list",
+	"deduplicate-ordered-string-list",
+	"decode-cli-bytes-through-utf8",
+	"collapse-cli-missing-to-empty",
+	"accept-unknown-missing-policy",
+	"translate-before-all-proofs-verify",
 ]);
 
 // This reviewed tuple list is deliberately separate from REQUIRED_U6_MUTANT_IDS
@@ -352,6 +382,160 @@ export const REVIEWED_U6_MUTANT_CONTRACT = Object.freeze([
     package: "./internal/observe",
     testName: "TestConfirmationScheduleIsPhaseBoundAndRotatedFromDiscovery",
   }),
+	Object.freeze({
+		id: "resolve-http-by-domain-alone",
+		file: "internal/projectiontranslate/http.go",
+		find: "\tif !exactBindingMatch(definition.Binding(), binding) {",
+		replace: "\tif definition.Binding().AdapterDomain() != binding.AdapterDomain() {",
+		package: "./internal/projectiontranslate",
+		testName: "TestResolveFixedHTTPBindingAndRejectNearMatch",
+	}),
+	Object.freeze({
+		id: "resolve-binding-by-digest-alone",
+		file: "internal/projectiontranslate/translate.go",
+		find: "\treturn candidateDigest.Valid() && requestedDigest.Valid() && candidateDigest == requestedDigest && bytes.Equal(candidateBytes, requestedBytes)",
+		replace: "\treturn candidateDigest.Valid() && requestedDigest.Valid() && candidateDigest == requestedDigest",
+		package: "./internal/projectiontranslate",
+		testName: "TestResolveRequiresDigestAndExactBindingBytes",
+	}),
+	Object.freeze({
+		id: "skip-exact-projection-canonical-check",
+		file: "internal/projectiontranslate/translate.go",
+		find: "\tif err != nil || !bytes.Equal(canonical, exact) {",
+		replace: "\tif err != nil || canonical == nil {",
+		package: "./internal/projectiontranslate",
+		testName: "TestCLITranslatorRejectsNoncanonicalProjectionBytes",
+	}),
+	Object.freeze({
+		id: "ignore-cli-projection-roster-order",
+		file: "internal/projectiontranslate/cli.go",
+		find: [
+			"\t\tfieldID, parseErr := exactText(fieldMembers[0])",
+			"\t\tif parseErr != nil || fieldID != profileFields[index].FieldID { // MUTANT_P07A_IGNORE_CLI_ROSTER_ORDER",
+			"\t\t\treturn Tuple{}, refuse(CodeRosterMismatch, fieldID, \"CLI projection field ID or registry order differs\")",
+			"\t\t}",
+			"\t\tvalue, parseErr := translateCLIValue(profileFields[index], fieldMembers[1])",
+			"\t\tif parseErr != nil {",
+			"\t\t\treturn Tuple{}, parseErr",
+			"\t\t}",
+			"\t\tfields[index] = Field{id: fieldID, value: value}",
+		].join("\n"),
+		replace: [
+			"\t\t_, parseErr = exactText(fieldMembers[0])",
+			"\t\tif parseErr != nil { // MUTANT_P07A_IGNORE_CLI_ROSTER_ORDER",
+			"\t\t\treturn Tuple{}, refuse(CodeRosterMismatch, \"\", \"CLI projection field ID is not text\")",
+			"\t\t}",
+			"\t\tvalue, parseErr := translateCLIValue(profileFields[index], fieldMembers[1])",
+			"\t\tif parseErr != nil {",
+			"\t\t\treturn Tuple{}, parseErr",
+			"\t\t}",
+			"\t\tfields[index] = Field{id: profileFields[index].FieldID, value: value}",
+		].join("\n"),
+		package: "./internal/projectiontranslate",
+		testName: "TestCLITranslatorRejectsSameTypedFieldReordering",
+	}),
+	Object.freeze({
+		id: "ignore-http-unused-payload-slots",
+		file: "internal/projectiontranslate/http.go",
+		find: "\t\tif tag != \"CANONICAL_JSON\" || descriptor.PortableTag != portablevalue.TagCanonicalJSON || integer != 0 || !emptyStrings || text != \"\" || canonicalJSON == \"\" { // MUTANT_P07A_HTTP_UNUSED_SLOTS",
+		replace: "\t\tif tag != \"CANONICAL_JSON\" || descriptor.PortableTag != portablevalue.TagCanonicalJSON || canonicalJSON == \"\" { // MUTANT_P07A_HTTP_UNUSED_SLOTS",
+		package: "./internal/projectiontranslate",
+		testName: "TestHTTPTranslatorRejectsDirtyMetadataUnusedSlot",
+	}),
+	Object.freeze({
+		id: "sort-ordered-string-list",
+		file: "internal/portablevalue/value.go",
+		find: "\tcanonical, err := canonicalStringList(values)",
+		replace: [
+			"\tfor left := 0; left < len(values); left++ {",
+			"\t\tfor right := left + 1; right < len(values); right++ {",
+			"\t\t\tif values[right] < values[left] { values[left], values[right] = values[right], values[left] }",
+			"\t\t}",
+			"\t}",
+			"\tcanonical, err := canonicalStringList(values[:])",
+		].join("\n"),
+		package: "./internal/portablevalue",
+		testName: "TestOrderedStringListPreservesOrderDuplicatesAndCopies",
+	}),
+	Object.freeze({
+		id: "join-ordered-string-list",
+		file: "internal/portablevalue/value.go",
+		find: "\tcanonical, err := canonicalStringList(values)",
+		replace: [
+			"\tjoined := \"\"",
+			"\tfor _, value := range values { joined += value }",
+			"\tvalues = []string{joined}",
+			"\tcanonical, err := canonicalStringList(values[:])",
+		].join("\n"),
+		package: "./internal/portablevalue",
+		testName: "TestOrderedStringListPreservesOrderDuplicatesAndCopies",
+	}),
+	Object.freeze({
+		id: "deduplicate-ordered-string-list",
+		file: "internal/portablevalue/value.go",
+		find: "\tcanonical, err := canonicalStringList(values)",
+		replace: [
+			"\tseen := map[string]struct{}{}",
+			"\tdeduplicated := make([]string, 0, len(values))",
+			"\tfor _, value := range values {",
+			"\t\tif _, duplicate := seen[value]; duplicate { continue }",
+			"\t\tseen[value] = struct{}{}",
+			"\t\tdeduplicated = append(deduplicated, value)",
+			"\t}",
+			"\tvalues = deduplicated",
+			"\tcanonical, err := canonicalStringList(values[:])",
+		].join("\n"),
+		package: "./internal/portablevalue",
+		testName: "TestOrderedStringListPreservesOrderDuplicatesAndCopies",
+	}),
+	Object.freeze({
+		id: "decode-cli-bytes-through-utf8",
+		file: "internal/projectiontranslate/cli.go",
+		find: "\t\tvalue, err := portablevalue.Bytes(decoded) // MUTANT_P07A_BYTES_THROUGH_UTF8",
+		replace: "\t\tvalue, err := portablevalue.String(string(decoded)) // MUTANT_P07A_BYTES_THROUGH_UTF8",
+		package: "./internal/projectiontranslate",
+		testName: "TestCLITranslationPreservesEveryHistoricalTagAndProfileOrder",
+	}),
+	Object.freeze({
+		id: "collapse-cli-missing-to-empty",
+		file: "internal/projectiontranslate/cli.go",
+		find: "\t\treturn portablevalue.Missing(), nil",
+		replace: [
+			"\t\tempty, _ := portablevalue.String(\"\")",
+			"\t\treturn empty, nil",
+		].join("\n"),
+		package: "./internal/projectiontranslate",
+		testName: "TestCLITranslationPreservesEveryHistoricalTagAndProfileOrder",
+	}),
+	Object.freeze({
+		id: "accept-unknown-missing-policy",
+		file: "internal/projectionprofile/profile.go",
+		find: "\tdefault:\n\t\treturn false, false\n\t}\n}\n\nfunc boundedText",
+		replace: "\tdefault:\n\t\treturn false, true\n\t}\n}\n\nfunc boundedText",
+		package: "./internal/projectionprofile",
+		testName: "TestProfileRejectsUnknownMissingPolicy",
+	}),
+	Object.freeze({
+		id: "translate-before-all-proofs-verify",
+		file: "internal/projectiontranslate/confirmed.go",
+		find: [
+			"\t\tfingerprint, err := roster.Verify(proof.CandidateExecutionKey, frozenProjection) // MUTANT_P07A_VERIFY_BEFORE_TRANSLATE",
+			"\t\tif err != nil {",
+			"\t\t\treturn ConfirmedTranslations{}, refuse(CodeRosterMismatch, candidateKey, \"projection proof does not match its confirmed fingerprint\")",
+			"\t\t}",
+		].join("\n"),
+		replace: [
+			"\t\tfingerprint, err := roster.Verify(proof.CandidateExecutionKey, frozenProjection) // MUTANT_P07A_TRANSLATE_BEFORE_ALL_VERIFY",
+			"\t\tif err != nil {",
+			"\t\t\treturn ConfirmedTranslations{}, refuse(CodeRosterMismatch, candidateKey, \"projection proof does not match its confirmed fingerprint\")",
+			"\t\t}",
+			"\t\tresolvedEarly, resolveErr := Resolve(binding)",
+			"\t\tif resolveErr != nil { return ConfirmedTranslations{}, resolveErr }",
+			"\t\tif _, translateErr := resolvedEarly.Translate(frozenProjection); translateErr != nil { return ConfirmedTranslations{}, translateErr }",
+		].join("\n"),
+		package: "./internal/choice",
+		testName: "TestTranslateConfirmedVerifiesCompleteRosterBeforeAnyTranslation",
+	}),
 ]);
 
 export const U6_MUTANTS = Object.freeze(
@@ -374,7 +558,7 @@ export function assertU6MutantDefinitionSet(
   requiredIDs = REQUIRED_U6_MUTANT_IDS,
   reviewedContract = REVIEWED_U6_MUTANT_CONTRACT,
 ) {
-  const requiredCount = 17;
+	const requiredCount = 29;
   if (!Object.isFrozen(requiredIDs) || requiredIDs.length !== requiredCount || new Set(requiredIDs).size !== requiredCount) {
     throw new MutationGateError("U6_INVALID_REQUIRED_ID_SET", `U6 requires exactly ${requiredCount} unique frozen IDs`);
   }
@@ -383,7 +567,7 @@ export function assertU6MutantDefinitionSet(
     throw new MutationGateError("U6_INVALID_REVIEWED_MUTANT_CONTRACT", "U6 reviewed tuples must be recursively frozen");
   }
   if (!Object.isFrozen(mutants) || mutants.length !== requiredCount || mutants.some((tuple) => !Object.isFrozen(tuple))) {
-    throw new MutationGateError("U6_MUTANT_SET_NOT_IMMUTABLE", "U6 executable tuples must be one recursively frozen set of 17");
+		throw new MutationGateError("U6_MUTANT_SET_NOT_IMMUTABLE", `U6/P07A executable tuples must be one recursively frozen set of ${requiredCount}`);
   }
   const ids = mutants.map((mutant) => mutant.id);
   if (!sameArray(ids, requiredIDs) || new Set(ids).size !== requiredCount ||
@@ -392,7 +576,7 @@ export function assertU6MutantDefinitionSet(
   }
   const sourceMutations = mutants.map((mutant) => `${mutant.file}\0${mutant.find}\0${mutant.replace}`);
   if (new Set(sourceMutations).size !== requiredCount) {
-    throw new MutationGateError("U6_DUPLICATE_SOURCE_MUTATION", "U6 requires 17 distinct source faults");
+		throw new MutationGateError("U6_DUPLICATE_SOURCE_MUTATION", `U6/P07A requires ${requiredCount} distinct source faults`);
   }
   const allowedFiles = new Set(U6_SANDBOX_FILE_ALLOWLIST);
   const reviewedByID = new Map(reviewedContract.map((tuple) => [tuple.id, tuple]));
@@ -412,7 +596,7 @@ export function assertU6MutantDefinitionSet(
     if (typeof mutant.find !== "string" || mutant.find.length === 0 || mutant.find === mutant.replace) {
       throw new MutationGateError("U6_INVALID_MUTATION", `${mutant.id} is not one exact effective replacement`);
     }
-    if (!/^\.\/internal\/(?:choice|confirmation|domain|observe|store)$/u.test(mutant.package)) {
+		if (!/^\.\/internal\/(?:choice|confirmation|domain|observe|portablevalue|projectionprofile|projectiontranslate|store)$/u.test(mutant.package)) {
       throw new MutationGateError("U6_INVALID_MUTATION_PACKAGE", `${mutant.id} has invalid package ${mutant.package}`);
     }
     if (!/^Test[A-Za-z0-9_]+$/u.test(mutant.testName)) {
@@ -667,7 +851,7 @@ export async function selfTest() {
     { phase: "post-control", manifest: seed.manifest.digest, sandbox: "/fresh/u6/c" },
   ];
   assert.match(exactU6ABADigest(U6_MUTANTS[0], records, seed), /^sha256:[0-9a-f]{64}$/u);
-  return "U6 mutation self-test passed: 17/17 recursively frozen tuples; exact anchors/tests/manifests; inherited hostile-copy tripwires; fresh synthetic A/B/A and receipt closure.";
+	return `U6/P07A mutation self-test passed: ${U6_MUTANTS.length}/${U6_MUTANTS.length} recursively frozen tuples; exact anchors/tests/manifests; inherited hostile-copy tripwires; fresh synthetic A/B/A and receipt closure.`;
 }
 
 export async function main(arguments_ = process.argv.slice(2)) {
@@ -687,7 +871,10 @@ export async function main(arguments_ = process.argv.slice(2)) {
   const seed = await createU6SeedSnapshot();
   const results = [];
   try {
-    for (const mutant of U6_MUTANTS) {
+		// Run the newly added P07A faults first for faster fail-closed feedback,
+		// while retaining the complete frozen U6/P07A set and final denominator.
+		const executionOrder = [...U6_MUTANTS.slice(17), ...U6_MUTANTS.slice(0, 17)];
+		for (const mutant of executionOrder) {
       const phaseRecords = [];
       const result = await runU2Mutant(mutant, toolchain, {
         prepareExperiment({ mutant: currentMutant, toolchain: currentToolchain, phase }) {
@@ -716,7 +903,7 @@ export async function main(arguments_ = process.argv.slice(2)) {
   process.stdout.write(`Immutable U6 seed manifest: ${seed.manifest.digest}\n`);
   process.stdout.write("Containment notice: private mutation copies retain the invoking user's host filesystem and network authority.\n");
   for (const item of results) process.stdout.write(`${item.result}; exact fresh A/B/A closure digest ${item.receipt}\n`);
-  process.stdout.write(`U6 mutation gate: ${results.length}/17 required mutants killed; ${results.length}/17 fresh A/B/A receipts.\n`);
+	process.stdout.write(`U6/P07A mutation gate: ${results.length}/${U6_MUTANTS.length} required mutants killed; ${results.length}/${U6_MUTANTS.length} fresh A/B/A receipts.\n`);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === resolve(modulePath)) {

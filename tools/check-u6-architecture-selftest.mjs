@@ -16,6 +16,9 @@ const copyPaths = Object.freeze([
   "internal/reduction",
   "internal/store",
   "internal/confirmation",
+	"internal/portablevalue",
+	"internal/projectionprofile",
+	"internal/projectiontranslate",
   "internal/choice",
   "internal/world",
   "spec/schema/v1/common.schema.json",
@@ -35,6 +38,10 @@ const requiredCaseIDs = Object.freeze([
   "arguments",
   "harmless-comment",
   "harmless-astral-comment",
+	"portablevalue-full-adapter-import",
+	"world-full-adapter-import",
+	"second-profile-derivation-reference",
+	"profile-constructor-reexport",
   "comment-camouflage",
   "raw-head-export",
   "raw-head-method-value-export",
@@ -81,7 +88,7 @@ const requiredCaseIDs = Object.freeze([
   "manifest-barrier-tamper",
   "manifest-tool-failure",
 ]);
-const requiredRosterDigest = "2eb647f2febf5d00918b8cc1ee2e22a006c0f6485fce4ce9ee2860c762ea8596";
+const requiredRosterDigest = "3587f91a244f801617cc6c2a613e3b094898f9e36cfcefd47d1af4f0bc704b87";
 
 async function copyFixture() {
   const fixture = await mkdtemp(join(tmpdir(), "countershape-u6-architecture-"));
@@ -153,7 +160,7 @@ async function exercise(name) {
           fixture,
           "internal/choice/blind.go",
           "package choice",
-          "package choice\n\n// AdvanceHead WakeEvent DisplayGroups() GeneralizationClaimed: true",
+			"package choice\n\n// AdvanceHead WakeEvent DisplayGroups() GeneralizationClaimed: true; projectionprofile.NewDerived; domain.AdapterCLI; HTTPStimulus",
         );
         break;
       case "harmless-astral-comment":
@@ -164,6 +171,40 @@ async function exercise(name) {
           "package choice\n\n// Astral lexical alignment control: 🧪",
         );
         break;
+		case "portablevalue-full-adapter-import":
+			await replaceExact(
+				fixture,
+				"internal/portablevalue/value.go",
+				"package portablevalue",
+				"package portablevalue\n\nimport _ \"github.com/nelsonwerd/countershape/internal/adapters/cli\"",
+			);
+			expected = "U6_ADAPTER_IMPORT_OUTSIDE_TRANSLATOR_OR_WORLD_MODEL";
+			break;
+		case "world-full-adapter-import":
+			await replaceExact(
+				fixture,
+				"internal/world/cli_api.go",
+				"github.com/nelsonwerd/countershape/internal/adapters/cli/model",
+				"github.com/nelsonwerd/countershape/internal/adapters/cli",
+			);
+			expected = "U6_ADAPTER_IMPORT_OUTSIDE_TRANSLATOR_OR_WORLD_MODEL";
+			break;
+		case "second-profile-derivation-reference":
+			await writeSource(
+				fixture,
+				"internal/projectiontranslate/forged_profile.go",
+				"package projectiontranslate\n\nimport pp \"github.com/nelsonwerd/countershape/internal/projectionprofile\"\n\nvar forgedProfileConstructor = pp.NewDerived\n",
+			);
+			expected = "U6_PROFILE_DERIVATION_REFERENCE_SURFACE_NOT_EXACT";
+			break;
+		case "profile-constructor-reexport":
+			await writeSource(
+				fixture,
+				"internal/projectionprofile/forged_profile.go",
+				"package projectionprofile\n\nvar ForgedProfileConstructor = NewDerived\n",
+			);
+			expected = "U6_PROFILE_INTERNAL_REBUILD_SURFACE_NOT_EXACT";
+			break;
       case "comment-camouflage":
         await replaceExact(
           fixture,
@@ -529,8 +570,9 @@ async function main() {
   const observed = [];
   for (const name of requiredCaseIDs) observed.push(await exercise(name));
   if (observed.join("\n") !== requiredCaseIDs.join("\n")) throw new Error("self-test case roster changed during execution");
-  const hostile = observed.length - 2;
-  process.stdout.write(`U6 architecture checker self-test OK (2 clean/comment controls; ${hostile}/${hostile} hostile cases)\n`);
+	const cleanControls = new Set(["clean", "harmless-comment", "harmless-astral-comment"]);
+	const hostile = observed.filter((name) => !cleanControls.has(name)).length;
+	process.stdout.write(`U6 architecture checker self-test OK (${cleanControls.size} clean/comment controls; ${hostile}/${hostile} hostile cases)\n`);
 }
 
 main().catch((error) => {
