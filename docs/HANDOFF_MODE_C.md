@@ -12,10 +12,10 @@
 
 ## Current state
 
-- **Pipeline phase:** U0–U6 are sealed and strict-clean. The P07 implementation-time red team found a real authority gap and split the work. The corrected planning contracts are committed at `e2cc2aa80f19`, but that commit's receipt failed after a second didrun concurrent-append fork. The follow-up receipt-document commit carrying this handoff must be confirmed strict-clean on the fresh ledger before P07A/U6b begins; P07B/U6c follows P07A.
-- **Git:** repository is on `codex/countershape-autopilot`. The last undisputed sealed implementation boundary is U6a commit `64b65cbfa6099f9be88c2de3cc2cc4dd5ff9ff81`, tree `27dc5f5d4930cc9a4f759e4e4973ed7fb4d5b6d6`. The corrected P07 planning implementation is commit `e2cc2aa80f19d9a48f7265f20e8e0d46e4cd133a`, tree `875782ca8effaa4fc621fda065bb030910ba3955`; its failed manifest remains negative history. Resolve the receipt-document commit carrying this handoff locally instead of copying a self-referential hash from prose.
-- **didrun:** installed globally. Two ledgers broke under concurrent writers and are preserved under `.didrun-history/`. The first was never claimed or sealed. The second has an intact prefix containing the evidence that backs the already sealed U1–U6 Git-note manifests, then forks at stored index `865`; only its post-fork P07 claims and failed `e2cc2aa` manifest are unusable. A fresh ledger is used for the recovery boundary, and every didrun operation is serialized by the primary agent. See `docs/status/DIDRUN_BUGS.md` before recording evidence.
-- **Build:** U5 adds the sealed bounded tri-valued reducer, strict transcript/replay boundary, typed CLI/HTTP neighbors, and durable sweep authority. Sealed U6 adds a bounded immutable semantic object store, full-token CAS fixed head spine through `RULING`, physical fresh confirmation, strict Choicepoint/DecisionRecord codecs, blind semantic DTO/session, sealed compile eligibility, and predecessor/action-bound opaque publication capabilities. Fresh U6 Choicepoints still use only `WHOLE_EXACT_CANONICAL_PROJECTION_V1`; they cannot honestly emit a selected-field contract. `REFINE` may exist as a semantic noncompilable DecisionRecord, but durable promotion returns `REFINE_REQUIRES_SUCCESSOR_STUDY` with no object or head mutation. P07 planning includes an executable generated six-file schema fixture only; it is not store-bound source authority or a runtime emitter. No portable selected-field ruling, source witness, runtime-generated standalone bundle, product CLI, server, dashboard, visual renderer, or report exists.
+- **Pipeline phase:** U0–U6 and the P07 planning recovery are sealed and strict-clean. P07A-A now implements the portable value/profile/proof-first translator substrate at source commit `d274588b3aba`, but that commit's first manifest is permanently strict-red because sixteen exploratory claims are stale beside fifteen final exact claims. The follow-up receipt-document commit carrying this handoff is acceptable only when its fresh serialized ledger is chain-intact and strict-clean. P07A-B Choice/ruling integration follows; P07B/U6c remains later.
+- **Git:** repository is on `codex/countershape-autopilot`. The last complete product-unit boundary remains U6a commit `64b65cbfa6099f9be88c2de3cc2cc4dd5ff9ff81`, tree `27dc5f5d4930cc9a4f759e4e4973ed7fb4d5b6d6`. P07 planning recovery is commit `3812158f1ae2`. The translator substrate source is commit `d274588b3aba26d2c29258dd42e167294d7c5a0f`, tree `2f2924e20dbe23559af755e475d353381fa08327`; its mixed-generation failed manifest remains negative history. Resolve the follow-up receipt commit carrying this handoff locally rather than copying a self-referential hash from prose.
+- **didrun:** installed globally. Two ledgers broke under concurrent writers and are preserved under `.didrun-history/`; a third chain-intact P07A source ledger is preserved because its strict manifest correctly rejected stale exploratory claims. Every didrun operation is serialized by the primary agent. New S6-08 records the unit-generation friction; S6-07 remains the reason agents never write didrun concurrently. See `docs/status/DIDRUN_BUGS.md` before recording evidence.
+- **Build:** U5 adds the sealed bounded tri-valued reducer, strict transcript/replay boundary, typed CLI/HTTP neighbors, and durable sweep authority. Sealed U6 adds a bounded immutable semantic object store, full-token CAS fixed head spine through `RULING`, physical fresh confirmation, strict Choicepoint/DecisionRecord codecs, blind semantic DTO/session, sealed compile eligibility, and predecessor/action-bound opaque publication capabilities. P07A-A adds a closed bounded portable value algebra, exact adapter-bound profile identity, all-127 CLI and fixed HTTP binding resolution, strict unchanged historical-wire translation, proof-first confirmed translations, architecture closure, active fuzzing, and 29-fault inherited-plus-translator A/B/A mutation coverage. Production Choice is not integrated yet: fresh Choicepoints still use only `WHOLE_EXACT_CANONICAL_PROJECTION_V1`, so no portable selected-field ruling, source witness, runtime-generated standalone bundle, product CLI, server, dashboard, visual renderer, or report exists.
 - **External APIs:** none used in the product. Current web research is read-only. Real model integrations remain human-gated and must never be faked.
 
 ## Read first, in order
@@ -26,13 +26,14 @@
 4. `docs/PROJECTION_ALGEBRA.md`
 5. `research/deep-dive/11-p07-implementation-red-team.md`
 6. `docs/status/P07-PLANNING.md`
-7. `research/ideation/07-divergence-and-selection.md`
-8. `research/ideation/06-founder-falsification.md`
-9. `research/ideation/05-counterfactual-prior-art.md`
-10. `research/ideation/04-finalist-duel.md`
-11. `research/ideation/02-wake-overlap-audit.md`
-12. `research/grounding/00-last30days-synthesis.md`
-13. this handoff
+7. `docs/status/P07A-TRANSLATOR.md`
+8. `research/ideation/07-divergence-and-selection.md`
+9. `research/ideation/06-founder-falsification.md`
+10. `research/ideation/05-counterfactual-prior-art.md`
+11. `research/ideation/04-finalist-duel.md`
+12. `research/ideation/02-wake-overlap-audit.md`
+13. `research/grounding/00-last30days-synthesis.md`
+14. this handoff
 
 Read `research/deep-dive/07-SYNTHESIS.md`, `08-RED_TEAM.md`, and the later P07 implementation-time correction immediately after the semantic contracts and before the ideation files.
 
@@ -235,6 +236,12 @@ The plain seal stopped on 54 aggregate entropy findings. After the exact invento
 The corrected planning implementation is commit `e2cc2aa80f19`, tree `875782ca8eff`. Its original strict verification exits `1` with `13/28 claims recorded-exact`: one claim is `FAILED`, fourteen are `STALE`, and the thirteen positive rows are shifted one command backward and therefore semantically misbound. None of those 28 claims supports a capability.
 
 The cause is the second concurrent-writer fork recorded as S6-07. The failed commit, Git note, ledger, claims, seals, and HTML report are preserved. The follow-up commit carrying `docs/status/P07-PLANNING.md`, the S6-07 finding, and this handoff is the recovery boundary. It is acceptable only if its fresh serialized ledger has an intact chain and its own `NO_COLOR=1 didrun verify --strict` exits `0`. Read the status file for the exact two-stage authority lock and explicit nonclaims.
+
+## P07A translator-substrate receipt boundary
+
+Source commit `d274588b3aba`, tree `2f2924e20dbe`, contains the portable algebra, exact derived profiles, strict CLI/HTTP historical translators, proof-first confirmed translation seal, architecture closure, active fuzz properties, and 29-fault mutation gate. Its first manifest is permanently strict-red at `15/31 claims recorded-exact` because sixteen honest intermediate claims are stale. It is not described as strict-clean.
+
+The follow-up commit carrying `docs/status/P07A-TRANSLATOR.md`, S6-08, the concept-brief handoff state, and this handoff is the recovery boundary. Accept it only if its fresh ledger is chain-intact, its claim labels match the receipt table verbatim, and strict exits `0`. P07A-B must then integrate sealed translations into Choice without changing legacy fixture bytes; no current source may be described as a portable selected-field ruling.
 
 ### U6 operational facts that P07A/P07B must preserve
 

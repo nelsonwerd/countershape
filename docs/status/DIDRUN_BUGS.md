@@ -67,3 +67,11 @@ This file records didrun behavior observed during a real multi-agent build. It i
 ## Evidence boundary
 
 These are live product findings, not proof of adversarial tamper resistance, platform portability, or behavior outside this macOS session. Both broken ledgers are retained as history rather than rewritten, repaired, or used to support a capability claim.
+
+## S6-08 — Strict includes stale exploratory claims from the whole live ledger
+
+- **Observed:** the P07A translator source commit `d274588b3aba` sealed with fifteen final tree-exact claims, but its manifest also inherited sixteen claims declared on earlier source trees in the same chain-intact ledger. `NO_COLOR=1 didrun verify --strict` exited `1` with `15/31 claims recorded-exact` and marked the earlier sixteen rows `STALE`.
+- **Expected and useful behavior:** strict correctly refused to call the mixed manifest clean. The stale claims were not deleted, narrowed, or relabeled, and the source commit was not resealed because `didrun seal` replaces its Git note.
+- **Operational friction:** didrun has no explicit unit-close or claim-supersession primitive. During a multi-pass build, honest intermediate claims remain part of every later seal in that session even when final replacements are exact. A strict shippable boundary therefore requires either never claiming until the very end or preserving the iterative ledger and starting a fresh ledger for a follow-up receipt commit.
+- **Response:** preserve the complete source ledger under `.didrun-history/2026-07-15-p07a-translator-stale/.didrun/`; keep its failed manifest as negative history; create a follow-up documentation boundary; rerun the load-bearing gates against that exact tree through a fresh serialized ledger; seal once; and require both chain integrity and strict exit `0`.
+- **Suggested improvement:** support an immutable claim-generation or unit identifier and allow `seal` to select one closed generation while retaining prior generations as visible negative/history rows. Never silently discard claims, and continue making a mixed-generation strict seal nonzero by default.
