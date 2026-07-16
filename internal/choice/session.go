@@ -10,6 +10,7 @@ import (
 
 	"github.com/nelsonwerd/countershape/internal/canon"
 	"github.com/nelsonwerd/countershape/internal/domain"
+	"github.com/nelsonwerd/countershape/internal/portablevalue"
 )
 
 const (
@@ -55,7 +56,7 @@ type RulingDraftInput struct {
 	Action               Action
 	SelectedFields       []string
 	AllowedAliases       []string
-	CustomExpectation    *CompleteTuple
+	CustomExpectation    *SelectedTuple
 	CustomReviewer       string
 	CustomReviewEvidence domain.Digest
 }
@@ -162,6 +163,12 @@ func (s Session) Propose(input RulingDraftInput) (Session, error) {
 	result.provisional = &draft
 	result.final = &draft
 	result.state = SessionProvisionalRecorded
+	// An accepted blind proposal is guaranteed to remain durably recordable if
+	// it is affirmed unchanged. This is intentionally conservative: a proposal
+	// that would fit only after a smaller post-reveal change is refused here.
+	if err := preflightPortableDecisionBudget(result); err != nil {
+		return Session{}, err
+	}
 	return result, nil
 }
 
@@ -201,7 +208,44 @@ func (s Session) Revise(input RulingDraftInput, rationale string) (Session, erro
 	result.final = &draft
 	result.rationale = rationale
 	result.state = SessionPostRevealRecorded
+	if err := preflightPortableDecisionBudget(result); err != nil {
+		return Session{}, err
+	}
 	return result, nil
+}
+
+// preflightPortableDecisionBudget materializes the exact prospective durable
+// body with minimal late-bound attribution. Portable sessions reserve the
+// remaining quarter of the one-MiB object ceiling for the actor, annotation,
+// and receipt arguments supplied only at Finalize.
+func preflightPortableDecisionBudget(source Session) error {
+	if source.record.mode != choicepointPortable || source.final == nil {
+		return nil
+	}
+	prospective := source.clone()
+	prospective.state = SessionPostRevealRecorded
+	prospective.revealed = true
+	// Retain the actual pre-reveal partition. Missing required surfaces are
+	// modeled as future post-reveal visits, which is the exact legal completion
+	// of the current session rather than an all-post-reveal approximation.
+	for _, surface := range requiredReviewSurfaces {
+		prospective.visits[surface] = struct{}{}
+	}
+	decision, err := buildDecisionRecord(
+		prospective,
+		"x",
+		"",
+		[]domain.ReceiptReference{},
+		nil,
+		false,
+	)
+	if err != nil {
+		return err
+	}
+	if len(decision.canonicalBytes) > maxPortableDecisionBaseBytes {
+		return refusal(CodeInputLimitExceeded, "portable ruling draft cannot fit the reserved durable DecisionRecord budget")
+	}
+	return nil
 }
 
 func (s Session) Finalize(
@@ -230,29 +274,29 @@ func newRulingDraft(record ChoicepointRecord, view BlindView, input RulingDraftI
 	if input.SelectedFields == nil || input.AllowedAliases == nil {
 		return rulingDraft{}, refusal(CodeOmittedSelectedFields, "ruling draft selections must be explicit arrays")
 	}
-	selectedFields := make([]string, len(input.SelectedFields))
-	copy(selectedFields, input.SelectedFields)
-	sort.Strings(selectedFields)
-	for index := 1; index < len(selectedFields); index++ {
-		if selectedFields[index] == selectedFields[index-1] {
-			return rulingDraft{}, refusal(CodeDuplicateSelectedField, "ruling draft field is duplicated")
-		}
+	if err := view.admitAliases(input.AllowedAliases); err != nil {
+		return rulingDraft{}, err
 	}
-	aliases := make([]string, len(input.AllowedAliases))
-	copy(aliases, input.AllowedAliases)
-	sort.Strings(aliases)
-	allowed, err := view.resolveAliases(aliases)
+	selected, err := record.confirmed.registry.resolveSelected(input.SelectedFields)
+	if err != nil {
+		return rulingDraft{}, err
+	}
+	selectedFields := make([]string, len(selected))
+	for index, field := range selected {
+		selectedFields[index] = field.String()
+	}
+	aliases, allowed, err := view.normalizeAliases(input.AllowedAliases)
 	if err != nil {
 		return rulingDraft{}, err
 	}
 	normalized := RulingDraftInput{
 		Action: input.Action, SelectedFields: selectedFields, AllowedAliases: aliases,
-		CustomExpectation: cloneTuplePointer(input.CustomExpectation), CustomReviewer: input.CustomReviewer,
+		CustomExpectation: cloneSelectedTuplePointer(input.CustomExpectation), CustomReviewer: input.CustomReviewer,
 		CustomReviewEvidence: input.CustomReviewEvidence,
 	}
 	rulingInput := RulingInput{
 		Action: input.Action, SelectedFields: selectedFields, AllowedObserved: allowed,
-		CustomExpectation: cloneTuplePointer(input.CustomExpectation),
+		CustomExpectation: cloneSelectedTuplePointer(input.CustomExpectation),
 	}
 	if input.Action == ActionCustomExpectation {
 		if input.CustomExpectation == nil {
@@ -272,7 +316,7 @@ func newRulingDraft(record ChoicepointRecord, view BlindView, input RulingDraftI
 	if err != nil {
 		return rulingDraft{}, err
 	}
-	identity, err := rulingDraftIdentityFor(record.digest, normalized)
+	identity, err := rulingDraftIdentityFor(record, normalized)
 	if err != nil {
 		return rulingDraft{}, err
 	}
@@ -313,11 +357,15 @@ func parseRulingDraft(exact []byte, record ChoicepointRecord, view BlindView) (r
 		}
 	}
 	if identity.CustomExpectation != nil {
-		tuple, tupleErr := tupleFromWire(*identity.CustomExpectation)
+		tuple, tupleErr := tupleFromWire(record.confirmed.registry, *identity.CustomExpectation)
 		if tupleErr != nil {
 			return rulingDraft{}, tupleErr
 		}
-		input.CustomExpectation = &tuple
+		selectedTuple, tupleErr := newSelectedTuple(record.confirmed, identity.SelectedFields, tuple.Fields)
+		if tupleErr != nil {
+			return rulingDraft{}, tupleErr
+		}
+		input.CustomExpectation = &selectedTuple
 	}
 	draft, err := newRulingDraft(record, view, input)
 	if err != nil || !bytes.Equal(draft.canonicalBytes, exact) {
@@ -326,9 +374,9 @@ func parseRulingDraft(exact []byte, record ChoicepointRecord, view BlindView) (r
 	return draft, nil
 }
 
-func rulingDraftIdentityFor(choicepoint domain.Digest, input RulingDraftInput) (rulingDraftIdentity, error) {
+func rulingDraftIdentityFor(record ChoicepointRecord, input RulingDraftInput) (rulingDraftIdentity, error) {
 	identity := rulingDraftIdentity{
-		SchemaVersion: domain.SchemaVersion, Kind: "RulingDraft", ChoicepointDigest: choicepoint.String(),
+		SchemaVersion: domain.SchemaVersion, Kind: "RulingDraft", ChoicepointDigest: record.digest.String(),
 		Action: string(input.Action), SelectedFields: cloneExplicitStrings(input.SelectedFields),
 		AllowedAliases: cloneExplicitStrings(input.AllowedAliases), CustomReviewer: input.CustomReviewer,
 	}
@@ -336,7 +384,7 @@ func rulingDraftIdentityFor(choicepoint domain.Digest, input RulingDraftInput) (
 		identity.CustomReviewEvidenceDigest = input.CustomReviewEvidence.String()
 	}
 	if input.CustomExpectation != nil {
-		wire, err := tupleToWire(*input.CustomExpectation)
+		wire, err := tupleToWire(record.confirmed.registry, CompleteTuple{Fields: input.CustomExpectation.Fields()})
 		if err != nil {
 			return rulingDraftIdentity{}, err
 		}
@@ -345,17 +393,22 @@ func rulingDraftIdentityFor(choicepoint domain.Digest, input RulingDraftInput) (
 	return identity, nil
 }
 
-func tupleToWire(tuple CompleteTuple) (tupleWire, error) {
-	fields := append([]FieldValue(nil), tuple.Fields...)
-	sort.Slice(fields, func(i, j int) bool { return fields[i].FieldID < fields[j].FieldID })
+func tupleToWire(registry FieldRegistry, tuple CompleteTuple) (tupleWire, error) {
+	fields := cloneTuple(tuple).Fields
 	result := tupleWire{Fields: make([]fieldValueWire, len(fields))}
+	lastOrder := -1
 	for index, field := range fields {
-		if index > 0 && field.FieldID == fields[index-1].FieldID {
-			return tupleWire{}, refusal(CodeDuplicateTupleField, "tuple wire field is duplicated")
+		order, present := registry.fieldOrder(field.FieldID)
+		if !present || order <= lastOrder {
+			return tupleWire{}, refusal(CodeDuplicateTupleField, "tuple wire fields do not follow exact registry order")
 		}
+		lastOrder = order
 		value := field.Value
 		wire := exactValueWire{Tag: string(value.Tag()), Text: value.Text(), Boolean: value.Boolean()}
-		if value.Tag() == ValueCanonicalJSON {
+		if value.Tag() == ValueBytes {
+			wire.Text = base64.StdEncoding.EncodeToString(value.Bytes())
+		}
+		if value.Tag() == ValueCanonicalJSON || value.Tag() == ValueOrderedStringList {
 			wire.Text = ""
 			wire.CanonicalJSONBase64 = base64.StdEncoding.EncodeToString(value.CanonicalBytes())
 		}
@@ -364,15 +417,18 @@ func tupleToWire(tuple CompleteTuple) (tupleWire, error) {
 	return result, nil
 }
 
-func tupleFromWire(wire tupleWire) (CompleteTuple, error) {
+func tupleFromWire(registry FieldRegistry, wire tupleWire) (CompleteTuple, error) {
 	if wire.Fields == nil {
 		return CompleteTuple{}, refusal(CodeIncompleteTuple, "tuple wire fields are omitted")
 	}
 	result := CompleteTuple{Fields: make([]FieldValue, len(wire.Fields))}
+	lastOrder := -1
 	for index, field := range wire.Fields {
-		if field.FieldID == "" || (index > 0 && field.FieldID <= wire.Fields[index-1].FieldID) {
+		order, present := registry.fieldOrder(field.FieldID)
+		if field.FieldID == "" || !present || order <= lastOrder {
 			return CompleteTuple{}, refusal(CodeDuplicateTupleField, "tuple wire order or field id is invalid")
 		}
+		lastOrder = order
 		value, err := exactValueFromWire(field.Value)
 		if err != nil {
 			return CompleteTuple{}, err
@@ -409,6 +465,29 @@ func exactValueFromWire(wire exactValueWire) (ExactValue, error) {
 			return ExactValue{}, refusal(CodeInvalidFieldType, "boolean wire carries another payload")
 		}
 		return BooleanValue(wire.Boolean), nil
+	case ValueBytes:
+		if wire.Boolean || wire.CanonicalJSONBase64 != "" {
+			return ExactValue{}, refusal(CodeInvalidFieldType, "byte wire carries another payload")
+		}
+		body, err := base64.StdEncoding.Strict().DecodeString(wire.Text)
+		if err != nil || base64.StdEncoding.EncodeToString(body) != wire.Text {
+			return ExactValue{}, refusal(CodeInvalidFieldType, "byte wire base64 is invalid")
+		}
+		return BytesValue(body)
+	case ValueOrderedStringList:
+		if wire.Text != "" || wire.Boolean || wire.CanonicalJSONBase64 == "" {
+			return ExactValue{}, refusal(CodeInvalidFieldType, "ordered-list wire payload is invalid")
+		}
+		body, err := base64.StdEncoding.Strict().DecodeString(wire.CanonicalJSONBase64)
+		if err != nil || base64.StdEncoding.EncodeToString(body) != wire.CanonicalJSONBase64 {
+			return ExactValue{}, refusal(CodeInvalidFieldType, "ordered-list wire base64 is invalid")
+		}
+		portable, err := portablevalue.OrderedStringListFromCanonical(body)
+		if err != nil {
+			return ExactValue{}, refusal(CodeInvalidFieldType, "ordered-list wire canonical bytes are invalid")
+		}
+		members, _ := portable.OrderedStrings()
+		return OrderedStringListValue(members)
 	case ValueCanonicalJSON:
 		if wire.Text != "" || wire.Boolean || wire.CanonicalJSONBase64 == "" {
 			return ExactValue{}, refusal(CodeInvalidFieldType, "canonical JSON wire payload is invalid")
@@ -421,14 +500,6 @@ func exactValueFromWire(wire exactValueWire) (ExactValue, error) {
 	default:
 		return ExactValue{}, refusal(CodeInvalidFieldType, "tuple wire has an unknown exact-value tag")
 	}
-}
-
-func cloneTuplePointer(input *CompleteTuple) *CompleteTuple {
-	if input == nil {
-		return nil
-	}
-	value := cloneTuple(*input)
-	return &value
 }
 
 func cloneExplicitStrings(input []string) []string {

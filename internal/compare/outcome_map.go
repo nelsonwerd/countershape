@@ -375,7 +375,22 @@ func (m ConfirmedOutcomeMap) ProjectionRoster() ConfirmedProjectionRoster {
 }
 
 func (r ConfirmedProjectionRoster) Valid() bool {
-	return r.mapDigest.Valid() && r.preservationDigest.Valid() && r.projectionDefinitionDigest.Valid() && len(r.entries) >= 2
+	if !r.mapDigest.Valid() || !r.preservationDigest.Valid() || !r.projectionDefinitionDigest.Valid() ||
+		len(r.entries) < 2 || len(r.entries) > 4 {
+		return false
+	}
+	seen := make(map[string]struct{}, len(r.entries))
+	for _, entry := range r.entries {
+		key := entry.candidate.String()
+		if !entry.candidate.Valid() || !entry.fingerprint.Valid() {
+			return false
+		}
+		if _, duplicate := seen[key]; duplicate {
+			return false
+		}
+		seen[key] = struct{}{}
+	}
+	return true
 }
 
 func (r ConfirmedProjectionRoster) OutcomeMapDigest() OutcomeArtifactDigest { return r.mapDigest }

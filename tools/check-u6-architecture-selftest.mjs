@@ -42,6 +42,76 @@ const requiredCaseIDs = Object.freeze([
 	"world-full-adapter-import",
 	"second-profile-derivation-reference",
 	"profile-constructor-reexport",
+	"portable-profile-roster-firewall-bypass",
+	"portable-profile-roster-version-drift",
+	"portable-expectation-roster-firewall-bypass",
+	"portable-mode-semantics-firewall-bypass",
+	"expectation-domain-exported-field",
+	"portable-registry-expectation-binding-bypass",
+	"expectation-domain-propagation-bypass",
+	"selected-expectation-validation-bypass",
+	"complete-expectation-validation-bypass",
+	"universe-expectation-seal-bypass",
+	"expectation-domain-validity-bypass",
+	"expectation-domain-validity-dead-return",
+	"expectation-domain-validation-dead-return",
+	"confirmed-expectation-authority-detached",
+	"choice-expectation-validator-bypass",
+	"choice-expectation-validator-dead-return",
+  "choice-adapter-domain-switch",
+  "caller-projection-builder",
+  "fresh-choicepoint-legacy",
+  "legacy-parse-portable",
+  "second-choice-translation",
+  "choice-direct-strict-translate",
+  "registry-from-tuple-authority",
+  "portable-registry-order-disabled",
+  "outcome-seal-before-sort",
+  "selected-order-lexical",
+  "selectable-order-lexical",
+  "differing-all-fields",
+  "selected-tuple-exported-field",
+  "custom-expectation-complete-tuple",
+  "selected-tuple-unselected-bypass",
+  "portable-json-digest-identity",
+  "bytes-blind-wrong-slot",
+  "ordered-list-decision-wrong-slot",
+	"portable-decision-propose-preflight-bypass",
+	"portable-decision-revise-preflight-bypass",
+	"portable-decision-final-budget-bypass",
+	"decision-receipt-count-guard-bypass",
+	"decision-receipt-payload-guard-bypass",
+	"choicepoint-receipt-count-guard-bypass",
+	"choicepoint-receipt-payload-guard-bypass",
+	"alias-admission-before-copy-bypass",
+	"draft-alias-admission-bypass",
+	"proof-copy-before-admission",
+	"confirmed-roster-max-bypass",
+	"receipt-wire-grade-budget-bypass",
+	"decision-receipt-rogue-precopy",
+	"choicepoint-receipt-rogue-precopy",
+	"alias-rogue-precopy",
+	"projection-proof-rogue-precopy",
+	"decision-receipt-json-precopy",
+	"choicepoint-receipt-json-precopy",
+	"alias-join-precopy",
+	"projection-proof-bytes-clone-precopy",
+	"alias-byte-guard-bypass",
+	"projection-proof-byte-guard-bypass",
+	"confirmed-translation-limit-drift",
+	"blind-alias-limit-drift",
+	"decision-receipt-limit-drift",
+	"choicepoint-receipt-limit-drift",
+	"choicepoint-nested-limit-drift",
+  "legacy-preparation-guard-bypass",
+  "portable-inspection-exported-field",
+  "preparation-current-head-bypass",
+  "forged-preparation-seal",
+  "choice-mode-schema-drift",
+  "exact-value-tags-schema-drift",
+  "exact-value-schema-opened",
+  "bytes-schema-slot-drift",
+  "ordered-list-schema-slot-drift",
   "comment-camouflage",
   "raw-head-export",
   "raw-head-method-value-export",
@@ -88,7 +158,7 @@ const requiredCaseIDs = Object.freeze([
   "manifest-barrier-tamper",
   "manifest-tool-failure",
 ]);
-const requiredRosterDigest = "3587f91a244f801617cc6c2a613e3b094898f9e36cfcefd47d1af4f0bc704b87";
+const requiredRosterDigest = "fde11250e4ccd088a97077af1d6eb4898843609bfe8115561490f6b79e89b833";
 
 async function copyFixture() {
   const fixture = await mkdtemp(join(tmpdir(), "countershape-u6-architecture-"));
@@ -205,6 +275,618 @@ async function exercise(name) {
 			);
 			expected = "U6_PROFILE_INTERNAL_REBUILD_SURFACE_NOT_EXACT";
 			break;
+		case "portable-profile-roster-firewall-bypass":
+			await replaceExact(
+				fixture,
+				"internal/projectiontranslate/translate.go",
+				"if err := verifyPortableProfileRosterV1(); err != nil {",
+				"if false {",
+			);
+			expected = "U6_PROFILE_ROSTER_FIREWALL_NOT_EXACT";
+			break;
+		case "portable-profile-roster-version-drift":
+			await replaceExact(
+				fixture,
+				"internal/projectiontranslate/cli.go",
+				'cliTranslatorVersion = "v1"',
+				'cliTranslatorVersion = "v1-drift"',
+			);
+			expected = "U6_PROFILE_ROSTER_TRANSLATOR_IDENTITY_NOT_EXACT";
+			break;
+		case "portable-expectation-roster-firewall-bypass":
+			await replaceExact(
+				fixture,
+				"internal/projectiontranslate/profile_roster.go",
+				"expectationDigest, expectationCount, err := derivePortableExpectationDomainRosterV1()",
+				' expectationDigest, expectationCount, err := domain.Digest(""), 0, error(nil)',
+			);
+			expected = "U6_PORTABLE_MODE_SEMANTICS_FIREWALL_NOT_EXACT";
+			break;
+		case "portable-mode-semantics-firewall-bypass":
+			await replaceExact(
+				fixture,
+				"internal/projectiontranslate/profile_roster.go",
+				"semanticsDigest, err := derivePortableModeSemanticsV1()",
+				' semanticsDigest, err := domain.Digest(""), error(nil)',
+			);
+			expected = "U6_PORTABLE_MODE_SEMANTICS_FIREWALL_NOT_EXACT";
+			break;
+		case "expectation-domain-exported-field":
+			await replaceExact(
+				fixture,
+				"internal/projectiontranslate/expectation.go",
+				"type ExpectationDomain struct {\n\tprofile   projectionprofile.Profile",
+				"type ExpectationDomain struct {\n\tProfile   projectionprofile.Profile",
+			);
+			expected = "U6_EXPECTATION_DOMAIN_SURFACE_NOT_CLOSED";
+			break;
+		case "portable-registry-expectation-binding-bypass":
+			await replaceExact(
+				fixture,
+				"internal/choice/portable.go",
+				"!bytes.Equal(expectation.ProfileBytes(), profile.CanonicalBytes())",
+				"false",
+			);
+			expected = "U6_PORTABLE_REGISTRY_EXPECTATION_BINDING_NOT_EXACT";
+			break;
+		case "expectation-domain-propagation-bypass":
+			await replaceExact(
+				fixture,
+				"internal/choice/portable.go",
+				"newPortableFieldRegistry(translations.Profile(), translations.ExpectationDomain())",
+				"newPortableFieldRegistry(translations.Profile(), projectiontranslate.ExpectationDomain{})",
+			);
+			expected = "U6_EXPECTATION_DOMAIN_NOT_PROPAGATED_TO_CHOICE";
+			break;
+		case "selected-expectation-validation-bypass":
+			await replaceExact(
+				fixture,
+				"internal/choice/validation.go",
+				"if err := r.validatePortableExpectation(selectedOrder, values, true); err != nil {",
+				"if false {",
+			);
+			expected = "U6_SELECTED_TUPLE_VALIDATION_NOT_EXACT";
+			break;
+		case "complete-expectation-validation-bypass":
+			await replaceExact(
+				fixture,
+				"internal/choice/validation.go",
+				"if err := r.validatePortableExpectation(r.orderedIDs, fields, false); err != nil {",
+				"if false {",
+			);
+			expected = "U6_COMPLETE_TUPLE_EXPECTATION_VALIDATION_NOT_EXACT";
+			break;
+		case "universe-expectation-seal-bypass":
+			await replaceExact(
+				fixture,
+				"internal/choice/validation.go",
+				"if registry.expectationDomain.Valid() {",
+				"if false {",
+			);
+			expected = "U6_EXPECTATION_DOMAIN_NOT_BOUND_TO_UNIVERSE_SEAL";
+			break;
+		case "expectation-domain-validity-bypass":
+			await replaceExact(
+				fixture,
+				"internal/projectiontranslate/expectation.go",
+				"return err == nil && rebuilt.digest == d.digest && bytes.Equal(rebuilt.canonical, d.canonical)",
+				"return err == nil",
+			);
+			expected = "U6_EXPECTATION_DOMAIN_VALIDITY_NOT_EXACT";
+			break;
+		case "expectation-domain-validity-dead-return":
+			await replaceExact(
+				fixture,
+				"internal/projectiontranslate/expectation.go",
+				"func (d ExpectationDomain) Valid() bool {",
+				"func (d ExpectationDomain) Valid() bool {\n\treturn true",
+			);
+			expected = "U6_EXPECTATION_DOMAIN_VALIDITY_NOT_EXACT";
+			break;
+		case "expectation-domain-validation-dead-return":
+			await replaceExact(
+				fixture,
+				"internal/projectiontranslate/expectation.go",
+				"func (d ExpectationDomain) ValidateSelected(selected []SelectedValue) error {",
+				"func (d ExpectationDomain) ValidateSelected(selected []SelectedValue) error {\n\treturn nil",
+			);
+			expected = "U6_EXPECTATION_DOMAIN_VALIDATION_NOT_EXACT";
+			break;
+		case "confirmed-expectation-authority-detached":
+			await replaceExact(
+				fixture,
+				"internal/projectiontranslate/confirmed.go",
+				"resolved: resolved, expectation: expectation, outcomes: verified",
+				"resolved: resolved, expectation: ExpectationDomain{}, outcomes: verified",
+			);
+			expected = "U6_CONFIRMED_EXPECTATION_AUTHORITY_NOT_EXACT";
+			break;
+		case "choice-expectation-validator-bypass":
+			await replaceExact(
+				fixture,
+				"internal/choice/validation.go",
+				"if err := r.expectationDomain.ValidateSelected(selected); err != nil {",
+				"if err := func() error { return nil }(); err != nil {",
+			);
+			expected = "U6_CHOICE_EXPECTATION_VALIDATION_NOT_EXACT";
+			break;
+		case "choice-expectation-validator-dead-return":
+			await replaceExact(
+				fixture,
+				"internal/choice/validation.go",
+				"func (r FieldRegistry) validatePortableExpectation(order []string, values map[string]ExactValue, custom bool) error {",
+				"func (r FieldRegistry) validatePortableExpectation(order []string, values map[string]ExactValue, custom bool) error {\n\treturn nil",
+			);
+			expected = "U6_CHOICE_EXPECTATION_VALIDATION_NOT_EXACT";
+			break;
+      case "choice-adapter-domain-switch":
+        await writeSource(
+          fixture,
+          "internal/choice/forged_adapter_branch.go",
+          "package choice\n\nimport \"github.com/nelsonwerd/countershape/internal/domain\"\n\nvar forgedAdapterBranch = domain.AdapterCLI\n",
+        );
+        expected = "U6_CHOICE_SWITCHES_ON_ADAPTER_DOMAIN";
+        break;
+      case "caller-projection-builder":
+        await writeSource(
+          fixture,
+          "internal/choice/forged_projection_builder.go",
+          "package choice\n\nfunc NewFieldRegistry() {}\n",
+        );
+        expected = "U6_CALLER_AUTHORED_PROJECTION_AUTHORITY_RESIDUE";
+        break;
+      case "fresh-choicepoint-legacy":
+        await replaceExact(
+          fixture,
+          "internal/choice/choicepoint.go",
+          "return buildChoicepointRecord(input, choicepointPortable, nil)",
+          "return buildChoicepointRecord(input, choicepointLegacyWhole, nil)",
+        );
+        expected = "U6_FRESH_CHOICEPOINT_MODE_NOT_EXACT";
+        break;
+      case "legacy-parse-portable":
+        await replaceExact(
+          fixture,
+          "internal/choice/choicepoint.go",
+          "mode = choicepointLegacyWhole // MUTANT_P07B_LEGACY_REBUILT_PORTABLE",
+          "mode = choicepointPortable // MUTANT_P07B_LEGACY_REBUILT_PORTABLE",
+        );
+        expected = "U6_CHOICEPOINT_PARSE_MODE_DISPATCH_NOT_EXACT";
+        break;
+      case "second-choice-translation":
+        await writeSource(
+          fixture,
+          "internal/choice/forged_translation.go",
+          "package choice\n\nimport \"github.com/nelsonwerd/countershape/internal/projectiontranslate\"\n\nvar forgedTranslation = projectiontranslate.TranslateConfirmed\n",
+        );
+        expected = "U6_PROOF_FIRST_TRANSLATION_SURFACE_NOT_EXACT";
+        break;
+      case "choice-direct-strict-translate":
+        await writeSource(
+          fixture,
+          "internal/choice/forged_strict_translate.go",
+          "package choice\n\nimport \"github.com/nelsonwerd/countershape/internal/projectiontranslate\"\n\nvar forgedStrictTranslate = projectiontranslate.StrictTranslate\n",
+        );
+        expected = "U6_CHOICE_BYPASSES_PROOF_FIRST_TRANSLATION";
+        break;
+      case "registry-from-tuple-authority":
+        await replaceExact(
+          fixture,
+          "internal/choice/portable.go",
+          "func newPortableFieldRegistry(profile projectionprofile.Profile, expectation projectiontranslate.ExpectationDomain)",
+          "func newPortableFieldRegistry(profile projectionprofile.Profile, expectation projectiontranslate.ExpectationDomain, tuple CompleteTuple)",
+        );
+        expected = "U6_PORTABLE_REGISTRY_ACCEPTS_NONPROFILE_AUTHORITY";
+        break;
+      case "portable-registry-order-disabled":
+        await replaceExact(
+          fixture,
+          "internal/choice/portable.go",
+          "newFieldRegistry(definitions, true)",
+          "newFieldRegistry(definitions, false)",
+        );
+        expected = "U6_PORTABLE_REGISTRY_DERIVATION_NOT_EXACT";
+        break;
+      case "outcome-seal-before-sort":
+        await replaceExact(
+          fixture,
+          "internal/choice/portable.go",
+          "\tsort.Slice(set.ordered, func(i, j int) bool { return set.ordered[i].ref.id.text < set.ordered[j].ref.id.text })\n\tseal, err := makeConfirmedOutcomeSetSeal(set.registry, set.outcomeMapDigest, set.preservationDigest, set.ordered)",
+          "\tseal, err := makeConfirmedOutcomeSetSeal(set.registry, set.outcomeMapDigest, set.preservationDigest, set.ordered)\n\tsort.Slice(set.ordered, func(i, j int) bool { return set.ordered[i].ref.id.text < set.ordered[j].ref.id.text })",
+        );
+        expected = "U6_PORTABLE_OUTCOME_ID_ORDER_BEFORE_SEAL";
+        break;
+      case "selected-order-lexical":
+        await replaceExact(
+          fixture,
+          "internal/choice/validation.go",
+          "\tfor _, fieldID := range r.orderedIDs { // MUTANT_P07B_SELECTED_LEXICAL_ORDER",
+          "\tsort.Strings(raw)\n\tfor _, fieldID := range raw { // MUTANT_P07B_SELECTED_LEXICAL_ORDER",
+        );
+        expected = "U6_SELECTED_FIELD_ORDER_LEXICAL";
+        break;
+      case "selectable-order-lexical":
+        await replaceExact(
+          fixture,
+          "internal/choice/blind.go",
+          "\tfor _, field := range record.confirmed.registry.Definitions() {\n\t\tselectable = append(selectable, field.ID)\n\t}",
+          "\tfor _, field := range record.confirmed.registry.Definitions() {\n\t\tselectable = append(selectable, field.ID)\n\t}\n\tsort.Strings(selectable)",
+        );
+        expected = "U6_SELECTABLE_FIELD_ORDER_LEXICAL";
+        break;
+      case "differing-all-fields":
+        await replaceExact(fixture, "internal/choice/blind.go", "\t\tif differs {", "\t\tif true {");
+        expected = "U6_DIFFERING_FIELD_FILTER_NOT_EXACT";
+        break;
+      case "selected-tuple-exported-field":
+        await replaceExact(
+          fixture,
+          "internal/choice/validation.go",
+          "type SelectedTuple struct {\n\tuniverse    canon.Digest",
+          "type SelectedTuple struct {\n\tUniverse    canon.Digest",
+        );
+        expected = "U6_SELECTED_TUPLE_SURFACE_NOT_CLOSED";
+        break;
+      case "custom-expectation-complete-tuple":
+        await replaceExact(fixture, "internal/choice/session.go", "\tCustomExpectation    *SelectedTuple", "\tCustomExpectation    *CompleteTuple");
+        expected = "U6_CUSTOM_EXPECTATION_NOT_SELECTED_ONLY";
+        break;
+      case "selected-tuple-unselected-bypass":
+        await replaceExact(
+          fixture,
+          "internal/choice/validation.go",
+          "\t\tif _, selectedField := allowed[fieldID.text]; !selectedField { // MUTANT_P07B_CUSTOM_UNSELECTED_FIELD",
+          "\t\tif false { // MUTANT_P07B_CUSTOM_UNSELECTED_FIELD",
+        );
+        expected = "U6_SELECTED_TUPLE_VALIDATION_NOT_EXACT";
+        break;
+      case "portable-json-digest-identity":
+        await replaceExact(
+          fixture,
+          "internal/choice/validation.go",
+          "return \"J\" + lengthPrefix(string(v.canonical))",
+          "return \"J\" + lengthPrefix(v.text)",
+        );
+        expected = "U6_PORTABLE_VALUE_IDENTITY_NOT_EXACT";
+        break;
+      case "bytes-blind-wrong-slot":
+        await replaceExact(
+          fixture,
+          "internal/choice/blind.go",
+          "result.Text = base64.StdEncoding.EncodeToString(value.Bytes())",
+          "result.CanonicalJSONBase64 = base64.StdEncoding.EncodeToString(value.Bytes())",
+        );
+        expected = "U6_PORTABLE_BLIND_WIRE_NOT_COMPATIBLE";
+        break;
+      case "ordered-list-decision-wrong-slot":
+        await replaceExact(
+          fixture,
+          "internal/choice/session.go",
+          "wire.CanonicalJSONBase64 = base64.StdEncoding.EncodeToString(value.CanonicalBytes())",
+          "wire.Text = base64.StdEncoding.EncodeToString(value.CanonicalBytes())",
+        );
+        expected = "U6_PORTABLE_DECISION_WIRE_NOT_COMPATIBLE";
+        break;
+		case "portable-decision-propose-preflight-bypass":
+			await replaceExact(
+				fixture,
+				"internal/choice/session.go",
+				"// that would fit only after a smaller post-reveal change is refused here.\n\tif err := preflightPortableDecisionBudget(result); err != nil {",
+				"// that would fit only after a smaller post-reveal change is refused here.\n\tif false {",
+			);
+			expected = "U6_PORTABLE_DECISION_DRAFT_PREFLIGHT_NOT_EXACT";
+			break;
+		case "portable-decision-revise-preflight-bypass":
+			await replaceExact(
+				fixture,
+				"internal/choice/session.go",
+				"result.state = SessionPostRevealRecorded\n\tif err := preflightPortableDecisionBudget(result); err != nil {",
+				"result.state = SessionPostRevealRecorded\n\tif false {",
+			);
+			expected = "U6_PORTABLE_DECISION_DRAFT_PREFLIGHT_NOT_EXACT";
+			break;
+		case "portable-decision-final-budget-bypass":
+			await replaceExact(
+				fixture,
+				"internal/choice/decision.go",
+				"if enforcePortableBudget && session.record.mode == choicepointPortable {",
+				"if false && session.record.mode == choicepointPortable {",
+			);
+			expected = "U6_PORTABLE_DECISION_FINAL_BUDGET_NOT_EXACT";
+			break;
+		case "decision-receipt-count-guard-bypass":
+			await replaceExact(
+				fixture,
+				"internal/choice/decision.go",
+				"if len(receipts) > canon.MaxContainerMembers {",
+				"if false {",
+			);
+			expected = "U6_DECISION_RECEIPT_ADMISSION_NOT_BOUNDED";
+			break;
+		case "decision-receipt-payload-guard-bypass":
+			await replaceExact(
+				fixture,
+				"internal/choice/decision.go",
+				"if !consumeReceiptWireBudget(wire, &remaining) {",
+				"if false {",
+			);
+			expected = "U6_DECISION_RECEIPT_ADMISSION_NOT_BOUNDED";
+			break;
+		case "choicepoint-receipt-payload-guard-bypass":
+			await replaceExact(
+				fixture,
+				"internal/choice/choicepoint.go",
+				"if !consumeReceiptWireBudget(wire, &remaining) {",
+				"if false {",
+			);
+			expected = "U6_CHOICEPOINT_RECEIPT_ADMISSION_NOT_BOUNDED";
+			break;
+		case "choicepoint-receipt-count-guard-bypass":
+			await replaceExact(
+				fixture,
+				"internal/choice/choicepoint.go",
+				"if len(receipts) > canon.MaxContainerMembers {",
+				"if false {",
+			);
+			expected = "U6_CHOICEPOINT_RECEIPT_ADMISSION_NOT_BOUNDED";
+			break;
+		case "alias-admission-before-copy-bypass":
+			await replaceExact(
+				fixture,
+				"internal/choice/blind.go",
+				"if err := v.admitAliases(raw); err != nil {\n\t\treturn nil, nil, err\n\t}",
+				"if false {\n\t\treturn nil, nil, nil\n\t}",
+			);
+			expected = "U6_ALIAS_ADMISSION_NOT_BEFORE_COPY_SORT_RESOLVE";
+			break;
+		case "draft-alias-admission-bypass":
+			await replaceExact(
+				fixture,
+				"internal/choice/session.go",
+				"if err := view.admitAliases(input.AllowedAliases); err != nil {\n\t\treturn rulingDraft{}, err\n\t}",
+				"if false {\n\t\treturn rulingDraft{}, nil\n\t}",
+			);
+			expected = "U6_DRAFT_ALIAS_ADMISSION_ORDER_NOT_EXACT";
+			break;
+		case "proof-copy-before-admission":
+			await replaceExact(
+				fixture,
+				"internal/projectiontranslate/confirmed.go",
+				"\t\tif len(proof.CanonicalProjection) > maxConfirmedProjectionBytes-projectionBytes {\n\t\t\treturn ConfirmedTranslations{}, refuse(CodeTranslationLimit, \"\", \"confirmed projection proofs exceed the aggregate retained-byte ceiling\")\n\t\t}\n\t\tprojectionBytes += len(proof.CanonicalProjection)\n\t\tfrozenProjection := append([]byte(nil), proof.CanonicalProjection...)",
+				"\t\tfrozenProjection := append([]byte(nil), proof.CanonicalProjection...)\n\t\tif len(proof.CanonicalProjection) > maxConfirmedProjectionBytes-projectionBytes {\n\t\t\treturn ConfirmedTranslations{}, refuse(CodeTranslationLimit, \"\", \"confirmed projection proofs exceed the aggregate retained-byte ceiling\")\n\t\t}\n\t\tprojectionBytes += len(proof.CanonicalProjection)",
+			);
+			expected = "U6_PROJECTION_PROOF_ADMISSION_NOT_BEFORE_COPY";
+			break;
+		case "confirmed-roster-max-bypass":
+			await replaceExact(
+				fixture,
+				"internal/compare/outcome_map.go",
+				"len(r.entries) < 2 || len(r.entries) > 4",
+				"len(r.entries) < 2",
+			);
+			expected = "U6_CONFIRMED_ROSTER_RESOURCE_PROFILE_NOT_EXACT";
+			break;
+		case "receipt-wire-grade-budget-bypass":
+			await replaceExact(
+				fixture,
+				"internal/choice/choicepoint.go",
+				"[...]string{wire.Authority, wire.GradeVerbatim, wire.CommitOID, wire.CommandDigest}",
+				"[...]string{wire.Authority, wire.CommitOID, wire.CommandDigest}",
+			);
+			expected = "U6_RECEIPT_WIRE_BUDGET_NOT_EXACT";
+			break;
+		case "decision-receipt-rogue-precopy":
+			await replaceExact(
+				fixture,
+				"internal/choice/decision.go",
+				"func normalizeDecisionReceipts(receipts []domain.ReceiptReference) ([]domain.ReceiptReference, error) {",
+				"func normalizeDecisionReceipts(receipts []domain.ReceiptReference) ([]domain.ReceiptReference, error) {\n\t_ = append([]domain.ReceiptReference(nil), receipts...)",
+			);
+			expected = "U6_DECISION_RECEIPT_ADMISSION_NOT_BOUNDED";
+			break;
+		case "choicepoint-receipt-rogue-precopy":
+			await replaceExact(
+				fixture,
+				"internal/choice/choicepoint.go",
+				"func normalizeChoicepointReceipts(receipts []domain.ReceiptReference) ([]domain.ReceiptReference, error) {",
+				"func normalizeChoicepointReceipts(receipts []domain.ReceiptReference) ([]domain.ReceiptReference, error) {\n\t_ = append([]domain.ReceiptReference(nil), receipts...)",
+			);
+			expected = "U6_CHOICEPOINT_RECEIPT_ADMISSION_NOT_BOUNDED";
+			break;
+		case "alias-rogue-precopy":
+			await replaceExact(
+				fixture,
+				"internal/choice/blind.go",
+				"func (v BlindView) normalizeAliases(raw []string) ([]string, []ConfirmedOutcomeRef, error) {",
+				"func (v BlindView) normalizeAliases(raw []string) ([]string, []ConfirmedOutcomeRef, error) {\n\t_ = append([]string(nil), raw...)",
+			);
+			expected = "U6_ALIAS_ADMISSION_NOT_BEFORE_COPY_SORT_RESOLVE";
+			break;
+		case "projection-proof-rogue-precopy":
+			await replaceExact(
+				fixture,
+				"internal/projectiontranslate/confirmed.go",
+				"for index, proof := range proofs {",
+				"for index, proof := range proofs {\n\t\t_ = append([]byte(nil), proof.CanonicalProjection...)",
+			);
+			expected = "U6_PROJECTION_PROOF_ADMISSION_NOT_BEFORE_COPY";
+			break;
+		case "decision-receipt-json-precopy":
+			await replaceExact(
+				fixture,
+				"internal/choice/decision.go",
+				"func normalizeDecisionReceipts(receipts []domain.ReceiptReference) ([]domain.ReceiptReference, error) {",
+				"func normalizeDecisionReceipts(receipts []domain.ReceiptReference) ([]domain.ReceiptReference, error) {\n\t_, _ = json.Marshal(receipts)",
+			);
+			expected = "U6_DECISION_RECEIPT_ADMISSION_NOT_BOUNDED";
+			break;
+		case "choicepoint-receipt-json-precopy":
+			await replaceExact(
+				fixture,
+				"internal/choice/choicepoint.go",
+				"func normalizeChoicepointReceipts(receipts []domain.ReceiptReference) ([]domain.ReceiptReference, error) {",
+				"func normalizeChoicepointReceipts(receipts []domain.ReceiptReference) ([]domain.ReceiptReference, error) {\n\t_, _ = json.Marshal(receipts)",
+			);
+			expected = "U6_CHOICEPOINT_RECEIPT_ADMISSION_NOT_BOUNDED";
+			break;
+		case "alias-join-precopy":
+			await replaceExact(
+				fixture,
+				"internal/choice/blind.go",
+				"func (v BlindView) normalizeAliases(raw []string) ([]string, []ConfirmedOutcomeRef, error) {",
+				"func (v BlindView) normalizeAliases(raw []string) ([]string, []ConfirmedOutcomeRef, error) {\n\t_ = strings.Clone(strings.Join(raw, \"\"))",
+			);
+			expected = "U6_ALIAS_ADMISSION_NOT_BEFORE_COPY_SORT_RESOLVE";
+			break;
+		case "projection-proof-bytes-clone-precopy":
+			await replaceExact(
+				fixture,
+				"internal/projectiontranslate/confirmed.go",
+				"for index, proof := range proofs {",
+				"for index, proof := range proofs {\n\t\t_ = bytes.Clone(proof.CanonicalProjection)",
+			);
+			expected = "U6_PROJECTION_PROOF_ADMISSION_NOT_BEFORE_COPY";
+			break;
+		case "alias-byte-guard-bypass":
+			await replaceExact(
+				fixture,
+				"internal/choice/blind.go",
+				"if len(alias) > maxBlindAliasBytes || len(alias) > remaining {",
+				"if false {",
+			);
+			expected = "U6_ALIAS_ADMISSION_PROFILE_NOT_EXACT";
+			break;
+		case "projection-proof-byte-guard-bypass":
+			await replaceExact(
+				fixture,
+				"internal/projectiontranslate/confirmed.go",
+				"if len(proof.CanonicalProjection) > maxConfirmedProjectionBytes-projectionBytes {",
+				"if false {",
+			);
+			expected = "U6_PROJECTION_PROOF_ADMISSION_NOT_BEFORE_COPY";
+			break;
+		case "confirmed-translation-limit-drift":
+			await replaceExact(
+				fixture,
+				"internal/projectiontranslate/confirmed.go",
+				"maxConfirmedProjectionBytes = 600 * 1024",
+				"maxConfirmedProjectionBytes = 601 * 1024",
+			);
+			expected = "U6_CONFIRMED_TRANSLATION_RESOURCE_PROFILE_NOT_EXACT";
+			break;
+		case "blind-alias-limit-drift":
+			await replaceExact(
+				fixture,
+				"internal/choice/blind.go",
+				"const maxBlindAliasBytes = len(\"blind:\") + 64",
+				"const maxBlindAliasBytes = len(\"blind:\") + 65",
+			);
+			expected = "U6_ALIAS_ADMISSION_PROFILE_NOT_EXACT";
+			break;
+		case "decision-receipt-limit-drift":
+			await replaceExact(
+				fixture,
+				"internal/choice/decision.go",
+				"remaining := canon.MaxInputBytes",
+				"remaining := canon.MaxInputBytes + 1",
+			);
+			expected = "U6_DECISION_RECEIPT_ADMISSION_NOT_BOUNDED";
+			break;
+		case "choicepoint-receipt-limit-drift":
+			await replaceExact(
+				fixture,
+				"internal/choice/choicepoint.go",
+				"remaining := canon.MaxInputBytes",
+				"remaining := canon.MaxInputBytes + 1",
+			);
+			expected = "U6_CHOICEPOINT_RECEIPT_ADMISSION_NOT_BOUNDED";
+			break;
+		case "choicepoint-nested-limit-drift":
+			await replaceExact(
+				fixture,
+				"internal/choice/choicepoint.go",
+				"maxChoicepointNestedRawBytes = 600 * 1024",
+				"maxChoicepointNestedRawBytes = 601 * 1024",
+			);
+			expected = "U6_CHOICEPOINT_RESOURCE_PROFILE_NOT_EXACT";
+			break;
+      case "legacy-preparation-guard-bypass":
+        await replaceExact(
+          fixture,
+          "internal/choice/portable.go",
+          "if decision.choicepoint.mode == choicepointLegacyWhole {",
+          "if false {",
+        );
+        expected = "U6_LEGACY_PORTABLE_PREPARATION_GUARD_NOT_EXACT";
+        break;
+      case "portable-inspection-exported-field":
+        await replaceExact(
+          fixture,
+          "internal/choice/portable.go",
+          "type PortableRulingInspection struct {\n\tdecisionDigest domain.Digest",
+          "type PortableRulingInspection struct {\n\tDecisionDigest domain.Digest",
+        );
+        expected = "U6_PORTABLE_INSPECTION_SURFACE_NOT_CLOSED";
+        break;
+      case "preparation-current-head-bypass":
+        await replaceExact(
+          fixture,
+          "internal/choice/promotion/service.go",
+          "\tif err := validateRuling(ctx, objectStore, ruling); err != nil {\n\t\treturn PortableRulingPreparation{}, err\n\t}\n\tinspection, err := choice.InspectPortableRuling(ruling.record)",
+          "\tif false {\n\t\treturn PortableRulingPreparation{}, nil\n\t}\n\tinspection, err := choice.InspectPortableRuling(ruling.record)",
+        );
+        expected = "U6_PORTABLE_PREPARATION_CURRENT_HEAD_GUARD_NOT_EXACT";
+        break;
+      case "forged-preparation-seal":
+        await writeSource(
+          fixture,
+          "internal/choice/promotion/forged_portable_preparation.go",
+          "package promotion\n\nvar forgedPortablePreparationSeal = &portableRulingPreparationSeal{marker: 1}\n",
+        );
+        expected = "U6_PORTABLE_PREPARATION_CONSTRUCTION_OUTSIDE_OWNER";
+        break;
+      case "choice-mode-schema-drift": {
+        const path = join(fixture, "spec/schema/v1/choicepoint.schema.json");
+        const value = JSON.parse(await readFile(path, "utf8"));
+        value.properties.choice_projection_mode.enum = ["WHOLE_EXACT_CANONICAL_PROJECTION_V1"];
+        await writeFile(path, `${JSON.stringify(value)}\n`, { mode: 0o600 });
+        expected = "U6_CHOICEPOINT_MODE_SCHEMA_NOT_EXACT";
+        break;
+      }
+      case "exact-value-tags-schema-drift": {
+        const path = join(fixture, "spec/schema/v1/decision-record.schema.json");
+        const value = JSON.parse(await readFile(path, "utf8"));
+        value.$defs.ExactValue.properties.tag.enum = value.$defs.ExactValue.properties.tag.enum.filter((tag) => tag !== "ORDERED_STRING_LIST");
+        await writeFile(path, `${JSON.stringify(value)}\n`, { mode: 0o600 });
+        expected = "U6_EXACT_VALUE_TAG_SCHEMA_NOT_EXACT";
+        break;
+      }
+      case "exact-value-schema-opened": {
+        const path = join(fixture, "spec/schema/v1/decision-record.schema.json");
+        const value = JSON.parse(await readFile(path, "utf8"));
+        value.$defs.ExactValue.additionalProperties = true;
+        await writeFile(path, `${JSON.stringify(value)}\n`, { mode: 0o600 });
+        expected = "U6_EXACT_VALUE_SCHEMA_SURFACE_NOT_CLOSED";
+        break;
+      }
+      case "bytes-schema-slot-drift": {
+        const path = join(fixture, "spec/schema/v1/decision-record.schema.json");
+        const value = JSON.parse(await readFile(path, "utf8"));
+        const rule = value.$defs.ExactValue.allOf.find((entry) => entry.if.properties.tag.const === "BYTES");
+        rule.then.properties.text = { $ref: "#/$defs/NonemptyBase64" };
+        await writeFile(path, `${JSON.stringify(value)}\n`, { mode: 0o600 });
+        expected = "U6_BYTES_COMPATIBILITY_SCHEMA_NOT_EXACT";
+        break;
+      }
+      case "ordered-list-schema-slot-drift": {
+        const path = join(fixture, "spec/schema/v1/decision-record.schema.json");
+        const value = JSON.parse(await readFile(path, "utf8"));
+        const rule = value.$defs.ExactValue.allOf.find((entry) => entry.if.properties.tag.const === "ORDERED_STRING_LIST");
+        rule.then.properties.canonical_json_base64 = { $ref: "#/$defs/OptionalBase64" };
+        await writeFile(path, `${JSON.stringify(value)}\n`, { mode: 0o600 });
+        expected = "U6_ORDERED_LIST_COMPATIBILITY_SCHEMA_NOT_EXACT";
+        break;
+      }
       case "comment-camouflage":
         await replaceExact(
           fixture,

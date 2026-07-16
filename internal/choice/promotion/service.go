@@ -304,6 +304,8 @@ func (r Ready) StudyID() store.StudyID { return r.head.StudyID() }
 
 type rulingSeal struct{ marker byte }
 
+type portableRulingPreparationSeal struct{ marker byte }
+
 // Ruling is current durable authority for one strict DecisionRecord and its
 // exact Choicepoint predecessor. The DecisionRecord bytes remain inert without
 // this store/head-bound capability.
@@ -466,6 +468,94 @@ func (r Ruling) Record() choice.DecisionRecord {
 }
 
 func (r Ruling) StudyID() store.StudyID { return r.head.StudyID() }
+
+// PortableRulingPreparation is the current-head-bound seam P07B must consume.
+// It contains no source bytes and cannot be reconstructed from a serialized
+// DecisionRecord or from Choice's non-authorizing semantic inspection.
+type PortableRulingPreparation struct {
+	ruling     Ruling
+	inspection choice.PortableRulingInspection
+	seal       *portableRulingPreparationSeal
+}
+
+// PreparePortableRuling revalidates the exact current RULING head before
+// issuing portable downstream preparation authority. Legacy current rulings
+// retain their exact Choice refusal code through InspectPortableRuling.
+func PreparePortableRuling(
+	ctx context.Context,
+	objectStore *store.ObjectStore,
+	ruling Ruling,
+) (PortableRulingPreparation, error) {
+	if ctx == nil || objectStore == nil {
+		return PortableRulingPreparation{}, refuse("INVALID_PORTABLE_RULING_PREPARATION", "store and context are required", nil)
+	}
+	if err := validateRuling(ctx, objectStore, ruling); err != nil {
+		return PortableRulingPreparation{}, err
+	}
+	inspection, err := choice.InspectPortableRuling(ruling.record)
+	if err != nil {
+		return PortableRulingPreparation{}, err
+	}
+	return PortableRulingPreparation{
+		ruling: ruling, inspection: inspection, seal: &portableRulingPreparationSeal{marker: 1},
+	}, nil
+}
+
+// Valid reports sealed construction integrity, not durable store currentness.
+func (p PortableRulingPreparation) Valid() bool {
+	return p.seal != nil && p.seal.marker == 1 && p.inspection.Valid() &&
+		p.ruling.record.Valid() && p.ruling.record.Digest() == p.inspection.DecisionDigest()
+}
+
+func (p PortableRulingPreparation) DecisionDigest() domain.Digest {
+	return p.inspection.DecisionDigest()
+}
+
+func (p PortableRulingPreparation) ProfileDigest() domain.Digest {
+	return p.inspection.ProfileDigest()
+}
+
+func (p PortableRulingPreparation) SelectedFields() []string {
+	return p.inspection.SelectedFields()
+}
+
+// ValidatePortableRulingPreparation proves currentness only at this instant.
+// Valid reports sealed construction integrity, and the getters expose inert
+// identity; neither is durable current-head authority. P07B must revalidate
+// inside its owner-controlled store transition/CAS and materialize files only
+// after that publication succeeds, so no standalone check becomes a TOCTOU
+// claim.
+func ValidatePortableRulingPreparation(
+	ctx context.Context,
+	objectStore *store.ObjectStore,
+	preparation PortableRulingPreparation,
+) error {
+	if ctx == nil || objectStore == nil || !preparation.Valid() {
+		return refuse("INVALID_PORTABLE_RULING_PREPARATION", "sealed portable preparation is required", nil)
+	}
+	if err := validateRuling(ctx, objectStore, preparation.ruling); err != nil {
+		return err
+	}
+	inspection, err := choice.InspectPortableRuling(preparation.ruling.record)
+	if err != nil || inspection.DecisionDigest() != preparation.inspection.DecisionDigest() ||
+		inspection.ProfileDigest() != preparation.inspection.ProfileDigest() ||
+		!equalStrings(inspection.SelectedFields(), preparation.inspection.SelectedFields()) {
+		return refuse("INVALID_PORTABLE_RULING_PREPARATION", "portable preparation no longer matches its exact ruling", err)
+	}
+	return nil
+}
+
+func equalStrings(left, right []string) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for index := range left {
+		if left[index] != right[index] {
+			return false
+		}
+	}
+	return true
+}
 
 func sameHead(left, right store.HeadToken) bool {
 	leftPrevious, leftHasPrevious := left.PreviousObjectDigest()

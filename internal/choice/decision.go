@@ -13,16 +13,18 @@ import (
 )
 
 const (
-	decisionMemberCount         = 40
-	maxDecisionActorBytes       = 512
-	maxDecisionAnnotationBytes  = 32 * 1024
-	decisionScope               = "EXACT_WITNESSED_STIMULUS_V1"
-	presentationFactScope       = "PRESENTED_NOT_COMPREHENDED_OR_DEBIASED"
-	compileEligible             = "COMPILE_ELIGIBLE_EXACT_PREDICATE"
-	compileIneligible           = "NONCOMPILABLE_ACTION"
-	receiptInterpretationOpaque = "OPAQUE_VERBATIM_REFERENCE_NOT_CONFORMANCE"
-	actorAttributionCaller      = "LOCAL_CALLER_ASSERTED_OPERATOR"
-	actorAuthenticityUnproven   = "AUTHENTICITY_NOT_ESTABLISHED_IN_U6"
+	decisionMemberCount          = 40
+	maxDecisionActorBytes        = 512
+	maxDecisionAnnotationBytes   = 32 * 1024
+	maxPortableDecisionLateBytes = 256 * 1024
+	maxPortableDecisionBaseBytes = canon.MaxInputBytes - maxPortableDecisionLateBytes
+	decisionScope                = "EXACT_WITNESSED_STIMULUS_V1"
+	presentationFactScope        = "PRESENTED_NOT_COMPREHENDED_OR_DEBIASED"
+	compileEligible              = "COMPILE_ELIGIBLE_EXACT_PREDICATE"
+	compileIneligible            = "NONCOMPILABLE_ACTION"
+	receiptInterpretationOpaque  = "OPAQUE_VERBATIM_REFERENCE_NOT_CONFORMANCE"
+	actorAttributionCaller       = "LOCAL_CALLER_ASSERTED_OPERATOR"
+	actorAuthenticityUnproven    = "AUTHENTICITY_NOT_ESTABLISHED_IN_U6"
 )
 
 type decisionSeparationIdentity struct {
@@ -95,6 +97,17 @@ func newDecisionRecord(
 	annotation string,
 	receipts []domain.ReceiptReference,
 	expected []byte,
+) (DecisionRecord, error) {
+	return buildDecisionRecord(session, actor, annotation, receipts, expected, true)
+}
+
+func buildDecisionRecord(
+	session Session,
+	actor string,
+	annotation string,
+	receipts []domain.ReceiptReference,
+	expected []byte,
+	enforcePortableBudget bool,
 ) (DecisionRecord, error) {
 	if !session.record.Valid() || session.state != SessionPostRevealRecorded || !session.revealed || session.final == nil {
 		return DecisionRecord{}, refusal(CodeInvalidSessionState, "decision construction requires a complete post-reveal session")
@@ -200,6 +213,16 @@ func newDecisionRecord(
 	if err != nil || len(canonicalBytes) > canon.MaxInputBytes {
 		return DecisionRecord{}, refusal(CodeInputLimitExceeded, "DecisionRecord exceeds the canonical resource profile")
 	}
+	if enforcePortableBudget && session.record.mode == choicepointPortable {
+		base, baseErr := buildDecisionRecord(session, "x", "", []domain.ReceiptReference{}, nil, false)
+		if baseErr != nil || len(base.canonicalBytes) > maxPortableDecisionBaseBytes {
+			return DecisionRecord{}, refusal(CodeInputLimitExceeded, "portable DecisionRecord structural body exceeds its reserved durable budget")
+		}
+		lateBytes := len(canonicalBytes) - len(base.canonicalBytes)
+		if lateBytes < 0 || lateBytes > maxPortableDecisionLateBytes {
+			return DecisionRecord{}, refusal(CodeInputLimitExceeded, "portable DecisionRecord attribution and receipts exceed their reserved durable budget")
+		}
+	}
 	if expected != nil && !bytes.Equal(expected, canonicalBytes) {
 		return DecisionRecord{}, refusal(CodeInvalidSessionState, "DecisionRecord wire did not reconstruct exactly")
 	}
@@ -244,11 +267,11 @@ func decisionProjection(record ChoicepointRecord, ruling ValidatedRuling) (proje
 		result.allowedOutcomeIDs = outcomeIDs(compilable.AllowedOutcomes())
 		result.disallowedOutcomeIDs = outcomeIDs(compilable.DisallowedOutcomes())
 		var err error
-		result.allowedTuples, err = tuplesToWire(compilable.AllowedTuples())
+		result.allowedTuples, err = tuplesToWire(record.confirmed.registry, compilable.AllowedTuples())
 		if err != nil {
 			return projectedDecision{}, err
 		}
-		result.disallowedTuples, err = tuplesToWire(compilable.DisallowedTuples())
+		result.disallowedTuples, err = tuplesToWire(record.confirmed.registry, compilable.DisallowedTuples())
 		if err != nil {
 			return projectedDecision{}, err
 		}
@@ -283,12 +306,14 @@ func outcomeIDs(refs []ConfirmedOutcomeRef) []string {
 	return result
 }
 
-func tuplesToWire(tuples []CompleteTuple) ([]tupleWire, error) {
+func tuplesToWire(registry FieldRegistry, tuples []CompleteTuple) ([]tupleWire, error) {
 	ordered := cloneTuples(tuples)
-	sort.Slice(ordered, func(i, j int) bool { return tupleIdentityKey(ordered[i].Fields) < tupleIdentityKey(ordered[j].Fields) })
+	sort.Slice(ordered, func(i, j int) bool {
+		return tupleIdentityKey(registry, ordered[i].Fields) < tupleIdentityKey(registry, ordered[j].Fields)
+	})
 	result := make([]tupleWire, len(ordered))
 	for index, tuple := range ordered {
-		wire, err := tupleToWire(tuple)
+		wire, err := tupleToWire(registry, tuple)
 		if err != nil {
 			return nil, err
 		}
@@ -298,18 +323,36 @@ func tuplesToWire(tuples []CompleteTuple) ([]tupleWire, error) {
 }
 
 func normalizeDecisionReceipts(receipts []domain.ReceiptReference) ([]domain.ReceiptReference, error) {
-	result := make([]domain.ReceiptReference, len(receipts))
-	copy(result, receipts)
-	sort.Slice(result, func(i, j int) bool { return receiptIdentityKey(result[i]) < receiptIdentityKey(result[j]) })
-	for index, receipt := range result {
+	if len(receipts) > canon.MaxContainerMembers {
+		return nil, refusal(CodeInputLimitExceeded, "DecisionRecord receipt count exceeds the canonical container profile")
+	}
+	remaining := canon.MaxInputBytes
+	for _, receipt := range receipts {
+		wire := receipt.Wire()
+		if !consumeReceiptWireBudget(wire, &remaining) {
+			return nil, refusal(CodeInputLimitExceeded, "DecisionRecord receipt payload exceeds the canonical input profile")
+		}
+	}
+	type keyedReceipt struct {
+		receipt domain.ReceiptReference
+		key     string
+	}
+	keyed := make([]keyedReceipt, len(receipts))
+	for index, receipt := range receipts {
 		wire := receipt.Wire()
 		rebuilt, err := domain.ReceiptFromWire(wire)
 		if err != nil || rebuilt.Wire() != wire {
 			return nil, refusal(CodeInvalidSessionState, "DecisionRecord receipt reference is invalid")
 		}
-		if index > 0 && receiptIdentityKey(receipt) == receiptIdentityKey(result[index-1]) {
+		keyed[index] = keyedReceipt{receipt: receipt, key: receiptIdentityKey(receipt)}
+	}
+	sort.Slice(keyed, func(i, j int) bool { return keyed[i].key < keyed[j].key })
+	result := make([]domain.ReceiptReference, len(keyed))
+	for index, entry := range keyed {
+		if index > 0 && entry.key == keyed[index-1].key {
 			return nil, refusal(CodeInvalidSessionState, "DecisionRecord receipt reference is duplicated")
 		}
+		result[index] = entry.receipt
 	}
 	return result, nil
 }

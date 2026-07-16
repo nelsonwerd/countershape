@@ -53,6 +53,13 @@ func resolveCLI(binding domain.ProjectionDefinitionBinding) (Resolved, error) {
 	if matches != 1 {
 		return Resolved{}, refuse(CodeProfileAmbiguous, "", "more than one CLI field subset matches the exact projection binding")
 	}
+	return newCLIResolvedProfile(matched, registry)
+}
+
+func newCLIResolvedProfile(matched cli.CLIProjectionDefinition, registry []cli.CLIFieldDescriptor) (Resolved, error) {
+	if !matched.Binding().Valid() || len(registry) != len(cli.CLIFieldRegistry()) {
+		return Resolved{}, refuse(CodeInvalidBinding, "", "CLI translator v1 profile source is invalid")
+	}
 	descriptors := make([]projectionprofile.Descriptor, len(matched.Fields()))
 	byID := make(map[cli.CLIFieldID]cli.CLIFieldDescriptor, len(registry))
 	for _, descriptor := range registry {
@@ -70,7 +77,7 @@ func resolveCLI(binding domain.ProjectionDefinitionBinding) (Resolved, error) {
 			AllowMissing: cliMissingPolicy(descriptor.MissingPolicy()),
 		}
 	}
-	return newResolvedProfile(cliTranslatorName, cliTranslatorVersion, binding, descriptors, armCLI, "CLIStimulus")
+	return newResolvedProfile(cliTranslatorName, cliTranslatorVersion, matched.Binding(), descriptors, armCLI, "CLIStimulus")
 }
 
 func cliMissingPolicy(policy string) bool {

@@ -13,6 +13,8 @@ import (
 
 const blindScope = "CANDIDATE_NEUTRAL_EXACT_WITNESS_CHOICE_V1"
 
+const maxBlindAliasBytes = len("blind:") + 64
+
 type BlindField struct {
 	FieldID             string `json:"field_id"`
 	Tag                 string `json:"tag"`
@@ -110,7 +112,7 @@ func buildBlindGroups(choicepoint domain.Digest, confirmed ConfirmedOutcomeSet) 
 				orderKey:    order.String(),
 			}
 			groupsByFingerprint[key] = current
-		} else if tupleIdentityKey(current.tuple.Fields) != tupleIdentityKey(outcome.tuple.Fields) {
+		} else if tupleIdentityKey(confirmed.registry, current.tuple.Fields) != tupleIdentityKey(confirmed.registry, outcome.tuple.Fields) {
 			return nil, refusal(CodeInvalidConfirmedOutcomeSet, "one exact fingerprint produced inconsistent blind facts")
 		}
 		current.refs = append(current.refs, outcome.ref)
@@ -165,6 +167,14 @@ func NewBlindView(record ChoicepointRecord) (BlindView, error) {
 	if err != nil {
 		return BlindView{}, err
 	}
+	selectable := make([]string, 0, len(record.confirmed.registry.orderedIDs))
+	for _, field := range record.confirmed.registry.Definitions() {
+		selectable = append(selectable, field.ID)
+	}
+	differing, err := differingFields(record.confirmed.registry, groups)
+	if err != nil {
+		return BlindView{}, err
+	}
 	identity := blindDTOIdentity{
 		SchemaVersion: domain.SchemaVersion, Kind: "BlindChoicepoint", ChoicepointDigest: record.digest.String(),
 		Scenario: record.scenario, Scope: blindScope,
@@ -172,8 +182,8 @@ func NewBlindView(record ChoicepointRecord) (BlindView, error) {
 		MinimizedStimulusBase64: base64.StdEncoding.EncodeToString(record.minimized.canonical),
 		Reduction:               reduction, DiscoveryRepeatsPerCandidate: record.plan.RepeatSchedule().DiscoveryRepeats,
 		ConfirmationRepeatsPerCandidate: record.plan.RepeatSchedule().ConfirmationRepeats,
-		ProjectionMode:                  choicepointProjectionMode, ProjectionOperations: operationDTOs,
-		SelectableFields: []string{WholeProjectionFieldID}, DifferingFields: []string{WholeProjectionFieldID},
+		ProjectionMode:                  record.mode.wire(), ProjectionOperations: operationDTOs,
+		SelectableFields: selectable, DifferingFields: differing,
 		Cards: cards,
 		TrustWarnings: []string{
 			"Exact witness evidence is not a universal behavioral-equivalence claim.",
@@ -192,6 +202,34 @@ func NewBlindView(record ChoicepointRecord) (BlindView, error) {
 	}
 	view.dto = BlindDTO{digest: digest, identity: identity, canonical: canonicalBytes}
 	return view, nil
+}
+
+func differingFields(registry FieldRegistry, groups []blindGroup) ([]string, error) {
+	if len(groups) == 0 || len(registry.orderedIDs) == 0 {
+		return nil, refusal(CodeInvalidConfirmedOutcomeSet, "differing-field analysis requires a nonempty profile and blind group set")
+	}
+	result := make([]string, 0, len(registry.orderedIDs))
+	for fieldIndex, fieldID := range registry.orderedIDs { // MUTANT_P07B_ALL_FIELDS_DIFFERING
+		if len(groups[0].tuple.Fields) != len(registry.orderedIDs) || groups[0].tuple.Fields[fieldIndex].FieldID != fieldID {
+			return nil, refusal(CodeInvalidConfirmedOutcomeSet, "blind tuple order differs from the profile registry")
+		}
+		first := groups[0].tuple.Fields[fieldIndex].Value.identityKey(registry.mode)
+		var differs bool
+		for groupIndex := 1; groupIndex < len(groups); groupIndex++ {
+			fields := groups[groupIndex].tuple.Fields
+			if len(fields) != len(registry.orderedIDs) || fields[fieldIndex].FieldID != fieldID {
+				return nil, refusal(CodeInvalidConfirmedOutcomeSet, "blind tuple order differs from the profile registry")
+			}
+			if fields[fieldIndex].Value.identityKey(registry.mode) != first {
+				differs = true
+				break
+			}
+		}
+		if differs {
+			result = append(result, fieldID)
+		}
+	}
+	return result, nil
 }
 
 func blindAlias(choicepoint domain.Digest, fingerprint domain.ProjectionFingerprint) (string, error) {
@@ -234,7 +272,10 @@ func renderBlindGroups(groups []blindGroup) ([]BlindCard, map[string][]Confirmed
 func blindField(field FieldValue) BlindField {
 	value := field.Value
 	result := BlindField{FieldID: field.FieldID, Tag: string(value.Tag()), Text: value.Text(), Boolean: value.Boolean()}
-	if value.Tag() == ValueCanonicalJSON {
+	if value.Tag() == ValueBytes {
+		result.Text = base64.StdEncoding.EncodeToString(value.Bytes())
+	}
+	if value.Tag() == ValueCanonicalJSON || value.Tag() == ValueOrderedStringList {
 		result.CanonicalJSONBase64 = base64.StdEncoding.EncodeToString(value.CanonicalBytes())
 		result.Text = ""
 	}
@@ -250,10 +291,48 @@ func (d BlindDTO) Cards() []BlindCard {
 	}
 	return result
 }
-func (d BlindDTO) Scenario() string { return d.identity.Scenario }
+func (d BlindDTO) Scenario() string       { return d.identity.Scenario }
+func (d BlindDTO) ProjectionMode() string { return d.identity.ProjectionMode }
+func (d BlindDTO) SelectableFields() []string {
+	return append([]string(nil), d.identity.SelectableFields...)
+}
+func (d BlindDTO) DifferingFields() []string {
+	return append([]string(nil), d.identity.DifferingFields...)
+}
 
 func (v BlindView) DTO() BlindDTO {
 	return BlindDTO{digest: v.dto.digest, identity: v.dto.identity, canonical: append([]byte(nil), v.dto.canonical...)}
+}
+
+func (v BlindView) normalizeAliases(raw []string) ([]string, []ConfirmedOutcomeRef, error) {
+	if err := v.admitAliases(raw); err != nil {
+		return nil, nil, err
+	}
+	aliases := make([]string, len(raw))
+	copy(aliases, raw)
+	sort.Strings(aliases)
+	resolved, err := v.resolveAliases(aliases)
+	if err != nil {
+		return nil, nil, err
+	}
+	return aliases, resolved, nil
+}
+
+func (v BlindView) admitAliases(raw []string) error {
+	if raw == nil {
+		return refusal(CodeOmittedObservedSelections, "blind aliases must be explicit")
+	}
+	if len(raw) > len(v.aliases) {
+		return refusal(CodeInputLimitExceeded, "blind alias selection exceeds the rendered-card ceiling")
+	}
+	remaining := maxBlindAliasBytes * len(v.aliases)
+	for _, alias := range raw {
+		if len(alias) > maxBlindAliasBytes || len(alias) > remaining {
+			return refusal(CodeInputLimitExceeded, "blind alias exceeds the closed identity byte ceiling")
+		}
+		remaining -= len(alias)
+	}
+	return nil
 }
 
 func (v BlindView) resolveAliases(aliases []string) ([]ConfirmedOutcomeRef, error) {

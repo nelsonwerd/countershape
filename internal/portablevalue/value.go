@@ -174,6 +174,21 @@ func OrderedStringList(values []string) (Value, error) {
 	return Value{tag: TagOrderedStringList, canonical: canonical}, nil
 }
 
+// OrderedStringListFromCanonical admits only the exact canonical compatibility
+// bytes produced by OrderedStringList. It exists for strict durable-wire
+// reconstruction; it never normalizes a merely equivalent JSON array.
+func OrderedStringListFromCanonical(exact []byte) (Value, error) {
+	members, ok := canonicalStringListMembers(exact)
+	if !ok {
+		return Value{}, refuse(CodeInvalidTuple, "ordered string list bytes are not one exact canonical string array")
+	}
+	rebuilt, err := OrderedStringList(members)
+	if err != nil || !bytes.Equal(rebuilt.canonical, exact) {
+		return Value{}, refuse(CodeInvalidTuple, "ordered string list bytes do not reconstruct exactly")
+	}
+	return rebuilt, nil
+}
+
 // CanonicalJSON admits exact bytes only. It retains the bytes themselves; a
 // digest is never accepted as a substitute for the JSON preimage.
 func CanonicalJSON(exact []byte) (Value, error) {

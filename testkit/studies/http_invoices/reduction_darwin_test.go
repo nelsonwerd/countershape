@@ -5,12 +5,15 @@ package http_invoices
 import (
 	"bytes"
 	"context"
+	"encoding/base64"
 	"path/filepath"
+	"slices"
 	"testing"
 	"time"
 
 	counterhttp "github.com/nelsonwerd/countershape/internal/adapters/http"
 	"github.com/nelsonwerd/countershape/internal/choice"
+	"github.com/nelsonwerd/countershape/internal/choice/promotion"
 	"github.com/nelsonwerd/countershape/internal/compare"
 	"github.com/nelsonwerd/countershape/internal/confirmation"
 	"github.com/nelsonwerd/countershape/internal/domain"
@@ -93,6 +96,10 @@ func TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence(t *testing.T)
 	}
 	baselineConfig := httpPhysicalReductionConfig(t)
 	baselineConfig.StimulusOverride = &noisy
+	baselineCheckpoint, err := Run(context.Background(), baselineConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
 	baselineResult, err := Run(context.Background(), baselineConfig)
 	if err != nil {
 		t.Fatal(err)
@@ -100,6 +107,11 @@ func TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence(t *testing.T)
 	if !baselineResult.HasOutcomeMap || baselineResult.OutcomeMap.Phase() != domain.AttemptDiscovery ||
 		len(baselineResult.OutcomeMap.Entries()) != 3 || len(baselineResult.OutcomeMap.Exclusions()) != 1 {
 		t.Fatal("physical HTTP baseline did not retain the stable A/B/C map plus excluded D")
+	}
+	if !baselineCheckpoint.HasOutcomeMap || baselineCheckpoint.Plan.Digest() != baselineResult.Plan.Digest() ||
+		compare.AssessPreservation(baselineCheckpoint.OutcomeMap, baselineResult.OutcomeMap).Relation() != compare.PreservationEqual ||
+		bytes.Equal(baselineCheckpoint.OutcomeMap.CanonicalBytes(), baselineResult.OutcomeMap.CanonicalBytes()) {
+		t.Fatal("physical HTTP baseline checkpoint did not retain fresh equivalent evidence")
 	}
 	baseline, err := compare.RequireDivergence(baselineResult.OutcomeMap)
 	if err != nil {
@@ -286,6 +298,37 @@ func TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence(t *testing.T)
 	if err != nil || len(blind.DTO().Cards()) != confirmedStudy.OutcomeMap.DistinctProjectionCount() {
 		t.Fatalf("physical HTTP blind DTO did not group exact eligible outcomes: %v", err)
 	}
+	httpFields := []string{
+		string(counterhttp.HTTPFieldStatus), string(counterhttp.HTTPFieldContentType),
+		string(counterhttp.HTTPFieldBodyKind), string(counterhttp.HTTPFieldBodyMetadata),
+	}
+	blindDTO := blind.DTO()
+	if blindDTO.ProjectionMode() != "ADAPTER_BOUND_PORTABLE_FIELDS_V1" ||
+		!slices.Equal(blindDTO.SelectableFields(), httpFields) ||
+		!slices.Equal(blindDTO.DifferingFields(), []string{
+			string(counterhttp.HTTPFieldStatus), string(counterhttp.HTTPFieldBodyKind),
+			string(counterhttp.HTTPFieldBodyMetadata),
+		}) {
+		t.Fatalf("physical HTTP Choicepoint lacks exact portable profile order or separation: selectable=%#v differing=%#v mode=%q",
+			blindDTO.SelectableFields(), blindDTO.DifferingFields(), blindDTO.ProjectionMode())
+	}
+	for _, card := range blindDTO.Cards() {
+		if len(card.Fields) != len(httpFields) {
+			t.Fatalf("HTTP blind card has %d fields, want %d", len(card.Fields), len(httpFields))
+		}
+		for index, field := range card.Fields {
+			if field.FieldID != httpFields[index] {
+				t.Fatalf("HTTP blind card field %d = %q, want %q", index, field.FieldID, httpFields[index])
+			}
+		}
+		contentType := card.Fields[1]
+		contentTypeBytes, decodeErr := base64.StdEncoding.Strict().DecodeString(contentType.CanonicalJSONBase64)
+		if decodeErr != nil || base64.StdEncoding.EncodeToString(contentTypeBytes) != contentType.CanonicalJSONBase64 ||
+			contentType.Tag != string(choice.ValueOrderedStringList) || contentType.Text != "" || contentType.Boolean ||
+			!bytes.Equal(contentTypeBytes, []byte(`["application/json"]`)) {
+			t.Fatalf("HTTP blind card lost exact ordered content-type evidence: %#v", contentType)
+		}
+	}
 	excluded := confirmedStudy.OutcomeMap.Exclusions()[0]
 	var excludedBinding domain.CandidateExecutionBinding
 	var excludedReveal choice.CandidateReveal
@@ -332,6 +375,233 @@ func TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence(t *testing.T)
 	choiceAuthority, err := confirmationStore.Publish(context.Background(), choiceObject)
 	if err != nil || confirmationStore.Validate(context.Background(), choiceObject, choiceAuthority) != nil {
 		t.Fatalf("physical HTTP Choicepoint did not persist immutably: %v", err)
+	}
+
+	promotionRoot := filepath.Join(t.TempDir(), "promotion-store")
+	promotionStore, err := store.OpenObjectStore(promotionRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	studyID, err := store.NewStudyID("physical HTTP choicepoint promotion")
+	if err != nil {
+		t.Fatal(err)
+	}
+	head, err := promotionStore.CreateStudy(context.Background(), studyID, confirmedStudy.Plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	head, err = promotionStore.AdvanceBaseline(context.Background(), head, baselineCheckpoint.OutcomeMap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	head, err = promotionStore.AdvanceDivergence(context.Background(), head, baseline)
+	if err != nil {
+		t.Fatal(err)
+	}
+	head, err = promotionStore.AdvanceReduction(context.Background(), head, run)
+	if err != nil {
+		t.Fatal(err)
+	}
+	storedConfirmation, err := promotion.PersistConfirmation(context.Background(), promotionStore, head, confirmationDraft)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ready, err := promotion.Promote(context.Background(), promotionStore, storedConfirmation, promotion.ChoicepointRequest{
+		Scenario: "Which exact invoice response behavior should become the accepted contract?",
+		Plan:     confirmedStudy.Plan, Envelope: confirmedStudy.Envelope,
+		CandidateBindings: confirmedStudy.CandidateBindings, OriginalStimulus: originalArtifact,
+		MinimizedStimulus: minimizedArtifact, CandidateReveals: reveals,
+		EvidenceReceipts: []domain.ReceiptReference{},
+	})
+	if err != nil || ready.Record().Digest() != choicepoint.Digest() {
+		t.Fatalf("physical HTTP store-bound Choicepoint promotion failed: %v", err)
+	}
+	restartedStore, err := store.OpenObjectStore(promotionRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reopenedReady, err := promotion.OpenReady(context.Background(), restartedStore, studyID)
+	if err != nil || reopenedReady.Record().Digest() != ready.Record().Digest() {
+		t.Fatalf("physical HTTP CHOICEPOINT_READY did not survive restart: %v", err)
+	}
+	readyRecord := reopenedReady.Record()
+
+	smuggledContentType, err := choice.OrderedStringListValue([]string{"application/json"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, smuggleErr := choice.NewSelectedTuple(
+		readyRecord,
+		[]string{string(counterhttp.HTTPFieldStatus)},
+		[]choice.FieldValue{{FieldID: string(counterhttp.HTTPFieldContentType), Value: smuggledContentType}},
+	); !choice.IsRefusal(smuggleErr, choice.CodeIncompleteTuple) {
+		t.Fatalf("same-cardinality unselected HTTP field smuggled into custom expectation: %v", smuggleErr)
+	}
+
+	customContentTypes := []string{"application/problem+json", "", "application/problem+json"}
+	customContentType, err := choice.OrderedStringListValue(customContentTypes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	contentTypeExpectation, err := choice.NewSelectedTuple(
+		readyRecord,
+		[]string{string(counterhttp.HTTPFieldContentType)},
+		[]choice.FieldValue{{FieldID: string(counterhttp.HTTPFieldContentType), Value: customContentType}},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	contentTypeInput := choice.RulingDraftInput{
+		Action: choice.ActionCustomExpectation, SelectedFields: []string{string(counterhttp.HTTPFieldContentType)},
+		AllowedAliases: []string{}, CustomExpectation: &contentTypeExpectation,
+		CustomReviewer: "physical-http-content-type-reviewer", CustomReviewEvidence: confirmationDraft.Digest(),
+	}
+	contentTypeSession, err := choice.NewSession(readyRecord)
+	if err != nil {
+		t.Fatal(err)
+	}
+	contentTypeSession, _, err = contentTypeSession.Reveal()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, surface := range []choice.ReviewSurface{
+		choice.SurfaceOriginalWitness, choice.SurfaceMinimizedWitness, choice.SurfaceReductionDerivation,
+		choice.SurfaceProjectionOperations, choice.SurfaceNonassertedFields, choice.SurfaceProvenance,
+	} {
+		contentTypeSession, err = contentTypeSession.Visit(surface)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	contentTypeSession, err = contentTypeSession.Revise(contentTypeInput, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, contentTypeDecision, err := contentTypeSession.Finalize(
+		"local-test-operator", "Preserve exact ordered content-type members.", []domain.ReceiptReference{},
+	)
+	if err != nil || !contentTypeDecision.EarlyReveal() ||
+		!slices.Equal(contentTypeDecision.SelectedFields(), []string{string(counterhttp.HTTPFieldContentType)}) ||
+		!slices.Equal(contentTypeDecision.NonassertedFields(), []string{
+			string(counterhttp.HTTPFieldStatus), string(counterhttp.HTTPFieldBodyKind),
+			string(counterhttp.HTTPFieldBodyMetadata),
+		}) {
+		t.Fatalf("portable HTTP ordered-list DecisionRecord lost its selected-only partition: %v", err)
+	}
+	contentTypeCompiled, ok := contentTypeDecision.CompilableRuling()
+	if !ok {
+		t.Fatal("portable HTTP ordered-list DecisionRecord was not compilable")
+	}
+	contentTypeAllowed := contentTypeCompiled.AllowedTuples()
+	if len(contentTypeAllowed) != 1 || len(contentTypeAllowed[0].Fields) != 1 ||
+		contentTypeAllowed[0].Fields[0].FieldID != string(counterhttp.HTTPFieldContentType) {
+		t.Fatalf("portable HTTP ordered-list DecisionRecord changed tuple shape: %#v", contentTypeAllowed)
+	}
+	ordered, ok := contentTypeAllowed[0].Fields[0].Value.OrderedStrings()
+	if !ok || !slices.Equal(ordered, customContentTypes) {
+		t.Fatalf("portable HTTP ordered-list DecisionRecord changed order or duplicates: %#v", ordered)
+	}
+	parsedContentType, err := choice.ParseDecisionRecord(contentTypeDecision.CanonicalBytes(), readyRecord)
+	if err != nil || parsedContentType.Digest() != contentTypeDecision.Digest() {
+		t.Fatalf("portable HTTP ordered-list DecisionRecord did not round trip strictly: %v", err)
+	}
+
+	status401, err := choice.IntegerValue("401")
+	if err != nil {
+		t.Fatal(err)
+	}
+	custom401, err := choice.NewSelectedTuple(
+		readyRecord,
+		[]string{string(counterhttp.HTTPFieldStatus)},
+		[]choice.FieldValue{{FieldID: string(counterhttp.HTTPFieldStatus), Value: status401}},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	customFields := custom401.Fields()
+	if len(customFields) != 1 || customFields[0].FieldID != string(counterhttp.HTTPFieldStatus) ||
+		customFields[0].Value.Tag() != choice.ValueInteger || customFields[0].Value.Text() != "401" {
+		t.Fatalf("custom HTTP expectation retained unselected context: %#v", customFields)
+	}
+	customInput := choice.RulingDraftInput{
+		Action: choice.ActionCustomExpectation, SelectedFields: []string{string(counterhttp.HTTPFieldStatus)},
+		AllowedAliases: []string{}, CustomExpectation: &custom401,
+		CustomReviewer: "physical-http-contract-reviewer", CustomReviewEvidence: confirmationDraft.Digest(),
+	}
+	customSession, err := choice.NewSession(readyRecord)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, surface := range []choice.ReviewSurface{
+		choice.SurfaceOriginalWitness, choice.SurfaceMinimizedWitness, choice.SurfaceReductionDerivation,
+		choice.SurfaceProjectionOperations, choice.SurfaceNonassertedFields,
+	} {
+		customSession, err = customSession.Visit(surface)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	customSession, err = customSession.Propose(customInput)
+	if err != nil {
+		t.Fatal(err)
+	}
+	customSession, _, err = customSession.Reveal()
+	if err != nil {
+		t.Fatal(err)
+	}
+	customSession, err = customSession.Visit(choice.SurfaceProvenance)
+	if err != nil {
+		t.Fatal(err)
+	}
+	customSession, err = customSession.Revise(customInput, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, customDecision, err := customSession.Finalize(
+		"local-test-operator", "Accept only the separately reviewed HTTP 401 status.", []domain.ReceiptReference{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if customDecision.Action() != choice.ActionCustomExpectation ||
+		!slices.Equal(customDecision.SelectedFields(), httpFields[:1]) ||
+		!slices.Equal(customDecision.NonassertedFields(), httpFields[1:]) ||
+		len(customDecision.ConfirmedAllowedOutcomeIDs()) != 0 ||
+		len(customDecision.ConfirmedDisallowedOutcomeIDs()) != len(confirmedStudy.OutcomeMap.Entries()) {
+		t.Fatalf("custom HTTP DecisionRecord lost its selected-only partition")
+	}
+	compiled, compilable := customDecision.CompilableRuling()
+	if !compilable {
+		t.Fatal("custom HTTP 401 decision was not compilable")
+	}
+	allowed := compiled.AllowedTuples()
+	if len(allowed) != 1 || len(allowed[0].Fields) != 1 ||
+		allowed[0].Fields[0].FieldID != string(counterhttp.HTTPFieldStatus) ||
+		allowed[0].Fields[0].Value.Text() != "401" {
+		t.Fatalf("compiled HTTP 401 predicate smuggled profile context: %#v", allowed)
+	}
+	parsedDecision, err := choice.ParseDecisionRecord(customDecision.CanonicalBytes(), readyRecord)
+	if err != nil || parsedDecision.Digest() != customDecision.Digest() {
+		t.Fatalf("custom HTTP DecisionRecord did not round trip strictly: %v", err)
+	}
+	durableRuling, err := promotion.Finalize(context.Background(), restartedStore, reopenedReady, customDecision)
+	if err != nil || durableRuling.Record().Digest() != customDecision.Digest() {
+		t.Fatalf("physical HTTP DecisionRecord promotion failed: %v", err)
+	}
+	rulingRestart, err := store.OpenObjectStore(promotionRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reopenedRuling, err := promotion.OpenRuling(context.Background(), rulingRestart, studyID)
+	if err != nil || reopenedRuling.Record().Digest() != customDecision.Digest() {
+		t.Fatalf("physical HTTP RULING did not survive restart: %v", err)
+	}
+	preparation, err := promotion.PreparePortableRuling(context.Background(), rulingRestart, reopenedRuling)
+	if err != nil || !preparation.Valid() || !preparation.ProfileDigest().Valid() ||
+		preparation.DecisionDigest() != parsedDecision.Digest() ||
+		!slices.Equal(preparation.SelectedFields(), httpFields[:1]) ||
+		promotion.ValidatePortableRulingPreparation(context.Background(), rulingRestart, preparation) != nil {
+		t.Fatalf("current portable HTTP ruling preparation failed: %#v, %v", preparation, err)
 	}
 }
 

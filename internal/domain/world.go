@@ -27,6 +27,20 @@ const (
 	AdapterHTTP AdapterDomain = "HTTP"
 )
 
+// CanonicalStimulusKind returns the stable semantic artifact kind bound to an
+// adapter domain. It belongs to the historical domain model, not to a current
+// adapter constructor or downstream portable translator.
+func (d AdapterDomain) CanonicalStimulusKind() string {
+	switch d {
+	case AdapterCLI:
+		return "CLIStimulus"
+	case AdapterHTTP:
+		return "HTTPStimulus"
+	default:
+		return ""
+	}
+}
+
 type ExecutionShape string
 
 const (

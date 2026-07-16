@@ -17,16 +17,17 @@ import (
 type Code string
 
 const (
-	CodeInvalidBinding    Code = "INVALID_PROJECTION_BINDING"
-	CodeProfileNotFound   Code = "EXACT_PROFILE_NOT_FOUND"
-	CodeProfileAmbiguous  Code = "EXACT_PROFILE_AMBIGUOUS"
-	CodeProfileMismatch   Code = "RESOLVED_PROFILE_MISMATCH"
-	CodeInvalidProjection Code = "INVALID_PROJECTION_WIRE"
-	CodeNoncanonical      Code = "NONCANONICAL_PROJECTION_WIRE"
-	CodeRosterMismatch    Code = "PROJECTION_FIELD_ROSTER_MISMATCH"
-	CodeInvalidTag        Code = "INVALID_PROJECTION_VALUE_TAG"
-	CodeInvalidPayload    Code = "INVALID_PROJECTION_VALUE_PAYLOAD"
-	CodeTranslationLimit  Code = "PORTABLE_TRANSLATION_LIMIT_EXCEEDED"
+	CodeInvalidBinding                 Code = "INVALID_PROJECTION_BINDING"
+	CodeProfileNotFound                Code = "EXACT_PROFILE_NOT_FOUND"
+	CodeProfileAmbiguous               Code = "EXACT_PROFILE_AMBIGUOUS"
+	CodeProfileMismatch                Code = "RESOLVED_PROFILE_MISMATCH"
+	CodeInvalidProjection              Code = "INVALID_PROJECTION_WIRE"
+	CodeNoncanonical                   Code = "NONCANONICAL_PROJECTION_WIRE"
+	CodeRosterMismatch                 Code = "PROJECTION_FIELD_ROSTER_MISMATCH"
+	CodeInvalidTag                     Code = "INVALID_PROJECTION_VALUE_TAG"
+	CodeInvalidPayload                 Code = "INVALID_PROJECTION_VALUE_PAYLOAD"
+	CodeTranslationLimit               Code = "PORTABLE_TRANSLATION_LIMIT_EXCEEDED"
+	CodeCustomExpectationNotRealizable Code = "CUSTOM_EXPECTATION_NOT_REALIZABLE"
 )
 
 type Error struct {
@@ -194,6 +195,9 @@ func newTuple(profile projectionprofile.Profile, fields []Field) (Tuple, error) 
 func Resolve(binding domain.ProjectionDefinitionBinding) (Resolved, error) {
 	if !binding.Valid() {
 		return Resolved{}, refuse(CodeInvalidBinding, "", "projection binding is invalid")
+	}
+	if err := verifyPortableProfileRosterV1(); err != nil {
+		return Resolved{}, err
 	}
 	switch binding.AdapterDomain() {
 	case domain.AdapterCLI:

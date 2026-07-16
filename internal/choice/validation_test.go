@@ -176,7 +176,8 @@ func TestCustomExpectationRequiresOneBoundReviewAndDerivesAllDisallowed(t *testi
 	_, confirmed := testConfirmed(t, defaultSpecs()...)
 	expectation := testTuple(t, "401", "human_authored")
 	selected := []string{"http.status", "http.body.kind"}
-	review, err := NewCustomExpectationReview(confirmed, selected, expectation, "reviewer@example.test", reviewDigest())
+	selectedExpectation := mustSelectedTuple(t, confirmed, selected, expectation)
+	review, err := NewCustomExpectationReview(confirmed, selected, selectedExpectation, "reviewer@example.test", reviewDigest())
 	if err != nil {
 		t.Fatalf("NewCustomExpectationReview() error = %v", err)
 	}
@@ -184,7 +185,7 @@ func TestCustomExpectationRequiresOneBoundReviewAndDerivesAllDisallowed(t *testi
 		Action:            ActionCustomExpectation,
 		SelectedFields:    selected,
 		AllowedObserved:   []ConfirmedOutcomeRef{},
-		CustomExpectation: &expectation,
+		CustomExpectation: &selectedExpectation,
 		CustomReview:      review,
 	})
 	if err != nil {
@@ -213,7 +214,8 @@ func TestCustomExpectationCannotReuseObservedProjection(t *testing.T) {
 	_, confirmed := testConfirmed(t, defaultSpecs()...)
 	expectation := testTuple(t, "404", "not_found")
 	selected := []string{"http.status", "http.body.kind"}
-	review, err := NewCustomExpectationReview(confirmed, selected, expectation, "reviewer", reviewDigest())
+	selectedExpectation := mustSelectedTuple(t, confirmed, selected, expectation)
+	review, err := NewCustomExpectationReview(confirmed, selected, selectedExpectation, "reviewer", reviewDigest())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -221,7 +223,7 @@ func TestCustomExpectationCannotReuseObservedProjection(t *testing.T) {
 		Action:            ActionCustomExpectation,
 		SelectedFields:    selected,
 		AllowedObserved:   []ConfirmedOutcomeRef{},
-		CustomExpectation: &expectation,
+		CustomExpectation: &selectedExpectation,
 		CustomReview:      review,
 	})
 	assertRefusal(t, err, CodeCustomExpectationAlreadySeen)
@@ -230,10 +232,12 @@ func TestCustomExpectationCannotReuseObservedProjection(t *testing.T) {
 func TestCustomReviewIsBoundToExactTupleAndFieldSelection(t *testing.T) {
 	_, confirmed := testConfirmed(t, defaultSpecs()...)
 	reviewed := testTuple(t, "401", "reviewed")
+	fields := []string{"http.status", "http.body.kind"}
+	selectedReviewed := mustSelectedTuple(t, confirmed, fields, reviewed)
 	review, err := NewCustomExpectationReview(
 		confirmed,
-		[]string{"http.status", "http.body.kind"},
-		reviewed,
+		fields,
+		selectedReviewed,
 		"reviewer",
 		reviewDigest(),
 	)
@@ -241,11 +245,12 @@ func TestCustomReviewIsBoundToExactTupleAndFieldSelection(t *testing.T) {
 		t.Fatal(err)
 	}
 	changed := testTuple(t, "402", "changed-after-review")
+	selectedChanged := mustSelectedTuple(t, confirmed, fields, changed)
 	_, err = ValidateRuling(confirmed, RulingInput{
 		Action:            ActionCustomExpectation,
-		SelectedFields:    []string{"http.status", "http.body.kind"},
+		SelectedFields:    fields,
 		AllowedObserved:   []ConfirmedOutcomeRef{},
-		CustomExpectation: &changed,
+		CustomExpectation: &selectedChanged,
 		CustomReview:      review,
 	})
 	assertRefusal(t, err, CodeReviewExpectationMismatch)
@@ -257,7 +262,8 @@ func TestCustomReviewCannotBeReusedAfterConfirmedUniverseChanges(t *testing.T) {
 	_, second := testConfirmed(t, largerSpecs...)
 	expectation := testTuple(t, "401", "reviewed")
 	fields := []string{"http.status", "http.body.kind"}
-	review, err := NewCustomExpectationReview(first, fields, expectation, "reviewer", reviewDigest())
+	selectedExpectation := mustSelectedTuple(t, first, fields, expectation)
+	review, err := NewCustomExpectationReview(first, fields, selectedExpectation, "reviewer", reviewDigest())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -265,7 +271,7 @@ func TestCustomReviewCannotBeReusedAfterConfirmedUniverseChanges(t *testing.T) {
 		Action:            ActionCustomExpectation,
 		SelectedFields:    fields,
 		AllowedObserved:   []ConfirmedOutcomeRef{},
-		CustomExpectation: &expectation,
+		CustomExpectation: &selectedExpectation,
 		CustomReview:      review,
 	})
 	assertRefusal(t, err, CodeReviewExpectationMismatch)
@@ -274,15 +280,17 @@ func TestCustomReviewCannotBeReusedAfterConfirmedUniverseChanges(t *testing.T) {
 func TestCustomExpectationRefusesBooleanReviewAndObservedSelection(t *testing.T) {
 	_, confirmed := testConfirmed(t, defaultSpecs()...)
 	expectation := testTuple(t, "401", "custom")
+	fields := []string{"http.status", "http.body.kind"}
+	selectedExpectation := mustSelectedTuple(t, confirmed, fields, expectation)
 	base := RulingInput{
 		Action:            ActionCustomExpectation,
-		SelectedFields:    []string{"http.status", "http.body.kind"},
+		SelectedFields:    fields,
 		AllowedObserved:   []ConfirmedOutcomeRef{},
-		CustomExpectation: &expectation,
+		CustomExpectation: &selectedExpectation,
 	}
 	_, err := ValidateRuling(confirmed, base)
 	assertRefusal(t, err, CodeCustomExpectationUnreviewed)
-	review, reviewErr := NewCustomExpectationReview(confirmed, base.SelectedFields, expectation, "reviewer", reviewDigest())
+	review, reviewErr := NewCustomExpectationReview(confirmed, base.SelectedFields, selectedExpectation, "reviewer", reviewDigest())
 	if reviewErr != nil {
 		t.Fatal(reviewErr)
 	}
@@ -295,7 +303,7 @@ func TestCustomExpectationRefusesBooleanReviewAndObservedSelection(t *testing.T)
 func TestIncompleteTuplesCannotReachReviewOrMembership(t *testing.T) {
 	_, confirmed := testConfirmed(t, defaultSpecs()...)
 	incomplete := CompleteTuple{Fields: []FieldValue{{FieldID: "http.status", Value: mustInteger(t, "401")}}}
-	_, err := NewCustomExpectationReview(confirmed, []string{"http.status"}, incomplete, "reviewer", reviewDigest())
+	_, err := newSelectedTuple(confirmed, []string{"http.status", "http.body.kind"}, incomplete.Fields)
 	assertRefusal(t, err, CodeIncompleteTuple)
 
 	validated := validateObservedForTest(t, confirmed, []string{"http.status"}, findRef(t, confirmed, "candidate:a"))
@@ -473,6 +481,7 @@ func TestProjectionAndReviewerInputCapsFailClosed(t *testing.T) {
 	_, confirmed := testConfirmed(t, defaultSpecs()...)
 	expectation := testTuple(t, "401", "reviewed")
 	selected := []string{"http.status", "http.body.kind"}
+	selectedExpectation := mustSelectedTuple(t, confirmed, selected, expectation)
 	overfullObserved := append(confirmed.Outcomes(), ConfirmedOutcomeRef{})
 	_, err = ValidateRuling(confirmed, RulingInput{
 		Action:          ActionAllowObserved,
@@ -483,14 +492,14 @@ func TestProjectionAndReviewerInputCapsFailClosed(t *testing.T) {
 	for _, reviewer := range []string{
 		"", "   ", string([]byte{0xff}), "reviewer\nforged", strings.Repeat("r", maxReviewerBytes+1),
 	} {
-		_, reviewErr := NewCustomExpectationReview(confirmed, selected, expectation, reviewer, reviewDigest())
+		_, reviewErr := NewCustomExpectationReview(confirmed, selected, selectedExpectation, reviewer, reviewDigest())
 		assertRefusal(t, reviewErr, CodeInvalidReviewFact)
 	}
 	_, err = ValidateRuling(confirmed, RulingInput{
 		Action: Action(strings.Repeat("A", maxActionBytes+1)), SelectedFields: []string{}, AllowedObserved: []ConfirmedOutcomeRef{},
 	})
 	assertRefusal(t, err, CodeInputLimitExceeded)
-	if _, err := NewCustomExpectationReview(confirmed, selected, expectation, strings.Repeat("r", maxReviewerBytes), reviewDigest()); err != nil {
+	if _, err := NewCustomExpectationReview(confirmed, selected, selectedExpectation, strings.Repeat("r", maxReviewerBytes), reviewDigest()); err != nil {
 		t.Fatalf("reviewer at exact byte cap was refused: %v", err)
 	}
 }
@@ -1341,6 +1350,15 @@ func testTuple(t testing.TB, status, kind string) CompleteTuple {
 		{FieldID: "http.status", Value: mustInteger(t, status)},
 		{FieldID: "http.body.kind", Value: mustString(t, kind)},
 	}}
+}
+
+func mustSelectedTuple(t testing.TB, confirmed ConfirmedOutcomeSet, selected []string, tuple CompleteTuple) SelectedTuple {
+	t.Helper()
+	value, err := newSelectedTuple(confirmed, selected, tuple.Fields)
+	if err != nil {
+		t.Fatalf("newSelectedTuple() error = %v", err)
+	}
+	return value
 }
 
 func stringPairTuple(t testing.TB, x, y string) CompleteTuple {

@@ -260,6 +260,17 @@ func TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence(t *test
 	if err != nil || len(blind.DTO().Cards()) != confirmedStudy.OutcomeMap.DistinctProjectionCount() {
 		t.Fatalf("physical CLI blind DTO did not group exact outcomes: %v", err)
 	}
+	if blind.DTO().ProjectionMode() != "ADAPTER_BOUND_PORTABLE_FIELDS_V1" ||
+		!slices.Equal(blind.DTO().SelectableFields(), []string{
+			string(countercli.CLIFieldStdoutBytes), string(countercli.CLIFieldStdoutJSONMode),
+			string(countercli.CLIFieldStdoutJSONSource),
+		}) || !slices.Equal(blind.DTO().DifferingFields(), []string{
+		string(countercli.CLIFieldStdoutBytes), string(countercli.CLIFieldStdoutJSONMode),
+		string(countercli.CLIFieldStdoutJSONSource),
+	}) {
+		t.Fatalf("physical CLI Choicepoint lacks exact portable profile order or mode: selectable=%#v differing=%#v mode=%q",
+			blind.DTO().SelectableFields(), blind.DTO().DifferingFields(), blind.DTO().ProjectionMode())
+	}
 	blindBytes := blind.DTO().CanonicalBytes()
 	for _, binding := range confirmedStudy.CandidateBindings {
 		for _, forbidden := range []string{
@@ -370,6 +381,70 @@ func TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence(t *test
 		t.Fatal("superseded confirmation authority promoted a second Choicepoint")
 	}
 
+	customBytes := []byte(`{ "mode" : "reviewed-custom" }`)
+	customValue, err := choice.BytesValue(customBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	customExpectation, err := choice.NewSelectedTuple(
+		reopenedReady.Record(),
+		[]string{string(countercli.CLIFieldStdoutBytes)},
+		[]choice.FieldValue{{FieldID: string(countercli.CLIFieldStdoutBytes), Value: customValue}},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	customBytesInput := choice.RulingDraftInput{
+		Action: choice.ActionCustomExpectation, SelectedFields: []string{string(countercli.CLIFieldStdoutBytes)},
+		AllowedAliases: []string{}, CustomExpectation: &customExpectation,
+		CustomReviewer: "physical-cli-byte-reviewer", CustomReviewEvidence: confirmationDraft.Digest(),
+	}
+	customBytesSession, err := choice.NewSession(reopenedReady.Record())
+	if err != nil {
+		t.Fatal(err)
+	}
+	customBytesSession, _, err = customBytesSession.Reveal()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, surface := range []choice.ReviewSurface{
+		choice.SurfaceOriginalWitness, choice.SurfaceMinimizedWitness, choice.SurfaceReductionDerivation,
+		choice.SurfaceProjectionOperations, choice.SurfaceNonassertedFields, choice.SurfaceProvenance,
+	} {
+		customBytesSession, err = customBytesSession.Visit(surface)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	customBytesSession, err = customBytesSession.Revise(customBytesInput, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, customBytesDecision, err := customBytesSession.Finalize(
+		"local-test-operator", "Exact CLI bytes are an adapter-realizable reviewed predicate.", []domain.ReceiptReference{},
+	)
+	if err != nil || !customBytesDecision.EarlyReveal() ||
+		!slices.Equal(customBytesDecision.SelectedFields(), []string{string(countercli.CLIFieldStdoutBytes)}) ||
+		!slices.Equal(customBytesDecision.NonassertedFields(), []string{
+			string(countercli.CLIFieldStdoutJSONMode), string(countercli.CLIFieldStdoutJSONSource),
+		}) {
+		t.Fatalf("portable CLI byte DecisionRecord lost its selected-only partition: %v", err)
+	}
+	customBytesCompiled, ok := customBytesDecision.CompilableRuling()
+	if !ok {
+		t.Fatal("portable CLI byte DecisionRecord was not compilable")
+	}
+	customBytesAllowed := customBytesCompiled.AllowedTuples()
+	if len(customBytesAllowed) != 1 || len(customBytesAllowed[0].Fields) != 1 ||
+		customBytesAllowed[0].Fields[0].FieldID != string(countercli.CLIFieldStdoutBytes) ||
+		!bytes.Equal(customBytesAllowed[0].Fields[0].Value.Bytes(), customBytes) {
+		t.Fatalf("portable CLI byte DecisionRecord changed exact bytes: %#v", customBytesAllowed)
+	}
+	parsedCustomBytes, err := choice.ParseDecisionRecord(customBytesDecision.CanonicalBytes(), reopenedReady.Record())
+	if err != nil || parsedCustomBytes.Digest() != customBytesDecision.Digest() {
+		t.Fatalf("portable CLI byte DecisionRecord did not round trip strictly: %v", err)
+	}
+
 	decisionSession, err := choice.NewSession(reopenedReady.Record())
 	if err != nil {
 		t.Fatal(err)
@@ -379,7 +454,7 @@ func TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence(t *test
 		t.Fatal("divergent CLI Choicepoint did not expose at least two blind outcome cards")
 	}
 	standardInput := choice.RulingDraftInput{
-		Action: choice.ActionAllowObserved, SelectedFields: []string{choice.WholeProjectionFieldID},
+		Action: choice.ActionAllowObserved, SelectedFields: []string{string(countercli.CLIFieldStdoutJSONMode)},
 		AllowedAliases: []string{cards[0].Alias},
 	}
 	if _, err := decisionSession.Propose(standardInput); !choice.IsRefusal(err, choice.CodeRequiredSurfaceNotVisited) {
@@ -454,6 +529,13 @@ func TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence(t *test
 	parsedDecision, err := choice.ParseDecisionRecord(decision.CanonicalBytes(), reopenedReady.Record())
 	if err != nil || parsedDecision.Digest() != decision.Digest() {
 		t.Fatalf("DecisionRecord did not round trip strictly: %v", err)
+	}
+	if !slices.Equal(parsedDecision.SelectedFields(), []string{string(countercli.CLIFieldStdoutJSONMode)}) ||
+		!slices.Equal(parsedDecision.NonassertedFields(), []string{
+			string(countercli.CLIFieldStdoutBytes), string(countercli.CLIFieldStdoutJSONSource),
+		}) {
+		t.Fatalf("portable CLI DecisionRecord selected/nonasserted fields differ: selected=%#v context=%#v",
+			parsedDecision.SelectedFields(), parsedDecision.NonassertedFields())
 	}
 	tamperedCompilable := bytes.Replace(decision.CanonicalBytes(), []byte(`"compilable":true`), []byte(`"compilable":false`), 1)
 	if bytes.Equal(tamperedCompilable, decision.CanonicalBytes()) {
@@ -574,6 +656,48 @@ func TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence(t *test
 	reopenedRuling, err := promotion.OpenRuling(context.Background(), rulingRestart, studyID)
 	if err != nil || reopenedRuling.Record().Digest() != decision.Digest() {
 		t.Fatalf("durable RULING did not survive strict restart reconstruction: %v", err)
+	}
+	preparation, err := promotion.PreparePortableRuling(context.Background(), rulingRestart, reopenedRuling)
+	if err != nil || !preparation.Valid() || preparation.DecisionDigest() != parsedDecision.Digest() ||
+		!slices.Equal(preparation.SelectedFields(), parsedDecision.SelectedFields()) ||
+		promotion.ValidatePortableRulingPreparation(context.Background(), rulingRestart, preparation) != nil {
+		t.Fatalf("current portable CLI ruling preparation failed: %#v, %v", preparation, err)
+	}
+	currentBeforeForeign, err := rulingRestart.OpenHead(context.Background(), studyID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	foreignStore, err := store.OpenObjectStore(promotionRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !preparation.Valid() {
+		t.Fatal("portable preparation seal integrity changed merely because another store instance opened")
+	}
+	foreignErr := promotion.ValidatePortableRulingPreparation(context.Background(), foreignStore, preparation)
+	var foreignStoreErr *store.Error
+	if !errors.As(foreignErr, &foreignStoreErr) || foreignStoreErr.Code != "OBJECT_AUTHORITY_REFUSED" {
+		t.Fatalf("portable preparation crossed store authority: %v", foreignErr)
+	}
+	currentAfterForeign, err := foreignStore.OpenHead(context.Background(), studyID)
+	if err != nil || currentAfterForeign.HeadDigest() != currentBeforeForeign.HeadDigest() ||
+		currentAfterForeign.Stage() != currentBeforeForeign.Stage() ||
+		currentAfterForeign.CurrentDigest() != currentBeforeForeign.CurrentDigest() {
+		t.Fatalf("foreign preparation validation changed the durable head: %v", err)
+	}
+	foreignRuling, err := promotion.OpenRuling(context.Background(), foreignStore, studyID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	foreignPreparation, err := promotion.PreparePortableRuling(context.Background(), foreignStore, foreignRuling)
+	if err != nil || promotion.ValidatePortableRulingPreparation(context.Background(), foreignStore, foreignPreparation) != nil ||
+		foreignPreparation.DecisionDigest() != preparation.DecisionDigest() ||
+		foreignPreparation.ProfileDigest() != preparation.ProfileDigest() ||
+		!slices.Equal(foreignPreparation.SelectedFields(), preparation.SelectedFields()) {
+		t.Fatalf("reopened store could not reissue matching portable preparation: %#v, %v", foreignPreparation, err)
+	}
+	if err := promotion.ValidatePortableRulingPreparation(context.Background(), rulingRestart, foreignPreparation); err == nil {
+		t.Fatal("foreign-store portable preparation validated against its predecessor store instance")
 	}
 	if _, err := promotion.Finalize(context.Background(), restartedStore, reopenedReady, rejectedDecision); err == nil {
 		t.Fatal("stale CHOICEPOINT_READY authority published a second DecisionRecord")
@@ -735,6 +859,11 @@ func TestCLIPhysicalReducerBudgetFenceRetainsOnlyBestKnown(t *testing.T) {
 func cliPhysicalReductionConfig(t *testing.T) Config {
 	t.Helper()
 	config := referenceConfig(t)
+	config.ProjectionFields = []countercli.CLIFieldID{
+		countercli.CLIFieldStdoutBytes,
+		countercli.CLIFieldStdoutJSONMode,
+		countercli.CLIFieldStdoutJSONSource,
+	}
 	config.ReductionProposalLimit = 5
 	// The plan reserves 18 trials for discovery+confirmation and 36 for U5.
 	config.ReductionTotalCandidateTrials = 54

@@ -410,10 +410,10 @@ const exactInternalImports = Object.freeze(new Map([
   ["internal/confirmation", ["internal/canon", "internal/compare", "internal/confirmation/authority", "internal/confirmation/internal/publication", "internal/domain", "internal/observe", "internal/reduce", "internal/reduction", "internal/world"]],
   ["internal/confirmation/authority", ["internal/confirmation/internal/publication"]],
   ["internal/confirmation/internal/publication", ["internal/canon", "internal/domain"]],
-	["internal/portablevalue", ["internal/canon"]],
-	["internal/projectionprofile", ["internal/canon", "internal/domain", "internal/portablevalue"]],
-	["internal/projectiontranslate", ["internal/adapters/cli", "internal/adapters/http", "internal/canon", "internal/compare", "internal/domain", "internal/portablevalue", "internal/projectionprofile"]],
-  ["internal/choice", ["internal/canon", "internal/compare", "internal/confirmation", "internal/domain", "internal/reduce"]],
+  ["internal/portablevalue", ["internal/canon"]],
+  ["internal/projectionprofile", ["internal/canon", "internal/domain", "internal/portablevalue"]],
+  ["internal/projectiontranslate", ["internal/adapters/cli", "internal/adapters/http", "internal/canon", "internal/compare", "internal/domain", "internal/portablevalue", "internal/projectionprofile"]],
+  ["internal/choice", ["internal/canon", "internal/compare", "internal/confirmation", "internal/domain", "internal/portablevalue", "internal/projectionprofile", "internal/projectiontranslate", "internal/reduce"]],
   ["internal/choice/promotion", ["internal/choice", "internal/choice/promotion/internal/publication", "internal/confirmation", "internal/domain", "internal/store"]],
   ["internal/choice/promotion/authority", ["internal/choice/promotion/internal/publication"]],
   ["internal/choice/promotion/internal/publication", ["internal/canon", "internal/domain"]],
@@ -506,6 +506,614 @@ function inspectPortableAuthorityBoundaries(manifest, violations) {
 		(validBody.match(/\bNewDerived\b/gu) ?? []).length !== 1) {
 		violations.push(["U6_PROFILE_INTERNAL_REBUILD_SURFACE_NOT_EXACT", `${internalReferences}:${internalFiles.join(",")}`]);
 	}
+
+	const translate = codeAt(manifest, "internal/projectiontranslate/translate.go");
+	const resolveBody = functionBody(translate, /\bfunc\s+Resolve\s*\(/u) ?? "";
+	const firewall = resolveBody.indexOf("if err := verifyPortableProfileRosterV1(); err != nil");
+	const adapterSwitch = resolveBody.indexOf("switch binding.AdapterDomain()");
+	if (firewall < 0 || adapterSwitch < 0 || firewall >= adapterSwitch ||
+		(resolveBody.match(/\bverifyPortableProfileRosterV1\s*\(/gu) ?? []).length !== 1) {
+		violations.push(["U6_PROFILE_ROSTER_FIREWALL_NOT_EXACT", "projectiontranslate.Resolve"]);
+	}
+	const roster = commentlessAt(manifest, "internal/projectiontranslate/profile_roster.go");
+	for (const anchor of [
+		"portableProfileRosterV1EntryCount           = 128",
+		'portableProfileRosterV1Digest               = "sha256:aec21f3f76f9384a09ab3f71cea3d1def86fb8ef725322f35af296aa8e1560b7"',
+		"portableExpectationDomainRosterV1EntryCount = 128",
+		'portableExpectationDomainRosterV1Digest     = "sha256:d0951b6681fc1893691db83accfb5aeaac2a500cba9d4814308518aeff4566c7"',
+		'portableModeSemanticsV1Digest               = "sha256:9b51d42ab58078eac4d652fbaeb925d614803d5926bf63e7c59fba4134f57cae"',
+		"for mask := 1; mask < 1<<len(registry); mask++",
+		"newCLIResolvedProfile(definition, registry)",
+		"counterhttp.NewHTTPProjectionDefinition()",
+		"resolveHTTP(httpDefinition.Binding())",
+		'canon.DigestTyped("PortableProjectionProfileRosterV1"',
+		'canon.DigestTyped("PortableExpectationDomainRosterV1"',
+		'canon.DigestTyped("PortableModeSemanticsV1"',
+		"newExpectationDomain(resolved)",
+		"PortableChoiceModeV1",
+		"portableTupleIdentityRuleV1",
+		"portableSelectionRuleV1",
+		"portableProofRuleV1",
+		"portablevalue.MaxTupleEncodedBytes",
+		"ProjectionBindingBase64: base64.StdEncoding.EncodeToString(binding.CanonicalBytes())",
+		"ProfileBase64:           base64.StdEncoding.EncodeToString(profile.CanonicalBytes())",
+	]) requireIncludes(violations, roster, anchor, "U6_PROFILE_ROSTER_DERIVATION_NOT_EXACT", anchor);
+	const rosterFirewall = functionBody(roster, /\bfunc\s+verifyPortableProfileRosterV1\s*\(/u) ?? "";
+	for (const anchor of [
+		"derivePortableProfileRosterV1()",
+		"derivePortableExpectationDomainRosterV1()",
+		"derivePortableModeSemanticsV1()",
+		"portableProfileRosterV1EntryCount",
+		"portableExpectationDomainRosterV1EntryCount",
+		"portableModeSemanticsV1Digest",
+	]) requireIncludes(violations, rosterFirewall, anchor, "U6_PORTABLE_MODE_SEMANTICS_FIREWALL_NOT_EXACT", anchor);
+	const cliTranslator = commentlessAt(manifest, "internal/projectiontranslate/cli.go");
+	const httpTranslator = commentlessAt(manifest, "internal/projectiontranslate/http.go");
+	if (!cliTranslator.includes('cliTranslatorName    = "CLI_PROJECTION_TO_PORTABLE"') ||
+		!cliTranslator.includes('cliTranslatorVersion = "v1"') ||
+		!httpTranslator.includes('httpTranslatorName    = "HTTP_PROJECTION_TO_PORTABLE"') ||
+		!httpTranslator.includes('httpTranslatorVersion = "v1"')) {
+		violations.push(["U6_PROFILE_ROSTER_TRANSLATOR_IDENTITY_NOT_EXACT", "internal/projectiontranslate"]);
+	}
+	const rosterTest = commentlessAt(manifest, "internal/projectiontranslate/resolve_test.go");
+	const rosterTestBody = functionBody(rosterTest, /\bfunc\s+TestPortableProfileRosterV1IsRuntimeFrozen\s*\(/u) ?? "";
+	for (const anchor of [
+		'const expected = "sha256:aec21f3f76f9384a09ab3f71cea3d1def86fb8ef725322f35af296aa8e1560b7"',
+		'const expectedExpectation = "sha256:d0951b6681fc1893691db83accfb5aeaac2a500cba9d4814308518aeff4566c7"',
+		'const expectedSemantics = "sha256:9b51d42ab58078eac4d652fbaeb925d614803d5926bf63e7c59fba4134f57cae"',
+		"derivePortableProfileRosterV1()",
+		"derivePortableExpectationDomainRosterV1()",
+		"derivePortableModeSemanticsV1()",
+		"count != portableProfileRosterV1EntryCount",
+		"expectationCount != portableExpectationDomainRosterV1EntryCount",
+		"semanticsDigest.String() != expectedSemantics",
+		"digest.String() != expected",
+		"verifyPortableProfileRosterV1()",
+	]) requireIncludes(violations, rosterTestBody, anchor, "U6_PROFILE_ROSTER_GOLDEN_TEST_NOT_EXACT", anchor);
+}
+
+function inspectPortableRulingBoundaries(manifest, violations) {
+  const choicepoint = codeAt(manifest, "internal/choice/choicepoint.go");
+  const portable = codeAt(manifest, "internal/choice/portable.go");
+  const validation = codeAt(manifest, "internal/choice/validation.go");
+  const blind = codeAt(manifest, "internal/choice/blind.go");
+  const session = codeAt(manifest, "internal/choice/session.go");
+  const promotion = codeAt(manifest, "internal/choice/promotion/service.go");
+  const choiceEntries = productionEntries(manifest).filter((entry) =>
+    entry.path.slice(0, entry.path.lastIndexOf("/")) === "internal/choice");
+  const choiceCode = choiceEntries.map((entry) => entry.lexical.code).join("\n");
+
+  for (const entry of choiceEntries) {
+    if (/\bdomain\s*\.\s*Adapter(?:CLI|HTTP)\b/gu.test(entry.lexical.code)) {
+      violations.push(["U6_CHOICE_SWITCHES_ON_ADAPTER_DOMAIN", entry.path]);
+    }
+    if (/\bStrictTranslate\b/gu.test(entry.lexical.code)) {
+      violations.push(["U6_CHOICE_BYPASSES_PROOF_FIRST_TRANSLATION", entry.path]);
+    }
+  }
+  for (const forbidden of [
+    "ProjectionDefinition",
+    "ProjectionDefinitionConfig",
+    "NewProjectionDefinition",
+    "NewFieldRegistry",
+    "NewConfirmedOutcomeSet",
+    "NewWholeProjectionRegistry",
+  ]) {
+    if (new RegExp(`\\b${forbidden}\\b`, "u").test(choiceCode)) {
+      violations.push(["U6_CALLER_AUTHORED_PROJECTION_AUTHORITY_RESIDUE", forbidden]);
+    }
+  }
+  if (/\bprojectiontranslate\s*\.\s*Resolve\b/u.test(choiceCode)) {
+    violations.push(["U6_CHOICE_BYPASSES_TRANSLATOR_RESOLVER", "internal/choice"]);
+  }
+
+  const freshConstructor = functionBody(choicepoint, /\bfunc\s+NewChoicepointRecord\s*\(/u) ?? "";
+  if (compactCode(freshConstructor) !== "return buildChoicepointRecord(input, choicepointPortable, nil)") {
+    violations.push(["U6_FRESH_CHOICEPOINT_MODE_NOT_EXACT", "NewChoicepointRecord"]);
+  }
+  if ((choiceCode.match(/\bbuildChoicepointRecord\b/gu) ?? []).length !== 3 ||
+      choiceEntries.filter((entry) => /\bbuildChoicepointRecord\b/u.test(entry.lexical.code)).some((entry) => entry.path !== "internal/choice/choicepoint.go")) {
+    violations.push(["U6_CHOICEPOINT_BUILD_SURFACE_NOT_EXACT", "internal/choice/choicepoint.go"]);
+  }
+  const buildChoicepoint = functionBody(choicepoint, /\bfunc\s+buildChoicepointRecord\s*\(/u) ?? "";
+  const parseChoicepoint = functionBody(choicepoint, /\bfunc\s+ParseChoicepointRecord\s*\(/u) ?? "";
+  for (const anchor of [
+    "case choicepointPortable:",
+    "case choicepointLegacyWhole:",
+    "expectedStimulusKind = input.Plan.Adapter().Domain.CanonicalStimulusKind()",
+  ]) requireIncludes(violations, buildChoicepoint, anchor, "U6_CHOICEPOINT_MODE_DISPATCH_NOT_EXACT", anchor);
+  for (const anchor of [
+    "case legacyWholeProjectionMode:",
+    "mode = choicepointLegacyWhole",
+    "case portableProjectionMode:",
+    "mode = choicepointPortable",
+    "default:",
+  ]) requireIncludes(violations, parseChoicepoint, anchor, "U6_CHOICEPOINT_PARSE_MODE_DISPATCH_NOT_EXACT", anchor);
+  if ((choiceCode.match(/\bCanonicalStimulusKind\s*\(/gu) ?? []).length !== 1) {
+    violations.push(["U6_LEGACY_STIMULUS_KIND_OWNER_NOT_EXACT", "internal/choice/choicepoint.go"]);
+  }
+
+  if ((choiceCode.match(/\bprojectiontranslate\s*\.\s*TranslateConfirmed\b/gu) ?? []).length !== 1 ||
+      (buildChoicepoint.match(/\bprojectiontranslate\s*\.\s*TranslateConfirmed\s*\(/gu) ?? []).length !== 1) {
+    violations.push(["U6_PROOF_FIRST_TRANSLATION_SURFACE_NOT_EXACT", "internal/choice/choicepoint.go"]);
+  }
+  if ((choiceCode.match(/\bconfirmedOutcomeSetFromTranslations\b/gu) ?? []).length !== 2 ||
+      (buildChoicepoint.match(/\bconfirmedOutcomeSetFromTranslations\s*\(/gu) ?? []).length !== 1) {
+    violations.push(["U6_TRANSLATED_OUTCOME_CONSUMER_SURFACE_NOT_EXACT", "internal/choice"]);
+  }
+  for (const [identifier, expectedFile] of [
+    ["newPortableFieldRegistry", "internal/choice/portable.go"],
+    ["newWholeProjectionRegistry", "internal/choice/validation.go"],
+    ["newLegacyConfirmedOutcomeSet", "internal/choice/validation.go"],
+  ]) {
+    const references = choiceEntries.filter((entry) => new RegExp(`\\b${identifier}\\b`, "u").test(entry.lexical.code));
+    const count = references.reduce((total, entry) => total + (entry.lexical.code.match(new RegExp(`\\b${identifier}\\b`, "gu")) ?? []).length, 0);
+    if (count !== 2 || !references.some((entry) => entry.path === expectedFile)) {
+      violations.push(["U6_PORTABLE_LEGACY_CONSTRUCTION_SURFACE_NOT_EXACT", identifier]);
+    }
+  }
+
+  const registry = functionBody(portable, /\bfunc\s+newPortableFieldRegistry\s*\(/u) ?? "";
+  for (const anchor of [
+    "profile.Valid()",
+    "profile.Fields()",
+    "newFieldRegistry(definitions, true)",
+    "registry.sourceKinds",
+    "profile.Digest()",
+    "profile.Binding().Digest()",
+    "registry.mode = fieldRegistryPortable",
+  ]) requireIncludes(violations, registry, anchor, "U6_PORTABLE_REGISTRY_DERIVATION_NOT_EXACT", anchor);
+	for (const anchor of [
+		"expectation.Valid()",
+		"expectation.ProfileDigest() != profile.Digest()",
+		"bytes.Equal(expectation.ProfileBytes(), profile.CanonicalBytes())",
+		"ExpectationDomainDigest: expectation.Digest().String()",
+		"registry.expectationDomain = expectation",
+	]) requireIncludes(violations, registry, anchor, "U6_PORTABLE_REGISTRY_EXPECTATION_BINDING_NOT_EXACT", anchor);
+  if (!/\bfunc\s+newPortableFieldRegistry\s*\(\s*profile\s+projectionprofile\.Profile\s*,\s*expectation\s+projectiontranslate\.ExpectationDomain\s*\)/u.test(portable) ||
+      /\b(?:proof|tuple|translation|CanonicalProjection)\b/u.test(registry)) {
+    violations.push(["U6_PORTABLE_REGISTRY_ACCEPTS_NONPROFILE_AUTHORITY", "internal/choice/portable.go"]);
+  }
+	const expectationSource = codeAt(manifest, "internal/projectiontranslate/expectation.go");
+	const expectationCommentless = commentlessAt(manifest, "internal/projectiontranslate/expectation.go");
+	const expectationBodies = topLevelStructBodies(expectationSource, "ExpectationDomain");
+	const expectedExpectationBody = "profile projectionprofile.Profile arm adapterArm digest domain.Digest canonical []byte seal *expectationDomainSeal";
+	if (expectationBodies.length !== 1 || exportedStructFields(expectationBodies[0]).length !== 0 ||
+		compactCode(expectationBodies[0]) !== expectedExpectationBody ||
+		!expectationCommentless.includes('PortableChoiceModeV1 = "ADAPTER_BOUND_PORTABLE_FIELDS_V1"') ||
+		!expectationCommentless.includes('portableExpectationSemanticsV1 = "EXISTS_COMPLETE_ADAPTER_PROJECTION_RESTRICTION_V1"')) {
+		violations.push(["U6_EXPECTATION_DOMAIN_SURFACE_NOT_CLOSED", "internal/projectiontranslate/expectation.go"]);
+	}
+	const expectationConstructor = functionBody(expectationCommentless, /\bfunc\s+newExpectationDomain\s*\(/u) ?? "";
+	for (const anchor of [
+		"resolved.Valid()",
+		"expectationRules(resolved.profile, resolved.arm)",
+		"resolved.profile.Binding().Digest().String()",
+		"resolved.profile.Digest().String()",
+		"base64.StdEncoding.EncodeToString(resolved.profile.CanonicalBytes())",
+		'canon.DigestTyped("PortableExpectationDomain"',
+		"seal: expectationDomainAuthority",
+	]) requireIncludes(violations, expectationConstructor, anchor, "U6_EXPECTATION_DOMAIN_IDENTITY_NOT_EXACT", anchor);
+	const validateExpectation = functionBody(expectationSource, /\bfunc\s*\(d\s+ExpectationDomain\)\s+ValidateSelected\s*\(/u) ?? "";
+	for (const anchor of [
+		"d.Valid()",
+		"position <= lastPosition",
+		"portablevalue.ValidateTuple(orderedValues)",
+		"validateCLISelectedExpectation(profileFields, values)",
+		"validateHTTPSelectedExpectation(values)",
+	]) requireIncludes(violations, validateExpectation, anchor, "U6_EXPECTATION_DOMAIN_VALIDATION_NOT_EXACT", anchor);
+	const expectationValid = functionBody(expectationSource, /\bfunc\s*\(d\s+ExpectationDomain\)\s+Valid\s*\(/u) ?? "";
+	const expectationValidGuard = expectationValid.indexOf("if d.seal != expectationDomainAuthority");
+	if (expectationValidGuard < 0 || expectationValid.slice(0, expectationValidGuard).trim() !== "") {
+		violations.push(["U6_EXPECTATION_DOMAIN_VALIDITY_NOT_EXACT", "ExpectationDomain.Valid prefix"]);
+	}
+	for (const anchor of [
+		"d.seal != expectationDomainAuthority",
+		"d.profile.Valid()",
+		"d.digest.Valid()",
+		"newExpectationDomain(Resolved{",
+		"rebuilt.digest == d.digest",
+		"bytes.Equal(rebuilt.canonical, d.canonical)",
+	]) requireIncludes(violations, expectationValid, anchor, "U6_EXPECTATION_DOMAIN_VALIDITY_NOT_EXACT", anchor);
+	const expectationValidationGuard = validateExpectation.indexOf("if !d.Valid()");
+	if (expectationValidationGuard < 0 || validateExpectation.slice(0, expectationValidationGuard).trim() !== "") {
+		violations.push(["U6_EXPECTATION_DOMAIN_VALIDATION_NOT_EXACT", "ExpectationDomain.ValidateSelected prefix"]);
+	}
+
+  const translatedSet = functionBody(portable, /\bfunc\s+confirmedOutcomeSetFromTranslations\s*\(/u) ?? "";
+	requireIncludes(
+		violations,
+		translatedSet,
+		"newPortableFieldRegistry(translations.Profile(), translations.ExpectationDomain())",
+		"U6_EXPECTATION_DOMAIN_NOT_PROPAGATED_TO_CHOICE",
+		"confirmedOutcomeSetFromTranslations",
+	);
+  const outcomeSort = translatedSet.indexOf("sort.Slice(set.ordered");
+  const outcomeSeal = translatedSet.indexOf("makeConfirmedOutcomeSetSeal(");
+  if (outcomeSort < 0 || outcomeSeal < 0 || outcomeSort >= outcomeSeal) {
+    violations.push(["U6_PORTABLE_OUTCOME_ID_ORDER_BEFORE_SEAL", "internal/choice/portable.go"]);
+  }
+  for (const anchor of [
+    "translated.CanonicalProjection()",
+    "domain.NewProjectionFingerprint(projection)",
+    "computed != fingerprint",
+  ]) requireIncludes(violations, translatedSet, anchor, "U6_ORIGINAL_FINGERPRINT_AUTHORITY_NOT_RETAINED", anchor);
+
+  const resolveSelected = functionBody(validation, /\bfunc\s*\(r\s+FieldRegistry\)\s+resolveSelected\s*\(/u) ?? "";
+  requireIncludes(violations, resolveSelected, "for _, fieldID := range r.orderedIDs", "U6_SELECTED_FIELD_ORDER_NOT_PROFILE_BOUND", "FieldRegistry.resolveSelected");
+  if (/\bsort\s*\./u.test(resolveSelected)) violations.push(["U6_SELECTED_FIELD_ORDER_LEXICAL", "FieldRegistry.resolveSelected"]);
+  const differing = functionBody(blind, /\bfunc\s+differingFields\s*\(/u) ?? "";
+  requireIncludes(violations, differing, "for fieldIndex, fieldID := range registry.orderedIDs", "U6_DIFFERING_FIELD_ORDER_NOT_PROFILE_BOUND", "differingFields");
+  requireIncludes(violations, differing, "identityKey(registry.mode)", "U6_DIFFERING_FIELD_IDENTITY_NOT_EXACT", "differingFields");
+  requireIncludes(violations, differing, "if differs", "U6_DIFFERING_FIELD_FILTER_NOT_EXACT", "differingFields");
+  if (/\bsort\s*\./u.test(differing)) violations.push(["U6_DIFFERING_FIELD_ORDER_LEXICAL", "differingFields"]);
+  const blindView = functionBody(blind, /\bfunc\s+NewBlindView\s*\(/u) ?? "";
+  requireIncludes(violations, blindView, "for _, field := range record.confirmed.registry.Definitions()", "U6_SELECTABLE_FIELD_ORDER_NOT_PROFILE_BOUND", "NewBlindView");
+  if (/sort\s*\.\s*(?:Strings|Slice)\s*\(\s*selectable\b/u.test(blindView)) {
+    violations.push(["U6_SELECTABLE_FIELD_ORDER_LEXICAL", "NewBlindView"]);
+  }
+
+  const selectedBodies = topLevelStructBodies(validation, "SelectedTuple");
+  const expectedSelectedBody = "universe canon.Digest selectedKey string tupleKey string fields []FieldValue seal *selectedTupleSeal";
+  if (selectedBodies.length !== 1 || exportedStructFields(selectedBodies[0]).length !== 0 || compactCode(selectedBodies[0]) !== expectedSelectedBody) {
+    violations.push(["U6_SELECTED_TUPLE_SURFACE_NOT_CLOSED", "SelectedTuple"]);
+  }
+  for (const [source, name] of [[validation, "RulingInput"], [session, "RulingDraftInput"]]) {
+    const bodies = topLevelStructBodies(source, name);
+    if (bodies.length !== 1 || !/\bCustomExpectation\s+\*SelectedTuple\b/u.test(bodies[0])) {
+      violations.push(["U6_CUSTOM_EXPECTATION_NOT_SELECTED_ONLY", name]);
+    }
+  }
+  const selectedValidation = functionBody(validation, /\bfunc\s*\(r\s+FieldRegistry\)\s+validateSelectedTuple\s*\(/u) ?? "";
+  for (const anchor of [
+    "len(raw) != len(selected)",
+    "if _, selectedField := allowed[fieldID.text]; !selectedField",
+    "r.validatePortableValues(selectedOrder, values)",
+		"r.validatePortableExpectation(selectedOrder, values, true)",
+  ]) requireIncludes(violations, selectedValidation, anchor, "U6_SELECTED_TUPLE_VALIDATION_NOT_EXACT", anchor);
+	const completeValidation = functionBody(validation, /\bfunc\s*\(r\s+FieldRegistry\)\s+validateTuple\s*\(/u) ?? "";
+	const completePortableValues = completeValidation.indexOf("r.validatePortableValues(r.orderedIDs, fields)");
+	const completeExpectation = completeValidation.indexOf("r.validatePortableExpectation(r.orderedIDs, fields, false)");
+	if (completePortableValues < 0 || completeExpectation < 0 || completePortableValues >= completeExpectation) {
+		violations.push(["U6_COMPLETE_TUPLE_EXPECTATION_VALIDATION_NOT_EXACT", "FieldRegistry.validateTuple"]);
+	}
+	const portableExpectation = functionBody(validation, /\bfunc\s*\(r\s+FieldRegistry\)\s+validatePortableExpectation\s*\(/u) ?? "";
+	const choiceExpectationGuard = portableExpectation.indexOf("if r.mode != fieldRegistryPortable");
+	if (choiceExpectationGuard < 0 || portableExpectation.slice(0, choiceExpectationGuard).trim() !== "") {
+		violations.push(["U6_CHOICE_EXPECTATION_VALIDATION_NOT_EXACT", "FieldRegistry.validatePortableExpectation prefix"]);
+	}
+	for (const anchor of [
+		"r.mode != fieldRegistryPortable",
+		"r.expectationDomain.Valid()",
+		"r.expectationDomain.ProfileDigest() != r.profileDigest",
+		"projectiontranslate.SelectedValue{FieldID: fieldID, Value: portable}",
+		"r.expectationDomain.ValidateSelected(selected)",
+		"projectiontranslate.CodeCustomExpectationNotRealizable",
+		"CodeCustomExpectationNotAdapterRealizable",
+	]) requireIncludes(violations, portableExpectation, anchor, "U6_CHOICE_EXPECTATION_VALIDATION_NOT_EXACT", anchor);
+	if ((validation.match(/\bvalidatePortableExpectation\s*\(/gu) ?? []).length !== 3) {
+		violations.push(["U6_CHOICE_EXPECTATION_VALIDATION_SURFACE_NOT_EXACT", "internal/choice/validation.go"]);
+	}
+	const universeSeal = functionBody(commentlessAt(manifest, "internal/choice/validation.go"), /\bfunc\s+makeConfirmedOutcomeSetSeal\s*\(/u) ?? "";
+	for (const anchor of [
+		"ExpectationDomainDigest",
+		'json:"expectation_domain_digest"',
+		"registry.expectationDomain.Valid()",
+		"identity.ExpectationDomainDigest = registry.expectationDomain.Digest().String()",
+	]) requireIncludes(violations, universeSeal, anchor, "U6_EXPECTATION_DOMAIN_NOT_BOUND_TO_UNIVERSE_SEAL", anchor);
+  const reviewReferences = choiceEntries.filter((entry) => /\bNewCustomExpectationReview\b/u.test(entry.lexical.code));
+  const reviewCount = reviewReferences.reduce((total, entry) => total + (entry.lexical.code.match(/\bNewCustomExpectationReview\b/gu) ?? []).length, 0);
+  if (reviewCount !== 2 || !exactSet(reviewReferences.map((entry) => entry.path), ["internal/choice/session.go", "internal/choice/validation.go"])) {
+    violations.push(["U6_CUSTOM_REVIEW_CONSTRUCTION_SURFACE_NOT_EXACT", reviewReferences.map((entry) => entry.path).join(",")]);
+  }
+
+  const valueIdentity = functionBody(validation, /\bfunc\s*\(v\s+ExactValue\)\s+identityKey\s*\(/u) ?? "";
+  for (const anchor of [
+    "case ValueBytes:",
+    "lengthPrefix(string(v.opaque))",
+    "case ValueOrderedStringList:",
+    "lengthPrefix(string(v.canonical))",
+    "if mode == fieldRegistryPortable",
+    "lengthPrefix(string(v.canonical))",
+  ]) requireIncludes(violations, valueIdentity, anchor, "U6_PORTABLE_VALUE_IDENTITY_NOT_EXACT", anchor);
+  const valueIdentitySource = functionBody(
+    commentlessAt(manifest, "internal/choice/validation.go"),
+    /\bfunc\s*\(v\s+ExactValue\)\s+identityKey\s*\(/u,
+  ) ?? "";
+  if (!/case\s+ValueCanonicalJSON\s*:\s*if\s+mode\s*==\s*fieldRegistryPortable\s*\{\s*return\s+"J"\s*\+\s*lengthPrefix\(string\(v\.canonical\)\)\s*\}\s*return\s+"J"\s*\+\s*lengthPrefix\(v\.text\)/u.test(valueIdentitySource)) {
+    violations.push(["U6_PORTABLE_VALUE_IDENTITY_NOT_EXACT", "ExactValue.identityKey"]);
+  }
+  const blindWire = functionBody(blind, /\bfunc\s+blindField\s*\(/u) ?? "";
+  for (const anchor of [
+    "if value.Tag() == ValueBytes",
+    "result.Text = base64.StdEncoding.EncodeToString(value.Bytes())",
+    "value.Tag() == ValueCanonicalJSON || value.Tag() == ValueOrderedStringList",
+    "result.CanonicalJSONBase64 = base64.StdEncoding.EncodeToString(value.CanonicalBytes())",
+    "result.Text =",
+  ]) requireIncludes(violations, blindWire, anchor, "U6_PORTABLE_BLIND_WIRE_NOT_COMPATIBLE", anchor);
+  const tupleWire = functionBody(session, /\bfunc\s+tupleToWire\s*\(/u) ?? "";
+  const exactFromWire = functionBody(session, /\bfunc\s+exactValueFromWire\s*\(/u) ?? "";
+  for (const anchor of ["ValueBytes", "wire.Text = base64.StdEncoding.EncodeToString(value.Bytes())", "ValueOrderedStringList", "wire.CanonicalJSONBase64 = base64.StdEncoding.EncodeToString(value.CanonicalBytes())"]) {
+    requireIncludes(violations, tupleWire, anchor, "U6_PORTABLE_DECISION_WIRE_NOT_COMPATIBLE", anchor);
+  }
+  for (const anchor of ["case ValueBytes:", "base64.StdEncoding.Strict().DecodeString(wire.Text)", "case ValueOrderedStringList:", "base64.StdEncoding.Strict().DecodeString(wire.CanonicalJSONBase64)"]) {
+    requireIncludes(violations, exactFromWire, anchor, "U6_PORTABLE_DECISION_WIRE_PARSE_NOT_STRICT", anchor);
+  }
+
+	const decision = codeAt(manifest, "internal/choice/decision.go");
+	const propose = functionBody(session, /\bfunc\s*\(s\s+Session\)\s+Propose\s*\(/u) ?? "";
+	const revise = functionBody(session, /\bfunc\s*\(s\s+Session\)\s+Revise\s*\(/u) ?? "";
+	for (const [body, state, label] of [
+		[propose, "result.state = SessionProvisionalRecorded", "Session.Propose"],
+		[revise, "result.state = SessionPostRevealRecorded", "Session.Revise"],
+	]) {
+		const stateIndex = body.indexOf(state);
+		const preflightIndex = body.indexOf("if err := preflightPortableDecisionBudget(result); err != nil");
+		if (stateIndex < 0 || preflightIndex < 0 || stateIndex >= preflightIndex ||
+			(body.match(/\bpreflightPortableDecisionBudget\s*\(/gu) ?? []).length !== 1) {
+			violations.push(["U6_PORTABLE_DECISION_DRAFT_PREFLIGHT_NOT_EXACT", label]);
+		}
+	}
+	const preflightReferences = session.match(/\bpreflightPortableDecisionBudget\s*\(/gu) ?? [];
+	if (preflightReferences.length !== 3) {
+		violations.push(["U6_PORTABLE_DECISION_DRAFT_PREFLIGHT_SURFACE", String(preflightReferences.length)]);
+	}
+	const preflight = functionBody(session, /\bfunc\s+preflightPortableDecisionBudget\s*\(/u) ?? "";
+	for (const anchor of [
+		"source.record.mode != choicepointPortable",
+		"prospective := source.clone()",
+		"prospective.state = SessionPostRevealRecorded",
+		"prospective.revealed = true",
+		"buildDecisionRecord(",
+		"false,",
+		"len(decision.canonicalBytes) > maxPortableDecisionBaseBytes",
+	]) requireIncludes(violations, preflight, anchor, "U6_PORTABLE_DECISION_PREFLIGHT_BUILDER_NOT_EXACT", anchor);
+	const builder = functionBody(commentlessAt(manifest, "internal/choice/decision.go"), /\bfunc\s+buildDecisionRecord\s*\(/u) ?? "";
+	for (const anchor of [
+		"maxPortableDecisionLateBytes = 256 * 1024",
+		"maxPortableDecisionBaseBytes = canon.MaxInputBytes - maxPortableDecisionLateBytes",
+	]) requireIncludes(violations, decision, anchor, "U6_PORTABLE_DECISION_BUDGET_CONSTANTS_NOT_EXACT", anchor);
+	requireIncludes(
+		violations,
+		choicepoint,
+		"maxChoicepointNestedRawBytes = 600 * 1024",
+		"U6_CHOICEPOINT_RESOURCE_PROFILE_NOT_EXACT",
+		"maxChoicepointNestedRawBytes",
+	);
+	for (const anchor of [
+		"if enforcePortableBudget && session.record.mode == choicepointPortable",
+		'buildDecisionRecord(session, "x", "", []domain.ReceiptReference{}, nil, false)',
+		"len(base.canonicalBytes) > maxPortableDecisionBaseBytes",
+		"lateBytes := len(canonicalBytes) - len(base.canonicalBytes)",
+		"lateBytes < 0 || lateBytes > maxPortableDecisionLateBytes",
+	]) requireIncludes(violations, builder, anchor, "U6_PORTABLE_DECISION_FINAL_BUDGET_NOT_EXACT", anchor);
+	const budgetTests = commentlessAt(manifest, "internal/choice/session_roundtrip_test.go");
+	for (const anchor of [
+		"func TestPortableDraftBudgetNeverDefersStructuralOverflowToFinalize",
+		"proposalRefusals++",
+		"reviseRefused = true",
+		"multiplicityProved = true",
+		"passed draft preflight but failed minimal finalization",
+		"ParseDecisionRecord(decision.CanonicalBytes(), record)",
+	]) requireIncludes(violations, budgetTests, anchor, "U6_PORTABLE_DECISION_BUDGET_TEST_NOT_EXACT", anchor);
+	for (const anchor of [
+		"func TestPortableDecisionLateBudgetIsExactAndLegacyHistoryKeepsFullCeiling",
+		"maxPortableDecisionLateBytes - fixedReceiptGrowth",
+		"gradeBytes+1",
+		"func TestDecisionReceiptAdmissionIsBoundedBeforeSorting",
+		"canon.MaxContainerMembers+1",
+		"canon.MaxInputBytes+1",
+	]) requireIncludes(violations, budgetTests, anchor, "U6_PORTABLE_DECISION_LIMIT_TEST_NOT_EXACT", anchor);
+	const normalizeReceipts = functionBody(decision, /\bfunc\s+normalizeDecisionReceipts\s*\(/u) ?? "";
+	const normalizeReceiptsExact = functionBody(commentlessAt(manifest, "internal/choice/decision.go"), /\bfunc\s+normalizeDecisionReceipts\s*\(/u) ?? "";
+	const countGuard = normalizeReceipts.indexOf("len(receipts) > canon.MaxContainerMembers");
+	const rawGuard = normalizeReceipts.indexOf("consumeReceiptWireBudget(wire, &remaining)");
+	const receiptAllocation = normalizeReceipts.indexOf("keyed := make([]keyedReceipt, len(receipts))");
+	const receiptSort = normalizeReceipts.indexOf("sort.Slice(keyed");
+	const receiptPrefix = rawGuard < 0 ? "" : normalizeReceipts.slice(0, rawGuard);
+	const exactDecisionBudget = normalizeReceiptsExact.indexOf("consumeReceiptWireBudget(wire, &remaining)");
+	const exactDecisionPrefix = exactDecisionBudget < 0 ? "" : compactCode(normalizeReceiptsExact.slice(0, exactDecisionBudget));
+	const expectedDecisionPrefix = 'if len(receipts) > canon.MaxContainerMembers { return nil, refusal(CodeInputLimitExceeded, "DecisionRecord receipt count exceeds the canonical container profile") } remaining := canon.MaxInputBytes for _, receipt := range receipts { wire := receipt.Wire() if !';
+	if (countGuard < 0 || rawGuard < 0 || receiptAllocation < 0 || receiptSort < 0 ||
+		countGuard >= receiptAllocation || rawGuard >= receiptAllocation || receiptAllocation >= receiptSort) {
+		violations.push(["U6_DECISION_RECEIPT_ADMISSION_NOT_BOUNDED", "normalizeDecisionReceipts"]);
+	}
+	if (/\b(?:make|append|copy)\s*\(|\bsort\s*\./u.test(receiptPrefix) ||
+		!normalizeReceipts.includes("remaining := canon.MaxInputBytes\n") || exactDecisionPrefix !== expectedDecisionPrefix) {
+		violations.push(["U6_DECISION_RECEIPT_ADMISSION_NOT_BOUNDED", "normalizeDecisionReceipts prefix"]);
+	}
+	const normalizeChoicepoint = functionBody(choicepoint, /\bfunc\s+normalizeChoicepointReceipts\s*\(/u) ?? "";
+	const normalizeChoicepointExact = functionBody(commentlessAt(manifest, "internal/choice/choicepoint.go"), /\bfunc\s+normalizeChoicepointReceipts\s*\(/u) ?? "";
+	const choiceReceiptCount = normalizeChoicepoint.indexOf("len(receipts) > canon.MaxContainerMembers");
+	const choiceReceiptBudget = normalizeChoicepoint.indexOf("consumeReceiptWireBudget(wire, &remaining)");
+	const choiceReceiptAllocation = normalizeChoicepoint.indexOf("keyed := make([]keyedReceipt, len(receipts))");
+	const choiceReceiptSort = normalizeChoicepoint.indexOf("sort.Slice(keyed");
+	const choiceReceiptPrefix = choiceReceiptBudget < 0 ? "" : normalizeChoicepoint.slice(0, choiceReceiptBudget);
+	const exactChoiceBudget = normalizeChoicepointExact.indexOf("consumeReceiptWireBudget(wire, &remaining)");
+	const exactChoicePrefix = exactChoiceBudget < 0 ? "" : compactCode(normalizeChoicepointExact.slice(0, exactChoiceBudget));
+	const expectedChoicePrefix = 'if len(receipts) > canon.MaxContainerMembers { return nil, refusal(CodeInputLimitExceeded, "choicepoint receipt count exceeds the canonical container profile") } remaining := canon.MaxInputBytes for _, receipt := range receipts { wire := receipt.Wire() if !';
+	if (choiceReceiptCount < 0 || choiceReceiptBudget < 0 || choiceReceiptAllocation < 0 || choiceReceiptSort < 0 ||
+		choiceReceiptCount >= choiceReceiptAllocation || choiceReceiptBudget >= choiceReceiptAllocation || choiceReceiptAllocation >= choiceReceiptSort) {
+		violations.push(["U6_CHOICEPOINT_RECEIPT_ADMISSION_NOT_BOUNDED", "normalizeChoicepointReceipts"]);
+	}
+	if (/\b(?:make|append|copy)\s*\(|\bsort\s*\./u.test(choiceReceiptPrefix) ||
+		!normalizeChoicepoint.includes("remaining := canon.MaxInputBytes\n") || exactChoicePrefix !== expectedChoicePrefix) {
+		violations.push(["U6_CHOICEPOINT_RECEIPT_ADMISSION_NOT_BOUNDED", "normalizeChoicepointReceipts prefix"]);
+	}
+	const normalizeAliases = functionBody(blind, /\bfunc\s*\(v\s+BlindView\)\s+normalizeAliases\s*\(/u) ?? "";
+	const normalizeAliasesExact = functionBody(commentlessAt(manifest, "internal/choice/blind.go"), /\bfunc\s*\(v\s+BlindView\)\s+normalizeAliases\s*\(/u) ?? "";
+	const aliasAdmission = normalizeAliases.indexOf("v.admitAliases(raw)");
+	const aliasAllocation = normalizeAliases.indexOf("aliases := make([]string, len(raw))");
+	const aliasSort = normalizeAliases.indexOf("sort.Strings(aliases)");
+	const aliasResolve = normalizeAliases.indexOf("v.resolveAliases(aliases)");
+	const aliasPrefix = aliasAdmission < 0 ? "" : normalizeAliases.slice(0, aliasAdmission);
+	const aliasAdmissionExact = normalizeAliasesExact.indexOf("v.admitAliases(raw)");
+	const aliasExactPrefix = aliasAdmissionExact < 0 ? "" : compactCode(normalizeAliasesExact.slice(0, aliasAdmissionExact));
+	if (aliasAdmission < 0 || aliasAllocation < 0 || aliasSort < 0 || aliasResolve < 0 ||
+		aliasAdmission >= aliasAllocation || aliasAllocation >= aliasSort || aliasSort >= aliasResolve) {
+		violations.push(["U6_ALIAS_ADMISSION_NOT_BEFORE_COPY_SORT_RESOLVE", "BlindView.normalizeAliases"]);
+	}
+	if (/\b(?:make|append|copy)\s*\(|\bsort\s*\./u.test(aliasPrefix) || aliasExactPrefix !== "if err :=") {
+		violations.push(["U6_ALIAS_ADMISSION_NOT_BEFORE_COPY_SORT_RESOLVE", "BlindView.normalizeAliases prefix"]);
+	}
+	const admitAliases = functionBody(blind, /\bfunc\s*\(v\s+BlindView\)\s+admitAliases\s*\(/u) ?? "";
+	requireIncludes(
+		violations,
+		commentlessAt(manifest, "internal/choice/blind.go"),
+		'const maxBlindAliasBytes = len("blind:") + 64',
+		"U6_ALIAS_ADMISSION_PROFILE_NOT_EXACT",
+		"maxBlindAliasBytes",
+	);
+	for (const anchor of [
+		"raw == nil",
+		"len(raw) > len(v.aliases)",
+		"remaining := maxBlindAliasBytes * len(v.aliases)",
+		"len(alias) > maxBlindAliasBytes || len(alias) > remaining",
+		"remaining -= len(alias)",
+	]) requireIncludes(violations, admitAliases, anchor, "U6_ALIAS_ADMISSION_PROFILE_NOT_EXACT", anchor);
+	const receiptBudget = functionBody(choicepoint, /\bfunc\s+consumeReceiptWireBudget\s*\(/u) ?? "";
+	for (const anchor of [
+		"remaining == nil || *remaining < 0",
+		"[...]string{wire.Authority, wire.GradeVerbatim, wire.CommitOID, wire.CommandDigest}",
+		"len(member) > *remaining",
+		"*remaining -= len(member)",
+	]) requireIncludes(violations, receiptBudget, anchor, "U6_RECEIPT_WIRE_BUDGET_NOT_EXACT", anchor);
+	const draft = functionBody(session, /\bfunc\s+newRulingDraft\s*\(/u) ?? "";
+	const draftExact = functionBody(commentlessAt(manifest, "internal/choice/session.go"), /\bfunc\s+newRulingDraft\s*\(/u) ?? "";
+	const draftAliasAdmission = draft.indexOf("view.admitAliases(input.AllowedAliases)");
+	const draftSelectedNormalization = draft.indexOf("record.confirmed.registry.resolveSelected(input.SelectedFields)");
+	const draftAliasNormalization = draft.indexOf("view.normalizeAliases(input.AllowedAliases)");
+	const draftAliasAdmissionExact = draftExact.indexOf("view.admitAliases(input.AllowedAliases)");
+	const draftExactPrefix = draftAliasAdmissionExact < 0 ? "" : compactCode(draftExact.slice(0, draftAliasAdmissionExact));
+	const expectedDraftPrefix = 'if input.SelectedFields == nil || input.AllowedAliases == nil { return rulingDraft{}, refusal(CodeOmittedSelectedFields, "ruling draft selections must be explicit arrays") } if err :=';
+	if (draftAliasAdmission < 0 || draftSelectedNormalization < 0 || draftAliasNormalization < 0 ||
+		draftAliasAdmission >= draftSelectedNormalization || draftAliasAdmission >= draftAliasNormalization || draftExactPrefix !== expectedDraftPrefix) {
+		violations.push(["U6_DRAFT_ALIAS_ADMISSION_ORDER_NOT_EXACT", "newRulingDraft"]);
+	}
+	const confirmed = codeAt(manifest, "internal/projectiontranslate/confirmed.go");
+	const translateConfirmed = functionBody(confirmed, /\bfunc\s+TranslateConfirmed\s*\(/u) ?? "";
+	const translateConfirmedExact = functionBody(commentlessAt(manifest, "internal/projectiontranslate/confirmed.go"), /\bfunc\s+TranslateConfirmed\s*\(/u) ?? "";
+	const proofMembership = translateConfirmed.indexOf("if _, member := expected[candidateKey]; !member");
+	const proofBudget = translateConfirmed.indexOf("len(proof.CanonicalProjection) > maxConfirmedProjectionBytes-projectionBytes");
+	const proofCopy = translateConfirmed.indexOf("frozenProjection := append([]byte(nil), proof.CanonicalProjection...)");
+	const proofLoop = translateConfirmed.indexOf("for index, proof := range proofs");
+	const proofPrefix = proofLoop < 0 || proofBudget < 0 ? "" : translateConfirmed.slice(proofLoop, proofBudget);
+	const proofLoopExact = translateConfirmedExact.indexOf("for index, proof := range proofs");
+	const proofBudgetExact = translateConfirmedExact.indexOf("len(proof.CanonicalProjection) > maxConfirmedProjectionBytes-projectionBytes");
+	const proofExactPrefix = proofLoopExact < 0 || proofBudgetExact < 0 ? "" : compactCode(translateConfirmedExact.slice(proofLoopExact, proofBudgetExact));
+	const expectedProofPrefix = 'for index, proof := range proofs { candidateKey := proof.CandidateExecutionKey.String() if !proof.CandidateExecutionKey.Valid() { return ConfirmedTranslations{}, refuse(CodeRosterMismatch, "", "projection proof has an invalid candidate key") } if _, duplicate := seen[candidateKey]; duplicate { return ConfirmedTranslations{}, refuse(CodeRosterMismatch, "", "projection proof candidate occurs more than once") } if _, member := expected[candidateKey]; !member { return ConfirmedTranslations{}, refuse(CodeRosterMismatch, "", "projection proof candidate is not in the confirmed roster") } if';
+	if (proofMembership < 0 || proofBudget < 0 || proofCopy < 0 || proofMembership >= proofBudget || proofBudget >= proofCopy) {
+		violations.push(["U6_PROJECTION_PROOF_ADMISSION_NOT_BEFORE_COPY", "projectiontranslate.TranslateConfirmed"]);
+	}
+	if (/\b(?:make|append|copy)\s*\(/u.test(proofPrefix) || proofExactPrefix !== expectedProofPrefix) {
+		violations.push(["U6_PROJECTION_PROOF_ADMISSION_NOT_BEFORE_COPY", "projectiontranslate.TranslateConfirmed proof-loop prefix"]);
+	}
+	for (const anchor of [
+		"maxConfirmedProjectionBytes = 600 * 1024",
+		"maxConfirmedTupleBytes      = 512 * 1024",
+	]) requireIncludes(violations, confirmed, anchor, "U6_CONFIRMED_TRANSLATION_RESOURCE_PROFILE_NOT_EXACT", anchor);
+	const confirmedBodies = topLevelStructBodies(confirmed, "ConfirmedTranslations");
+	const expectedConfirmedBody = "resolved Resolved expectation ExpectationDomain outcomes []TranslatedOutcome outcomeMapDigest compare.OutcomeArtifactDigest preservationDigest compare.PreservationMapDigest seal *confirmedSeal";
+	if (confirmedBodies.length !== 1 || exportedStructFields(confirmedBodies[0]).length !== 0 || compactCode(confirmedBodies[0]) !== expectedConfirmedBody ||
+		!translateConfirmed.includes("resolved: resolved, expectation: expectation")) {
+		violations.push(["U6_CONFIRMED_EXPECTATION_AUTHORITY_NOT_EXACT", "projectiontranslate.ConfirmedTranslations"]);
+	}
+	const confirmedValid = functionBody(confirmed, /\bfunc\s*\(c\s+ConfirmedTranslations\)\s+Valid\s*\(/u) ?? "";
+	for (const anchor of [
+		"c.expectation.Valid()",
+		"c.expectation.ProfileDigest() != c.resolved.profile.Digest()",
+		"projectionBytes <= maxConfirmedProjectionBytes",
+		"tupleBytes <= maxConfirmedTupleBytes",
+	]) requireIncludes(violations, confirmedValid, anchor, "U6_CONFIRMED_EXPECTATION_AUTHORITY_NOT_EXACT", anchor);
+	const outcomeMap = codeAt(manifest, "internal/compare/outcome_map.go");
+	const rosterValid = functionBody(outcomeMap, /\bfunc\s*\(r\s+ConfirmedProjectionRoster\)\s+Valid\s*\(/u) ?? "";
+	for (const anchor of [
+		"len(r.entries) < 2 || len(r.entries) > 4",
+		"seen := make(map[string]struct{}, len(r.entries))",
+		"entry.candidate.Valid()",
+		"entry.fingerprint.Valid()",
+		"if _, duplicate := seen[key]; duplicate",
+	]) requireIncludes(violations, rosterValid, anchor, "U6_CONFIRMED_ROSTER_RESOURCE_PROFILE_NOT_EXACT", anchor);
+	for (const anchor of [
+		"func TestChoicepointReceiptAdmissionIsBoundedBeforeSorting",
+		"func TestRulingAliasAdmissionIsBoundedBeforeNormalization",
+		"func TestDecisionAnnotationV1RetainsExactInertBytes",
+	]) requireIncludes(violations, budgetTests, anchor, "U6_RESOURCE_AND_INERTNESS_TEST_NOT_EXACT", anchor);
+	const portableChoiceTests = commentlessAt(manifest, "internal/choice/portable_choice_test.go");
+	requireIncludes(
+		violations,
+		portableChoiceTests,
+		"func TestTranslateConfirmedAdmitsProofBytesBeforeDefensiveCopy",
+		"U6_PROJECTION_PROOF_ADMISSION_TEST_NOT_EXACT",
+		"internal/choice/portable_choice_test.go",
+	);
+
+  const inspection = functionBody(portable, /\bfunc\s+InspectPortableRuling\s*\(/u) ?? "";
+  const legacyGuard = inspection.indexOf("decision.choicepoint.mode == choicepointLegacyWhole");
+  const portableGuard = inspection.indexOf("decision.choicepoint.mode != choicepointPortable");
+  if (legacyGuard < 0 || portableGuard < 0 || legacyGuard >= portableGuard || !inspection.includes("CodeLegacyWholeProjectionNotPortable")) {
+    violations.push(["U6_LEGACY_PORTABLE_PREPARATION_GUARD_NOT_EXACT", "InspectPortableRuling"]);
+  }
+  const legacyPortableLiterals = choiceEntries.flatMap((entry) => entry.lexical.literals)
+    .filter((literal) => literal === "LEGACY_WHOLE_PROJECTION_NOT_PORTABLE");
+  if (legacyPortableLiterals.length !== 1) {
+    violations.push(["U6_LEGACY_PORTABLE_REFUSAL_LITERAL_NOT_EXACT", "internal/choice"]);
+  }
+  const inspectionBodies = topLevelStructBodies(portable, "PortableRulingInspection");
+  const expectedInspectionBody = "decisionDigest domain.Digest profileDigest domain.Digest selectedFields []string seal *portableInspectionSeal";
+  if (inspectionBodies.length !== 1 || exportedStructFields(inspectionBodies[0]).length !== 0 || compactCode(inspectionBodies[0]) !== expectedInspectionBody ||
+      (portable.match(/\bPortableRulingInspection\s*\{\s*decisionDigest\s*:/gu) ?? []).length !== 1) {
+    violations.push(["U6_PORTABLE_INSPECTION_SURFACE_NOT_CLOSED", "PortableRulingInspection"]);
+  }
+  const inspectionReferences = productionEntries(manifest).filter((entry) => /\bInspectPortableRuling\b/u.test(entry.lexical.code));
+  const inspectionCount = inspectionReferences.reduce((total, entry) => total + (entry.lexical.code.match(/\bInspectPortableRuling\b/gu) ?? []).length, 0);
+  if (inspectionCount !== 3 || !exactSet(inspectionReferences.map((entry) => entry.path), ["internal/choice/portable.go", "internal/choice/promotion/service.go"])) {
+    violations.push(["U6_PORTABLE_INSPECTION_REFERENCE_SURFACE_NOT_EXACT", inspectionReferences.map((entry) => entry.path).join(",")]);
+  }
+  const preparationBodies = topLevelStructBodies(promotion, "PortableRulingPreparation");
+  const expectedPreparationBody = "ruling Ruling inspection choice.PortableRulingInspection seal *portableRulingPreparationSeal";
+  if (preparationBodies.length !== 1 || exportedStructFields(preparationBodies[0]).length !== 0 || compactCode(preparationBodies[0]) !== expectedPreparationBody) {
+    violations.push(["U6_PORTABLE_PREPARATION_SURFACE_NOT_CLOSED", "PortableRulingPreparation"]);
+  }
+  if ((promotion.match(/\bportableRulingPreparationSeal\s*\{/gu) ?? []).length !== 1) {
+    violations.push(["U6_PORTABLE_PREPARATION_SEAL_ISSUANCE_NOT_EXACT", "internal/choice/promotion/service.go"]);
+  }
+  for (const entry of productionEntries(manifest)) {
+    const packageDirectory = entry.path.slice(0, entry.path.lastIndexOf("/"));
+    if (packageDirectory === "internal/choice/promotion" && entry.path !== "internal/choice/promotion/service.go" &&
+        /\b(?:PortableRulingPreparation|portableRulingPreparationSeal)\b/u.test(entry.lexical.code)) {
+      violations.push(["U6_PORTABLE_PREPARATION_CONSTRUCTION_OUTSIDE_OWNER", entry.path]);
+    }
+  }
+  for (const [signature, name] of [
+    [/\bfunc\s+PreparePortableRuling\s*\(/u, "PreparePortableRuling"],
+    [/\bfunc\s+ValidatePortableRulingPreparation\s*\(/u, "ValidatePortableRulingPreparation"],
+  ]) {
+    const body = functionBody(promotion, signature) ?? "";
+    const current = body.indexOf("validateRuling(");
+    const semantic = body.indexOf("choice.InspectPortableRuling(");
+    if (current < 0 || semantic < 0 || current >= semantic) {
+      violations.push(["U6_PORTABLE_PREPARATION_CURRENT_HEAD_ORDER", name]);
+    }
+  }
+  requireIncludes(
+    violations,
+    functionBody(promotion, /\bfunc\s+PreparePortableRuling\s*\(/u) ?? "",
+    "if err := validateRuling(ctx, objectStore, ruling); err != nil",
+    "U6_PORTABLE_PREPARATION_CURRENT_HEAD_GUARD_NOT_EXACT",
+    "PreparePortableRuling",
+  );
+  requireIncludes(
+    violations,
+    functionBody(promotion, /\bfunc\s+ValidatePortableRulingPreparation\s*\(/u) ?? "",
+    "if err := validateRuling(ctx, objectStore, preparation.ruling); err != nil",
+    "U6_PORTABLE_PREPARATION_CURRENT_HEAD_GUARD_NOT_EXACT",
+    "ValidatePortableRulingPreparation",
+  );
+  const validateCurrent = functionBody(promotion, /\bfunc\s+validateRuling\s*\(/u) ?? "";
+  for (const anchor of ["objectStore.OpenHead(ctx, ruling.head.StudyID())", "sameHead(current, ruling.head)", "current.Stage() != store.StageRuling", "current.CurrentDigest() != ruling.record.Digest()"] ) {
+    requireIncludes(violations, validateCurrent, anchor, "U6_PORTABLE_PREPARATION_CURRENT_HEAD_BINDING", anchor);
+  }
 }
 
 function inspectTypedPublication(manifest, violations) {
@@ -1048,6 +1656,54 @@ function inspectSchemas(manifest, violations) {
   if (JSON.stringify(grade) !== JSON.stringify({ type: "string", minLength: 1 })) {
     violations.push(["U6_RECEIPT_GRADE_NOT_VERBATIM", "spec/schema/v1/common.schema.json"]);
   }
+
+  const choiceSchema = strictJSONParse(
+    sourceAt(manifest, "spec/schema/v1/choicepoint.schema.json"),
+    "spec/schema/v1/choicepoint.schema.json",
+  ).value;
+  const expectedModes = ["WHOLE_EXACT_CANONICAL_PROJECTION_V1", "ADAPTER_BOUND_PORTABLE_FIELDS_V1"];
+  if (JSON.stringify(choiceSchema?.properties?.choice_projection_mode?.enum) !== JSON.stringify(expectedModes)) {
+    violations.push(["U6_CHOICEPOINT_MODE_SCHEMA_NOT_EXACT", "spec/schema/v1/choicepoint.schema.json"]);
+  }
+
+  const decisionSchema = strictJSONParse(
+    sourceAt(manifest, "spec/schema/v1/decision-record.schema.json"),
+    "spec/schema/v1/decision-record.schema.json",
+  ).value;
+  const exactValue = decisionSchema?.$defs?.ExactValue;
+  const expectedTags = ["MISSING", "STRING", "INTEGER", "BOOLEAN", "NULL", "BYTES", "ORDERED_STRING_LIST", "CANONICAL_JSON"];
+  if (JSON.stringify(exactValue?.properties?.tag?.enum) !== JSON.stringify(expectedTags)) {
+    violations.push(["U6_EXACT_VALUE_TAG_SCHEMA_NOT_EXACT", "spec/schema/v1/decision-record.schema.json"]);
+  }
+  const expectedExactValueMembers = ["tag", "text", "boolean", "canonical_json_base64"];
+  if (exactValue?.additionalProperties !== false ||
+      JSON.stringify(exactValue?.required) !== JSON.stringify(expectedExactValueMembers) ||
+      !exactSet(Object.keys(exactValue?.properties ?? {}), expectedExactValueMembers)) {
+    violations.push(["U6_EXACT_VALUE_SCHEMA_SURFACE_NOT_CLOSED", "spec/schema/v1/decision-record.schema.json"]);
+  }
+  const conditionalFor = (tag) => (exactValue?.allOf ?? []).filter((entry) => entry?.if?.properties?.tag?.const === tag);
+  const expectedBytesSlots = {
+    text: { $ref: "#/$defs/OptionalBase64" },
+    boolean: { const: false },
+    canonical_json_base64: { const: "" },
+  };
+  const expectedListSlots = {
+    text: { const: "" },
+    boolean: { const: false },
+    canonical_json_base64: { $ref: "#/$defs/NonemptyBase64" },
+  };
+  const bytesRules = conditionalFor("BYTES");
+  const listRules = conditionalFor("ORDERED_STRING_LIST");
+  const conditionalTags = (exactValue?.allOf ?? []).map((entry) => entry?.if?.properties?.tag?.const);
+  if (!exactSet(conditionalTags, expectedTags) || expectedTags.some((tag) => conditionalFor(tag).length !== 1)) {
+    violations.push(["U6_EXACT_VALUE_SCHEMA_CONDITIONALS_NOT_EXACT", "spec/schema/v1/decision-record.schema.json"]);
+  }
+  if (bytesRules.length !== 1 || JSON.stringify(bytesRules[0]?.then?.properties) !== JSON.stringify(expectedBytesSlots)) {
+    violations.push(["U6_BYTES_COMPATIBILITY_SCHEMA_NOT_EXACT", "spec/schema/v1/decision-record.schema.json"]);
+  }
+  if (listRules.length !== 1 || JSON.stringify(listRules[0]?.then?.properties) !== JSON.stringify(expectedListSlots)) {
+    violations.push(["U6_ORDERED_LIST_COMPATIBILITY_SCHEMA_NOT_EXACT", "spec/schema/v1/decision-record.schema.json"]);
+  }
 }
 
 function inspectNonclaims(manifest, violations) {
@@ -1097,7 +1753,8 @@ function inspectNonclaims(manifest, violations) {
 function inspectManifest(manifest) {
   const violations = [];
   inspectPackageBoundaries(manifest, violations);
-	inspectPortableAuthorityBoundaries(manifest, violations);
+  inspectPortableAuthorityBoundaries(manifest, violations);
+  inspectPortableRulingBoundaries(manifest, violations);
   inspectTypedPublication(manifest, violations);
   inspectPromotionAndFreshness(manifest, violations);
   inspectBlindAndDecision(manifest, violations);

@@ -30,6 +30,7 @@ import {
   U5_MUTANTS,
   U5_REVIEWED_EMBED_BINDINGS,
   U5_REVIEWED_NON_GO_FILES,
+	U5_RUNTIME_SUPPORT_FILES,
   U5_SANDBOX_FILE_ALLOWLIST,
   assertExactU5MutantDelta,
   assertReviewedU5Anchors,
@@ -70,6 +71,7 @@ async function writeSyntheticSource(root) {
     "pkg/fixture.go",
     "pkg/fixture.mjs",
     "pkg/guard.go",
+		"runtime/fixture.json",
   ]);
   const scopeRoots = Object.freeze(["pkg"]);
   const reviewedNonGoFiles = Object.freeze(["pkg/fixture.mjs"]);
@@ -80,7 +82,9 @@ async function writeSyntheticSource(root) {
       directive: "//go:embed fixture.mjs",
     }),
   ]);
+	const runtimeSupportFiles = Object.freeze(["runtime/fixture.json"]);
   await mkdir(join(root, "pkg"), { recursive: true });
+	await mkdir(join(root, "runtime"), { recursive: true });
   await writeFile(join(root, "go.mod"), "module example.invalid/u5\n", "utf8");
   await writeFile(
     join(root, "pkg", "fixture.go"),
@@ -89,7 +93,8 @@ async function writeSyntheticSource(root) {
   );
   await writeFile(join(root, "pkg", "fixture.mjs"), "export const fixture = true;\n", "utf8");
   await writeFile(join(root, "pkg", "guard.go"), "package fixture\nconst guarded = true // SYNTHETIC_U5_ANCHOR\n", "utf8");
-  return Object.freeze({ allowlist, scopeRoots, reviewedNonGoFiles, embedBindings });
+	await writeFile(join(root, "runtime", "fixture.json"), '{"runtime":true}\n', "utf8");
+	return Object.freeze({ allowlist, scopeRoots, reviewedNonGoFiles, embedBindings, runtimeSupportFiles });
 }
 
 function inspectSynthetic(root, contract) {
@@ -99,6 +104,7 @@ function inspectSynthetic(root, contract) {
     contract.scopeRoots,
     contract.reviewedNonGoFiles,
     contract.embedBindings,
+		contract.runtimeSupportFiles,
   );
 }
 
@@ -188,6 +194,7 @@ test("the U5 positive manifest is exact and excludes ambient secrets and reposit
     U5_REVIEWED_EMBED_BINDINGS.map((binding) => binding.asset).sort(),
     [...U5_REVIEWED_NON_GO_FILES].sort(),
   );
+	assert.deepEqual(U5_RUNTIME_SUPPORT_FILES, []);
 });
 
 test("unlisted Go, unsupported assets, symlinks, escapes, and overlapping scopes all fail closed", async () => {
@@ -217,6 +224,7 @@ test("unlisted Go, unsupported assets, symlinks, escapes, and overlapping scopes
         contract.scopeRoots,
         contract.reviewedNonGoFiles,
         contract.embedBindings,
+		contract.runtimeSupportFiles,
       ),
       codeIs("U5_UNSAFE_ALLOWLIST_PATH"),
     );
@@ -230,6 +238,7 @@ test("unlisted Go, unsupported assets, symlinks, escapes, and overlapping scopes
         ["pkg", "pkg/nested"],
         contract.reviewedNonGoFiles,
         contract.embedBindings,
+		contract.runtimeSupportFiles,
       ),
       codeIs("U5_OVERLAPPING_SOURCE_SCOPES"),
     );
@@ -244,7 +253,7 @@ test("unlisted Go, unsupported assets, symlinks, escapes, and overlapping scopes
   });
 });
 
-test("non-Go admission is exactly paired with one reviewed go:embed owner", async () => {
+test("embedded assets and runtime support remain distinct exact non-Go sets", async () => {
   await withTemporaryRoot("countershape-u5-embed-test-", async (root) => {
     const contract = await writeSyntheticSource(root);
     await assert.rejects(
@@ -254,6 +263,7 @@ test("non-Go admission is exactly paired with one reviewed go:embed owner", asyn
         contract.scopeRoots,
         contract.reviewedNonGoFiles,
         contract.embedBindings,
+		contract.runtimeSupportFiles,
       ),
       codeIs("U5_NON_GO_ALLOWLIST_MISMATCH"),
     );
@@ -265,6 +275,7 @@ test("non-Go admission is exactly paired with one reviewed go:embed owner", asyn
         contract.scopeRoots,
         contract.reviewedNonGoFiles,
         wrongBinding,
+		contract.runtimeSupportFiles,
       ),
       codeIs("U5_EMBED_DIRECTIVE_COUNT"),
     );
@@ -272,6 +283,17 @@ test("non-Go admission is exactly paired with one reviewed go:embed owner", asyn
     const original = await readFile(owner, "utf8");
     await writeFile(owner, `${original}\n//go:embed fixture.mjs\nvar duplicate string\n`, "utf8");
     await assert.rejects(inspectSynthetic(root, contract), codeIs("U5_EMBED_DIRECTIVE_COUNT"));
+		await assert.rejects(
+			assertU5ManifestMatchesTree(
+				root,
+				contract.allowlist,
+				contract.scopeRoots,
+				contract.reviewedNonGoFiles,
+				contract.embedBindings,
+				[],
+			),
+			codeIs("U5_NON_GO_ALLOWLIST_MISMATCH"),
+		);
   });
 });
 

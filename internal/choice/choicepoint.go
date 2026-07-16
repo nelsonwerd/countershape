@@ -13,6 +13,7 @@ import (
 	"github.com/nelsonwerd/countershape/internal/compare"
 	"github.com/nelsonwerd/countershape/internal/confirmation"
 	"github.com/nelsonwerd/countershape/internal/domain"
+	"github.com/nelsonwerd/countershape/internal/projectiontranslate"
 )
 
 const (
@@ -21,9 +22,28 @@ const (
 	maxChoicepointRevealBytes    = 2 * 1024
 	maxChoicepointNestedRawBytes = 600 * 1024
 	choicepointScope             = "EXACT_FRESH_CONFIRMED_WITNESS_V1"
-	choicepointProjectionMode    = "WHOLE_EXACT_CANONICAL_PROJECTION_V1"
+	legacyWholeProjectionMode    = "WHOLE_EXACT_CANONICAL_PROJECTION_V1"
+	portableProjectionMode       = projectiontranslate.PortableChoiceModeV1
 	choicepointPresentationNote  = "DISPLAY_REFS_AND_PRODUCER_METADATA_ARE_REVEAL_ONLY_NONEXECUTION_PROVENANCE"
 )
+
+type choicepointMode uint8
+
+const (
+	choicepointLegacyWhole choicepointMode = iota + 1
+	choicepointPortable
+)
+
+func (m choicepointMode) wire() string {
+	switch m {
+	case choicepointLegacyWhole:
+		return legacyWholeProjectionMode
+	case choicepointPortable:
+		return portableProjectionMode
+	default:
+		return ""
+	}
+}
 
 // CanonicalArtifact binds exact typed stimulus bytes to their domain-separated
 // digest. It deliberately accepts only the two v1 adapter stimulus kinds.
@@ -98,6 +118,7 @@ type ChoicepointRecord struct {
 	minimized      CanonicalArtifact
 	confirmation   confirmation.Record
 	confirmed      ConfirmedOutcomeSet
+	mode           choicepointMode
 	reveals        []CandidateReveal
 	receipts       []domain.ReceiptReference
 }
@@ -139,11 +160,15 @@ type choicepointIdentity struct {
 }
 
 func NewChoicepointRecord(input ChoicepointInput) (ChoicepointRecord, error) {
-	return buildChoicepointRecord(input, nil)
+	return buildChoicepointRecord(input, choicepointPortable, nil)
 }
 
-func buildChoicepointRecord(input ChoicepointInput, expected []byte) (ChoicepointRecord, error) {
-	if err := validateChoicepointInput(input); err != nil {
+func buildChoicepointRecord(input ChoicepointInput, mode choicepointMode, expected []byte) (ChoicepointRecord, error) {
+	receipts, err := normalizeChoicepointReceipts(input.EvidenceReceipts)
+	if err != nil {
+		return ChoicepointRecord{}, err
+	}
+	if err := validateChoicepointLineage(input); err != nil {
 		return ChoicepointRecord{}, err
 	}
 	bindings := append([]domain.CandidateExecutionBinding(nil), input.CandidateBindings...)
@@ -152,27 +177,50 @@ func buildChoicepointRecord(input ChoicepointInput, expected []byte) (Choicepoin
 	sort.Slice(reveals, func(i, j int) bool {
 		return reveals[i].CandidateExecutionKey.String() < reveals[j].CandidateExecutionKey.String()
 	})
-	receipts := append([]domain.ReceiptReference(nil), input.EvidenceReceipts...)
-	sort.Slice(receipts, func(i, j int) bool { return receiptIdentityKey(receipts[i]) < receiptIdentityKey(receipts[j]) })
-
 	confirmedMap, err := compare.RequireConfirmedOutcomeMap(input.Confirmation.ConfirmedMap())
 	if err != nil {
 		return ChoicepointRecord{}, refusal(CodeInvalidConfirmedOutcomeSet, "confirmation record lacks a strict confirmed map")
 	}
-	registry, err := NewWholeProjectionRegistry(input.Plan.ProjectionDefinitionDigest())
-	if err != nil {
-		return ChoicepointRecord{}, err
-	}
 	confirmationProofs := input.Confirmation.ProjectionProofs()
-	proofs := make([]ProjectionProofInput, len(confirmationProofs))
-	for index, proof := range confirmationProofs {
-		proofs[index] = ProjectionProofInput{
-			CandidateExecutionKey: proof.CandidateExecutionKey(), CanonicalProjection: proof.CanonicalProjection(),
+	var confirmed ConfirmedOutcomeSet
+	var expectedStimulusKind string
+	switch mode {
+	case choicepointPortable:
+		proofs := make([]projectiontranslate.ProjectionProof, len(confirmationProofs))
+		for index, proof := range confirmationProofs {
+			proofs[index] = projectiontranslate.ProjectionProof{
+				CandidateExecutionKey: proof.CandidateExecutionKey(), CanonicalProjection: proof.CanonicalProjection(),
+			}
 		}
+		translations, translateErr := projectiontranslate.TranslateConfirmed(
+			input.Plan.ProjectionDefinitionBinding(), confirmedMap.ProjectionRoster(), proofs,
+		) // MUTANT_P07B_FALLBACK_TO_LEGACY
+		if translateErr != nil {
+			return ChoicepointRecord{}, refusal(CodeInvalidConfirmedOutcomeSet, "portable proof-first projection translation failed: "+translateErr.Error())
+		}
+		confirmed, err = confirmedOutcomeSetFromTranslations(translations)
+		expectedStimulusKind = translations.ExpectedStimulusKind()
+	case choicepointLegacyWhole:
+		registry, registryErr := newWholeProjectionRegistry(input.Plan.ProjectionDefinitionDigest())
+		if registryErr != nil {
+			return ChoicepointRecord{}, registryErr
+		}
+		proofs := make([]ProjectionProofInput, len(confirmationProofs))
+		for index, proof := range confirmationProofs {
+			proofs[index] = ProjectionProofInput{
+				CandidateExecutionKey: proof.CandidateExecutionKey(), CanonicalProjection: proof.CanonicalProjection(),
+			}
+		}
+		confirmed, err = newLegacyConfirmedOutcomeSet(registry, confirmedMap.ProjectionRoster(), proofs)
+		expectedStimulusKind = input.Plan.Adapter().Domain.CanonicalStimulusKind()
+	default:
+		return ChoicepointRecord{}, refusal(CodeInvalidConfirmedOutcomeSet, "choicepoint projection mode is unknown")
 	}
-	confirmed, err := NewConfirmedOutcomeSet(registry, confirmedMap.ProjectionRoster(), proofs)
 	if err != nil {
 		return ChoicepointRecord{}, err
+	}
+	if input.OriginalStimulus.kind != expectedStimulusKind || input.MinimizedStimulus.kind != expectedStimulusKind {
+		return ChoicepointRecord{}, refusal(CodeInvalidConfirmedOutcomeSet, "choicepoint stimulus kind differs from its exact projection authority")
 	}
 
 	identity := choicepointIdentity{
@@ -194,7 +242,7 @@ func buildChoicepointRecord(input ChoicepointInput, expected []byte) (Choicepoin
 		FreshConfirmationDigest:        input.Confirmation.Digest().String(),
 		ConfirmedOutcomeMapDigest:      input.Confirmation.ConfirmedArtifactDigest().String(),
 		ConfirmedPreservationMapDigest: input.Confirmation.ConfirmedMap().PreservationDigest().String(),
-		ChoiceProjectionMode:           choicepointProjectionMode, EvidenceReceipts: make([]domain.ReceiptWire, len(receipts)),
+		ChoiceProjectionMode:           mode.wire(), EvidenceReceipts: make([]domain.ReceiptWire, len(receipts)),
 		EvidenceStatusWhenEmpty: domain.Unreceipted(), ReadinessScope: choicepointScope,
 		PresentationProvenanceNonclaim: choicepointPresentationNote,
 	}
@@ -226,11 +274,11 @@ func buildChoicepointRecord(input ChoicepointInput, expected []byte) (Choicepoin
 		digest: digest, canonicalBytes: canonicalBytes, scenario: input.Scenario, plan: input.Plan,
 		envelope: input.Envelope, bindings: bindings, original: input.OriginalStimulus,
 		minimized: input.MinimizedStimulus, confirmation: input.Confirmation,
-		confirmed: confirmed, reveals: reveals, receipts: receipts,
+		confirmed: confirmed, mode: mode, reveals: reveals, receipts: receipts,
 	}, nil
 }
 
-func validateChoicepointInput(input ChoicepointInput) error {
+func validateChoicepointLineage(input ChoicepointInput) error {
 	if input.Scenario == "" || len(input.Scenario) > maxChoicepointScenarioBytes || !utf8.ValidString(input.Scenario) ||
 		strings.TrimSpace(input.Scenario) == "" || containsControl(input.Scenario) ||
 		!input.Plan.Digest().Valid() || len(input.Plan.CanonicalBytes()) == 0 ||
@@ -252,11 +300,7 @@ func validateChoicepointInput(input ChoicepointInput) error {
 		confirmedMap.CapturePolicyDigest() != input.Plan.CapturePolicyDigest() {
 		return refusal(CodeInvalidConfirmedOutcomeSet, "choicepoint plan, envelope, projection, capture, or confirmation lineage differs")
 	}
-	wantStimulusKind := "HTTPStimulus"
-	if input.Plan.Adapter().Domain == domain.AdapterCLI {
-		wantStimulusKind = "CLIStimulus"
-	}
-	if input.OriginalStimulus.kind != wantStimulusKind || input.MinimizedStimulus.kind != wantStimulusKind ||
+	if input.OriginalStimulus.kind != input.MinimizedStimulus.kind ||
 		input.OriginalStimulus.digest != originalMap.StimulusDigest() || input.MinimizedStimulus.digest != reducedMap.StimulusDigest() ||
 		reducedMap.StimulusDigest() != confirmedMap.StimulusDigest() {
 		return refusal(CodeInvalidConfirmedOutcomeSet, "choicepoint stimulus bytes do not bind the exact original/minimized lineage")
@@ -301,20 +345,55 @@ func validateChoicepointInput(input ChoicepointInput) error {
 	if retained > maxChoicepointNestedRawBytes {
 		return refusal(CodeInputLimitExceeded, "choicepoint nested evidence exceeds the durable v1 resource profile")
 	}
-	seenReceipts := map[string]struct{}{}
-	for _, receipt := range input.EvidenceReceipts {
+	return nil
+}
+
+func normalizeChoicepointReceipts(receipts []domain.ReceiptReference) ([]domain.ReceiptReference, error) {
+	if len(receipts) > canon.MaxContainerMembers {
+		return nil, refusal(CodeInputLimitExceeded, "choicepoint receipt count exceeds the canonical container profile")
+	}
+	remaining := canon.MaxInputBytes
+	for _, receipt := range receipts {
+		wire := receipt.Wire()
+		if !consumeReceiptWireBudget(wire, &remaining) {
+			return nil, refusal(CodeInputLimitExceeded, "choicepoint receipt payload exceeds the canonical input profile")
+		}
+	}
+	type keyedReceipt struct {
+		receipt domain.ReceiptReference
+		key     string
+	}
+	keyed := make([]keyedReceipt, len(receipts))
+	for index, receipt := range receipts {
 		wire := receipt.Wire()
 		rebuilt, err := domain.ReceiptFromWire(wire)
-		key := receiptIdentityKey(receipt)
 		if err != nil || rebuilt.Wire() != wire {
-			return refusal(CodeInvalidConfirmedOutcomeSet, "choicepoint receipt reference is invalid")
+			return nil, refusal(CodeInvalidConfirmedOutcomeSet, "choicepoint receipt reference is invalid")
 		}
-		if _, duplicate := seenReceipts[key]; duplicate {
-			return refusal(CodeInvalidConfirmedOutcomeSet, "choicepoint receipt reference is duplicated")
-		}
-		seenReceipts[key] = struct{}{}
+		keyed[index] = keyedReceipt{receipt: receipt, key: receiptIdentityKey(receipt)}
 	}
-	return nil
+	sort.Slice(keyed, func(i, j int) bool { return keyed[i].key < keyed[j].key })
+	result := make([]domain.ReceiptReference, len(keyed))
+	for index, entry := range keyed {
+		if index > 0 && entry.key == keyed[index-1].key {
+			return nil, refusal(CodeInvalidConfirmedOutcomeSet, "choicepoint receipt reference is duplicated")
+		}
+		result[index] = entry.receipt
+	}
+	return result, nil
+}
+
+func consumeReceiptWireBudget(wire domain.ReceiptWire, remaining *int) bool {
+	if remaining == nil || *remaining < 0 {
+		return false
+	}
+	for _, member := range [...]string{wire.Authority, wire.GradeVerbatim, wire.CommitOID, wire.CommandDigest} {
+		if len(member) > *remaining {
+			return false
+		}
+		*remaining -= len(member)
+	}
+	return true
 }
 
 func ParseChoicepointRecord(exact []byte) (ChoicepointRecord, error) {
@@ -332,9 +411,18 @@ func ParseChoicepointRecord(exact []byte) (ChoicepointRecord, error) {
 		return ChoicepointRecord{}, refusal(CodeInvalidConfirmedOutcomeSet, "choicepoint typed wire decode failed")
 	}
 	if identity.SchemaVersion != domain.SchemaVersion || identity.Kind != "Choicepoint" ||
-		identity.ChoiceProjectionMode != choicepointProjectionMode || identity.EvidenceStatusWhenEmpty != domain.Unreceipted() ||
+		identity.EvidenceStatusWhenEmpty != domain.Unreceipted() ||
 		identity.ReadinessScope != choicepointScope || identity.PresentationProvenanceNonclaim != choicepointPresentationNote {
 		return ChoicepointRecord{}, refusal(CodeInvalidConfirmedOutcomeSet, "choicepoint closed wire facts disagree")
+	}
+	var mode choicepointMode
+	switch identity.ChoiceProjectionMode {
+	case legacyWholeProjectionMode:
+		mode = choicepointLegacyWhole // MUTANT_P07B_LEGACY_REBUILT_PORTABLE
+	case portableProjectionMode:
+		mode = choicepointPortable
+	default:
+		return ChoicepointRecord{}, refusal(CodeInvalidConfirmedOutcomeSet, "choicepoint projection mode is unknown")
 	}
 	projectionBytes, err := decodeChoiceBase64(identity.ProjectionBindingBase64)
 	if err != nil {
@@ -412,7 +500,7 @@ func ParseChoicepointRecord(exact []byte) (ChoicepointRecord, error) {
 		Scenario: identity.Scenario, Plan: plan, Envelope: envelope, CandidateBindings: bindings,
 		OriginalStimulus: original, MinimizedStimulus: minimized, Confirmation: confirmationRecord,
 		CandidateReveals: reveals, EvidenceReceipts: receipts,
-	}, exact)
+	}, mode, exact)
 }
 
 func (r ChoicepointRecord) Valid() bool {

@@ -2,7 +2,7 @@
 
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { chmod, mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, realpath, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -47,9 +47,13 @@ export const U6_ADDITIONAL_FILES = Object.freeze([
   "internal/choice/blind_test.go",
   "internal/choice/choicepoint.go",
   "internal/choice/decision.go",
+	"internal/choice/legacy_validation_fixtures_test.go",
+	"internal/choice/portable.go",
+	"internal/choice/portable_choice_test.go",
   "internal/choice/promotion/authority/authority.go",
   "internal/choice/promotion/internal/publication/authority.go",
   "internal/choice/promotion/internal/publication/authority_test.go",
+	"internal/choice/promotion/legacy_snapshot_darwin_test.go",
   "internal/choice/promotion/service.go",
 	"internal/choice/projectiontranslate_test.go",
   "internal/choice/schema_parity_test.go",
@@ -73,9 +77,12 @@ export const U6_ADDITIONAL_FILES = Object.freeze([
 	"internal/projectiontranslate/cli.go",
 	"internal/projectiontranslate/cli_test.go",
 	"internal/projectiontranslate/confirmed.go",
+	"internal/projectiontranslate/expectation.go",
+	"internal/projectiontranslate/expectation_test.go",
 	"internal/projectiontranslate/fuzz_test.go",
 	"internal/projectiontranslate/http.go",
 	"internal/projectiontranslate/http_test.go",
+	"internal/projectiontranslate/profile_roster.go",
 	"internal/projectiontranslate/resolve_test.go",
 	"internal/projectiontranslate/translate.go",
 	"internal/projectiontranslate/translate_test.go",
@@ -89,9 +96,15 @@ export const U6_ADDITIONAL_FILES = Object.freeze([
   "internal/world/fresh_confirmation.go",
 ]);
 
+export const U6_RUNTIME_SUPPORT_FILES = Object.freeze([
+	"spec/examples/v1/choicepoint.valid.json",
+	"spec/examples/v1/decision-record.valid.json",
+]);
+
 export const U6_SANDBOX_FILE_ALLOWLIST = Object.freeze([
   ...U5_SANDBOX_FILE_ALLOWLIST,
   ...U6_ADDITIONAL_FILES,
+	...U6_RUNTIME_SUPPORT_FILES,
 ]);
 
 export const U6_SOURCE_SCOPE_ROOTS = Object.freeze([
@@ -133,7 +146,35 @@ export const REQUIRED_U6_MUTANT_IDS = Object.freeze([
 	"collapse-cli-missing-to-empty",
 	"accept-unknown-missing-policy",
 	"translate-before-all-proofs-verify",
+	"fresh-choicepoint-falls-back-to-legacy",
+	"legacy-choicepoint-rebuilt-portable",
+	"hardcode-all-fields-as-differing",
+	"allow-unselected-custom-field-smuggling",
+	"sort-selected-fields-lexically",
+	"skip-portable-selected-value-validation",
+	"upgrade-legacy-ruling-to-portable-preparation",
+	"sort-portable-profile-registry",
+	"drift-cli-translator-version-without-mode-bump",
+	"drift-http-profile-descriptor-without-mode-bump",
+	"skip-portable-proposal-decision-preflight",
+	"skip-portable-revision-decision-preflight",
+	"skip-custom-expectation-realizability-check",
+	"accept-incoherent-cli-completion-sum",
+	"skip-cli-stdout-expectation-coherence",
+	"skip-http-expectation-realizability",
+	"drift-portable-choice-mode-without-mode-bump",
+	"drift-portable-expectation-semantics-without-mode-bump",
+	"drift-portable-tuple-identity-rule-without-mode-bump",
+	"skip-confirmed-proof-byte-admission",
+	"skip-blind-alias-admission",
+	"skip-choicepoint-receipt-count-admission",
+	"skip-choicepoint-receipt-payload-admission",
+	"skip-portable-final-decision-budget",
+	"skip-decision-receipt-count-admission",
+	"skip-decision-receipt-payload-admission",
 ]);
+
+const REQUIRED_U6_MUTANT_ID_DIGEST = "sha256:6f5f027b533d97180cc26db5ad5973a538c50e2e2aad67c28e7147b4188ccac7";
 
 // This reviewed tuple list is deliberately separate from REQUIRED_U6_MUTANT_IDS
 // and the executable clone below. Missing, reordered, renamed, or weakened
@@ -296,7 +337,7 @@ export const REVIEWED_U6_MUTANT_CONTRACT = Object.freeze([
       "\t\tfound := false",
       "\t\tfor _, allowedTuple := range r.allowedTuples {",
       "\t\t\tfor _, allowedField := range allowedTuple.Fields {",
-      "\t\t\t\tif allowedField.FieldID == selectedField.text && allowedField.Value.identityKey() == candidateValue.identityKey() {",
+      "\t\t\t\tif allowedField.FieldID == selectedField.text && allowedField.Value.identityKey(r.registry.mode) == candidateValue.identityKey(r.registry.mode) {",
       "\t\t\t\t\tfound = true",
       "\t\t\t\t\tbreak",
       "\t\t\t\t}",
@@ -536,6 +577,249 @@ export const REVIEWED_U6_MUTANT_CONTRACT = Object.freeze([
 		package: "./internal/choice",
 		testName: "TestTranslateConfirmedVerifiesCompleteRosterBeforeAnyTranslation",
 	}),
+	Object.freeze({
+		id: "fresh-choicepoint-falls-back-to-legacy",
+		file: "internal/choice/choicepoint.go",
+		find: "return buildChoicepointRecord(input, choicepointPortable, nil)",
+		replace: "return buildChoicepointRecord(input, choicepointLegacyWhole, nil)",
+		package: "./internal/choice",
+		testName: "TestFreshConstructionFromLegacyEvidenceUsesPortableMode",
+	}),
+	Object.freeze({
+		id: "legacy-choicepoint-rebuilt-portable",
+		file: "internal/choice/choicepoint.go",
+		find: "mode = choicepointLegacyWhole // MUTANT_P07B_LEGACY_REBUILT_PORTABLE",
+		replace: "mode = choicepointPortable // MUTANT_P07B_LEGACY_REBUILT_PORTABLE",
+		package: "./internal/choice",
+		testName: "TestFreshConstructionFromLegacyEvidenceUsesPortableMode",
+	}),
+	Object.freeze({
+		id: "hardcode-all-fields-as-differing",
+		file: "internal/choice/blind.go",
+		find: "\t\tvar differs bool",
+		replace: "\t\tdiffers := true",
+		package: "./internal/choice",
+		testName: "TestPortableConfirmedSetPreservesProfileOrderAndExactValues",
+	}),
+	Object.freeze({
+		id: "allow-unselected-custom-field-smuggling",
+		file: "internal/choice/validation.go",
+		find: [
+			"\t\tif _, selectedField := allowed[fieldID.text]; !selectedField { // MUTANT_P07B_CUSTOM_UNSELECTED_FIELD",
+			"\t\t\terr := refusal(CodeIncompleteTuple, \"custom expectation contains an unselected field\")",
+			"\t\t\terr.FieldID = fieldID.text",
+			"\t\t\treturn nil, err",
+			"\t\t}",
+		].join("\n"),
+		replace: [
+			"\t\tif _, selectedField := allowed[fieldID.text]; !selectedField { // MUTANT_P07B_CUSTOM_UNSELECTED_FIELD",
+			"\t\t\tfieldID = selected[len(values)]",
+			"\t\t}",
+		].join("\n"),
+		package: "./internal/choice",
+		testName: "TestSelectedTupleContainsExactlySelectedFieldsAndCannotSmuggleContext",
+	}),
+	Object.freeze({
+		id: "sort-selected-fields-lexically",
+		file: "internal/choice/validation.go",
+		find: "\tfor _, fieldID := range r.orderedIDs { // MUTANT_P07B_SELECTED_LEXICAL_ORDER",
+		replace: [
+			"\tordered := append([]string(nil), r.orderedIDs...)",
+			"\tsort.Strings(ordered)",
+			"\tfor _, fieldID := range ordered { // MUTANT_P07B_SELECTED_LEXICAL_ORDER",
+		].join("\n"),
+		package: "./internal/choice",
+		testName: "TestPortableSelectedFieldsCanonicalizeInProfileOrderNotLexicalOrder",
+	}),
+	Object.freeze({
+		id: "skip-portable-selected-value-validation",
+		file: "internal/choice/validation.go",
+		find: "\tif err := r.validatePortableValues(selectedOrder, values); err != nil {",
+		replace: "\tif err := r.validatePortableValues(selectedOrder, values); false && err != nil {",
+		package: "./internal/choice",
+		testName: "TestPortableCustomCanonicalJSONRetainsHTTPObjectSourceConstraint",
+	}),
+	Object.freeze({
+		id: "upgrade-legacy-ruling-to-portable-preparation",
+		file: "internal/choice/portable.go",
+		find: [
+			"\tif decision.choicepoint.mode == choicepointLegacyWhole {",
+			"\t\treturn PortableRulingInspection{}, refusal(CodeLegacyWholeProjectionNotPortable, \"legacy whole-projection rulings are parseable history only\")",
+			"\t}",
+		].join("\n"),
+		replace: [
+			"\tif decision.choicepoint.mode == choicepointLegacyWhole {",
+			"\t\tdecision.choicepoint.mode = choicepointPortable",
+			"\t\tdecision.choicepoint.confirmed.registry.profileDigest = decision.choicepoint.confirmed.registry.projectionDefinitionDigest",
+			"\t}",
+		].join("\n"),
+		package: "./internal/choice/promotion",
+		testName: "TestPreUpgradeLegacyChoiceSnapshotsReopenWithoutPortableUpgrade",
+	}),
+	Object.freeze({
+		id: "sort-portable-profile-registry",
+		file: "internal/choice/portable.go",
+		find: "newFieldRegistry(definitions, true)",
+		replace: "newFieldRegistry(definitions, false)",
+		package: "./internal/choice",
+		testName: "TestPortableConfirmedSetPreservesProfileOrderAndExactValues",
+	}),
+	Object.freeze({
+		id: "drift-cli-translator-version-without-mode-bump",
+		file: "internal/projectiontranslate/cli.go",
+		find: "cliTranslatorVersion = \"v1\"",
+		replace: "cliTranslatorVersion = \"v1-drift\"",
+		package: "./internal/projectiontranslate",
+		testName: "TestPortableProfileRosterV1IsRuntimeFrozen",
+	}),
+	Object.freeze({
+		id: "drift-http-profile-descriptor-without-mode-bump",
+		file: "internal/projectiontranslate/http.go",
+		find: "SourcePath: descriptor.Path(),",
+		replace: "SourcePath: append(descriptor.Path(), \"portable-profile-roster-v1-drift\"),",
+		package: "./internal/projectiontranslate",
+		testName: "TestPortableProfileRosterV1IsRuntimeFrozen",
+	}),
+	Object.freeze({
+		id: "skip-portable-proposal-decision-preflight",
+		file: "internal/choice/session.go",
+		find: [
+			"\t// that would fit only after a smaller post-reveal change is refused here.",
+			"\tif err := preflightPortableDecisionBudget(result); err != nil {",
+		].join("\n"),
+		replace: [
+			"\t// that would fit only after a smaller post-reveal change is refused here.",
+			"\tif err := preflightPortableDecisionBudget(result); false && err != nil {",
+		].join("\n"),
+		package: "./internal/choice",
+		testName: "TestPortableDraftBudgetNeverDefersStructuralOverflowToFinalize",
+	}),
+	Object.freeze({
+		id: "skip-portable-revision-decision-preflight",
+		file: "internal/choice/session.go",
+		find: [
+			"\tresult.state = SessionPostRevealRecorded",
+			"\tif err := preflightPortableDecisionBudget(result); err != nil {",
+		].join("\n"),
+		replace: [
+			"\tresult.state = SessionPostRevealRecorded",
+			"\tif err := preflightPortableDecisionBudget(result); false && err != nil {",
+		].join("\n"),
+		package: "./internal/choice",
+		testName: "TestPortableDraftBudgetNeverDefersStructuralOverflowToFinalize",
+	}),
+	Object.freeze({
+		id: "skip-custom-expectation-realizability-check",
+		file: "internal/choice/validation.go",
+		find: "\tif err := r.validatePortableExpectation(selectedOrder, values, true); err != nil {\n\t\treturn nil, err\n\t}",
+		replace: "\tif err := r.validatePortableExpectation(selectedOrder, values, true); false && err != nil {\n\t\treturn nil, err\n\t}",
+		package: "./internal/choice",
+		testName: "TestPortableCustomExpectationRequiresAdapterRealizableExtension",
+	}),
+	Object.freeze({
+		id: "accept-incoherent-cli-completion-sum",
+		file: "internal/projectiontranslate/expectation.go",
+		find: "\tif possible == 0 {\n\t\treturn refuse(CodeCustomExpectationNotRealizable, \"\", \"CLI completion fields cannot coexist in one adapter projection\")\n\t}",
+		replace: "\tif false && possible == 0 {\n\t\treturn refuse(CodeCustomExpectationNotRealizable, \"\", \"CLI completion fields cannot coexist in one adapter projection\")\n\t}",
+		package: "./internal/projectiontranslate",
+		testName: "TestPortableExpectationDomainCLICompletionRealizability",
+	}),
+	Object.freeze({
+		id: "skip-cli-stdout-expectation-coherence",
+		file: "internal/projectiontranslate/expectation.go",
+		find: "\treturn validateCLIStdoutCoherence(profileFields, values)",
+		replace: "\treturn nil // Mutant: ignore selected stdout/JSON coherence.",
+		package: "./internal/projectiontranslate",
+		testName: "TestPortableExpectationDomainCLIStdoutCoherence",
+	}),
+	Object.freeze({
+		id: "skip-http-expectation-realizability",
+		file: "internal/projectiontranslate/expectation.go",
+		find: "\t\treturn validateHTTPSelectedExpectation(values)",
+		replace: "\t\treturn nil // Mutant: accept every profile-typed HTTP selection.",
+		package: "./internal/projectiontranslate",
+		testName: "TestPortableExpectationDomainHTTPRealizability",
+	}),
+	Object.freeze({
+		id: "drift-portable-choice-mode-without-mode-bump",
+		file: "internal/projectiontranslate/expectation.go",
+		find: "\tPortableChoiceModeV1 = \"ADAPTER_BOUND_PORTABLE_FIELDS_V1\"",
+		replace: "\tPortableChoiceModeV1 = \"ADAPTER_BOUND_PORTABLE_FIELDS_V1_DRIFT\"",
+		package: "./internal/projectiontranslate",
+		testName: "TestPortableProfileRosterV1IsRuntimeFrozen",
+	}),
+	Object.freeze({
+		id: "drift-portable-expectation-semantics-without-mode-bump",
+		file: "internal/projectiontranslate/expectation.go",
+		find: "\tportableExpectationSemanticsV1 = \"EXISTS_COMPLETE_ADAPTER_PROJECTION_RESTRICTION_V1\"",
+		replace: "\tportableExpectationSemanticsV1 = \"EXISTS_COMPLETE_ADAPTER_PROJECTION_RESTRICTION_V1_DRIFT\"",
+		package: "./internal/projectiontranslate",
+		testName: "TestPortableProfileRosterV1IsRuntimeFrozen",
+	}),
+	Object.freeze({
+		id: "drift-portable-tuple-identity-rule-without-mode-bump",
+		file: "internal/projectiontranslate/profile_roster.go",
+		find: "\tportableTupleIdentityRuleV1 = \"FIELD_ID_PROFILE_ORDER_PLUS_TAGGED_EXACT_PAYLOAD_BYTES_V1\"",
+		replace: "\tportableTupleIdentityRuleV1 = \"FIELD_ID_PROFILE_ORDER_PLUS_TAGGED_EXACT_PAYLOAD_BYTES_V1_DRIFT\"",
+		package: "./internal/projectiontranslate",
+		testName: "TestPortableProfileRosterV1IsRuntimeFrozen",
+	}),
+	Object.freeze({
+		id: "skip-confirmed-proof-byte-admission",
+		file: "internal/projectiontranslate/confirmed.go",
+		find: "\t\tif len(proof.CanonicalProjection) > maxConfirmedProjectionBytes-projectionBytes {\n\t\t\treturn ConfirmedTranslations{}, refuse(CodeTranslationLimit, \"\", \"confirmed projection proofs exceed the aggregate retained-byte ceiling\")\n\t\t}",
+		replace: "\t\tif false && len(proof.CanonicalProjection) > maxConfirmedProjectionBytes-projectionBytes {\n\t\t\treturn ConfirmedTranslations{}, refuse(CodeTranslationLimit, \"\", \"confirmed projection proofs exceed the aggregate retained-byte ceiling\")\n\t\t}",
+		package: "./internal/choice",
+		testName: "TestTranslateConfirmedAdmitsProofBytesBeforeDefensiveCopy",
+	}),
+	Object.freeze({
+		id: "skip-blind-alias-admission",
+		file: "internal/choice/blind.go",
+		find: "\tif err := v.admitAliases(raw); err != nil {\n\t\treturn nil, nil, err\n\t}",
+		replace: "\tif err := v.admitAliases(raw); false && err != nil {\n\t\treturn nil, nil, err\n\t}",
+		package: "./internal/choice",
+		testName: "TestRulingAliasAdmissionIsBoundedBeforeNormalization",
+	}),
+	Object.freeze({
+		id: "skip-choicepoint-receipt-count-admission",
+		file: "internal/choice/choicepoint.go",
+		find: "\tif len(receipts) > canon.MaxContainerMembers {\n\t\treturn nil, refusal(CodeInputLimitExceeded, \"choicepoint receipt count exceeds the canonical container profile\")\n\t}",
+		replace: "\tif false && len(receipts) > canon.MaxContainerMembers {\n\t\treturn nil, refusal(CodeInputLimitExceeded, \"choicepoint receipt count exceeds the canonical container profile\")\n\t}",
+		package: "./internal/choice",
+		testName: "TestChoicepointReceiptAdmissionIsBoundedBeforeSorting",
+	}),
+	Object.freeze({
+		id: "skip-choicepoint-receipt-payload-admission",
+		file: "internal/choice/choicepoint.go",
+		find: "\t\tif !consumeReceiptWireBudget(wire, &remaining) {\n\t\t\treturn nil, refusal(CodeInputLimitExceeded, \"choicepoint receipt payload exceeds the canonical input profile\")\n\t\t}",
+		replace: "\t\tif false && !consumeReceiptWireBudget(wire, &remaining) {\n\t\t\treturn nil, refusal(CodeInputLimitExceeded, \"choicepoint receipt payload exceeds the canonical input profile\")\n\t\t}",
+		package: "./internal/choice",
+		testName: "TestChoicepointReceiptAdmissionIsBoundedBeforeSorting",
+	}),
+	Object.freeze({
+		id: "skip-portable-final-decision-budget",
+		file: "internal/choice/decision.go",
+		find: "\tif enforcePortableBudget && session.record.mode == choicepointPortable {",
+		replace: "\tif false && enforcePortableBudget && session.record.mode == choicepointPortable {",
+		package: "./internal/choice",
+		testName: "TestPortableDecisionLateBudgetIsExactAndLegacyHistoryKeepsFullCeiling",
+	}),
+	Object.freeze({
+		id: "skip-decision-receipt-count-admission",
+		file: "internal/choice/decision.go",
+		find: "\tif len(receipts) > canon.MaxContainerMembers {\n\t\treturn nil, refusal(CodeInputLimitExceeded, \"DecisionRecord receipt count exceeds the canonical container profile\")\n\t}",
+		replace: "\tif false && len(receipts) > canon.MaxContainerMembers {\n\t\treturn nil, refusal(CodeInputLimitExceeded, \"DecisionRecord receipt count exceeds the canonical container profile\")\n\t}",
+		package: "./internal/choice",
+		testName: "TestDecisionReceiptAdmissionIsBoundedBeforeSorting",
+	}),
+	Object.freeze({
+		id: "skip-decision-receipt-payload-admission",
+		file: "internal/choice/decision.go",
+		find: "\t\tif !consumeReceiptWireBudget(wire, &remaining) {\n\t\t\treturn nil, refusal(CodeInputLimitExceeded, \"DecisionRecord receipt payload exceeds the canonical input profile\")\n\t\t}",
+		replace: "\t\tif false && !consumeReceiptWireBudget(wire, &remaining) {\n\t\t\treturn nil, refusal(CodeInputLimitExceeded, \"DecisionRecord receipt payload exceeds the canonical input profile\")\n\t\t}",
+		package: "./internal/choice",
+		testName: "TestDecisionReceiptAdmissionIsBoundedBeforeSorting",
+	}),
 ]);
 
 export const U6_MUTANTS = Object.freeze(
@@ -558,10 +842,14 @@ export function assertU6MutantDefinitionSet(
   requiredIDs = REQUIRED_U6_MUTANT_IDS,
   reviewedContract = REVIEWED_U6_MUTANT_CONTRACT,
 ) {
-	const requiredCount = 29;
+	const requiredCount = 55;
   if (!Object.isFrozen(requiredIDs) || requiredIDs.length !== requiredCount || new Set(requiredIDs).size !== requiredCount) {
     throw new MutationGateError("U6_INVALID_REQUIRED_ID_SET", `U6 requires exactly ${requiredCount} unique frozen IDs`);
   }
+	const requiredIDDigest = `sha256:${createHash("sha256").update(requiredIDs.join("\n"), "utf8").digest("hex")}`;
+	if (requiredIDDigest !== REQUIRED_U6_MUTANT_ID_DIGEST) {
+		throw new MutationGateError("U6_REQUIRED_ID_DIGEST_MISMATCH", `${requiredIDDigest} != ${REQUIRED_U6_MUTANT_ID_DIGEST}`);
+	}
   if (!Object.isFrozen(reviewedContract) || reviewedContract.length !== requiredCount ||
       reviewedContract.some((tuple) => !Object.isFrozen(tuple))) {
     throw new MutationGateError("U6_INVALID_REVIEWED_MUTANT_CONTRACT", "U6 reviewed tuples must be recursively frozen");
@@ -596,7 +884,7 @@ export function assertU6MutantDefinitionSet(
     if (typeof mutant.find !== "string" || mutant.find.length === 0 || mutant.find === mutant.replace) {
       throw new MutationGateError("U6_INVALID_MUTATION", `${mutant.id} is not one exact effective replacement`);
     }
-		if (!/^\.\/internal\/(?:choice|confirmation|domain|observe|portablevalue|projectionprofile|projectiontranslate|store)$/u.test(mutant.package)) {
+		if (!/^\.\/internal\/(?:choice(?:\/promotion)?|confirmation|domain|observe|portablevalue|projectionprofile|projectiontranslate|store)$/u.test(mutant.package)) {
       throw new MutationGateError("U6_INVALID_MUTATION_PACKAGE", `${mutant.id} has invalid package ${mutant.package}`);
     }
     if (!/^Test[A-Za-z0-9_]+$/u.test(mutant.testName)) {
@@ -612,6 +900,7 @@ export function assertU6ManifestMatchesTree(sourceRoot = repoRoot) {
     U6_SOURCE_SCOPE_ROOTS,
     U5_REVIEWED_NON_GO_FILES,
     U5_REVIEWED_EMBED_BINDINGS,
+		U6_RUNTIME_SUPPORT_FILES,
   );
 }
 
@@ -670,6 +959,7 @@ async function createU6SeedSnapshot() {
     scopeRoots: U6_SOURCE_SCOPE_ROOTS,
     reviewedNonGoFiles: U5_REVIEWED_NON_GO_FILES,
     embedBindings: U5_REVIEWED_EMBED_BINDINGS,
+		runtimeSupportFiles: U6_RUNTIME_SUPPORT_FILES,
   });
 }
 
@@ -689,7 +979,8 @@ function revalidateToolchain(toolchain) {
 
 async function prepareExperiment({ mutant, toolchain, phase, seed, phaseRecords }) {
   await assertU5SourceAndSeedUnchanged(seed);
-  const sandboxParent = await mkdtemp(join(tmpdir(), `countershape-u6-${phase}-`));
+	const realTemporaryRoot = await realpath(tmpdir());
+	const sandboxParent = await mkdtemp(join(realTemporaryRoot, `countershape-u6-${phase}-`));
   await chmod(sandboxParent, 0o700);
   const sandbox = join(sandboxParent, "repo");
   const cacheRoot = join(sandboxParent, "cache");
@@ -790,7 +1081,11 @@ function fakeClassification(outcome) {
 
 export async function selfTest() {
   assertU6MutantDefinitionSet();
-  await assertU6ManifestMatchesTree(repoRoot);
+	const manifest = await assertU6ManifestMatchesTree(repoRoot);
+	for (const file of U6_RUNTIME_SUPPORT_FILES) {
+		const entry = manifest.entries.find((candidate) => candidate.file === file);
+		assert.ok(entry && entry.bytes > 0 && /^[0-9a-f]{64}$/u.test(entry.sha256), `${file} lacks exact runtime-support manifest facts`);
+	}
   await assertReviewedU6Anchors(repoRoot);
   await assertReviewedU6NamedTests(repoRoot);
 
@@ -851,7 +1146,7 @@ export async function selfTest() {
     { phase: "post-control", manifest: seed.manifest.digest, sandbox: "/fresh/u6/c" },
   ];
   assert.match(exactU6ABADigest(U6_MUTANTS[0], records, seed), /^sha256:[0-9a-f]{64}$/u);
-	return `U6/P07A mutation self-test passed: ${U6_MUTANTS.length}/${U6_MUTANTS.length} recursively frozen tuples; exact anchors/tests/manifests; inherited hostile-copy tripwires; fresh synthetic A/B/A and receipt closure.`;
+	return `U6/P07A-B mutation self-test passed: ${U6_MUTANTS.length}/${U6_MUTANTS.length} recursively frozen tuples; exact anchors/tests/manifests; runtime support and inherited hostile-copy tripwires; fresh synthetic A/B/A and receipt closure.`;
 }
 
 export async function main(arguments_ = process.argv.slice(2)) {
@@ -871,9 +1166,13 @@ export async function main(arguments_ = process.argv.slice(2)) {
   const seed = await createU6SeedSnapshot();
   const results = [];
   try {
-		// Run the newly added P07A faults first for faster fail-closed feedback,
-		// while retaining the complete frozen U6/P07A set and final denominator.
-		const executionOrder = [...U6_MUTANTS.slice(17), ...U6_MUTANTS.slice(0, 17)];
+		// Run inherited filesystem/concurrency faults first so host-containment
+		// regressions fail early, then newest P07A-B and earlier P07A additions.
+		const executionOrder = [
+			...U6_MUTANTS.slice(0, 17),
+			...U6_MUTANTS.slice(41),
+			...U6_MUTANTS.slice(17, 41),
+		];
 		for (const mutant of executionOrder) {
       const phaseRecords = [];
       const result = await runU2Mutant(mutant, toolchain, {
@@ -901,9 +1200,13 @@ export async function main(arguments_ = process.argv.slice(2)) {
   process.stdout.write(`Trusted C compiler sha256: ${toolchain.compiler.sha256}\n`);
   process.stdout.write(`Closed Darwin CGO facts digest: ${toolchain.cgo.digest}\n`);
   process.stdout.write(`Immutable U6 seed manifest: ${seed.manifest.digest}\n`);
+	for (const file of U6_RUNTIME_SUPPORT_FILES) {
+		const entry = seed.manifest.entries.find((candidate) => candidate.file === file);
+		process.stdout.write(`Runtime support ${file}: ${entry.bytes} bytes sha256:${entry.sha256}\n`);
+	}
   process.stdout.write("Containment notice: private mutation copies retain the invoking user's host filesystem and network authority.\n");
   for (const item of results) process.stdout.write(`${item.result}; exact fresh A/B/A closure digest ${item.receipt}\n`);
-	process.stdout.write(`U6/P07A mutation gate: ${results.length}/${U6_MUTANTS.length} required mutants killed; ${results.length}/${U6_MUTANTS.length} fresh A/B/A receipts.\n`);
+	process.stdout.write(`U6/P07A-B mutation gate: ${results.length}/${U6_MUTANTS.length} required mutants killed; ${results.length}/${U6_MUTANTS.length} fresh A/B/A receipts.\n`);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === resolve(modulePath)) {

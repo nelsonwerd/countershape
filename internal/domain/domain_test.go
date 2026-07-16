@@ -31,6 +31,14 @@ func testProjectionDefinitionBinding(adapter AdapterDomain) ProjectionDefinition
 	return binding
 }
 
+func TestAdapterDomainOwnsStableCanonicalStimulusKinds(t *testing.T) {
+	if AdapterCLI.CanonicalStimulusKind() != "CLIStimulus" ||
+		AdapterHTTP.CanonicalStimulusKind() != "HTTPStimulus" ||
+		AdapterDomain("UNKNOWN").CanonicalStimulusKind() != "" {
+		t.Fatal("adapter-domain canonical stimulus mapping drifted")
+	}
+}
+
 func validPlanConfig() WorldPlanConfig {
 	return WorldPlanConfig{
 		CandidateSetDigest:          testDigest("1"),

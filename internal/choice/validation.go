@@ -15,6 +15,8 @@ import (
 	"github.com/nelsonwerd/countershape/internal/canon"
 	"github.com/nelsonwerd/countershape/internal/compare"
 	"github.com/nelsonwerd/countershape/internal/domain"
+	"github.com/nelsonwerd/countershape/internal/portablevalue"
+	"github.com/nelsonwerd/countershape/internal/projectiontranslate"
 )
 
 // Action is an explicit human action. The empty value is intentionally invalid.
@@ -33,61 +35,67 @@ const (
 type ValueTag string
 
 const (
-	ValueMissing       ValueTag = "MISSING"
-	ValueString        ValueTag = "STRING"
-	ValueInteger       ValueTag = "INTEGER"
-	ValueBoolean       ValueTag = "BOOLEAN"
-	ValueNull          ValueTag = "NULL"
-	ValueCanonicalJSON ValueTag = "CANONICAL_JSON"
+	ValueMissing           ValueTag = "MISSING"
+	ValueString            ValueTag = "STRING"
+	ValueInteger           ValueTag = "INTEGER"
+	ValueBoolean           ValueTag = "BOOLEAN"
+	ValueNull              ValueTag = "NULL"
+	ValueBytes             ValueTag = "BYTES"
+	ValueOrderedStringList ValueTag = "ORDERED_STRING_LIST"
+	ValueCanonicalJSON     ValueTag = "CANONICAL_JSON"
 )
 
 // FieldType is the non-null, non-missing type declared by an adapter registry.
 type FieldType string
 
 const (
-	FieldString        FieldType = "STRING"
-	FieldInteger       FieldType = "INTEGER"
-	FieldBoolean       FieldType = "BOOLEAN"
-	FieldCanonicalJSON FieldType = "CANONICAL_JSON"
+	FieldString            FieldType = "STRING"
+	FieldInteger           FieldType = "INTEGER"
+	FieldBoolean           FieldType = "BOOLEAN"
+	FieldBytes             FieldType = "BYTES"
+	FieldOrderedStringList FieldType = "ORDERED_STRING_LIST"
+	FieldCanonicalJSON     FieldType = "CANONICAL_JSON"
 )
 
 // RefusalCode is a stable machine-readable validation failure.
 type RefusalCode string
 
 const (
-	CodeMissingAction                     RefusalCode = "MISSING_ACTION"
-	CodeUnknownAction                     RefusalCode = "UNKNOWN_ACTION"
-	CodeOmittedSelectedFields             RefusalCode = "OMITTED_SELECTED_FIELDS"
-	CodeOmittedObservedSelections         RefusalCode = "OMITTED_OBSERVED_SELECTIONS"
-	CodeEmptySelectedFields               RefusalCode = "EMPTY_SELECTED_FIELDS"
-	CodeEmptyFieldID                      RefusalCode = "EMPTY_FIELD_ID"
-	CodeUnknownField                      RefusalCode = "UNKNOWN_FIELD"
-	CodeDuplicateSelectedField            RefusalCode = "DUPLICATE_SELECTED_FIELD"
-	CodeDuplicateTupleField               RefusalCode = "DUPLICATE_TUPLE_FIELD"
-	CodeInvalidFieldType                  RefusalCode = "INVALID_FIELD_TYPE"
-	CodeIncompleteTuple                   RefusalCode = "INCOMPLETE_TUPLE"
-	CodeEmptyObservedSelection            RefusalCode = "EMPTY_OBSERVED_SELECTION"
-	CodeDuplicateObservedSelection        RefusalCode = "DUPLICATE_OBSERVED_SELECTION"
-	CodeUnconfirmedOutcomeSelection       RefusalCode = "UNCONFIRMED_OUTCOME_SELECTION"
-	CodeCustomExpectationCardinality      RefusalCode = "CUSTOM_EXPECTATION_CARDINALITY"
-	CodeCustomExpectationUnreviewed       RefusalCode = "CUSTOM_EXPECTATION_UNREVIEWED"
-	CodeCustomExpectationAlreadySeen      RefusalCode = "CUSTOM_EXPECTATION_ALREADY_OBSERVED"
-	CodeNoncompilablePredicate            RefusalCode = "NONCOMPILABLE_ACTION_HAS_PREDICATE"
-	CodeUnexpectedCustomExpectation       RefusalCode = "UNEXPECTED_CUSTOM_EXPECTATION"
-	CodeAmbiguousScope                    RefusalCode = "AMBIGUOUS_SCOPE"
-	CodeInvalidFieldRegistry              RefusalCode = "INVALID_FIELD_REGISTRY"
-	CodeInvalidUTF8                       RefusalCode = "INVALID_UTF8"
-	CodeEmptyConfirmedOutcomes            RefusalCode = "EMPTY_CONFIRMED_OUTCOMES"
-	CodeInvalidConfirmedOutcome           RefusalCode = "INVALID_CONFIRMED_OUTCOME"
-	CodeDuplicateConfirmedOutcome         RefusalCode = "DUPLICATE_CONFIRMED_OUTCOME"
-	CodeDuplicateConfirmedCandidate       RefusalCode = "DUPLICATE_CONFIRMED_CANDIDATE"
-	CodeProjectionFingerprintMismatch     RefusalCode = "PROJECTION_FINGERPRINT_MISMATCH"
-	CodeConfirmedProjectionRosterMismatch RefusalCode = "CONFIRMED_PROJECTION_ROSTER_MISMATCH"
-	CodeNoncanonicalProjection            RefusalCode = "NONCANONICAL_PROJECTION"
-	CodeInvalidConfirmedOutcomeSet        RefusalCode = "INVALID_CONFIRMED_OUTCOME_SET"
-	CodeInvalidReviewFact                 RefusalCode = "INVALID_REVIEW_FACT"
-	CodeReviewExpectationMismatch         RefusalCode = "REVIEW_EXPECTATION_MISMATCH"
-	CodeInputLimitExceeded                RefusalCode = "INPUT_LIMIT_EXCEEDED"
+	CodeMissingAction                         RefusalCode = "MISSING_ACTION"
+	CodeUnknownAction                         RefusalCode = "UNKNOWN_ACTION"
+	CodeOmittedSelectedFields                 RefusalCode = "OMITTED_SELECTED_FIELDS"
+	CodeOmittedObservedSelections             RefusalCode = "OMITTED_OBSERVED_SELECTIONS"
+	CodeEmptySelectedFields                   RefusalCode = "EMPTY_SELECTED_FIELDS"
+	CodeEmptyFieldID                          RefusalCode = "EMPTY_FIELD_ID"
+	CodeUnknownField                          RefusalCode = "UNKNOWN_FIELD"
+	CodeDuplicateSelectedField                RefusalCode = "DUPLICATE_SELECTED_FIELD"
+	CodeDuplicateTupleField                   RefusalCode = "DUPLICATE_TUPLE_FIELD"
+	CodeInvalidFieldType                      RefusalCode = "INVALID_FIELD_TYPE"
+	CodeIncompleteTuple                       RefusalCode = "INCOMPLETE_TUPLE"
+	CodeEmptyObservedSelection                RefusalCode = "EMPTY_OBSERVED_SELECTION"
+	CodeDuplicateObservedSelection            RefusalCode = "DUPLICATE_OBSERVED_SELECTION"
+	CodeUnconfirmedOutcomeSelection           RefusalCode = "UNCONFIRMED_OUTCOME_SELECTION"
+	CodeCustomExpectationCardinality          RefusalCode = "CUSTOM_EXPECTATION_CARDINALITY"
+	CodeCustomExpectationUnreviewed           RefusalCode = "CUSTOM_EXPECTATION_UNREVIEWED"
+	CodeCustomExpectationAlreadySeen          RefusalCode = "CUSTOM_EXPECTATION_ALREADY_OBSERVED"
+	CodeCustomExpectationNotAdapterRealizable RefusalCode = "CUSTOM_EXPECTATION_NOT_ADAPTER_REALIZABLE"
+	CodeNoncompilablePredicate                RefusalCode = "NONCOMPILABLE_ACTION_HAS_PREDICATE"
+	CodeUnexpectedCustomExpectation           RefusalCode = "UNEXPECTED_CUSTOM_EXPECTATION"
+	CodeAmbiguousScope                        RefusalCode = "AMBIGUOUS_SCOPE"
+	CodeInvalidFieldRegistry                  RefusalCode = "INVALID_FIELD_REGISTRY"
+	CodeInvalidUTF8                           RefusalCode = "INVALID_UTF8"
+	CodeEmptyConfirmedOutcomes                RefusalCode = "EMPTY_CONFIRMED_OUTCOMES"
+	CodeInvalidConfirmedOutcome               RefusalCode = "INVALID_CONFIRMED_OUTCOME"
+	CodeDuplicateConfirmedOutcome             RefusalCode = "DUPLICATE_CONFIRMED_OUTCOME"
+	CodeDuplicateConfirmedCandidate           RefusalCode = "DUPLICATE_CONFIRMED_CANDIDATE"
+	CodeProjectionFingerprintMismatch         RefusalCode = "PROJECTION_FINGERPRINT_MISMATCH"
+	CodeConfirmedProjectionRosterMismatch     RefusalCode = "CONFIRMED_PROJECTION_ROSTER_MISMATCH"
+	CodeNoncanonicalProjection                RefusalCode = "NONCANONICAL_PROJECTION"
+	CodeInvalidConfirmedOutcomeSet            RefusalCode = "INVALID_CONFIRMED_OUTCOME_SET"
+	CodeInvalidReviewFact                     RefusalCode = "INVALID_REVIEW_FACT"
+	CodeReviewExpectationMismatch             RefusalCode = "REVIEW_EXPECTATION_MISMATCH"
+	CodeInputLimitExceeded                    RefusalCode = "INPUT_LIMIT_EXCEEDED"
+	CodeLegacyWholeProjectionNotPortable      RefusalCode = "LEGACY_WHOLE_PROJECTION_NOT_PORTABLE"
 )
 
 // RefusalError carries a stable code plus bounded structural coordinates.
@@ -154,50 +162,33 @@ func (id FieldID) String() string { return id.text }
 type FieldRegistry struct {
 	definitions                map[string]FieldDefinition
 	orderedIDs                 []string
+	sourceKinds                map[string]string
 	fieldRegistryDigest        domain.Digest
 	projectionDefinitionDigest domain.Digest
+	profileDigest              domain.Digest
+	expectationDomain          projectiontranslate.ExpectationDomain
+	mode                       fieldRegistryMode
 }
+
+type fieldRegistryMode uint8
 
 const (
-	maxProjectionFields       = 64
-	maxProjectionPathDepth    = 8
-	maxProjectionNameBytes    = 128
-	maxProjectionChannels     = 3
-	maxProjectionOperations   = 64
-	maxExactStringBytes       = 64 * 1024
-	maxExactIntegerBytes      = 32
-	maxActionBytes            = 64
-	maxFieldTypeBytes         = 32
-	maxTupleRetainedBytes     = 2 * 1024 * 1024
-	maxReviewerBytes          = 512
-	ProjectionComparatorExact = domain.ProjectionComparatorExact
+	fieldRegistryDefinition fieldRegistryMode = iota + 1
+	fieldRegistryLegacyWhole
+	fieldRegistryPortable
 )
 
-// ProjectionOperation is one identity-bearing pipeline stage. Operation slice
-// order is semantic execution order; names must still be globally unique.
-type ProjectionOperation struct {
-	Name       string
-	RuleDigest domain.Digest
-}
-
-type ProjectionDefinitionConfig struct {
-	AdapterDomain        domain.AdapterDomain
-	ImplementationDigest domain.Digest
-	ConfigurationDigest  domain.Digest
-	AcceptedChannels     []string
-	Operations           []ProjectionOperation
-	Comparator           string
-	Fields               []FieldDefinition
-}
-
-// ProjectionDefinition is the full, construction-safe projection authority.
-// The field registry is one committed component, not an alias for the whole
-// definition. Only Registry() can produce a registry bound to this digest.
-type ProjectionDefinition struct {
-	digest   domain.Digest
-	binding  domain.ProjectionDefinitionBinding
-	registry FieldRegistry
-}
+const (
+	maxProjectionFields    = 64
+	maxProjectionPathDepth = 8
+	maxProjectionNameBytes = 128
+	maxExactStringBytes    = 64 * 1024
+	maxExactIntegerBytes   = 32
+	maxActionBytes         = 64
+	maxFieldTypeBytes      = 32
+	maxTupleRetainedBytes  = 2 * 1024 * 1024
+	maxReviewerBytes       = 512
+)
 
 type fieldDefinitionIdentity struct {
 	ID           string   `json:"id"`
@@ -207,8 +198,7 @@ type fieldDefinitionIdentity struct {
 	AllowNull    bool     `json:"allow_null"`
 }
 
-// NewFieldRegistry rejects empty, duplicate, malformed, or untyped declarations.
-func NewFieldRegistry(definitions []FieldDefinition) (FieldRegistry, error) {
+func newFieldRegistry(definitions []FieldDefinition, preserveOrder bool) (FieldRegistry, error) {
 	if len(definitions) == 0 || len(definitions) > maxProjectionFields {
 		return FieldRegistry{}, refusal(CodeInvalidFieldRegistry, "registry must declare at least one field")
 	}
@@ -229,7 +219,7 @@ func NewFieldRegistry(definitions []FieldDefinition) (FieldRegistry, error) {
 			return FieldRegistry{}, refusal(CodeInvalidFieldRegistry, "registry field type is outside the bounded UTF-8 profile")
 		}
 		switch definition.Type {
-		case FieldString, FieldInteger, FieldBoolean, FieldCanonicalJSON:
+		case FieldString, FieldInteger, FieldBoolean, FieldBytes, FieldOrderedStringList, FieldCanonicalJSON:
 		default:
 			return FieldRegistry{}, refusal(CodeInvalidFieldRegistry, "registry field has unknown type "+strconv.Quote(string(definition.Type)))
 		}
@@ -254,7 +244,9 @@ func NewFieldRegistry(definitions []FieldDefinition) (FieldRegistry, error) {
 		registry.definitions[definition.ID] = definition
 		registry.orderedIDs = append(registry.orderedIDs, definition.ID)
 	}
-	sort.Strings(registry.orderedIDs)
+	if !preserveOrder {
+		sort.Strings(registry.orderedIDs)
+	}
 	identity := struct {
 		SchemaVersion string                    `json:"schema_version"`
 		Kind          string                    `json:"kind"`
@@ -280,6 +272,7 @@ func NewFieldRegistry(definitions []FieldDefinition) (FieldRegistry, error) {
 		return FieldRegistry{}, refusal(CodeInvalidFieldRegistry, "field registry digest is invalid")
 	}
 	registry.fieldRegistryDigest = parsed
+	registry.mode = fieldRegistryDefinition
 	return registry, nil
 }
 
@@ -299,11 +292,9 @@ func (r FieldRegistry) ProjectionDefinitionDigest() domain.Digest {
 	return r.projectionDefinitionDigest
 }
 
-// NewWholeProjectionRegistry provides the safe adapter-neutral U6 ruling
-// surface: one selectable field containing the entire exact canonical
-// projection. It never guesses adapter field semantics or permits a partial
-// predicate to escape the projection definition that the confirmed map binds.
-func NewWholeProjectionRegistry(projectionDefinitionDigest domain.Digest) (FieldRegistry, error) {
+// newWholeProjectionRegistry exists only for exact legacy wire reconstruction.
+// Fresh construction cannot select or obtain this registry.
+func newWholeProjectionRegistry(projectionDefinitionDigest domain.Digest) (FieldRegistry, error) {
 	if !projectionDefinitionDigest.Valid() {
 		return FieldRegistry{}, refusal(CodeInvalidFieldRegistry, "whole-projection registry requires an exact projection definition")
 	}
@@ -324,7 +315,7 @@ func NewWholeProjectionRegistry(projectionDefinitionDigest domain.Digest) (Field
 	return FieldRegistry{
 		definitions: map[string]FieldDefinition{WholeProjectionFieldID: definition},
 		orderedIDs:  []string{WholeProjectionFieldID}, fieldRegistryDigest: parsed,
-		projectionDefinitionDigest: projectionDefinitionDigest,
+		projectionDefinitionDigest: projectionDefinitionDigest, mode: fieldRegistryLegacyWhole,
 	}, nil
 }
 
@@ -337,39 +328,6 @@ func (r FieldRegistry) Definitions() []FieldDefinition {
 	}
 	return result
 }
-
-func NewProjectionDefinition(config ProjectionDefinitionConfig) (ProjectionDefinition, error) {
-	if (config.AdapterDomain != domain.AdapterCLI && config.AdapterDomain != domain.AdapterHTTP) ||
-		!config.ImplementationDigest.Valid() || !config.ConfigurationDigest.Valid() ||
-		config.Comparator != ProjectionComparatorExact || len(config.AcceptedChannels) == 0 || len(config.AcceptedChannels) > maxProjectionChannels ||
-		len(config.Operations) == 0 || len(config.Operations) > maxProjectionOperations {
-		return ProjectionDefinition{}, refusal(CodeInvalidFieldRegistry, "projection definition is incomplete")
-	}
-	registry, err := NewFieldRegistry(config.Fields)
-	if err != nil {
-		return ProjectionDefinition{}, err
-	}
-	operations := make([]domain.ProjectionOperationBinding, len(config.Operations))
-	for index, operation := range config.Operations {
-		operations[index] = domain.ProjectionOperationBinding{Name: operation.Name, RuleDigest: operation.RuleDigest}
-	}
-	binding, err := domain.NewProjectionDefinitionBinding(domain.ProjectionDefinitionBindingConfig{
-		AdapterDomain: config.AdapterDomain, ImplementationDigest: config.ImplementationDigest,
-		ConfigurationDigest: config.ConfigurationDigest, AcceptedChannels: config.AcceptedChannels,
-		Operations: operations, Comparator: config.Comparator, FieldRegistryDigest: registry.fieldRegistryDigest,
-	})
-	if err != nil {
-		return ProjectionDefinition{}, refusal(CodeInvalidFieldRegistry, "projection definition body is outside the closed v1 profile")
-	}
-	registry.projectionDefinitionDigest = binding.Digest()
-	return ProjectionDefinition{digest: binding.Digest(), binding: binding, registry: registry}, nil
-}
-
-func (d ProjectionDefinition) Digest() domain.Digest { return d.digest }
-
-func (d ProjectionDefinition) Binding() domain.ProjectionDefinitionBinding { return d.binding }
-
-func (d ProjectionDefinition) Registry() FieldRegistry { return d.registry.clone() }
 
 // Resolve closes a textual ID against the domain registry.
 func (r FieldRegistry) Resolve(text string) (FieldID, error) {
@@ -390,13 +348,24 @@ func (r FieldRegistry) Resolve(text string) (FieldID, error) {
 	return FieldID{text: text}, nil
 }
 
+func (r FieldRegistry) fieldOrder(text string) (int, bool) {
+	for index, fieldID := range r.orderedIDs {
+		if fieldID == text {
+			return index, true
+		}
+	}
+	return 0, false
+}
+
 // ExactValue has private storage so invalid tag/payload combinations cannot be
-// assembled by a caller. Canonical JSON retains proof bytes and a locally
-// computed digest; callers can never inject a digest as the value.
+// assembled by a caller. Canonical payloads retain proof bytes and canonical
+// JSON additionally carries a locally computed digest; callers can never inject
+// a digest as the value.
 type ExactValue struct {
 	tag       ValueTag
 	text      string
 	boolean   bool
+	opaque    []byte
 	canonical []byte
 }
 
@@ -415,6 +384,27 @@ func StringValue(value string) (ExactValue, error) {
 func BooleanValue(value bool) ExactValue { return ExactValue{tag: ValueBoolean, boolean: value} }
 
 func NullValue() ExactValue { return ExactValue{tag: ValueNull} }
+
+// BytesValue retains exact opaque bytes. UTF-8 is deliberately irrelevant.
+func BytesValue(value []byte) (ExactValue, error) {
+	portable, err := portablevalue.Bytes(value)
+	if err != nil {
+		return ExactValue{}, refusal(CodeInputLimitExceeded, "byte value exceeds the portable exact-value profile")
+	}
+	body, _ := portable.BytesValue()
+	return ExactValue{tag: ValueBytes, opaque: body}, nil
+}
+
+// OrderedStringListValue preserves order, duplicates, empty lists, and empty
+// members as strict canonical JSON-array bytes.
+func OrderedStringListValue(values []string) (ExactValue, error) {
+	portable, err := portablevalue.OrderedStringList(values)
+	if err != nil {
+		return ExactValue{}, refusal(CodeInvalidFieldType, "ordered string list is outside the portable exact-value profile")
+	}
+	exact, _ := portable.CanonicalStringListBytes()
+	return ExactValue{tag: ValueOrderedStringList, canonical: exact}, nil
+}
 
 // IntegerValue delegates lexical and safe-range authority to canon.
 func IntegerValue(spelling string) (ExactValue, error) {
@@ -478,12 +468,33 @@ func (v ExactValue) Tag() ValueTag { return v.tag }
 func (v ExactValue) Text() string  { return v.text }
 func (v ExactValue) Boolean() bool { return v.boolean }
 
-// CanonicalBytes returns proof bytes only for CANONICAL_JSON values.
+// Bytes returns a defensive copy only for BYTES values.
+func (v ExactValue) Bytes() []byte {
+	if v.tag != ValueBytes {
+		return nil
+	}
+	return append([]byte(nil), v.opaque...)
+}
+
+// OrderedStrings returns a defensive decoded list only for ordered-list values.
+func (v ExactValue) OrderedStrings() ([]string, bool) {
+	if v.tag != ValueOrderedStringList {
+		return nil, false
+	}
+	portable, err := portablevalue.OrderedStringListFromCanonical(v.canonical)
+	if err != nil {
+		return nil, false
+	}
+	return portable.OrderedStrings()
+}
+
+// CanonicalBytes returns defensive canonical payload bytes for canonical JSON
+// and ordered-string-list values.
 func (v ExactValue) CanonicalBytes() []byte {
 	return append([]byte(nil), v.canonical...)
 }
 
-func (v ExactValue) identityKey() string {
+func (v ExactValue) identityKey(mode fieldRegistryMode) string {
 	switch v.tag {
 	case ValueMissing:
 		return "M"
@@ -498,7 +509,14 @@ func (v ExactValue) identityKey() string {
 			return "B1"
 		}
 		return "B0"
+	case ValueBytes:
+		return "X" + lengthPrefix(string(v.opaque))
+	case ValueOrderedStringList:
+		return "L" + lengthPrefix(string(v.canonical))
 	case ValueCanonicalJSON:
+		if mode == fieldRegistryPortable {
+			return "J" + lengthPrefix(string(v.canonical))
+		}
 		return "J" + lengthPrefix(v.text)
 	default:
 		return "?"
@@ -513,6 +531,83 @@ type FieldValue struct {
 
 // CompleteTuple is a complete domain projection. Slice order is display-only.
 type CompleteTuple struct{ Fields []FieldValue }
+
+// SelectedTuple is a sealed, registry-ordered custom expectation containing
+// exactly the fields a ruling selected and no unselected profile values. It is
+// constructible only against one exact Choicepoint/confirmed universe.
+type SelectedTuple struct {
+	universe    canon.Digest
+	selectedKey string
+	tupleKey    string
+	fields      []FieldValue
+	seal        *selectedTupleSeal
+}
+
+type selectedTupleSeal struct{}
+
+var selectedTupleAuthority = &selectedTupleSeal{}
+
+// NewSelectedTuple validates caller-authored exact values against the sealed
+// profile owned by record. Field input order is ignored; the retained tuple is
+// canonicalized exclusively in registry order.
+func NewSelectedTuple(record ChoicepointRecord, selectedFields []string, fields []FieldValue) (SelectedTuple, error) {
+	if !record.Valid() || !record.confirmed.Valid() {
+		return SelectedTuple{}, refusal(CodeInvalidConfirmedOutcomeSet, "selected tuple requires an exact Choicepoint")
+	}
+	return newSelectedTuple(record.confirmed, selectedFields, fields)
+}
+
+func newSelectedTuple(confirmed ConfirmedOutcomeSet, selectedFields []string, fields []FieldValue) (SelectedTuple, error) {
+	if !confirmed.Valid() {
+		return SelectedTuple{}, refusal(CodeInvalidConfirmedOutcomeSet, "selected tuple requires a sealed confirmed universe")
+	}
+	selected, err := confirmed.registry.resolveSelected(selectedFields)
+	if err != nil {
+		return SelectedTuple{}, err
+	}
+	if len(selected) == 0 {
+		return SelectedTuple{}, refusal(CodeEmptySelectedFields, "selected tuple requires a nonempty selected-field set")
+	}
+	values, err := confirmed.registry.validateSelectedTuple(selected, fields)
+	if err != nil {
+		return SelectedTuple{}, err
+	}
+	projected, key, err := projectTuple(confirmed.registry, selected, values)
+	if err != nil {
+		return SelectedTuple{}, err
+	}
+	return SelectedTuple{
+		universe: confirmed.seal, selectedKey: selectedIdentityKey(selected), tupleKey: key,
+		fields: cloneTuple(projected).Fields, seal: selectedTupleAuthority,
+	}, nil
+}
+
+// Fields returns the exact selected values in profile registry order.
+func (t SelectedTuple) Fields() []FieldValue {
+	return cloneTuple(CompleteTuple{Fields: t.fields}).Fields
+}
+
+func (t SelectedTuple) validFor(confirmed ConfirmedOutcomeSet, selected []FieldID) bool {
+	if t.seal != selectedTupleAuthority || t.universe != confirmed.seal ||
+		t.selectedKey != selectedIdentityKey(selected) || len(t.fields) != len(selected) {
+		return false
+	}
+	values, err := confirmed.registry.validateSelectedTuple(selected, t.fields)
+	if err != nil {
+		return false
+	}
+	projected, key, err := projectTuple(confirmed.registry, selected, values)
+	return err == nil && key == t.tupleKey && tupleIdentityKey(confirmed.registry, projected.Fields) == t.tupleKey
+}
+
+func cloneSelectedTuplePointer(input *SelectedTuple) *SelectedTuple {
+	if input == nil {
+		return nil
+	}
+	copy := *input
+	copy.fields = cloneTuple(CompleteTuple{Fields: input.fields}).Fields
+	return &copy
+}
 
 // ProjectionProofInput supplies the canonical projection bytes needed to
 // reconstruct an exact tuple. It is not confirmation authority: candidate and
@@ -564,11 +659,10 @@ type ConfirmedOutcomeSet struct {
 	valid              bool
 }
 
-// NewConfirmedOutcomeSet reconstructs and seals exactly the complete eligible
-// roster exported by a confirmed comparison map. Proof inputs may be reordered,
-// but they may neither omit nor add candidates, and each candidate/projection
-// pair must verify against the opaque roster.
-func NewConfirmedOutcomeSet(
+// newLegacyConfirmedOutcomeSet reconstructs the exact historical whole-
+// projection universe. It is private so fresh callers cannot author an
+// alternate projection interpretation beside the adapter-derived translator.
+func newLegacyConfirmedOutcomeSet(
 	registry FieldRegistry,
 	roster compare.ConfirmedProjectionRoster,
 	inputs []ProjectionProofInput,
@@ -690,6 +784,10 @@ func makeConfirmedOutcomeSetSeal(
 		OutcomeMapDigest           string                    `json:"outcome_map_digest"`
 		PreservationDigest         string                    `json:"preservation_map_digest"`
 		ProjectionDefinitionDigest string                    `json:"projection_definition_digest"`
+		FieldRegistryDigest        string                    `json:"field_registry_digest"`
+		PortableProfileDigest      string                    `json:"portable_profile_digest"`
+		ExpectationDomainDigest    string                    `json:"expectation_domain_digest"`
+		RegistryMode               int                       `json:"registry_mode"`
 		Fields                     []fieldDefinitionIdentity `json:"fields"`
 		Outcomes                   []outcomeIdentity         `json:"outcomes"`
 	}{
@@ -698,8 +796,16 @@ func makeConfirmedOutcomeSetSeal(
 		OutcomeMapDigest:           outcomeMapDigest.String(),
 		PreservationDigest:         preservationDigest.String(),
 		ProjectionDefinitionDigest: registry.projectionDefinitionDigest.String(),
+		FieldRegistryDigest:        registry.fieldRegistryDigest.String(),
+		RegistryMode:               int(registry.mode),
 		Fields:                     make([]fieldDefinitionIdentity, 0, len(registry.orderedIDs)),
 		Outcomes:                   make([]outcomeIdentity, 0, len(outcomes)),
+	}
+	if registry.profileDigest.Valid() {
+		identity.PortableProfileDigest = registry.profileDigest.String()
+	}
+	if registry.expectationDomain.Valid() {
+		identity.ExpectationDomainDigest = registry.expectationDomain.Digest().String()
 	}
 	for _, id := range registry.orderedIDs {
 		definition := registry.definitions[id]
@@ -845,7 +951,7 @@ func (r CustomExpectationReview) EvidenceDigest() domain.Digest { return r.evide
 
 // NewCustomExpectationReview validates and seals one exact review fact against
 // the confirmed universe whose complete complement the ruling will reject.
-func NewCustomExpectationReview(confirmed ConfirmedOutcomeSet, selectedFields []string, expectation CompleteTuple, reviewer string, evidence domain.Digest) (CustomExpectationReview, error) {
+func NewCustomExpectationReview(confirmed ConfirmedOutcomeSet, selectedFields []string, expectation SelectedTuple, reviewer string, evidence domain.Digest) (CustomExpectationReview, error) {
 	if !confirmed.valid || len(confirmed.byID) == 0 {
 		return CustomExpectationReview{}, refusal(CodeInvalidConfirmedOutcomeSet, "custom review requires a sealed confirmed universe")
 	}
@@ -860,18 +966,13 @@ func NewCustomExpectationReview(confirmed ConfirmedOutcomeSet, selectedFields []
 	if len(selected) == 0 {
 		return CustomExpectationReview{}, refusal(CodeEmptySelectedFields, "a custom review must bind a nonempty selected-field set")
 	}
-	fields, err := confirmed.registry.validateTuple(expectation)
-	if err != nil {
-		return CustomExpectationReview{}, err
-	}
-	_, expectationKey, err := projectTuple(selected, fields)
-	if err != nil {
-		return CustomExpectationReview{}, err
+	if !expectation.validFor(confirmed, selected) {
+		return CustomExpectationReview{}, refusal(CodeReviewExpectationMismatch, "selected tuple does not bind this exact confirmed universe and field selection")
 	}
 	return CustomExpectationReview{
 		universe:       confirmed.seal,
 		selectedKey:    selectedIdentityKey(selected),
-		expectationKey: expectationKey,
+		expectationKey: expectation.tupleKey,
 		reviewer:       reviewer,
 		evidence:       evidence,
 		valid:          true,
@@ -885,7 +986,7 @@ type RulingInput struct {
 	Action            Action
 	SelectedFields    []string
 	AllowedObserved   []ConfirmedOutcomeRef
-	CustomExpectation *CompleteTuple
+	CustomExpectation *SelectedTuple
 	CustomReview      CustomExpectationReview
 }
 
@@ -967,7 +1068,7 @@ func (r compilableRuling) Allows(candidate CompleteTuple) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	_, key, err := projectTuple(r.selectedFields, fields)
+	_, key, err := projectTuple(r.registry, r.selectedFields, fields)
 	if err != nil {
 		return false, err
 	}
@@ -1067,14 +1168,11 @@ func validateCompilable(confirmed ConfirmedOutcomeSet, input RulingInput) (Valid
 		if !input.CustomReview.valid {
 			return ValidatedRuling{}, refusal(CodeCustomExpectationUnreviewed, "custom expectation requires a typed review fact")
 		}
-		fields, validationErr := confirmed.registry.validateTuple(*input.CustomExpectation)
-		if validationErr != nil {
-			return ValidatedRuling{}, validationErr
+		if !input.CustomExpectation.validFor(confirmed, selected) {
+			return ValidatedRuling{}, refusal(CodeReviewExpectationMismatch, "custom selected tuple does not bind this exact universe and field selection")
 		}
-		projected, key, projectionErr := projectTuple(selected, fields)
-		if projectionErr != nil {
-			return ValidatedRuling{}, projectionErr
-		}
+		projected := CompleteTuple{Fields: input.CustomExpectation.Fields()}
+		key := input.CustomExpectation.tupleKey
 		if input.CustomReview.universe != confirmed.seal || input.CustomReview.selectedKey != selectedIdentityKey(selected) || input.CustomReview.expectationKey != key {
 			return ValidatedRuling{}, refusal(CodeReviewExpectationMismatch, "typed review fact does not bind this exact field selection and expectation")
 		}
@@ -1088,7 +1186,7 @@ func validateCompilable(confirmed ConfirmedOutcomeSet, input RulingInput) (Valid
 	}
 	if len(authoredAllowed) == 1 {
 		allowedTuples = authoredAllowed
-		allowedKeys = map[string]struct{}{tupleIdentityKey(authoredAllowed[0].Fields): struct{}{}}
+		allowedKeys = map[string]struct{}{tupleIdentityKey(confirmed.registry, authoredAllowed[0].Fields): struct{}{}}
 	}
 	disallowedTuples, _, err := confirmed.registry.projectConfirmed(selected, disallowedOutcomes)
 	if err != nil {
@@ -1097,10 +1195,10 @@ func validateCompilable(confirmed ConfirmedOutcomeSet, input RulingInput) (Valid
 
 	pairCount := 0
 	for allowedIndex, allowedTuple := range allowedTuples {
-		allowedKey := tupleIdentityKey(allowedTuple.Fields)
+		allowedKey := tupleIdentityKey(confirmed.registry, allowedTuple.Fields)
 		for disallowedIndex, disallowedTuple := range disallowedTuples {
 			pairCount++
-			if allowedKey == tupleIdentityKey(disallowedTuple.Fields) {
+			if allowedKey == tupleIdentityKey(confirmed.registry, disallowedTuple.Fields) {
 				code := CodeAmbiguousScope
 				if input.Action == ActionCustomExpectation {
 					code = CodeCustomExpectationAlreadySeen
@@ -1168,7 +1266,6 @@ func (r FieldRegistry) resolveSelected(raw []string) ([]FieldID, error) {
 	if len(raw) > len(r.definitions) {
 		return nil, refusal(CodeInputLimitExceeded, "selected field count exceeds the closed registry")
 	}
-	selected := make([]FieldID, 0, len(raw))
 	seen := make(map[string]struct{}, len(raw))
 	for _, text := range raw {
 		fieldID, err := r.Resolve(text)
@@ -1181,10 +1278,71 @@ func (r FieldRegistry) resolveSelected(raw []string) ([]FieldID, error) {
 			return nil, err
 		}
 		seen[fieldID.text] = struct{}{}
-		selected = append(selected, fieldID)
 	}
-	sort.Slice(selected, func(i, j int) bool { return selected[i].text < selected[j].text })
+	selected := make([]FieldID, 0, len(raw))
+	for _, fieldID := range r.orderedIDs { // MUTANT_P07B_SELECTED_LEXICAL_ORDER
+		if _, present := seen[fieldID]; present {
+			selected = append(selected, FieldID{text: fieldID})
+		}
+	}
 	return selected, nil
+}
+
+func (r FieldRegistry) validateSelectedTuple(selected []FieldID, raw []FieldValue) (map[string]ExactValue, error) {
+	if raw == nil {
+		return nil, refusal(CodeIncompleteTuple, "selected tuple fields were omitted")
+	}
+	if len(raw) != len(selected) {
+		return nil, refusal(CodeIncompleteTuple, "selected tuple must contain exactly the selected fields")
+	}
+	allowed := make(map[string]struct{}, len(selected))
+	for _, field := range selected {
+		allowed[field.text] = struct{}{}
+	}
+	values := make(map[string]ExactValue, len(raw))
+	retainedBytes := 0
+	for _, field := range raw {
+		fieldID, err := r.Resolve(field.FieldID)
+		if err != nil {
+			return nil, err
+		}
+		if _, selectedField := allowed[fieldID.text]; !selectedField { // MUTANT_P07B_CUSTOM_UNSELECTED_FIELD
+			err := refusal(CodeIncompleteTuple, "custom expectation contains an unselected field")
+			err.FieldID = fieldID.text
+			return nil, err
+		}
+		if _, duplicate := values[fieldID.text]; duplicate {
+			err := refusal(CodeDuplicateTupleField, "selected tuple contains the field more than once")
+			err.FieldID = fieldID.text
+			return nil, err
+		}
+		if err := validateValue(r.definitions[fieldID.text], field.Value); err != nil {
+			return nil, err
+		}
+		retainedBytes += exactValueRetainedBytes(field.Value)
+		if retainedBytes > maxTupleRetainedBytes {
+			return nil, refusal(CodeInputLimitExceeded, "selected tuple exceeds the retained canonical-byte ceiling")
+		}
+		values[fieldID.text] = cloneExactValue(field.Value)
+	}
+	for _, field := range selected {
+		if _, present := values[field.text]; !present {
+			err := refusal(CodeIncompleteTuple, "selected tuple omits a selected field")
+			err.FieldID = field.text
+			return nil, err
+		}
+	}
+	selectedOrder := make([]string, len(selected))
+	for index, field := range selected {
+		selectedOrder[index] = field.text
+	}
+	if err := r.validatePortableValues(selectedOrder, values); err != nil {
+		return nil, err
+	}
+	if err := r.validatePortableExpectation(selectedOrder, values, true); err != nil {
+		return nil, err
+	}
+	return values, nil
 }
 
 func (r FieldRegistry) validateTuple(tuple CompleteTuple) (map[string]ExactValue, error) {
@@ -1225,11 +1383,88 @@ func (r FieldRegistry) validateTuple(tuple CompleteTuple) (map[string]ExactValue
 			}
 		}
 	}
+	if err := r.validatePortableValues(r.orderedIDs, fields); err != nil {
+		return nil, err
+	}
+	if err := r.validatePortableExpectation(r.orderedIDs, fields, false); err != nil {
+		return nil, err
+	}
 	return fields, nil
 }
 
+func (r FieldRegistry) validatePortableValues(order []string, values map[string]ExactValue) error {
+	if r.mode != fieldRegistryPortable {
+		return nil
+	}
+	portableValues := make([]portablevalue.Value, 0, len(order))
+	for _, fieldID := range order {
+		exact, exists := values[fieldID]
+		if !exists {
+			continue
+		}
+		portable, err := portableValueFromExact(exact)
+		if err != nil || !portable.Valid() {
+			code := CodeInvalidFieldType
+			if portablevalue.IsCode(err, portablevalue.CodeLimitExceeded) {
+				code = CodeInputLimitExceeded
+			}
+			refused := refusal(code, "portable tuple value could not be reconstructed exactly")
+			refused.FieldID = fieldID
+			return refused
+		}
+		if r.sourceKinds[fieldID] == "CANONICAL_JSON_OBJECT" && portable.Tag() == portablevalue.TagCanonicalJSON {
+			canonical, _ := portable.CanonicalJSONBytes()
+			parsed, parseErr := canon.Parse(canonical)
+			if parseErr != nil || parsed.Kind() != canon.KindObject {
+				refused := refusal(CodeInvalidFieldType, "portable value violates the adapter profile source kind")
+				refused.FieldID = fieldID
+				return refused
+			}
+		}
+		portableValues = append(portableValues, portable)
+	}
+	if err := portablevalue.ValidateTuple(portableValues); err != nil {
+		code := CodeInvalidFieldType
+		if portablevalue.IsCode(err, portablevalue.CodeLimitExceeded) {
+			code = CodeInputLimitExceeded
+		}
+		return refusal(code, "portable tuple exceeds the closed value profile")
+	}
+	return nil
+}
+
+func (r FieldRegistry) validatePortableExpectation(order []string, values map[string]ExactValue, custom bool) error {
+	if r.mode != fieldRegistryPortable {
+		return nil
+	}
+	if !r.expectationDomain.Valid() || r.expectationDomain.ProfileDigest() != r.profileDigest {
+		return refusal(CodeInvalidFieldRegistry, "portable field registry lost its exact expectation-domain authority")
+	}
+	selected := make([]projectiontranslate.SelectedValue, 0, len(order))
+	for _, fieldID := range order {
+		exact, exists := values[fieldID]
+		if !exists {
+			continue
+		}
+		portable, err := portableValueFromExact(exact)
+		if err != nil || !portable.Valid() {
+			refused := refusal(CodeInvalidFieldType, "portable expectation value could not be reconstructed exactly")
+			refused.FieldID = fieldID
+			return refused
+		}
+		selected = append(selected, projectiontranslate.SelectedValue{FieldID: fieldID, Value: portable})
+	}
+	if err := r.expectationDomain.ValidateSelected(selected); err != nil {
+		if custom && projectiontranslate.IsCode(err, projectiontranslate.CodeCustomExpectationNotRealizable) {
+			return refusal(CodeCustomExpectationNotAdapterRealizable, "custom selected tuple has no complete adapter-projection extension")
+		}
+		return refusal(CodeInvalidFieldRegistry, "portable tuple disagrees with its sealed expectation domain: "+err.Error())
+	}
+	return nil
+}
+
 func exactValueRetainedBytes(value ExactValue) int {
-	return len(value.text) + len(value.canonical)
+	return len(value.text) + len(value.opaque) + len(value.canonical)
 }
 
 func validateValue(definition FieldDefinition, value ExactValue) error {
@@ -1241,18 +1476,24 @@ func validateValue(definition FieldDefinition, value ExactValue) error {
 	valid := false
 	switch value.tag {
 	case ValueMissing:
-		valid = definition.AllowMissing && value.text == "" && !value.boolean && len(value.canonical) == 0
+		valid = definition.AllowMissing && value.text == "" && !value.boolean && len(value.opaque) == 0 && len(value.canonical) == 0
 	case ValueNull:
-		valid = definition.AllowNull && value.text == "" && !value.boolean && len(value.canonical) == 0
+		valid = definition.AllowNull && value.text == "" && !value.boolean && len(value.opaque) == 0 && len(value.canonical) == 0
 	case ValueString:
-		valid = definition.Type == FieldString && !value.boolean && utf8.ValidString(value.text) && len(value.text) <= maxExactStringBytes && len(value.canonical) == 0
+		valid = definition.Type == FieldString && !value.boolean && utf8.ValidString(value.text) && len(value.text) <= maxExactStringBytes && len(value.opaque) == 0 && len(value.canonical) == 0
 	case ValueInteger:
 		_, err := canon.IntegerFromString(value.text)
-		valid = definition.Type == FieldInteger && !value.boolean && err == nil && len(value.canonical) == 0
+		valid = definition.Type == FieldInteger && !value.boolean && err == nil && len(value.opaque) == 0 && len(value.canonical) == 0
 	case ValueBoolean:
-		valid = definition.Type == FieldBoolean && value.text == "" && len(value.canonical) == 0
+		valid = definition.Type == FieldBoolean && value.text == "" && len(value.opaque) == 0 && len(value.canonical) == 0
+	case ValueBytes:
+		portable, err := portablevalue.Bytes(value.opaque)
+		valid = definition.Type == FieldBytes && err == nil && value.text == "" && !value.boolean && len(value.canonical) == 0 && portable.Valid()
+	case ValueOrderedStringList:
+		portable, err := portablevalue.OrderedStringListFromCanonical(value.canonical)
+		valid = definition.Type == FieldOrderedStringList && err == nil && value.text == "" && !value.boolean && len(value.opaque) == 0 && portable.Valid()
 	case ValueCanonicalJSON:
-		if definition.Type == FieldCanonicalJSON && !value.boolean && len(value.canonical) > 0 {
+		if definition.Type == FieldCanonicalJSON && !value.boolean && len(value.opaque) == 0 && len(value.canonical) > 0 {
 			parsed, err := canon.Parse(value.canonical)
 			checked, checkedErr := parsed.CanonicalChecked()
 			if err == nil && checkedErr == nil && parsed.Kind() != canon.KindNull && bytes.Equal(checked, value.canonical) {
@@ -1277,7 +1518,7 @@ func (r FieldRegistry) projectConfirmed(selected []FieldID, outcomes []confirmed
 		if err != nil {
 			return nil, nil, err
 		}
-		tuple, key, err := projectTuple(selected, fields)
+		tuple, key, err := projectTuple(r, selected, fields)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -1288,12 +1529,12 @@ func (r FieldRegistry) projectConfirmed(selected []FieldID, outcomes []confirmed
 		projected = append(projected, tuple)
 	}
 	sort.Slice(projected, func(i, j int) bool {
-		return tupleIdentityKey(projected[i].Fields) < tupleIdentityKey(projected[j].Fields)
+		return tupleIdentityKey(r, projected[i].Fields) < tupleIdentityKey(r, projected[j].Fields)
 	})
 	return projected, keys, nil
 }
 
-func projectTuple(selected []FieldID, fields map[string]ExactValue) (CompleteTuple, string, error) {
+func projectTuple(registry FieldRegistry, selected []FieldID, fields map[string]ExactValue) (CompleteTuple, string, error) {
 	projected := CompleteTuple{Fields: make([]FieldValue, 0, len(selected))}
 	for _, fieldID := range selected {
 		value, exists := fields[fieldID.text]
@@ -1304,7 +1545,7 @@ func projectTuple(selected []FieldID, fields map[string]ExactValue) (CompleteTup
 		}
 		projected.Fields = append(projected.Fields, FieldValue{FieldID: fieldID.text, Value: cloneExactValue(value)})
 	}
-	return projected, tupleIdentityKey(projected.Fields), nil
+	return projected, tupleIdentityKey(registry, projected.Fields), nil
 }
 
 func selectedIdentityKey(selected []FieldID) string {
@@ -1315,11 +1556,11 @@ func selectedIdentityKey(selected []FieldID) string {
 	return builder.String()
 }
 
-func tupleIdentityKey(fields []FieldValue) string {
+func tupleIdentityKey(registry FieldRegistry, fields []FieldValue) string {
 	var builder strings.Builder
 	for _, field := range fields {
 		builder.WriteString(lengthPrefix(field.FieldID))
-		builder.WriteString(lengthPrefix(field.Value.identityKey()))
+		builder.WriteString(lengthPrefix(field.Value.identityKey(registry.mode)))
 	}
 	return builder.String()
 }
@@ -1327,6 +1568,7 @@ func tupleIdentityKey(fields []FieldValue) string {
 func lengthPrefix(value string) string { return strconv.Itoa(len(value)) + ":" + value }
 
 func cloneExactValue(value ExactValue) ExactValue {
+	value.opaque = append([]byte(nil), value.opaque...)
 	value.canonical = append([]byte(nil), value.canonical...)
 	return value
 }
@@ -1367,12 +1609,19 @@ func (r FieldRegistry) clone() FieldRegistry {
 	clone := FieldRegistry{
 		definitions:                make(map[string]FieldDefinition, len(r.definitions)),
 		orderedIDs:                 append([]string(nil), r.orderedIDs...),
+		sourceKinds:                make(map[string]string, len(r.sourceKinds)),
 		fieldRegistryDigest:        r.fieldRegistryDigest,
 		projectionDefinitionDigest: r.projectionDefinitionDigest,
+		profileDigest:              r.profileDigest,
+		expectationDomain:          r.expectationDomain,
+		mode:                       r.mode,
 	}
 	for id, definition := range r.definitions {
 		definition.Path = append([]string(nil), definition.Path...)
 		clone.definitions[id] = definition
+	}
+	for id, sourceKind := range r.sourceKinds {
+		clone.sourceKinds[id] = sourceKind
 	}
 	return clone
 }

@@ -55,6 +55,48 @@ func TestResolveEveryCLIFieldSubsetUniquelyAndInRegistryOrder(t *testing.T) {
 	}
 }
 
+func TestPortableProfileRosterV1IsRuntimeFrozen(t *testing.T) {
+	const expected = "sha256:aec21f3f76f9384a09ab3f71cea3d1def86fb8ef725322f35af296aa8e1560b7"
+	const expectedExpectation = "sha256:d0951b6681fc1893691db83accfb5aeaac2a500cba9d4814308518aeff4566c7"
+	const expectedSemantics = "sha256:9b51d42ab58078eac4d652fbaeb925d614803d5926bf63e7c59fba4134f57cae"
+	digest, count, err := derivePortableProfileRosterV1()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if portableProfileRosterV1Digest != expected || count != portableProfileRosterV1EntryCount || digest.String() != expected {
+		t.Fatalf(
+			"portable profile roster v1 drifted: constant=%s count=%d digest=%s; a changed interpretation requires a new Choicepoint mode",
+			portableProfileRosterV1Digest,
+			count,
+			digest.String(),
+		)
+	}
+	expectationDigest, expectationCount, err := derivePortableExpectationDomainRosterV1()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if portableExpectationDomainRosterV1Digest != expectedExpectation ||
+		expectationCount != portableExpectationDomainRosterV1EntryCount || expectationDigest.String() != expectedExpectation {
+		t.Fatalf(
+			"portable expectation-domain roster v1 drifted: constant=%s count=%d digest=%s; changed realizability requires a new Choicepoint mode",
+			portableExpectationDomainRosterV1Digest, expectationCount, expectationDigest.String(),
+		)
+	}
+	semanticsDigest, err := derivePortableModeSemanticsV1()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if portableModeSemanticsV1Digest != expectedSemantics || semanticsDigest.String() != expectedSemantics {
+		t.Fatalf(
+			"portable mode semantics v1 drifted: constant=%s digest=%s; changed algebra or equality requires a new Choicepoint mode",
+			portableModeSemanticsV1Digest, semanticsDigest.String(),
+		)
+	}
+	if err := verifyPortableProfileRosterV1(); err != nil {
+		t.Fatalf("runtime portable profile roster firewall refused the frozen identity: %v", err)
+	}
+}
+
 func TestResolveRequiresDigestAndExactBindingBytes(t *testing.T) {
 	definition, err := cli.NewCLIProjectionDefinition(cli.CLIProjectionDefinitionConfig{Fields: []cli.CLIFieldID{cli.CLIFieldStdoutBytes}})
 	if err != nil {

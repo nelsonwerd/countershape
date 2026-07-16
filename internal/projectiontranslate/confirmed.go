@@ -44,6 +44,7 @@ func (o TranslatedOutcome) Tuple() Tuple {
 // happened before any adapter translation.
 type ConfirmedTranslations struct {
 	resolved           Resolved
+	expectation        ExpectationDomain
 	outcomes           []TranslatedOutcome
 	outcomeMapDigest   compare.OutcomeArtifactDigest
 	preservationDigest compare.PreservationMapDigest
@@ -86,11 +87,11 @@ func TranslateConfirmed(
 		if _, member := expected[candidateKey]; !member {
 			return ConfirmedTranslations{}, refuse(CodeRosterMismatch, "", "projection proof candidate is not in the confirmed roster")
 		}
-		frozenProjection := append([]byte(nil), proof.CanonicalProjection...)
-		projectionBytes += len(frozenProjection)
-		if projectionBytes > maxConfirmedProjectionBytes {
+		if len(proof.CanonicalProjection) > maxConfirmedProjectionBytes-projectionBytes {
 			return ConfirmedTranslations{}, refuse(CodeTranslationLimit, "", "confirmed projection proofs exceed the aggregate retained-byte ceiling")
 		}
+		projectionBytes += len(proof.CanonicalProjection)
+		frozenProjection := append([]byte(nil), proof.CanonicalProjection...)
 		fingerprint, err := roster.Verify(proof.CandidateExecutionKey, frozenProjection) // MUTANT_P07A_VERIFY_BEFORE_TRANSLATE
 		if err != nil {
 			return ConfirmedTranslations{}, refuse(CodeRosterMismatch, candidateKey, "projection proof does not match its confirmed fingerprint")
@@ -106,6 +107,10 @@ func TranslateConfirmed(
 	}
 	// Resolution deliberately follows complete proof/fingerprint verification.
 	resolved, err := Resolve(binding)
+	if err != nil {
+		return ConfirmedTranslations{}, err
+	}
+	expectation, err := newExpectationDomain(resolved)
 	if err != nil {
 		return ConfirmedTranslations{}, err
 	}
@@ -125,13 +130,14 @@ func TranslateConfirmed(
 		return verified[i].candidate.String() < verified[j].candidate.String()
 	})
 	return ConfirmedTranslations{
-		resolved: resolved, outcomes: verified, outcomeMapDigest: roster.OutcomeMapDigest(),
+		resolved: resolved, expectation: expectation, outcomes: verified, outcomeMapDigest: roster.OutcomeMapDigest(),
 		preservationDigest: roster.PreservationDigest(), seal: confirmedAuthority,
 	}, nil
 }
 
 func (c ConfirmedTranslations) Valid() bool {
-	if c.seal != confirmedAuthority || !c.resolved.Valid() || !c.outcomeMapDigest.Valid() ||
+	if c.seal != confirmedAuthority || !c.resolved.Valid() || !c.expectation.Valid() ||
+		c.expectation.ProfileDigest() != c.resolved.profile.Digest() || !c.outcomeMapDigest.Valid() ||
 		!c.preservationDigest.Valid() || len(c.outcomes) < 2 {
 		return false
 	}
@@ -154,6 +160,9 @@ func (c ConfirmedTranslations) Valid() bool {
 }
 
 func (c ConfirmedTranslations) Profile() projectionprofile.Profile { return c.resolved.Profile() }
+func (c ConfirmedTranslations) ExpectationDomain() ExpectationDomain {
+	return c.expectation.clone()
+}
 func (c ConfirmedTranslations) ExpectedStimulusKind() string {
 	return c.resolved.ExpectedStimulusKind()
 }

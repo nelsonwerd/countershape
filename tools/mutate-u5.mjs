@@ -112,6 +112,11 @@ export const U5_REVIEWED_EMBED_BINDINGS = Object.freeze([
   }),
 ]);
 
+// Runtime support files are copied and digest-pinned beside the admitted Go
+// source, but are deliberately outside source scopes and are not go:embed
+// assets. U5 itself needs none; later gates may opt into an exact frozen set.
+export const U5_RUNTIME_SUPPORT_FILES = Object.freeze([]);
+
 export const REQUIRED_U5_MUTANT_IDS = Object.freeze([
   "replace-full-map-preservation-with-partition-shape",
   "collapse-unresolved-into-changes",
@@ -628,6 +633,7 @@ export async function assertU5ManifestMatchesTree(
   scopeRoots = U5_SOURCE_SCOPE_ROOTS,
   reviewedNonGoFiles = U5_REVIEWED_NON_GO_FILES,
   embedBindings = U5_REVIEWED_EMBED_BINDINGS,
+	runtimeSupportFiles = U5_RUNTIME_SUPPORT_FILES,
 ) {
   const resolvedSource = resolve(sourceRoot);
   let sourceMetadata;
@@ -648,13 +654,23 @@ export async function assertU5ManifestMatchesTree(
   if (new Set(reviewedNonGoFiles).size !== reviewedNonGoFiles.length) {
     throw new MutationGateError("U5_INVALID_NON_GO_ALLOWLIST", "U5 reviewed non-Go paths must be unique");
   }
+	if (new Set(runtimeSupportFiles).size !== runtimeSupportFiles.length) {
+		throw new MutationGateError("U5_INVALID_RUNTIME_SUPPORT", "U5 runtime support paths must be unique");
+	}
   for (const value of allowlist) assertSafeRelativePath(value, "U5_UNSAFE_ALLOWLIST_PATH");
   for (const value of scopeRoots) assertSafeRelativePath(value, "U5_UNSAFE_SCOPE_PATH");
   for (const value of reviewedNonGoFiles) assertSafeRelativePath(value, "U5_UNSAFE_NON_GO_PATH");
+	for (const value of runtimeSupportFiles) assertSafeRelativePath(value, "U5_UNSAFE_RUNTIME_SUPPORT_PATH");
 
   const reviewedNonGo = new Set(reviewedNonGoFiles);
-  const declaredNonGo = allowlist.filter((file) => file !== "go.mod" && !file.endsWith(".go")).sort();
-  if (!sameArray(declaredNonGo, [...reviewedNonGoFiles].sort())) {
+	const runtimeSupport = new Set(runtimeSupportFiles);
+	for (const file of runtimeSupportFiles) {
+		if (file === "go.mod" || file.endsWith(".go") || reviewedNonGo.has(file)) {
+			throw new MutationGateError("U5_RUNTIME_SUPPORT_SHAPE", `${file} is not one distinct non-Go runtime support file`);
+		}
+	}
+	const declaredNonGo = allowlist.filter((file) => file !== "go.mod" && !file.endsWith(".go")).sort();
+	if (!sameArray(declaredNonGo, [...reviewedNonGoFiles, ...runtimeSupportFiles].sort())) {
     throw new MutationGateError(
       "U5_NON_GO_ALLOWLIST_MISMATCH",
       `declared non-Go files [${declaredNonGo.join(",")}] differ from the reviewed closed set`,
@@ -662,12 +678,16 @@ export async function assertU5ManifestMatchesTree(
   }
   const isScoped = (file) => scopeRoots.some((scope) => file.startsWith(`${scope}/`));
   const support = allowlist.filter((file) => !isScoped(file)).sort();
-  if (!sameArray(support, ["go.mod"])) {
-    throw new MutationGateError("U5_MANIFEST_SUPPORT_SET_MISMATCH", `support files [${support.join(",")}] differ from go.mod`);
+	const expectedSupport = ["go.mod", ...runtimeSupportFiles].sort();
+	if (!sameArray(support, expectedSupport)) {
+		throw new MutationGateError("U5_MANIFEST_SUPPORT_SET_MISMATCH", `support files [${support.join(",")}] differ from [${expectedSupport.join(",")}]`);
   }
   for (const file of reviewedNonGoFiles) {
     if (!isScoped(file)) throw new MutationGateError("U5_NON_GO_OUTSIDE_SCOPE", `${file} is outside every source scope`);
   }
+	for (const file of runtimeSupportFiles) {
+		if (isScoped(file)) throw new MutationGateError("U5_RUNTIME_SUPPORT_INSIDE_SCOPE", `${file} is inside a source scope`);
+	}
 
   const actual = [];
   for (const scope of scopeRoots) actual.push(...await enumerateU5SourceScope(resolvedSource, scope, reviewedNonGo));
@@ -675,7 +695,7 @@ export async function assertU5ManifestMatchesTree(
   if (new Set(actual).size !== actual.length) {
     throw new MutationGateError("U5_OVERLAPPING_SOURCE_SCOPES", "U5 source scopes enumerate at least one file twice");
   }
-  const expected = allowlist.filter((file) => file !== "go.mod").sort();
+	const expected = allowlist.filter((file) => file !== "go.mod" && !runtimeSupport.has(file)).sort();
   const actualSet = new Set(actual);
   const expectedSet = new Set(expected);
   const unlisted = actual.filter((file) => !expectedSet.has(file));
@@ -717,9 +737,9 @@ function requireU5ManifestEqual(actual, expected, code, detail) {
   }
 }
 
-async function validateU5TreeAndManifest(root, allowlist, scopeRoots, reviewedNonGoFiles, embedBindings) {
-  const first = await assertU5ManifestMatchesTree(root, allowlist, scopeRoots, reviewedNonGoFiles, embedBindings);
-  const second = await assertU5ManifestMatchesTree(root, allowlist, scopeRoots, reviewedNonGoFiles, embedBindings);
+async function validateU5TreeAndManifest(root, allowlist, scopeRoots, reviewedNonGoFiles, embedBindings, runtimeSupportFiles) {
+	const first = await assertU5ManifestMatchesTree(root, allowlist, scopeRoots, reviewedNonGoFiles, embedBindings, runtimeSupportFiles);
+	const second = await assertU5ManifestMatchesTree(root, allowlist, scopeRoots, reviewedNonGoFiles, embedBindings, runtimeSupportFiles);
   requireU5ManifestEqual(second, first, "U5_MANIFEST_CHANGED_DURING_DOUBLE_READ", "tree changed between complete manifest reads");
   return second;
 }
@@ -774,6 +794,7 @@ function normalizeSeedOptions({
   scopeRoots = U5_SOURCE_SCOPE_ROOTS,
   reviewedNonGoFiles = U5_REVIEWED_NON_GO_FILES,
   embedBindings = U5_REVIEWED_EMBED_BINDINGS,
+	runtimeSupportFiles = U5_RUNTIME_SUPPORT_FILES,
 } = {}) {
   return Object.freeze({
     sourceRoot: resolve(sourceRoot),
@@ -781,6 +802,7 @@ function normalizeSeedOptions({
     scopeRoots: Object.freeze([...scopeRoots]),
     reviewedNonGoFiles: Object.freeze([...reviewedNonGoFiles]),
     embedBindings: Object.freeze(embedBindings.map((binding) => Object.freeze({ ...binding }))),
+		runtimeSupportFiles: Object.freeze([...runtimeSupportFiles]),
   });
 }
 
@@ -792,6 +814,7 @@ export async function createU5SeedSnapshot(options = {}) {
     contract.scopeRoots,
     contract.reviewedNonGoFiles,
     contract.embedBindings,
+		contract.runtimeSupportFiles,
   );
   const parent = await mkdtemp(join(tmpdir(), "countershape-u5-seed-"));
   await chmod(parent, 0o700);
@@ -805,6 +828,7 @@ export async function createU5SeedSnapshot(options = {}) {
       contract.scopeRoots,
       contract.reviewedNonGoFiles,
       contract.embedBindings,
+		contract.runtimeSupportFiles,
     );
     requireU5ManifestEqual(manifest, sourceManifest, "U5_SEED_COPY_MISMATCH", "immutable seed differs from admitted source");
     const sourceAfterCopy = await validateU5TreeAndManifest(
@@ -813,6 +837,7 @@ export async function createU5SeedSnapshot(options = {}) {
       contract.scopeRoots,
       contract.reviewedNonGoFiles,
       contract.embedBindings,
+		contract.runtimeSupportFiles,
     );
     requireU5ManifestEqual(sourceAfterCopy, sourceManifest, "U5_ADMITTED_SOURCE_CHANGED", "source changed while seed was copied");
     const seedAfterSourceRead = await validateU5TreeAndManifest(
@@ -821,6 +846,7 @@ export async function createU5SeedSnapshot(options = {}) {
       contract.scopeRoots,
       contract.reviewedNonGoFiles,
       contract.embedBindings,
+		contract.runtimeSupportFiles,
     );
     requireU5ManifestEqual(seedAfterSourceRead, manifest, "U5_SEED_SNAPSHOT_CHANGED", "seed changed during source revalidation");
     return Object.freeze({ ...contract, parent, root, sourceManifest, manifest });
@@ -842,6 +868,7 @@ export async function assertU5SourceAndSeedUnchanged(seed) {
     seed.scopeRoots,
     seed.reviewedNonGoFiles,
     seed.embedBindings,
+		seed.runtimeSupportFiles,
   );
   const seedManifest = await validateU5TreeAndManifest(
     seed.root,
@@ -849,6 +876,7 @@ export async function assertU5SourceAndSeedUnchanged(seed) {
     seed.scopeRoots,
     seed.reviewedNonGoFiles,
     seed.embedBindings,
+		seed.runtimeSupportFiles,
   );
   requireU5ManifestEqual(sourceManifest, seed.sourceManifest, "U5_ADMITTED_SOURCE_CHANGED", "admitted source changed");
   requireU5ManifestEqual(seedManifest, seed.manifest, "U5_SEED_SNAPSHOT_CHANGED", "immutable seed changed");
@@ -866,6 +894,7 @@ export async function assertExactU5MutantDelta(sandboxRoot, seed, mutant) {
     seed.scopeRoots,
     seed.reviewedNonGoFiles,
     seed.embedBindings,
+		seed.runtimeSupportFiles,
   );
   const expectedEntries = manifestEntryMap(seed.manifest);
   const actualEntries = manifestEntryMap(actual);
@@ -960,6 +989,7 @@ async function prepareU5Experiment({ mutant, toolchain, phase, seed, phaseRecord
       seed.scopeRoots,
       seed.reviewedNonGoFiles,
       seed.embedBindings,
+		seed.runtimeSupportFiles,
     );
     requireU5ManifestEqual(
       sourceManifest,
@@ -1003,6 +1033,7 @@ async function expectedU5ExperimentManifest(context, mutant) {
     context.u5Seed.scopeRoots,
     context.u5Seed.reviewedNonGoFiles,
     context.u5Seed.embedBindings,
+		context.u5Seed.runtimeSupportFiles,
   );
   requireU5ManifestEqual(
     manifest,
@@ -1103,6 +1134,7 @@ async function writeSyntheticU5Source(root) {
     "pkg/fixture.go",
     "pkg/fixture.mjs",
     "pkg/guard.go",
+		"runtime/fixture.json",
   ]);
   const scopeRoots = Object.freeze(["pkg"]);
   const reviewedNonGoFiles = Object.freeze(["pkg/fixture.mjs"]);
@@ -1113,7 +1145,9 @@ async function writeSyntheticU5Source(root) {
       directive: "//go:embed fixture.mjs",
     }),
   ]);
+	const runtimeSupportFiles = Object.freeze(["runtime/fixture.json"]);
   await mkdir(join(root, "pkg"), { recursive: true });
+	await mkdir(join(root, "runtime"), { recursive: true });
   await writeFile(join(root, "go.mod"), "module example.invalid/u5\n", "utf8");
   await writeFile(
     join(root, "pkg", "fixture.go"),
@@ -1122,7 +1156,8 @@ async function writeSyntheticU5Source(root) {
   );
   await writeFile(join(root, "pkg", "fixture.mjs"), "export const fixture = true;\n", "utf8");
   await writeFile(join(root, "pkg", "guard.go"), "package fixture\nconst guarded = true // SYNTHETIC_U5_ANCHOR\n", "utf8");
-  return Object.freeze({ allowlist, scopeRoots, reviewedNonGoFiles, embedBindings });
+	await writeFile(join(root, "runtime", "fixture.json"), '{"runtime":true}\n', "utf8");
+	return Object.freeze({ allowlist, scopeRoots, reviewedNonGoFiles, embedBindings, runtimeSupportFiles });
 }
 
 async function exerciseHostileU5ManifestTripwires() {
@@ -1134,8 +1169,20 @@ async function exerciseHostileU5ManifestTripwires() {
       contract.scopeRoots,
       contract.reviewedNonGoFiles,
       contract.embedBindings,
+		contract.runtimeSupportFiles,
     );
     await assert.doesNotReject(inspect());
+		await assert.rejects(
+			assertU5ManifestMatchesTree(
+				root,
+				contract.allowlist,
+				contract.scopeRoots,
+				contract.reviewedNonGoFiles,
+				contract.embedBindings,
+				[],
+			),
+			codeIs("U5_NON_GO_ALLOWLIST_MISMATCH"),
+		);
 
     const unlistedGo = join(root, "pkg", "unlisted.go");
     await writeFile(unlistedGo, "package fixture\n", "utf8");
@@ -1159,6 +1206,7 @@ async function exerciseHostileU5ManifestTripwires() {
         contract.scopeRoots,
         contract.reviewedNonGoFiles,
         contract.embedBindings,
+			contract.runtimeSupportFiles,
       ),
       codeIs("U5_UNSAFE_ALLOWLIST_PATH"),
     );
@@ -1172,6 +1220,7 @@ async function exerciseHostileU5ManifestTripwires() {
         ["pkg", "pkg/nested"],
         contract.reviewedNonGoFiles,
         contract.embedBindings,
+			contract.runtimeSupportFiles,
       ),
       codeIs("U5_OVERLAPPING_SOURCE_SCOPES"),
     );
@@ -1186,6 +1235,7 @@ async function exerciseHostileU5ManifestTripwires() {
           contract.scopeRoots,
           contract.reviewedNonGoFiles,
           contract.embedBindings,
+				contract.runtimeSupportFiles,
         ),
         codeIs("U5_MANIFEST_ROOT_INVALID"),
       );
@@ -1209,6 +1259,12 @@ async function exerciseU5PrivateSeedAndDeltaTripwires() {
       await assert.rejects(assertU5SourceAndSeedUnchanged(seed), codeIs("U5_ADMITTED_SOURCE_CHANGED"));
       await writeFile(sourceGuard, originalSource);
       await assertU5SourceAndSeedUnchanged(seed);
+			const runtimeFixture = join(source, "runtime", "fixture.json");
+			const originalRuntime = await readFile(runtimeFixture);
+			await writeFile(runtimeFixture, '{"runtime":false}\n', "utf8");
+			await assert.rejects(assertU5SourceAndSeedUnchanged(seed), codeIs("U5_ADMITTED_SOURCE_CHANGED"));
+			await writeFile(runtimeFixture, originalRuntime);
+			await assertU5SourceAndSeedUnchanged(seed);
 
       const seedGuard = join(seed.root, "pkg", "guard.go");
       const originalSeed = await readFile(seedGuard);
@@ -1281,6 +1337,7 @@ export async function selfTest() {
     U5_SOURCE_SCOPE_ROOTS,
     U5_REVIEWED_NON_GO_FILES,
     U5_REVIEWED_EMBED_BINDINGS,
+		U5_RUNTIME_SUPPORT_FILES,
   );
   for (const file of U5_REVIEWED_NON_GO_FILES) {
     const entry = selfManifest.entries.find((candidate) => candidate.file === file);
@@ -1328,6 +1385,7 @@ export async function main(arguments_ = process.argv.slice(2)) {
     U5_SOURCE_SCOPE_ROOTS,
     U5_REVIEWED_NON_GO_FILES,
     U5_REVIEWED_EMBED_BINDINGS,
+		U5_RUNTIME_SUPPORT_FILES,
   );
   await assertReviewedU5Anchors(repoRoot);
   await assertReviewedU5NamedTests(repoRoot);
