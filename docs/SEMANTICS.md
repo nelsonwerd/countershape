@@ -1,7 +1,7 @@
 # Countershape semantic authority contract
 
 - **Contract version:** `semantics-v1`
-- **Status:** controlling model; runtime truth and durable publication remain `UNRECEIPTED` until their owning units are sealed
+- **Status:** controlling model; runtime authority is implemented and receipted through the P07A portable selected-field ruling boundary, while P07B standalone publication remains future
 - **Purpose:** separate structural identity, measured facts, comparison assessment, observed behavior, and storage/wire projection
 
 Countershape does not treat a digest-shaped string, a status enum, or a JSON object as evidence merely because it has the right fields. Each stronger state is available only through the operation that can establish it. Some schemas describe exact canonical artifact bodies; others describe external storage or wire envelopes. Production constructors must rebuild the corresponding opaque authority from stricter inputs.
@@ -26,11 +26,11 @@ Construction yields an opaque `ProjectionDefinitionBinding` that retains the dec
 
 ## Portable selected-field interpretation
 
-Sealed U6 fresh Choicepoints use `WHOLE_EXACT_CANONICAL_PROJECTION_V1`; their single field is the entire exact projection body. Those records are valid historical ruling artifacts but do not authorize a future emitter to assert that only a subset of HTTP or CLI fields matters.
+Historical sealed U6 Choicepoints use `WHOLE_EXACT_CANONICAL_PROJECTION_V1`; their single field is the entire exact projection body. Those records remain valid parseable ruling artifacts but do not authorize a future emitter to assert that only a subset of HTTP or CLI fields matters. Sealed P07A fresh public construction instead uses only `ADAPTER_BOUND_PORTABLE_FIELDS_V1`.
 
-P07A adds `ADAPTER_BOUND_PORTABLE_FIELDS_V1` without changing either adapter's projection bytes or the existing 27-member Choicepoint body. Construction first verifies the original exact projection proof against the confirmation roster, then resolves the complete adapter definition from the WorldPlan's exact `ProjectionDefinitionBinding`, then strictly translates the verified adapter wire into a complete portable tuple. The portable profile identity binds translator version, adapter domain, complete projection binding, and ordered adapter-owned field descriptors. It is a downstream interpretation digest, not another name for the adapter field-registry digest.
+P07A adds that mode without changing either adapter's projection bytes or the existing 27-member Choicepoint body. Construction first verifies the original exact projection proof against the confirmation roster, then resolves the complete adapter definition from the WorldPlan's exact `ProjectionDefinitionBinding`, then strictly translates the verified adapter wire into a complete portable tuple. The portable profile identity binds translator version, adapter domain, complete projection binding, and ordered adapter-owned field descriptors. It is a downstream interpretation digest, not another name for the adapter field-registry digest.
 
-Legacy parsing reconstructs only the whole-projection registry. Fresh public construction uses only the adapter-bound profile. A legacy record offered to standalone compilation returns `LEGACY_WHOLE_PROJECTION_NOT_PORTABLE`; canonical bytes are never migrated or reinterpreted in place.
+Legacy parsing reconstructs only the whole-projection registry. Fresh public construction uses only the adapter-bound profile. A legacy DecisionRecord offered to the store-bound portable-preparation seam returns `LEGACY_WHOLE_PROJECTION_NOT_PORTABLE`; canonical bytes are never migrated or reinterpreted in place.
 
 The closed portable algebra distinguishes:
 
@@ -42,6 +42,8 @@ The closed portable algebra distinguishes:
 - exact strict `CANONICAL_JSON` bytes.
 
 These semantics do not imply that the historical CLI and HTTP wire codecs are identical. Their exact existing shapes remain fingerprint authority. The translator is the only versioned bridge. No caller-authored tuple plus a digest can substitute for verified projection bytes.
+
+The sealed expectation domain validates existential model shape only: the selected values must be the restriction of at least one complete tuple admitted by the exact adapter projection model. It does not prove that a current source, candidate, fixture, or runtime can emit the values. That stronger source authority belongs to P07B.
 
 A P07A portable ruling is selected-field semantic authority, not runnable-source authority. Historical stimuli intentionally retain some source content only by length and digest. P07B therefore requires a separate opaque `PortableSource` preimage witness. Its closed adapter constructor retains exact bounded bytes, rebuilds the adapter stimulus and execution binding, and must exact-match the Choicepoint plan, projection binding, minimized-stimulus canonical bytes/digest, portable profile, and every verified FreshConfirmation execution-binding digest before compilation. HTTP additionally requires the exact child-bind/pipe-readiness start authority. The application service independently retranslates reopened confirmation projection proofs and compares them with the ruling tuples; source carries no proof or tuple bytes. The source cannot change the ruling; the ruling cannot recover missing source.
 

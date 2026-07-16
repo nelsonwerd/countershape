@@ -2,8 +2,8 @@
 
 - **Working name:** Countershape (package, domain, trademark, and legal clearance not performed)
 - **Mode:** open-source-first experimental infrastructure
-- **State:** deep dive and adversarial red team complete; U1–U6 sealed and strict-clean; the implementation-time P07 red team split portable ruling authority from standalone residue; P07A is next
-- **Last updated:** 2026-07-15
+- **State:** deep dive and adversarial red team complete; U1–U6 and P07A portable selected-field ruling authority sealed and strict-clean; P07B standalone residue is next
+- **Last updated:** 2026-07-16
 - **Founder persona:** Soren Vale
 - **Confidence:** 8/10 in the truth kernel; 6/10 in the bounded reference instrument; 3/10 in review compression; 3/10 in adoption
 - **Semantic authority:** `docs/SEMANTICS.md` and `docs/PROJECTION_ALGEBRA.md` control structural identity, measurement/admission, and preservation semantics
@@ -175,7 +175,7 @@ The normative objects are:
 10. `ProjectionDefinition` and `ProjectionResult`: pure, versioned, visible operations ending in exact canonical bytes or typed rejection.
 11. `StableBatch` and `CandidateOutcomeMap`: tagged repeated trials, a shared ordered per-repetition admission-digest set across candidate batches, explicit exclusions, globally unique evidence identities, and the canonical sorted `candidate_execution_key -> projection_fingerprint` map. Display clusters are derived views with no identity.
 12. `ReductionRun`: U5's inert bounded-run body with a separate `ReductionTranscript`; it carries only `UNCHANGED` or `BEST_KNOWN`. Transcript bytes reconstruct intent but cannot execute replay without the exact compare-owned divergent baseline, and replay receipts establish only bounded same-domain digest noncollision. `CompletedSweepDraft` is separately persisted, and only the outward store-backed `ReductionGrade` may carry `ONE_MINIMAL_UNDER`.
-13. `Choicepoint`: immutable fresh-confirmed decision-ready revision with original/minimized stimuli, exact maps, evidence, exclusions, and a U5 reduction grade. Sealed U6 fresh construction currently uses only the legacy whole-projection ruling mode; P07A owns the new adapter-bound portable mode while retaining the same 27-member body.
+13. `Choicepoint`: immutable fresh-confirmed decision-ready revision with original/minimized stimuli, exact maps, evidence, exclusions, and a U5 reduction grade. Historical U6 records retain the legacy whole-projection ruling mode; sealed P07A fresh construction uses the adapter-bound portable mode while retaining the same 27-member body.
 14. `DecisionRecord`: blind/reveal facts, local-caller-attributed action, selected and nonasserted fields, exact scope, rationale, the explicit `AUTHENTICITY_NOT_ESTABLISHED_IN_U6` nonclaim, and verbatim receipt references. Derived wire booleans such as `compilable` are reconstructed, never emitter inputs. A legacy whole-projection record remains historical but cannot authorize standalone emission.
 15. `PortableSource`: a future P07B live exact reconstruction witness, not a ruling or self-authenticating serialized claim. Its closed adapter constructor retains bounded runnable bytes and must reproduce the Choicepoint's exact plan, projection binding, and minimized stimulus before compilation.
 16. `ContractBundle`: deterministic recoverable six-file Node-core source, typed exact predicate, and every exact file byte. Its domain-separated digest is external to its canonical body.
@@ -232,7 +232,7 @@ The v1 actions are:
 - `DEFER`; and
 - `REFINE` as a semantic request for a successor study. U6 can construct the noncompilable record, but durable promotion returns `REFINE_REQUIRES_SUCCESSOR_STUDY` before publication or head mutation; successor-study construction remains future work.
 
-Only allow-observed and custom-expectation records are semantically compilable. Exact witnessed stimulus is the only scope. No field is preselected. Each differing projected field is explicitly `Assert` or `Context only`; nonasserted fields remain visible. Sealed U6 currently offers only one whole-projection field, so those records are not standalone-portable. P07A must derive a closed adapter-bound field profile from the exact WorldPlan projection binding, verify and strictly translate the unchanged historical projection bytes, and only then expose real selectable and differing fields.
+Only allow-observed and custom-expectation records are semantically compilable. Exact witnessed stimulus is the only scope. No field is preselected. Each differing projected field is explicitly `Assert` or `Context only`; nonasserted fields remain visible. Historical U6 records offer only one whole-projection field and are not standalone-portable. Sealed P07A derives a closed adapter-bound field profile from the exact WorldPlan projection binding, verifies and strictly translates the unchanged historical projection bytes, and exposes real selectable and differing fields for fresh Choicepoints.
 
 U6 actor fields establish caller-supplied local attribution only: `actor_attribution = LOCAL_CALLER_ASSERTED_OPERATOR` and `actor_authenticity = AUTHENTICITY_NOT_ESTABLISHED_IN_U6`. Canonical bytes do not prove that an authenticated human authored the action. `DEFER` may become a noncompilable fixed-stage `RULING`, but deferred-session reopening is not implemented.
 
@@ -250,7 +250,7 @@ A `CUSTOM_EXPECTATION` contains exactly the selected fields and no unselected fi
 
 P07A preserves every sealed CLI/HTTP projection byte and fingerprint. A strict versioned translator first verifies each original projection proof against the exact confirmation roster, resolves the exact adapter definition from the WorldPlan projection binding, and then interprets the existing adapter wire as one complete portable tuple. The derived profile binds translator version, adapter domain, the complete projection binding, and ordered adapter-owned field descriptors. Its digest is a new downstream identity; it never replaces or relabels the adapter's field-registry digest.
 
-Fresh Choicepoints retain the existing 27-member body but use `ADAPTER_BOUND_PORTABLE_FIELDS_V1`. Legacy `WHOLE_EXACT_CANONICAL_PROJECTION_V1` Choicepoints remain byte-identical and parseable only as nonportable history; emission returns `LEGACY_WHOLE_PROJECTION_NOT_PORTABLE`. P07A carries no runnable fixture bytes and makes no export-ready claim.
+Fresh Choicepoints retain the existing 27-member body but use `ADAPTER_BOUND_PORTABLE_FIELDS_V1`. Legacy `WHOLE_EXACT_CANONICAL_PROJECTION_V1` Choicepoints remain byte-identical, valid, addressable, and parseable as nonportable history; the current portable-preparation seam returns `LEGACY_WHOLE_PROJECTION_NOT_PORTABLE`. P07A carries no runnable fixture bytes and makes no export-ready claim.
 
 The portable value profile is closed to tagged missing, null, Boolean, safe canonical integer, exact string, exact bytes, ordered string list, and strict canonical JSON. The HTTP ordered list preserves duplicates and order. The CLI/HTTP historical wire formats remain different and unchanged; the translator freezes both exact compatibility codecs instead of normalizing fingerprints.
 
@@ -422,8 +422,8 @@ Each unit is separately verified, claimed, committed, sealed, and gated on `NO_C
 5. **U4 — HTTP observation spine:** fixture-owned readiness, one request, typed capture/projection, contamination negative fixture, shared truth services.
 6. **U5 — bounded reducer:** typed neighbors, tri-valued evaluations, map-digest preservation, budgets/transcript, shape trap, and a minimal content-addressed durable-sweep authority required for the local grade.
 7. **U6a/P06 — Choicepoint and ruling source boundary:** immutable store/CAS, physical confirmation, strict Choicepoint/Decision codecs, blind semantic DTO/session, separation obligation, and typed ruling promotion through `RULING`; no public residue transition.
-8. **U6b/P07A — portable ruling authority:** unchanged historical projection bytes, strict adapter-bound translators, portable exact tuples, real selectable/differing fields, selected-only custom expectations, and legacy nonemittable preservation.
-9. **U6c/P07B — standalone residue:** byte-complete source reconstruction, portable HTTP child-bind lineage, Go/Node raw-wire corpus, deterministic recoverable six-file bundle, stale-safe terminal publication, retryable materialization, target-inventory absence checks, and immutable nonhead current execution.
+8. **U6b/P07A — portable ruling authority (sealed):** unchanged historical projection bytes, strict adapter-bound translators, portable exact tuples, real selectable/differing fields, selected-only custom expectations, and legacy nonemittable preservation.
+9. **U6c/P07B — standalone residue (next):** byte-complete source reconstruction, portable HTTP child-bind lineage, Go/Node raw-wire corpus, deterministic recoverable six-file bundle, stale-safe terminal publication, retryable materialization, target-inventory absence checks, and immutable nonhead current execution.
 10. **U7 — complete CLI and reference studies:** safe next actions, both end-to-end proofs, allow-many, custom none-conforms, reject/defer, three clean reproductions, named-machine timings.
 11. **U8 — secure decision bench:** authenticated loopback API, complete state renderer, 1440/375 flows, at least three full visual passes, Playwright/axe/manual checks, and a real different-model screenshot critic.
 12. **U9 — local export, packaging, and hardening:** minimized evidence export, embedded assets/single binary, docs/license/contributor path, adversarial suite, performance/limitations ledger, final strict verify, didrun HTML evidence, receipts handoff.
@@ -488,10 +488,9 @@ didrun references remain opaque verbatim receipt grades associated with their ex
 
 ### Strong engineering inferences still to test
 
-- Strict downstream translation can preserve historical adapter projection fingerprints while adding exact selected-field authority.
 - A byte-complete source preimage can reconstruct the exact minimized adapter stimulus without entering the historical DecisionRecord.
 - A constrained Node harness can match the Go semantic profile under one normative corpus.
-- Blind-first selected-field UX can faithfully capture one scoped ruling.
+- A designed human-facing blind-first selected-field UX can make the now-implemented semantic session comprehensible without leaking candidate identity.
 
 ### Unvalidated technical/product/market bets
 
@@ -508,4 +507,4 @@ didrun references remain opaque verbatim receipt grades associated with their ex
 
 ## Handoff state
 
-**U0–U6 and the P07 planning recovery are sealed and strict-clean. P07A-A's portable value/profile/proof-first translator substrate is implemented at source commit `d274588b3aba`, while P07A-B Choice/ruling integration remains the next source boundary.** The U6a implementation boundary is commit `64b65cbfa609`, tree `27dc5f5d4930`; exact events, permanent failures, and verbatim grades live in `docs/status/U6.md`. The translator boundary and its deliberately failed mixed-generation source manifest are recorded in `docs/status/P07A-TRANSLATOR.md`; accept only its fresh follow-up receipt commit as strict-clean. Fresh production Choicepoints still authorize only whole-projection rulings. The implementation-time P07 red team therefore prohibited direct emission, preserved all historical adapter projection bytes/fingerprints, and split the work: P07A-B must make sealed adapter-bound translations construction-safe selected-field rulings; P07B additionally requires an exact source-reconstruction witness before deterministic recoverable emission, terminal residue, and immutable nonhead execution evidence. `REFINE` remains a valid semantic noncompilable DecisionRecord but durable promotion refuses it without object publication or head mutation.
+**U0–U6 and P07A portable selected-field ruling authority are sealed and strict-clean. P07B standalone residue is the next source boundary.** P07A-B source commit `65005e498b05`, tree `18f52daa4f7b`, makes fresh production Choicepoints consume sealed adapter-bound translations and issue selected-field rulings while preserving legacy whole-projection bytes as valid, addressable nonportable history. Exact events, permanent failures, verbatim grades, physical-study bounds, and explicit nonclaims live in `docs/status/P07A-RULING.md`. The implementation-time P07 red team still prohibits direct emission: P07B additionally requires an exact source-reconstruction witness before deterministic recoverable emission, terminal residue, and immutable nonhead execution evidence. `REFINE` remains a valid semantic noncompilable DecisionRecord but durable promotion refuses it without object publication or head mutation.

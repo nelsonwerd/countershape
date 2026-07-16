@@ -2,7 +2,7 @@
 
 - **Contract version:** U0 / `state-machines-v1`
 - **Target:** narrowed Darwin reference instrument
-- **Status:** normative separation of implemented and future transitions. U1–U6 receipt state lives in the corresponding status files. U6a is sealed through `RULING`; P07A and P07B names below remain future transitions until their own status files record sealed strict-clean boundaries.
+- **Status:** normative separation of implemented and future transitions. U1–U6 receipt state lives in the corresponding status files. U6a is sealed through `RULING`; P07A changes the authority inside that transition and is sealed at the source boundary in `status/P07A-RULING.md`; P07B transitions remain future.
 
 Countershape state is a set of immutable semantic artifacts connected by validated transitions. State names are not presentation copy. The Go domain model, JSON schemas, API DTOs, CLI, studio, generated residue, examples, and tests must agree on these names and preconditions.
 
@@ -23,7 +23,7 @@ Every semantic transition follows the same rules:
 
 ## Full-product immutable artifact lineage target
 
-The full-product happy-path semantic lineage is shown below. The sealed U6a boundary stops at a legacy whole-projection `RULING`. P07A/U6b adds portable selected-field ruling authority without a new head stage. P07B/U6c adds terminal `CONTRACT_BUNDLE`; later `CONTRACT_EXECUTION` is immutable nonhead evidence, not another lineage stage.
+The full-product happy-path semantic lineage is shown below. Historical U6a could stop at a legacy whole-projection `RULING`. Sealed P07A/U6b adds portable selected-field ruling authority without a new head stage. P07B/U6c will add terminal `CONTRACT_BUNDLE`; later `CONTRACT_EXECUTION` is immutable nonhead evidence, not another lineage stage.
 
 ```text
 SOURCE_SPEC
@@ -326,11 +326,11 @@ View/visit facts prove presentation only. They are not comprehension state.
 
 If selected fields fail the separation formula, finalization returns `AMBIGUOUS_SCOPE`; no DecisionRecord with compile eligibility and no files are created.
 
-The table's “yes” is semantic compile eligibility inside sealed U6, not standalone portability. Until P07A lands, fresh U6 Choicepoints still select only the whole projection; P07B must refuse those legacy rulings even when their DecisionRecord carries the derived `compilable` fact.
+The table's “yes” is semantic compile eligibility, not standalone portability. Sealed P07A fresh Choicepoints now select adapter-bound fields, while historical U6 whole-projection rulings remain valid, addressable, and parseable but receive `LEGACY_WHOLE_PROJECTION_NOT_PORTABLE` from portable preparation. P07B must preserve that refusal even when a legacy DecisionRecord carries the derived `compilable` fact.
 
-## Future P07A/U6b portable-ruling state machine
+## Implemented P07A/U6b portable-ruling state machine
 
-P07A changes the construction authority inside `CHOICEPOINT_READY -> RULING`; it does not add a head stage:
+P07A changes the construction authority inside `CHOICEPOINT_READY -> RULING`; it adds no head stage:
 
 ```text
 EXACT_CONFIRMED_PROJECTION_PROOFS
@@ -352,7 +352,7 @@ AMBIGUOUS_SCOPE
 CUSTOM_EXPECTATION_ALREADY_OBSERVED
 ```
 
-Legacy whole-projection Choicepoints remain addressable and may retain historical rulings. They do not enter the portable sequence and later compilation returns `LEGACY_WHOLE_PROJECTION_NOT_PORTABLE`.
+Legacy whole-projection Choicepoints remain valid and addressable and may retain historical rulings. They do not enter the portable sequence; the current preparation seam returns `LEGACY_WHOLE_PROJECTION_NOT_PORTABLE`, and P07B must preserve that refusal before any compiler or file construction.
 
 ## Future P07B/U6c contract-emission state machine
 
@@ -485,7 +485,7 @@ A crash may leave finalized immutable semantic objects and nonadvancing partial-
 | empty or weak selected fields -> compile | `AMBIGUOUS_SCOPE`; no files | allowed/disallowed tuples are not separated |
 | allow-many fields expanded independently | reject tuple construction | cross-product adds unauthored outcomes |
 | context-only field emitted as assertion | emitter/vector failure | field was not selected |
-| legacy whole-projection ruling -> standalone compiler | `LEGACY_WHOLE_PROJECTION_NOT_PORTABLE`; no files | whole equality cannot authorize selected-field scope |
+| legacy whole-projection ruling -> portable preparation or later standalone compiler | `LEGACY_WHOLE_PROJECTION_NOT_PORTABLE`; no files | whole equality cannot authorize selected-field scope |
 | caller-paired raw bytes/digests -> PortableSource | source reconstruction refusal | a digest-shaped pair is not a typed adapter preimage |
 | inherited-listener HTTP ruling -> child-bind standalone source | `NONPORTABLE_START_PROFILE`; no files | the execution world changed and requires a new physical lineage |
 | `REJECT_ALL`, `DEFER`, or `REFINE` -> emitter | `NONCOMPILABLE_ACTION`; no files | no positive exact oracle |

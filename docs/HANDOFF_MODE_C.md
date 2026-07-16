@@ -12,10 +12,10 @@
 
 ## Current state
 
-- **Pipeline phase:** U0–U6 and the P07 planning recovery are sealed and strict-clean. P07A-A now implements the portable value/profile/proof-first translator substrate at source commit `d274588b3aba`, but that commit's first manifest is permanently strict-red because sixteen exploratory claims are stale beside fifteen final exact claims. The follow-up receipt-document commit carrying this handoff is acceptable only when its fresh serialized ledger is chain-intact and strict-clean. P07A-B Choice/ruling integration follows; P07B/U6c remains later.
-- **Git:** repository is on `codex/countershape-autopilot`. The last complete product-unit boundary remains U6a commit `64b65cbfa6099f9be88c2de3cc2cc4dd5ff9ff81`, tree `27dc5f5d4930cc9a4f759e4e4973ed7fb4d5b6d6`. P07 planning recovery is commit `3812158f1ae2`. The translator substrate source is commit `d274588b3aba26d2c29258dd42e167294d7c5a0f`, tree `2f2924e20dbe23559af755e475d353381fa08327`; its mixed-generation failed manifest remains negative history. Resolve the follow-up receipt commit carrying this handoff locally rather than copying a self-referential hash from prose.
-- **didrun:** installed globally. Two ledgers broke under concurrent writers and are preserved under `.didrun-history/`; a third chain-intact P07A source ledger is preserved because its strict manifest correctly rejected stale exploratory claims. Every didrun operation is serialized by the primary agent. New S6-08 records the unit-generation friction; S6-07 remains the reason agents never write didrun concurrently. See `docs/status/DIDRUN_BUGS.md` before recording evidence.
-- **Build:** U5 adds the sealed bounded tri-valued reducer, strict transcript/replay boundary, typed CLI/HTTP neighbors, and durable sweep authority. Sealed U6 adds a bounded immutable semantic object store, full-token CAS fixed head spine through `RULING`, physical fresh confirmation, strict Choicepoint/DecisionRecord codecs, blind semantic DTO/session, sealed compile eligibility, and predecessor/action-bound opaque publication capabilities. P07A-A adds a closed bounded portable value algebra, exact adapter-bound profile identity, all-127 CLI and fixed HTTP binding resolution, strict unchanged historical-wire translation, proof-first confirmed translations, architecture closure, active fuzzing, and 29-fault inherited-plus-translator A/B/A mutation coverage. Production Choice is not integrated yet: fresh Choicepoints still use only `WHOLE_EXACT_CANONICAL_PROJECTION_V1`, so no portable selected-field ruling, source witness, runtime-generated standalone bundle, product CLI, server, dashboard, visual renderer, or report exists.
+- **Pipeline phase:** U0–U6 and P07A/U6b portable selected-field ruling authority are sealed and strict-clean. P07A-B source commit `65005e498b05` passed 17/17 exact claims; the follow-up documentation commit carrying this handoff is acceptable only when its fresh serialized ledger is chain-intact and strict-clean. P07B/U6c standalone residue is next.
+- **Git:** repository is on `codex/countershape-autopilot`. The current complete source-unit boundary is P07A-B commit `65005e498b05f3da62d6e30e108fb1cdba68d2af`, tree `18f52daa4f7b25b71d7fe3fda70c2aba561d29c9`. Earlier U6a, planning, and translator boundaries remain history. Resolve the follow-up documentation receipt commit carrying this handoff locally rather than copying a self-referential hash from prose.
+- **didrun:** installed globally. Two ledgers broke under concurrent writers and remain preserved under `.didrun-history/`; the P07A-A mixed-generation ledger also remains as strict-red negative history. Every didrun operation is serialized by the primary agent. S6-09 records the P07A-B entropy-scanner classification; S6-08 records claim-generation friction; S6-07 remains the reason agents never write didrun concurrently. See `docs/status/DIDRUN_BUGS.md` before recording evidence.
+- **Build:** U5 adds the sealed bounded tri-valued reducer. U6 adds the immutable store, physical fresh confirmation, strict Choicepoint/DecisionRecord codecs, blind semantic session, compile eligibility, and opaque store publication capabilities. P07A-A adds the closed portable algebra and proof-first exact translators. P07A-B integrates them into Choice: fresh Choicepoints use `ADAPTER_BOUND_PORTABLE_FIELDS_V1`; selectable/differing fields follow the sealed profile; selected-only custom expectations receive existential adapter-model validation; legacy whole-projection fixtures remain byte-identical, valid, addressable nonportable history; and a current-head-bound preparation seam refuses those legacy rulings. No runnable source witness, generated standalone bundle, residue, product CLI, server, dashboard, visual renderer, or report exists yet.
 - **External APIs:** none used in the product. Current web research is read-only. Real model integrations remain human-gated and must never be faked.
 
 ## Read first, in order
@@ -25,15 +25,16 @@
 3. `docs/SEMANTICS.md`
 4. `docs/PROJECTION_ALGEBRA.md`
 5. `research/deep-dive/11-p07-implementation-red-team.md`
-6. `docs/status/P07-PLANNING.md`
-7. `docs/status/P07A-TRANSLATOR.md`
-8. `research/ideation/07-divergence-and-selection.md`
-9. `research/ideation/06-founder-falsification.md`
-10. `research/ideation/05-counterfactual-prior-art.md`
-11. `research/ideation/04-finalist-duel.md`
-12. `research/ideation/02-wake-overlap-audit.md`
-13. `research/grounding/00-last30days-synthesis.md`
-14. this handoff
+6. `docs/status/P07A-RULING.md`
+7. `docs/status/P07-PLANNING.md`
+8. `docs/status/P07A-TRANSLATOR.md`
+9. `research/ideation/07-divergence-and-selection.md`
+10. `research/ideation/06-founder-falsification.md`
+11. `research/ideation/05-counterfactual-prior-art.md`
+12. `research/ideation/04-finalist-duel.md`
+13. `research/ideation/02-wake-overlap-audit.md`
+14. `research/grounding/00-last30days-synthesis.md`
+15. this handoff
 
 Read `research/deep-dive/07-SYNTHESIS.md`, `08-RED_TEAM.md`, and the later P07 implementation-time correction immediately after the semantic contracts and before the ideation files.
 
@@ -82,9 +83,9 @@ All six specialist lanes, synthesis, and adversarial red team are complete under
 
 ## P07 implementation-time red-team correction
 
-The preimplementation P07 review found that sealed U6 cannot support its original prompt literally:
+The preimplementation P07 review found that sealed U6 could not support its original prompt literally:
 
-- every fresh Choicepoint constructs only the whole projection, so its current DecisionRecord cannot authorize `http.status`, `cli.stdout.json.mode`, an unselected-field change, or a selected-only custom `401` expectation;
+- every then-fresh Choicepoint constructed only the whole projection, so its DecisionRecord could not authorize `http.status`, `cli.stdout.json.mode`, an unselected-field change, or a selected-only custom `401` expectation;
 - canonical stimuli retain content digests but not every stdin/body/fixture/seed byte needed to run a standalone test;
 - rewriting adapter projection envelopes would invalidate sealed fingerprints and downstream evidence;
 - the inherited-listener HTTP start cannot be reproduced by a reference-quality Node-only parent, and Node's high-level HTTP client normalizes bytes differently from the Go wire parser;
@@ -94,7 +95,7 @@ The preimplementation P07 review found that sealed U6 cannot support its origina
 
 The locked correction in `research/deep-dive/11-p07-implementation-red-team.md` is:
 
-1. **P07A/U6b:** preserve every historical CLI/HTTP projection byte and the 27-member Choicepoint body; strictly translate roster-verified adapter wires under the exact projection binding into a closed portable algebra; make fresh Choicepoints use `ADAPTER_BOUND_PORTABLE_FIELDS_V1`; add real selectable/differing fields and selected-only custom expectations; keep legacy whole-projection records byte-identical and nonemittable.
+1. **P07A/U6b — implemented and sealed:** preserve every historical CLI/HTTP projection byte and the 27-member Choicepoint body; strictly translate roster-verified adapter wires under the exact projection binding into a closed portable algebra; make fresh Choicepoints use `ADAPTER_BOUND_PORTABLE_FIELDS_V1`; add real selectable/differing fields and selected-only custom expectations; keep legacy whole-projection records byte-identical and nonemittable.
 2. **P07B/U6c:** require the current portable ruling plus a byte-complete `PortableSource` that reconstructs the exact plan/binding/minimized stimulus and matches every verified confirmation execution-binding digest; independently retranslate reopened confirmation projections rather than trusting source-carried tuples; require a new physical HTTP plan → observation → confirmation → portable Choicepoint → selected-field ruling lineage under `NODE_LOOPBACK_CHILD_BIND_PIPE_READY_V1`, leaving inherited-listener P07A rulings structurally nonemittable; support only the antecedent-backed logical-Node-plus-repository-script launch; compile a recoverable six-file bundle; stale-check before publication; make post-residue materialization retryable; use raw `node:net` parity; publish/reopen a capability-only `ContractExecutionTarget` for one explicit pinned/verified tree, fresh attempt, and admitted runtime before spawn; publish a matching `FinalizedContractRun` only after the exact lifecycle closes with a constructor-derived disposition, exact projected tuple when present, and scoped standalone evidence; and publish `ContractExecution` as immutable nonhead derived classification bound to both exact objects, with no independently supplied tuple or control reason.
 
 This is a prerequisite repair, not a scope reduction. P07A selected-field authority is explicitly not yet export-ready source authority.
@@ -241,7 +242,13 @@ The cause is the second concurrent-writer fork recorded as S6-07. The failed com
 
 Source commit `d274588b3aba`, tree `2f2924e20dbe`, contains the portable algebra, exact derived profiles, strict CLI/HTTP historical translators, proof-first confirmed translation seal, architecture closure, active fuzz properties, and 29-fault mutation gate. Its first manifest is permanently strict-red at `15/31 claims recorded-exact` because sixteen honest intermediate claims are stale. It is not described as strict-clean.
 
-The follow-up commit carrying `docs/status/P07A-TRANSLATOR.md`, S6-08, the concept-brief handoff state, and this handoff is the recovery boundary. Accept it only if its fresh ledger is chain-intact, its claim labels match the receipt table verbatim, and strict exits `0`. P07A-B must then integrate sealed translations into Choice without changing legacy fixture bytes; no current source may be described as a portable selected-field ruling.
+The follow-up commit carrying `docs/status/P07A-TRANSLATOR.md`, S6-08, the concept-brief handoff state, and the then-current handoff is that historical recovery boundary. P07A-B has since integrated the translations without changing legacy fixture bytes.
+
+## P07A portable selected-field ruling receipt boundary
+
+Source commit `65005e498b05`, tree `18f52daa4f7b`, is sealed with `ALL RECORDED-EXACT` and `17/17 claims recorded-exact`. It makes fresh Choicepoints consume sealed proof-first translations, derives Choice registries and exact selectable/differing fields in profile order, adds selected-only custom expectations with exact existential adapter-model validation, preserves legacy fixture bytes, and exposes only a current-head-bound portable preparation seam. The complete event/claim/grade table, physical-study scope, resource qualifications, permanent failed events, and nonclaims live in `docs/status/P07A-RULING.md`.
+
+The plain seal stopped on 60 high-entropy findings. Masked-source classification found 39 workspace/toolchain path tokens and 21 checked-in mutation identifiers, with no structured credential-pattern finding; the source commit sealed using didrun's logged redacted-export override. This is not a secret-free claim or security review. The source ledger is preserved locally under `.didrun-history/2026-07-16-p07ab-source/.didrun/`.
 
 ### U6 operational facts that P07A/P07B must preserve
 
@@ -255,11 +262,11 @@ The follow-up commit carrying `docs/status/P07A-TRANSLATOR.md`, S6-08, the conce
 
 ## Exact next actions if this task resumes elsewhere
 
-1. Run `git status --short --branch`; confirm the commit carrying this handoff and `docs/status/P07-PLANNING.md` is sealed, the fresh ledger reports an intact chain, `NO_COLOR=1 didrun verify --strict` exits `0`, and no `.didrun` path is staged or tracked. Keep `e2cc2aa` as failed negative history; never reseal it.
-2. Read `research/deep-dive/11-p07-implementation-red-team.md`, `docs/prompts/P07A-U6-PORTABLE-RULING.md`, `docs/status/P07-PLANNING.md`, `docs/status/U6.md`, and the controlling semantic/architecture contracts. Confirm the separately receipted planning correction is strict-clean before source edits.
-3. Implement only P07A/U6b: unchanged historical projection bytes, strict adapter-bound portable profiles/translators, selected-field Choicepoints and rulings, real selectable/differing fields, selected-only custom expectations, and legacy nonemittable preservation. Do not add PortableSource, portable HTTP start, bundle emission, residue, product CLI, server, or studio.
+1. Run `git status --short --branch`; confirm the commit carrying this handoff is sealed, the fresh ledger reports an intact chain, `NO_COLOR=1 didrun verify --strict` exits `0`, and no `.didrun` path is staged or tracked. Keep old failed commits and archived ledgers as negative history; never reseal or rewrite them.
+2. Read `docs/status/P07A-RULING.md`, `research/deep-dive/11-p07-implementation-red-team.md`, `docs/prompts/P07-U6-STANDALONE-CONTRACT.md`, `docs/SEMANTICS.md`, `docs/PROJECTION_ALGEBRA.md`, and the relevant source seams. Confirm the P07A-B source and follow-up documentation boundaries locally before source edits.
+3. Implement only P07B/U6c: byte-complete `PortableSource`, new portable-start HTTP lineage, independent reopened-proof retranslation, deterministic recoverable six-file bundle, stale-safe terminal residue publication, retryable materialization, Go/Node raw-wire parity, target-inventory absence, and immutable nonhead current execution. Do not start the product CLI/server/studio until P07B is sealed and strict-clean.
 4. Wrap every load-bearing verification command in `didrun run --`. Any nonzero command or mutant survivor is a real unfinished result: repair, rerun, preserve failed history, and never weaken or relabel the gate.
-5. At the P07A shippable boundary, declare only successful final-tree claims, stage exact intended paths, commit, run `didrun seal --commit HEAD`, and loop `NO_COLOR=1 didrun verify --strict` until exit `0`. Only then read and execute the corrected P07B prompt.
+5. At the P07B shippable boundary, declare only successful final-tree claims, stage exact intended paths, commit, run `didrun seal --commit HEAD`, and loop `NO_COLOR=1 didrun verify --strict` until exit `0`. Only then begin the product CLI/server/studio unit.
 6. Keep the root as sole writer and sole didrun/claim/Git/seal operator. Parallel agents may perform bounded read-only audits only; never allow parallel didrun writers or parallelize two didrun calls inside one tool orchestration.
 7. Human surfaces arrive in U8. Run at least three functional/visual loops and a real different-model critic there; label that external evidence honestly.
 8. Before final delivery, run the human-cleared S6 disposable real-agent protocol, produce strict plus HTML didrun reports, map every claim to its verbatim grade, and disclose the adoption, production-hardening, security-review, cross-platform, and maintainership tail.
@@ -271,7 +278,7 @@ Before editing, reply in your working notes with:
 1. the one product verb;
 2. the three distinct truth authorities (Git, Choicepoint observations/ruling, didrun receipts);
 3. two things the system must never claim;
-4. the current last sealed implementation commit (`64b65cbfa6099f9be88c2de3cc2cc4dd5ff9ff81`, verify locally), its `18/18 TREE-EXACT` strict didrun verdict, and U6's explicit nonclaims; and
-5. the current bounded shippable unit (P07A/U6b portable selected-field ruling authority only; no runnable source or residue yet).
+4. the current last sealed source commit (`65005e498b05f3da62d6e30e108fb1cdba68d2af`, verify locally), its `17/17 TREE-EXACT` strict didrun verdict, and P07A's explicit nonclaims; and
+5. the current bounded shippable unit (P07B/U6c standalone source, residue, and execution authority only; no product UI yet).
 
 If any answer is missing, read the files above again. Do not infer a didrun grade from this handoff; run strict verification locally.
