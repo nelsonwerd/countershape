@@ -8,6 +8,7 @@ import (
 	httpmodel "github.com/nelsonwerd/countershape/internal/adapters/http/model"
 	"github.com/nelsonwerd/countershape/internal/domain"
 	"github.com/nelsonwerd/countershape/internal/gitobj"
+	"github.com/nelsonwerd/countershape/internal/runnerprofile"
 )
 
 const (
@@ -162,12 +163,15 @@ func executeHTTPWithMaterializer(ctx context.Context, request HTTPRequest, sourc
 	if err != nil {
 		return Result{}, err
 	}
-	invocationReceipt, err := inspectHTTPInvocationEvidence(
-		allocated.world.Digest(), allocated.markerDigest, request.Binding.Digest(), request.Binding.StimulusDigest(), allocated.roots.evidence,
-		allocated.attemptID, service.exchange.requestWire,
-	)
-	if err != nil {
-		return Result{}, err
+	invocationReceipt := HTTPInvocationEvidenceReceipt{}
+	if len(service.exchange.requestWire) > 0 {
+		invocationReceipt, err = inspectHTTPInvocationEvidence(
+			allocated.world.Digest(), allocated.markerDigest, request.Binding.Digest(), request.Binding.StimulusDigest(), allocated.roots.evidence,
+			allocated.attemptID, service.exchange.requestWire,
+		)
+		if err != nil {
+			return Result{}, err
+		}
 	}
 	if service.exchange.responseParsed && service.process.primary == "" && !invocationReceipt.Validated() {
 		// A complete HTTP response is not enough for the reference fixture's
@@ -192,10 +196,29 @@ func deriveHTTPRequest(request HTTPRequest) (Request, error) {
 	}
 	plan := request.Binding.Plan()
 	if plan.Adapter().Domain != domain.AdapterHTTP || plan.ExecutionShape() != domain.OneLoopbackHTTPRequest || len(plan.SetupArgv()) != 0 ||
-		!request.Binding.StartSpec().Valid() || !request.Binding.CapturePolicy().Valid() || !request.Binding.Readiness().Valid() ||
-		request.Binding.Readiness().Protocol() != httpmodel.ReadinessProtocolV1 ||
-		request.Binding.Readiness().SuccessByte() != httpmodel.ReadinessSuccessByte {
-		return Request{}, refuse(CodeHTTPExecutionRejected, "binding is outside the closed U4 HTTP profile", nil)
+		plan.Adapter().AdapterVersion != runnerprofile.HTTPAdapterVersionV1 ||
+		!request.Binding.StartSpec().Valid() || !request.Binding.CapturePolicy().Valid() || !request.Binding.Readiness().Valid() {
+		return Request{}, refuse(CodeHTTPExecutionRejected, "binding is outside the closed HTTP profile", nil)
+	}
+	legacyRunner, legacyErr := runnerprofile.HTTPLegacyDigest()
+	portableRunner, portableErr := runnerprofile.HTTPPortableDigest()
+	legacy := request.Binding.Authority() == httpmodel.HTTPExecutionAuthorityV1 &&
+		request.Binding.StartSpec().Authority() == httpmodel.HTTPStartAuthorityV1 &&
+		request.Binding.Readiness().Protocol() == httpmodel.ReadinessProtocolV1 &&
+		request.Binding.Readiness().SuccessByte() == httpmodel.ReadinessSuccessByte &&
+		legacyErr == nil && plan.Adapter().RunnerDigest == legacyRunner
+	portablePrefix, portableMax, portableEOF, portableFrame := request.Binding.Readiness().PortableFrameProfile()
+	portable := request.Binding.Authority() == httpmodel.HTTPPortableExecutionAuthorityV1 &&
+		request.Binding.StartSpec().Authority() == httpmodel.HTTPPortableStartAuthorityV1 &&
+		request.Binding.Readiness().Protocol() == httpmodel.PortableReadinessProtocolV1 && portableFrame &&
+		portablePrefix == httpmodel.PortableReadinessFramePrefix && portableMax == httpmodel.PortableReadinessFrameMax && portableEOF &&
+		portableErr == nil && plan.Adapter().RunnerDigest == portableRunner
+	if !legacy && !portable {
+		return Request{}, refuse(CodeHTTPExecutionRejected, "binding start, readiness, and runner lineages are cross-paired", nil)
+	}
+	tools := plan.RequiredTools()
+	if len(tools) != 1 || tools[0].Name != "node" || tools[0].VersionConstraint != runnerprofile.NodeToolConstraintV1 {
+		return Request{}, refuse(CodeHTTPExecutionRejected, "HTTP runner requires the exact admitted Node tool profile", nil)
 	}
 	for _, slot := range plan.SecretSlots() {
 		if slot.Presence != domain.SecretAbsent {
@@ -268,11 +291,14 @@ func buildHTTPPhysicalReceipts(
 	binding httpmodel.HTTPExecutionBinding,
 	service liveHTTPServiceResult,
 ) (HTTPReadinessReceipt, HTTPExchangeReceipt, error) {
-	if service.readiness.endpoint == "" {
-		if service.process.physicalExecutionEntered {
-			return HTTPReadinessReceipt{}, HTTPExchangeReceipt{}, refuse(CodeHTTPExecutionRejected, "physical HTTP entry has no owned endpoint receipt", nil)
-		}
+	if !service.process.physicalExecutionEntered {
 		return HTTPReadinessReceipt{}, HTTPExchangeReceipt{}, nil
+	}
+	if service.readiness.protocol == "" ||
+		(service.readiness.protocol == httpmodel.ReadinessProtocolV1 && service.readiness.endpoint == "") {
+		if service.process.physicalExecutionEntered {
+			return HTTPReadinessReceipt{}, HTTPExchangeReceipt{}, refuse(CodeHTTPExecutionRejected, "physical HTTP entry has no reported endpoint receipt", nil)
+		}
 	}
 	if !service.readiness.accepted && service.readiness.diagnosticCode == "" {
 		service.readiness.diagnosticCode = firstDiagnostic(service.process.diagnosticCode, "HTTP_READINESS_NOT_REACHED")
@@ -284,10 +310,10 @@ func buildHTTPPhysicalReceipts(
 		return HTTPReadinessReceipt{}, HTTPExchangeReceipt{}, readinessErr
 	}
 	if len(service.exchange.requestWire) == 0 {
-		if service.process.physicalExecutionEntered {
-			return HTTPReadinessReceipt{}, HTTPExchangeReceipt{}, refuse(CodeHTTPExecutionRejected, "physical HTTP entry has no encoded request receipt", nil)
+		if rejectedPortableReadinessOnly(binding.Authority(), service.readiness) {
+			return readiness, HTTPExchangeReceipt{}, nil
 		}
-		return readiness, HTTPExchangeReceipt{}, nil
+		return HTTPReadinessReceipt{}, HTTPExchangeReceipt{}, refuse(CodeHTTPExecutionRejected, "physical HTTP entry has no encoded request receipt", nil)
 	}
 	if !service.exchange.responseParsed && service.exchange.diagnosticCode == "" && service.process.primary != "" {
 		service.exchange.diagnosticCode = service.process.diagnosticCode
@@ -299,6 +325,11 @@ func buildHTTPPhysicalReceipts(
 		return HTTPReadinessReceipt{}, HTTPExchangeReceipt{}, exchangeErr
 	}
 	return readiness, exchange, nil
+}
+
+func rejectedPortableReadinessOnly(executionAuthority string, readiness httpReadinessPhysical) bool {
+	return executionAuthority == httpmodel.HTTPPortableExecutionAuthorityV1 &&
+		readiness.protocol == httpmodel.PortableReadinessProtocolV1 && !readiness.accepted
 }
 
 func attachHTTPArtifacts(

@@ -18,23 +18,35 @@ type Presence = model.Presence
 type HTTPStartSpec = model.HTTPStartSpec
 type HTTPFixtureRecipe = model.HTTPFixtureRecipe
 type HTTPReadinessContract = model.HTTPReadinessContract
+type HTTPReadyPortFrame = model.HTTPReadyPortFrame
 type HTTPCapturePolicy = model.HTTPCapturePolicy
 type HTTPCapturePolicyConfig = model.HTTPCapturePolicyConfig
 type HTTPExecutionBinding = model.HTTPExecutionBinding
 
 const (
-	MethodGET                = model.MethodGET
-	MethodPOST               = model.MethodPOST
-	MethodPUT                = model.MethodPUT
-	MethodPATCH              = model.MethodPATCH
-	MethodDELETE             = model.MethodDELETE
-	PresenceAbsent           = model.PresenceAbsent
-	PresencePresent          = model.PresencePresent
-	SeedMode0644             = model.SeedMode0644
-	ReadinessSuccessByte     = model.ReadinessSuccessByte
-	ReadinessProtocolV1      = model.ReadinessProtocolV1
-	ReadinessSignalNameV1    = model.ReadinessSignalNameV1
-	HTTPExecutionAuthorityV1 = model.HTTPExecutionAuthorityV1
+	MethodGET                        = model.MethodGET
+	MethodPOST                       = model.MethodPOST
+	MethodPUT                        = model.MethodPUT
+	MethodPATCH                      = model.MethodPATCH
+	MethodDELETE                     = model.MethodDELETE
+	PresenceAbsent                   = model.PresenceAbsent
+	PresencePresent                  = model.PresencePresent
+	SeedMode0644                     = model.SeedMode0644
+	ReadinessSuccessByte             = model.ReadinessSuccessByte
+	ReadinessProtocolV1              = model.ReadinessProtocolV1
+	ReadinessSignalNameV1            = model.ReadinessSignalNameV1
+	HTTPExecutionAuthorityV1         = model.HTTPExecutionAuthorityV1
+	HTTPPortableExecutionAuthorityV1 = model.HTTPPortableExecutionAuthorityV1
+	HTTPStartAuthorityV1             = model.HTTPStartAuthorityV1
+	HTTPPortableStartAuthorityV1     = model.HTTPPortableStartAuthorityV1
+	HTTPStartVersionV1               = model.HTTPStartVersionV1
+	HTTPPortableStartVersionV1       = model.HTTPPortableStartVersionV1
+	HTTPReadinessVersionV1           = model.HTTPReadinessVersionV1
+	HTTPPortableReadinessVersionV1   = model.HTTPPortableReadinessVersionV1
+	PortableReadinessProtocolV1      = model.PortableReadinessProtocolV1
+	PortableReadinessSignalNameV1    = model.PortableReadinessSignalNameV1
+	PortableReadinessFramePrefix     = model.PortableReadinessFramePrefix
+	PortableReadinessFrameMax        = model.PortableReadinessFrameMax
 )
 
 func QueryFlag(name string) (HTTPQueryEntry, error)         { return model.QueryFlag(name) }
@@ -53,9 +65,21 @@ func NewHTTPStimulus(config HTTPStimulusConfig) (HTTPStimulus, error) {
 func NewHTTPStartSpec(entrypoint string) (HTTPStartSpec, error) {
 	return model.NewHTTPStartSpec(entrypoint)
 }
+func NewPortableHTTPStartSpec(entrypoint string) (HTTPStartSpec, error) {
+	return model.NewPortableHTTPStartSpec(entrypoint)
+}
 func NewHTTPFixtureRecipe() (HTTPFixtureRecipe, error) { return model.NewHTTPFixtureRecipe() }
 func NewHTTPReadinessContract() (HTTPReadinessContract, error) {
 	return model.NewHTTPReadinessContract()
+}
+func NewPortableHTTPReadinessContract() (HTTPReadinessContract, error) {
+	return model.NewPortableHTTPReadinessContract()
+}
+func NewHTTPReadyPortFrame(port int) (HTTPReadyPortFrame, error) {
+	return model.NewHTTPReadyPortFrame(port)
+}
+func ParseHTTPReadyPortFrame(exact []byte) (HTTPReadyPortFrame, error) {
+	return model.ParseHTTPReadyPortFrame(exact)
 }
 func NewHTTPCapturePolicy(config HTTPCapturePolicyConfig) (HTTPCapturePolicy, error) {
 	return model.NewHTTPCapturePolicy(config)

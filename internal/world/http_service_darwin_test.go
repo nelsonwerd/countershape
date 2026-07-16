@@ -12,6 +12,7 @@ import (
 	"os"
 	"path/filepath"
 	"reflect"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -34,7 +35,25 @@ func httpTestDigest(t *testing.T, kind, value string) domain.Digest {
 	return parsed
 }
 
+func legacyHTTPReadiness(t *testing.T) httpmodel.HTTPReadinessContract {
+	t.Helper()
+	contract, err := httpmodel.NewHTTPReadinessContract()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return contract
+}
+
 func runReadinessBytes(t *testing.T, payload []byte, closeWriter bool) (httpReadinessRead, domain.ControlReason, string) {
+	return runReadinessContract(t, payload, closeWriter, legacyHTTPReadiness(t))
+}
+
+func runReadinessContract(
+	t *testing.T,
+	payload []byte,
+	closeWriter bool,
+	contract httpmodel.HTTPReadinessContract,
+) (httpReadinessRead, domain.ControlReason, string) {
 	t.Helper()
 	reader, writer, err := os.Pipe()
 	if err != nil {
@@ -52,10 +71,121 @@ func runReadinessBytes(t *testing.T, payload []byte, closeWriter bool) (httpRead
 		}
 	}()
 	result, _, control, diagnostic := awaitExactHTTPReadiness(
-		context.Background(), reader, 10*time.Millisecond, stdout, stderr, overflow, waitC,
+		context.Background(), reader, 10*time.Millisecond, stdout, stderr, overflow, waitC, contract,
 	)
 	_ = writer.Close()
 	return result, control, diagnostic
+}
+
+func TestHTTPPortableReadinessBindsExactChildReportedPortFrame(t *testing.T) {
+	contract, err := httpmodel.NewPortableHTTPReadinessContract()
+	if err != nil {
+		t.Fatal(err)
+	}
+	frame, err := httpmodel.NewHTTPReadyPortFrame(43127)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result, control, diagnostic := runReadinessContract(t, frame.CanonicalBytes(), true, contract)
+	if control != "" || diagnostic != "" || !result.eof || !bytes.Equal(result.bytes, frame.CanonicalBytes()) {
+		t.Fatalf("portable readiness frame was not accepted exactly: result=%+v control=%s diagnostic=%s", result, control, diagnostic)
+	}
+	receipt, err := newHTTPReadinessReceipt(
+		httpTestDigest(t, "world", "portable"), httpTestDigest(t, "attempt", "portable"), httpTestDigest(t, "binding", "portable"),
+		httpReadinessPhysical{
+			protocol: httpmodel.PortableReadinessProtocolV1, listenerFD: 0, readinessFD: httpPortableReadinessChildFD,
+			endpoint: "127.0.0.1:43127", port: 43127, frameBytes: frame.CanonicalBytes(),
+			bytesObserved: int64(len(frame.CanonicalBytes())), observedByte: frame.CanonicalBytes()[0], eofObserved: true, accepted: true,
+		},
+	)
+	if err != nil || !receipt.Valid() || receipt.Authority() != httpPortableReadinessAuthority ||
+		receipt.ListenerFDPresent() || receipt.ListenerFD() != 0 || receipt.ReadinessFD() != httpPortableReadinessChildFD ||
+		receipt.Protocol() != httpmodel.PortableReadinessProtocolV1 || receipt.Port() != 43127 ||
+		!bytes.Equal(receipt.FrameBytes(), frame.CanonicalBytes()) || !receipt.FrameDigest().Valid() {
+		t.Fatalf("portable readiness receipt did not bind the child frame: receipt=%+v err=%v", receipt, err)
+	}
+	const portableReceiptDigest = "sha256:4d0ad3b13e6712d6b8f9498a043b364ed10fd43f3a120a12e071ea4377d26d21"
+	const portableReceiptBytes = `{"attempt_artifact_digest":"sha256:06b90f70849baa42d83c67d4da9d0d6bc66c926a3b8e4f3e826f28b92fc151fc","authority":"P07B_CHILD_BIND_PIPE_FRAME_READINESS_RECEIPT_V1","child_reported_port":43127,"diagnostic_code":"","http_execution_binding_digest":"sha256:47a39c434570bddb2a899a9e1ad198556c3f3468d24e757be830076f93cd8689","inherited_listener_present":false,"inherited_readiness_fd":3,"kind":"HTTPReadinessReceipt","literal_loopback_endpoint":"127.0.0.1:43127","readiness_accepted":true,"readiness_bytes_observed":28,"readiness_eof_observed":true,"readiness_frame_base64":"Q09VTlRFUlNIQVBFX1JFQURZX1YxIDQzMTI3Cg==","readiness_frame_digest":"sha256:d2831697f4969c339de4421ca8381079418deed2a197d4ade40507c6be179351","readiness_protocol":"ASCII_COUNTERSHAPE_READY_V1_SPACE_PORT_LF_THEN_EOF_V1","schema_version":"countershape/v1","world_instance_digest":"sha256:855b9092a3bfc51b4a48e818e37b07bf89ef451a7df360c925c6512dee945199"}`
+	if receipt.Digest().String() != portableReceiptDigest || string(receipt.CanonicalBytes()) != portableReceiptBytes {
+		t.Fatalf("portable readiness receipt golden changed:\ndigest=%s\nbytes=%s", receipt.Digest(), receipt.CanonicalBytes())
+	}
+	frameCopy := receipt.FrameBytes()
+	frameCopy[0] ^= 0xff
+	if bytes.Equal(frameCopy, receipt.FrameBytes()) {
+		t.Fatal("portable readiness frame getter returned shared mutable bytes")
+	}
+	tamperedAuthority := receipt
+	tamperedAuthority.authority = "FORGED_PORT_OWNERSHIP_AUTHORITY"
+	if tamperedAuthority.Valid() {
+		t.Fatal("readiness receipt accepted a tampered cached authority")
+	}
+	tamperedFrame := receipt
+	tamperedFrame.frameBytes = append([]byte(nil), receipt.frameBytes...)
+	tamperedFrame.frameBytes[0] ^= 0xff
+	if tamperedFrame.Valid() {
+		t.Fatal("readiness receipt accepted tampered cached frame bytes")
+	}
+	basePhysical := httpReadinessPhysical{
+		protocol: httpmodel.PortableReadinessProtocolV1, listenerFD: 0, readinessFD: httpPortableReadinessChildFD,
+		endpoint: "127.0.0.1:43127", port: 43127, frameBytes: frame.CanonicalBytes(),
+		bytesObserved: int64(len(frame.CanonicalBytes())), observedByte: frame.CanonicalBytes()[0], eofObserved: true, accepted: true,
+	}
+	for _, hostile := range []struct {
+		name   string
+		mutate func(*httpReadinessPhysical)
+	}{
+		{name: "listener-present", mutate: func(value *httpReadinessPhysical) { value.listenerFD = 1 }},
+		{name: "readiness-fd", mutate: func(value *httpReadinessPhysical) { value.readinessFD = 4 }},
+		{name: "endpoint", mutate: func(value *httpReadinessPhysical) { value.endpoint = "127.0.0.1:43128" }},
+		{name: "port", mutate: func(value *httpReadinessPhysical) { value.port = 43128 }},
+		{name: "byte-count", mutate: func(value *httpReadinessPhysical) { value.bytesObserved-- }},
+		{name: "missing-eof", mutate: func(value *httpReadinessPhysical) { value.eofObserved = false }},
+		{name: "false-rejection", mutate: func(value *httpReadinessPhysical) { value.accepted = false }},
+		{name: "overflow", mutate: func(value *httpReadinessPhysical) {
+			value.frameBytes = append(bytes.Repeat([]byte{'X'}, httpmodel.PortableReadinessFrameMax+1), '\n')
+			value.bytesObserved = int64(len(value.frameBytes))
+			value.observedByte = value.frameBytes[0]
+		}},
+	} {
+		physical := basePhysical
+		physical.frameBytes = append([]byte(nil), basePhysical.frameBytes...)
+		hostile.mutate(&physical)
+		if _, err := newHTTPReadinessReceipt(
+			httpTestDigest(t, "world", hostile.name), httpTestDigest(t, "attempt", hostile.name), httpTestDigest(t, "binding", hostile.name), physical,
+		); err == nil {
+			t.Fatalf("receipt-rejects-%s: hostile portable receipt input was accepted", hostile.name)
+		}
+	}
+	if _, err := newHTTPReadinessReceipt(
+		httpTestDigest(t, "world", "empty-byte"), httpTestDigest(t, "attempt", "empty-byte"), httpTestDigest(t, "binding", "empty-byte"),
+		httpReadinessPhysical{
+			protocol: httpmodel.PortableReadinessProtocolV1, listenerFD: 0, readinessFD: httpPortableReadinessChildFD,
+			observedByte: 'X', eofObserved: true, accepted: false, diagnosticCode: "HTTP_READINESS_EMPTY",
+		},
+	); err == nil {
+		t.Fatal("empty portable readiness frame retained a fabricated first byte")
+	}
+	for _, invalid := range []struct {
+		bytes   []byte
+		wantEOF bool
+	}{
+		{bytes: []byte("COUNTERSHAPE_READY_V1 043127\n"), wantEOF: true},
+		{bytes: []byte("COUNTERSHAPE_READY_V1 43127\r\n"), wantEOF: true},
+		// The bounded reader returns at max+1 bytes without waiting for EOF;
+		// that is the positive overflow witness and prevents an unbounded child
+		// from turning readiness rejection into memory growth.
+		{bytes: []byte("COUNTERSHAPE_READY_V1 43127\nextra"), wantEOF: false},
+	} {
+		observed, refusal, _ := runReadinessContract(t, invalid.bytes, true, contract)
+		if refusal != domain.ControlReadinessError || observed.eof != invalid.wantEOF ||
+			!bytes.Equal(observed.bytes, invalid.bytes) {
+			t.Fatalf("portable readiness admitted or misclassified malformed bytes %q: result=%+v control=%s", invalid.bytes, observed, refusal)
+		}
+	}
+	environment, err := appendHTTPStartEnvironment([]string{"LANG=C"}, httpmodel.HTTPPortableStartAuthorityV1, 0)
+	if err != nil || !slices.Equal(environment, []string{"COUNTERSHAPE_HTTP_READINESS_FD=3", "LANG=C"}) {
+		t.Fatalf("portable child received listener/port authority: %q %v", environment, err)
+	}
 }
 
 func TestHTTPReadinessUsesInheritedPipeWithoutHTTPWarmup(t *testing.T) {
@@ -68,8 +198,49 @@ func TestHTTPReadinessUsesInheritedPipeWithoutHTTPWarmup(t *testing.T) {
 		httpReadinessPhysical{listenerFD: 3, readinessFD: 4, endpoint: "127.0.0.1:43127", port: 43127,
 			bytesObserved: 1, observedByte: 0x01, eofObserved: true, accepted: true},
 	)
-	if err != nil || !receipt.Valid() || receipt.ListenerFD() != 3 || receipt.ReadinessFD() != 4 {
+	if err != nil || !receipt.Valid() || !receipt.ListenerFDPresent() || receipt.ListenerFD() != 3 || receipt.ReadinessFD() != 4 {
 		t.Fatalf("readiness receipt did not bind inherited listener/readiness descriptors: receipt=%+v err=%v", receipt, err)
+	}
+	const legacyReceiptDigest = "sha256:6c08fbecf7a99e61a811037a8a4df90ac635a2efb49e5a629613b1c860363d90"
+	const legacyReceiptBytes = `{"allocated_port":43127,"attempt_artifact_digest":"sha256:6e03e4db9f18f0e80f8e03aec6100be9a2d201869c9731e0101dc9e690863759","authority":"U4_INHERITED_FD_READINESS_RECEIPT_V1","diagnostic_code":"","http_execution_binding_digest":"sha256:94d02fbd8392647fd7d5c4e3fb24632f602f2ca1ca0aafd580dddac9fa4f7036","inherited_listener_fd":3,"inherited_readiness_fd":4,"kind":"HTTPReadinessReceipt","literal_loopback_endpoint":"127.0.0.1:43127","readiness_accepted":true,"readiness_bytes_observed":1,"readiness_eof_observed":true,"readiness_first_byte":1,"readiness_protocol":"ONE_BYTE_0X01_THEN_EOF_V1","schema_version":"countershape/v1","world_instance_digest":"sha256:2e7a5276a199c26bab019774bd1daa4e71d2b9afc20c98799d5dbd487bb6fa4d"}`
+	if receipt.Digest().String() != legacyReceiptDigest || string(receipt.CanonicalBytes()) != legacyReceiptBytes {
+		t.Fatalf("legacy readiness receipt golden changed:\ndigest=%s\nbytes=%s", receipt.Digest(), receipt.CanonicalBytes())
+	}
+	if len(receipt.FrameBytes()) != 0 || receipt.FrameDigest().Valid() {
+		t.Fatal("legacy receipt exposed portable-only frame evidence")
+	}
+	withFrame := httpReadinessPhysical{listenerFD: 3, readinessFD: 4, endpoint: "127.0.0.1:43127", port: 43127,
+		bytesObserved: 1, observedByte: 0x01, frameBytes: []byte{0x01}, eofObserved: true, accepted: true}
+	if _, err := newHTTPReadinessReceipt(
+		httpTestDigest(t, "world", "legacy-frame"), httpTestDigest(t, "attempt", "legacy-frame"), httpTestDigest(t, "binding", "legacy-frame"), withFrame,
+	); err == nil {
+		t.Fatal("legacy readiness accepted unbound portable frame evidence")
+	}
+	tamperedAuthority := receipt
+	tamperedAuthority.authority = "FORGED_LEGACY_AUTHORITY"
+	if tamperedAuthority.Valid() {
+		t.Fatal("legacy readiness accepted a tampered cached authority")
+	}
+	tamperedFrame := receipt
+	tamperedFrame.frameBytes = []byte{0x01, 0x00}
+	if tamperedFrame.Valid() {
+		t.Fatal("legacy readiness accepted cached frame bytes absent from its historical identity")
+	}
+}
+
+func TestOnlyRejectedPortableReadinessMayOmitExchange(t *testing.T) {
+	base := httpReadinessPhysical{protocol: httpmodel.PortableReadinessProtocolV1, accepted: false}
+	if !rejectedPortableReadinessOnly(httpmodel.HTTPPortableExecutionAuthorityV1, base) {
+		t.Fatal("rejected portable readiness could not retain a readiness-only physical receipt")
+	}
+	accepted := base
+	accepted.accepted = true
+	legacyProtocol := base
+	legacyProtocol.protocol = httpmodel.ReadinessProtocolV1
+	if rejectedPortableReadinessOnly(httpmodel.HTTPPortableExecutionAuthorityV1, accepted) ||
+		rejectedPortableReadinessOnly(httpmodel.HTTPPortableExecutionAuthorityV1, legacyProtocol) ||
+		rejectedPortableReadinessOnly(httpmodel.HTTPExecutionAuthorityV1, base) {
+		t.Fatal("accepted, cross-protocol, or legacy readiness escaped the missing-exchange invariant")
 	}
 }
 
@@ -124,7 +295,7 @@ func TestHTTPReadinessOwnerPriorityExitBeforeExactBytes(t *testing.T) {
 		overflow := make(chan struct{}, 2)
 		observed, waited, control, diagnostic := awaitExactHTTPReadiness(
 			context.Background(), reader, time.Second,
-			newCappedCapture(1024, overflow), newCappedCapture(1024, overflow), overflow, waitC,
+			newCappedCapture(1024, overflow), newCappedCapture(1024, overflow), overflow, waitC, legacyHTTPReadiness(t),
 		)
 		_ = reader.Close()
 		if waited == nil || control != domain.ControlReadinessError || diagnostic != "HTTP_PROCESS_EXITED_BEFORE_READINESS" {
@@ -152,7 +323,7 @@ func TestHTTPReadinessCancellationTimeoutAndEarlyExitControls(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		cancel()
 		stdout, stderr, overflow := newCaptures()
-		_, _, control, diagnostic := awaitExactHTTPReadiness(ctx, reader, time.Second, stdout, stderr, overflow, make(chan waitResult, 1))
+		_, _, control, diagnostic := awaitExactHTTPReadiness(ctx, reader, time.Second, stdout, stderr, overflow, make(chan waitResult, 1), legacyHTTPReadiness(t))
 		if control != domain.ControlCancelled || diagnostic != "HTTP_READINESS_CANCELLED" {
 			t.Fatalf("cancelled readiness = %s %s", control, diagnostic)
 		}
@@ -165,7 +336,7 @@ func TestHTTPReadinessCancellationTimeoutAndEarlyExitControls(t *testing.T) {
 		}
 		defer writer.Close()
 		stdout, stderr, overflow := newCaptures()
-		_, _, control, diagnostic := awaitExactHTTPReadiness(context.Background(), reader, time.Millisecond, stdout, stderr, overflow, make(chan waitResult, 1))
+		_, _, control, diagnostic := awaitExactHTTPReadiness(context.Background(), reader, time.Millisecond, stdout, stderr, overflow, make(chan waitResult, 1), legacyHTTPReadiness(t))
 		if control != domain.ControlReadinessError || diagnostic != "HTTP_READINESS_TIMEOUT" {
 			t.Fatalf("timed-out readiness = %s %s", control, diagnostic)
 		}
@@ -180,7 +351,7 @@ func TestHTTPReadinessCancellationTimeoutAndEarlyExitControls(t *testing.T) {
 		waitC := make(chan waitResult, 1)
 		waitC <- waitResult{}
 		stdout, stderr, overflow := newCaptures()
-		_, waited, control, diagnostic := awaitExactHTTPReadiness(context.Background(), reader, time.Second, stdout, stderr, overflow, waitC)
+		_, waited, control, diagnostic := awaitExactHTTPReadiness(context.Background(), reader, time.Second, stdout, stderr, overflow, waitC, legacyHTTPReadiness(t))
 		if waited == nil || control != domain.ControlReadinessError || diagnostic != "HTTP_PROCESS_EXITED_BEFORE_READINESS" {
 			t.Fatalf("early-exit readiness = waited=%+v %s %s", waited, control, diagnostic)
 		}
@@ -201,7 +372,7 @@ func TestHTTPServiceControlPrecedenceOutputBeforeCancellationAndTimeout(t *testi
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	_, _, control, diagnostic := awaitExactHTTPReadiness(
-		ctx, reader, time.Nanosecond, stdout, stderr, overflow, make(chan waitResult, 1),
+		ctx, reader, time.Nanosecond, stdout, stderr, overflow, make(chan waitResult, 1), legacyHTTPReadiness(t),
 	)
 	if control != domain.ControlOutputLimit || diagnostic != "HTTP_PROCESS_OUTPUT_LIMIT_BEFORE_READINESS" {
 		t.Fatalf("owner priority did not preserve output limit: %s %s", control, diagnostic)

@@ -21,6 +21,7 @@ import (
 	"github.com/nelsonwerd/countershape/internal/observe"
 	"github.com/nelsonwerd/countershape/internal/reduce"
 	"github.com/nelsonwerd/countershape/internal/reduction"
+	"github.com/nelsonwerd/countershape/internal/runnerprofile"
 	"github.com/nelsonwerd/countershape/internal/spec"
 	"github.com/nelsonwerd/countershape/internal/world"
 	"github.com/nelsonwerd/countershape/testkit/gitrepo"
@@ -37,6 +38,9 @@ type Config struct {
 	CandidateOrder   []httpfixture.CandidateRole
 	DisplayLabels    map[httpfixture.CandidateRole]string
 	ProducerMetadata string
+	// PortableStart selects the P07B child-bind/pipe-frame physical lineage.
+	// False preserves the sealed inherited-listener U4 study.
+	PortableStart bool
 	// Purpose is explicit because reducer evaluations and final sweeps must
 	// produce fresh evidence under their own attempt phase.
 	Purpose domain.AttemptPurpose
@@ -140,8 +144,14 @@ func Run(ctx context.Context, config Config) (study StudyResult, returnErr error
 	if err != nil {
 		return StudyResult{}, err
 	}
+	fixtureFiles := httpfixture.CandidateFiles
+	entrypoint := httpfixture.Entrypoint
+	if config.PortableStart {
+		fixtureFiles = httpfixture.PortableCandidateFiles
+		entrypoint = httpfixture.PortableEntrypoint
+	}
 	for _, role := range roles {
-		files, fileErr := httpfixture.CandidateFiles(role)
+		files, fileErr := fixtureFiles(role)
 		if fileErr != nil {
 			return StudyResult{}, fileErr
 		}
@@ -198,7 +208,10 @@ func Run(ctx context.Context, config Config) (study StudyResult, returnErr error
 		}
 		stimulus = *config.StimulusOverride
 	}
-	startSpec, err := counterhttp.NewHTTPStartSpec(httpfixture.Entrypoint)
+	startSpec, err := counterhttp.NewHTTPStartSpec(entrypoint)
+	if config.PortableStart {
+		startSpec, err = counterhttp.NewPortableHTTPStartSpec(entrypoint)
+	}
 	if err != nil {
 		return StudyResult{}, err
 	}
@@ -207,6 +220,9 @@ func Run(ctx context.Context, config Config) (study StudyResult, returnErr error
 		return StudyResult{}, err
 	}
 	readiness, err := counterhttp.NewHTTPReadinessContract()
+	if config.PortableStart {
+		readiness, err = counterhttp.NewPortableHTTPReadinessContract()
+	}
 	if err != nil {
 		return StudyResult{}, err
 	}
@@ -224,7 +240,10 @@ func Run(ctx context.Context, config Config) (study StudyResult, returnErr error
 	if err != nil {
 		return StudyResult{}, err
 	}
-	runnerDigest, err := digestBytes("HTTPStudyRunner", []byte("world.ExecuteHTTP/U4/opaque-binding/inherited-listener/v1"))
+	runnerDigest, err := runnerprofile.HTTPLegacyDigest()
+	if config.PortableStart {
+		runnerDigest, err = runnerprofile.HTTPPortableDigest()
+	}
 	if err != nil {
 		return StudyResult{}, err
 	}
@@ -232,7 +251,7 @@ func Run(ctx context.Context, config Config) (study StudyResult, returnErr error
 		CandidateSetDigest: declaration.Digest(), MaterializationPolicyDigest: materializationPolicy.Digest(),
 		ComparisonEnvelopeDigest: envelope.Digest(), RunnerDigest: runnerDigest,
 		StartArgv: startSpec.LogicalArgv(), FixtureRecipeDigest: fixtureRecipe.Digest(),
-		CapturePolicy: capturePolicy, ProjectionDefinition: projection.Binding(),
+		ReadinessSignal: readiness.SignalName(), CapturePolicy: capturePolicy, ProjectionDefinition: projection.Binding(),
 		Repetitions: config.Repetitions, CandidateCount: len(roles),
 		ReductionProposalLimit:        config.ReductionProposalLimit,
 		ReductionTotalCandidateTrials: config.ReductionTotalCandidateTrials, ReductionWallMS: config.ReductionWallMS,
@@ -493,6 +512,7 @@ type studyPlanInput struct {
 	ComparisonEnvelopeDigest      domain.Digest
 	RunnerDigest                  domain.Digest
 	StartArgv                     []string
+	ReadinessSignal               string
 	FixtureRecipeDigest           domain.Digest
 	CapturePolicy                 counterhttp.HTTPCapturePolicy
 	ProjectionDefinition          domain.ProjectionDefinitionBinding
@@ -566,7 +586,7 @@ func compileStudyPlan(input studyPlanInput) (domain.WorldPlan, domain.Digest, []
 			{Name: "NODE_NO_WARNINGS", Value: "1"}, {Name: "NO_COLOR", Value: "1"}, {Name: "TZ", Value: "UTC"},
 		},
 		SecretSlots: []domain.SecretSlot{}, FixtureRecipeDigest: input.FixtureRecipeDigest.String(),
-		Readiness:                  studySourceReadiness{Kind: string(domain.FixtureOwnedReadiness), SignalName: counterhttp.ReadinessSignalNameV1},
+		Readiness:                  studySourceReadiness{Kind: string(domain.FixtureOwnedReadiness), SignalName: input.ReadinessSignal},
 		CapturePolicyDigest:        input.CapturePolicy.Digest().String(),
 		ProjectionDefinitionDigest: input.ProjectionDefinition.Digest().String(),
 		RepeatSchedule: domain.RepeatSchedule{
@@ -805,7 +825,7 @@ func studyMeasurements(
 	}{
 		{dimensionToolDigest, domain.MeasuredToolReceipt, process.ToolExecutableDigest().String()},
 		{dimensionToolMajor, domain.MeasuredToolReceipt, int64(process.ToolMajor())},
-		{dimensionExecutionAuthority, domain.MeasuredProcessReceipt, counterhttp.HTTPExecutionAuthorityV1},
+		{dimensionExecutionAuthority, domain.MeasuredProcessReceipt, binding.Authority()},
 		{dimensionLogicalArgv, domain.MeasuredProcessReceipt, logicalArgv},
 		{dimensionCWDPolicy, domain.MeasuredProcessReceipt, httpStudyCWDPolicy},
 		{dimensionReadinessProtocol, domain.MeasuredProcessReceipt, readinessProtocol},

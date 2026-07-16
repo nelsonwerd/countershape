@@ -2,7 +2,14 @@ package httpfixture
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"testing"
+)
+
+const (
+	legacyProgramBytes  = 18343
+	legacyProgramSHA256 = "d476c70a9c8e1605fc65335044afddaa9f56f007d1fcbc70ea87c0b747c72caa"
 )
 
 func TestCandidateFilesAreClosedDistinctAndShareOneProgram(t *testing.T) {
@@ -28,6 +35,41 @@ func TestCandidateFilesAreClosedDistinctAndShareOneProgram(t *testing.T) {
 	}
 	if _, err := CandidateFiles("unknown"); err == nil {
 		t.Fatal("unknown HTTP fixture role was accepted")
+	}
+}
+
+func TestPortableCandidateFilesAreDistinctWithoutRewritingLegacyFixture(t *testing.T) {
+	t.Parallel()
+	legacy := Program()
+	portable := PortableProgram()
+	legacyDigest := sha256.Sum256(legacy)
+	if len(legacy) != legacyProgramBytes || hex.EncodeToString(legacyDigest[:]) != legacyProgramSHA256 {
+		t.Fatalf("sealed U4 server.mjs changed: bytes=%d sha256=%x", len(legacy), legacyDigest)
+	}
+	if bytes.Equal(legacy, portable) || len(portable) == 0 || Entrypoint == PortableEntrypoint {
+		t.Fatal("portable fixture collapsed onto the sealed legacy fixture")
+	}
+	for _, role := range Roles() {
+		legacyFiles, err := CandidateFiles(role)
+		if err != nil {
+			t.Fatal(err)
+		}
+		portableFiles, err := PortableCandidateFiles(role)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(portableFiles) != 2 || portableFiles[1].Path != PortableEntrypoint ||
+			portableFiles[1].Mode != "100755" || !bytes.Equal(portableFiles[1].Content, portable) ||
+			len(legacyFiles) != 2 || legacyFiles[1].Path != Entrypoint ||
+			!bytes.Equal(legacyFiles[1].Content, legacy) ||
+			!bytes.Equal(legacyFiles[0].Content, portableFiles[0].Content) {
+			t.Fatalf("legacy/portable fixture roster mismatch for %s", role)
+		}
+	}
+	legacy[0] ^= 0xff
+	portable[0] ^= 0xff
+	if bytes.Equal(legacy, Program()) || bytes.Equal(portable, PortableProgram()) {
+		t.Fatal("fixture program accessors returned shared mutable bytes")
 	}
 }
 

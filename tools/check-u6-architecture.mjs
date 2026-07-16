@@ -417,7 +417,7 @@ const exactInternalImports = Object.freeze(new Map([
   ["internal/choice/promotion", ["internal/choice", "internal/choice/promotion/internal/publication", "internal/confirmation", "internal/domain", "internal/store"]],
   ["internal/choice/promotion/authority", ["internal/choice/promotion/internal/publication"]],
   ["internal/choice/promotion/internal/publication", ["internal/canon", "internal/domain"]],
-  ["internal/world", ["internal/adapters/cli/model", "internal/adapters/http/model", "internal/canon", "internal/domain", "internal/gitobj"]],
+  ["internal/world", ["internal/adapters/cli/model", "internal/adapters/http/model", "internal/canon", "internal/domain", "internal/gitobj", "internal/runnerprofile"]],
 ]));
 
 function inspectPackageBoundaries(manifest, violations) {
@@ -502,8 +502,11 @@ function inspectPortableAuthorityBoundaries(manifest, violations) {
 	}
 	const profile = codeAt(manifest, "internal/projectionprofile/profile.go");
 	const validBody = functionBody(profile, /\bfunc\s*\(p\s+Profile\)\s+Valid\s*\(/u) ?? "";
-	if (internalReferences !== 2 || !exactSet(internalFiles, ["internal/projectionprofile/profile.go"]) ||
-		(validBody.match(/\bNewDerived\b/gu) ?? []).length !== 1) {
+	const parseBody = functionBody(profile, /\bfunc\s+Parse\s*\(/u) ?? "";
+	if (internalReferences !== 3 || !exactSet(internalFiles, ["internal/projectionprofile/profile.go"]) ||
+		(validBody.match(/\bNewDerived\b/gu) ?? []).length !== 1 ||
+		(parseBody.match(/\bNewDerived\b/gu) ?? []).length !== 1 ||
+		!parseBody.includes("bytes.Equal(rebuilt.CanonicalBytes(), exact)")) {
 		violations.push(["U6_PROFILE_INTERNAL_REBUILD_SURFACE_NOT_EXACT", `${internalReferences}:${internalFiles.join(",")}`]);
 	}
 

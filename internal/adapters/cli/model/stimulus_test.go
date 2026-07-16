@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/nelsonwerd/countershape/internal/canon"
 	"github.com/nelsonwerd/countershape/internal/domain"
 )
 
@@ -22,77 +21,12 @@ func testProjectionBinding(t *testing.T) domain.ProjectionDefinitionBinding {
 }
 
 func testProjectionPair(t *testing.T) (domain.ProjectionDefinitionBinding, CLIProjectionAuthority) {
-	return testProjectionPairWithRegistry(t, "a")
-}
-
-func testProjectionPairWithRegistry(t *testing.T, registryCharacter string) (domain.ProjectionDefinitionBinding, CLIProjectionAuthority) {
 	t.Helper()
-	fields := []string{"cli.stdout.bytes"}
-	configurationDigest, _, err := digestTyped("CLIProjectionConfiguration", struct {
-		SchemaVersion string   `json:"schema_version"`
-		Kind          string   `json:"kind"`
-		Version       string   `json:"version"`
-		Fields        []string `json:"fields"`
-	}{domain.SchemaVersion, "CLIProjectionConfiguration", "cli-projection/v1", fields})
+	authority, err := NewCLIProjectionAuthority([]string{"cli.stdout.bytes"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	implementationRaw, err := canon.DigestBytes(
-		"CLIProjectionImplementation",
-		[]byte("cli-projection/v1\x00closed-field-registry\x00visible-pure-operations\x00exact-canonical"),
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	implementationDigest, err := domain.ParseDigest(implementationRaw.String())
-	if err != nil {
-		t.Fatal(err)
-	}
-	operation := resolvedProjectionOperation{
-		Name:      "cli.require-eligible-capture/v1",
-		Semantics: "test-visible-semantics",
-	}
-	ruleRaw, err := canon.DigestBytes(
-		"CLIProjectionOperationRule", []byte(operation.Name+"\x00"+operation.Semantics),
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	operation.RuleDigest = ruleRaw.String()
-	binding, err := domain.NewProjectionDefinitionBinding(domain.ProjectionDefinitionBindingConfig{
-		AdapterDomain: domain.AdapterCLI, ImplementationDigest: implementationDigest,
-		ConfigurationDigest: configurationDigest, AcceptedChannels: []string{"exit", "stderr", "stdout"},
-		Operations: []domain.ProjectionOperationBinding{{Name: operation.Name, RuleDigest: domain.MustDigest(operation.RuleDigest)}},
-		Comparator: domain.ProjectionComparatorExact, FieldRegistryDigest: testDigest(registryCharacter),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	identity := resolvedProjectionIdentity{
-		SchemaVersion: domain.SchemaVersion, Kind: "CLIProjectionDefinition", Version: "cli-projection/v1",
-		Fields: fields, Operations: []resolvedProjectionOperation{operation},
-		FieldRegistryDigest:     binding.FieldRegistryDigest().String(),
-		ImplementationDigest:    binding.ImplementationDigest().String(),
-		ConfigurationDigest:     binding.ConfigurationDigest().String(),
-		ProjectionBindingDigest: binding.Digest().String(),
-	}
-	canonical, err := canon.CanonicalizeTyped(identity)
-	if err != nil {
-		t.Fatal(err)
-	}
-	digestRaw, err := canon.DigestBytes("CLIProjectionDefinition", canonical)
-	if err != nil {
-		t.Fatal(err)
-	}
-	digest, err := domain.ParseDigest(digestRaw.String())
-	if err != nil {
-		t.Fatal(err)
-	}
-	authority, err := ResolveCLIProjectionAuthority(digest, canonical, binding)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return binding, authority
+	return authority.Binding(), authority
 }
 
 func testCapturePolicy(t *testing.T) CLICapturePolicy {
@@ -434,7 +368,10 @@ func TestBindExecutionResolvesExactCaptureAndProjectionAuthorities(t *testing.T)
 	if _, err := BindExecution(plan, stimulus, wrongPolicy, projection); err == nil {
 		t.Fatal("independently valid but cross-paired capture policy resolved against the plan")
 	}
-	_, wrongProjection := testProjectionPairWithRegistry(t, "c")
+	wrongProjection, err := NewCLIProjectionAuthority([]string{"cli.exit.code"})
+	if err != nil {
+		t.Fatal(err)
+	}
 	if _, err := BindExecution(plan, stimulus, policy, wrongProjection); err == nil {
 		t.Fatal("independently valid but cross-paired adapter projection resolved against the plan")
 	}

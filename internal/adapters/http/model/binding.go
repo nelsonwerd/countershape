@@ -6,7 +6,10 @@ import (
 	"github.com/nelsonwerd/countershape/internal/domain"
 )
 
-const HTTPExecutionAuthorityV1 = "U4_OPAQUE_HTTP_EXECUTION_BINDING_V1"
+const (
+	HTTPExecutionAuthorityV1         = "U4_OPAQUE_HTTP_EXECUTION_BINDING_V1"
+	HTTPPortableExecutionAuthorityV1 = "P07B_OPAQUE_HTTP_CHILD_BIND_EXECUTION_BINDING_V1"
+)
 
 type HTTPExecutionBinding struct {
 	digest         domain.Digest
@@ -18,6 +21,7 @@ type HTTPExecutionBinding struct {
 	capturePolicy  HTTPCapturePolicy
 	readiness      HTTPReadinessContract
 	projection     HTTPProjectionAuthority
+	authority      string
 }
 
 type executionBindingIdentity struct {
@@ -62,7 +66,11 @@ func BindExecution(
 		return HTTPExecutionBinding{}, refuse(CodeInvalidBinding, "plan fixture recipe does not name the U4 private seed overlay")
 	}
 	if plan.Readiness().Kind != domain.FixtureOwnedReadiness || plan.Readiness().SignalName != readiness.SignalName() {
-		return HTTPExecutionBinding{}, refuse(CodeInvalidBinding, "plan readiness does not name the exact one-byte protocol")
+		return HTTPExecutionBinding{}, refuse(CodeInvalidBinding, "plan readiness does not name the exact HTTP signal")
+	}
+	executionAuthority, paired := httpExecutionAuthorityFor(start, readiness)
+	if !paired {
+		return HTTPExecutionBinding{}, refuse(CodeInvalidBinding, "HTTP start and readiness authorities are cross-paired")
 	}
 	budgets := plan.Budgets()
 	if plan.CapturePolicyDigest() != capturePolicy.Digest() || budgets.HTTPBodyBytes != capturePolicy.BodyBytes() {
@@ -72,7 +80,7 @@ func BindExecution(
 		return HTTPExecutionBinding{}, refuse(CodeInvalidBinding, "plan projection binding does not resolve to the supplied HTTP definition")
 	}
 	identity := executionBindingIdentity{
-		SchemaVersion: domain.SchemaVersion, Kind: "HTTPExecutionBinding", Authority: HTTPExecutionAuthorityV1,
+		SchemaVersion: domain.SchemaVersion, Kind: "HTTPExecutionBinding", Authority: executionAuthority,
 		WorldPlanDigest: plan.Digest().String(), StimulusDigest: stimulus.Digest().String(),
 		ExecutionPayloadDigest: stimulus.ExecutionPayloadDigest().String(), StartSpecDigest: start.Digest().String(),
 		FixtureRecipeDigest: fixtureRecipe.Digest().String(), CapturePolicyDigest: capturePolicy.Digest().String(),
@@ -86,7 +94,19 @@ func BindExecution(
 	return HTTPExecutionBinding{
 		digest: digest, canonicalBytes: canonicalBytes, plan: plan, stimulus: stimulus, start: start,
 		fixtureRecipe: fixtureRecipe, capturePolicy: capturePolicy, readiness: readiness, projection: projection,
+		authority: executionAuthority,
 	}, nil
+}
+
+func httpExecutionAuthorityFor(start HTTPStartSpec, readiness HTTPReadinessContract) (string, bool) {
+	switch {
+	case start.Authority() == HTTPStartAuthorityV1 && readiness.Protocol() == ReadinessProtocolV1:
+		return HTTPExecutionAuthorityV1, true
+	case start.Authority() == HTTPPortableStartAuthorityV1 && readiness.Protocol() == PortableReadinessProtocolV1:
+		return HTTPPortableExecutionAuthorityV1, true
+	default:
+		return "", false
+	}
 }
 
 func (b HTTPExecutionBinding) Valid() bool {
@@ -116,6 +136,7 @@ func (b HTTPExecutionBinding) CapturePolicy() HTTPCapturePolicy   { return b.cap
 func (b HTTPExecutionBinding) CapturePolicyDigest() domain.Digest { return b.capturePolicy.Digest() }
 func (b HTTPExecutionBinding) Readiness() HTTPReadinessContract   { return b.readiness }
 func (b HTTPExecutionBinding) ReadinessDigest() domain.Digest     { return b.readiness.Digest() }
+func (b HTTPExecutionBinding) Authority() string                  { return b.authority }
 func (b HTTPExecutionBinding) AdapterProjectionDefinitionDigest() domain.Digest {
 	return b.projection.Digest()
 }

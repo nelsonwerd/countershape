@@ -15,95 +15,13 @@ import (
 	"github.com/nelsonwerd/countershape/internal/gitobj"
 )
 
-type cliBridgeProjectionOperation struct {
-	Name       string `json:"name"`
-	Semantics  string `json:"semantics"`
-	RuleDigest string `json:"rule_digest"`
-}
-
-type cliBridgeProjectionIdentity struct {
-	SchemaVersion           string                         `json:"schema_version"`
-	Kind                    string                         `json:"kind"`
-	Version                 string                         `json:"version"`
-	Fields                  []string                       `json:"fields"`
-	Operations              []cliBridgeProjectionOperation `json:"operations"`
-	FieldRegistryDigest     string                         `json:"field_registry_digest"`
-	ImplementationDigest    string                         `json:"implementation_digest"`
-	ConfigurationDigest     string                         `json:"configuration_digest"`
-	ProjectionBindingDigest string                         `json:"projection_definition_binding_digest"`
-}
-
 func cliBridgeProjectionPair(t *testing.T) (domain.ProjectionDefinitionBinding, climodel.CLIProjectionAuthority) {
 	t.Helper()
-	fields := []string{"cli.stdout.bytes"}
-	configurationRaw, _, err := canon.DigestTyped("CLIProjectionConfiguration", struct {
-		SchemaVersion string   `json:"schema_version"`
-		Kind          string   `json:"kind"`
-		Version       string   `json:"version"`
-		Fields        []string `json:"fields"`
-	}{domain.SchemaVersion, "CLIProjectionConfiguration", "cli-projection/v1", fields})
+	authority, err := climodel.NewCLIProjectionAuthority([]string{"cli.stdout.bytes"})
 	if err != nil {
 		t.Fatal(err)
 	}
-	configuration, err := domain.ParseDigest(configurationRaw.String())
-	if err != nil {
-		t.Fatal(err)
-	}
-	implementationRaw, err := canon.DigestBytes(
-		"CLIProjectionImplementation",
-		[]byte("cli-projection/v1\x00closed-field-registry\x00visible-pure-operations\x00exact-canonical"),
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	implementation, err := domain.ParseDigest(implementationRaw.String())
-	if err != nil {
-		t.Fatal(err)
-	}
-	operation := cliBridgeProjectionOperation{
-		Name: "cli.require-eligible-capture/v1", Semantics: "world-test-visible-semantics",
-	}
-	ruleRaw, err := canon.DigestBytes(
-		"CLIProjectionOperationRule", []byte(operation.Name+"\x00"+operation.Semantics),
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	operation.RuleDigest = ruleRaw.String()
-	binding, err := domain.NewProjectionDefinitionBinding(domain.ProjectionDefinitionBindingConfig{
-		AdapterDomain: domain.AdapterCLI, ImplementationDigest: implementation,
-		ConfigurationDigest: configuration, AcceptedChannels: []string{"exit", "stderr", "stdout"},
-		Operations: []domain.ProjectionOperationBinding{{Name: operation.Name, RuleDigest: domain.MustDigest(operation.RuleDigest)}},
-		Comparator: domain.ProjectionComparatorExact, FieldRegistryDigest: worldTestDigest("b"),
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	identity := cliBridgeProjectionIdentity{
-		SchemaVersion: domain.SchemaVersion, Kind: "CLIProjectionDefinition", Version: "cli-projection/v1",
-		Fields: fields, Operations: []cliBridgeProjectionOperation{operation},
-		FieldRegistryDigest:     binding.FieldRegistryDigest().String(),
-		ImplementationDigest:    binding.ImplementationDigest().String(),
-		ConfigurationDigest:     binding.ConfigurationDigest().String(),
-		ProjectionBindingDigest: binding.Digest().String(),
-	}
-	canonical, err := canon.CanonicalizeTyped(identity)
-	if err != nil {
-		t.Fatal(err)
-	}
-	digestRaw, err := canon.DigestBytes("CLIProjectionDefinition", canonical)
-	if err != nil {
-		t.Fatal(err)
-	}
-	digest, err := domain.ParseDigest(digestRaw.String())
-	if err != nil {
-		t.Fatal(err)
-	}
-	authority, err := climodel.ResolveCLIProjectionAuthority(digest, canonical, binding)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return binding, authority
+	return authority.Binding(), authority
 }
 
 func cliBridgeBinding(

@@ -3,6 +3,7 @@ package projectionprofile
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"testing"
 
 	"github.com/nelsonwerd/countershape/internal/canon"
@@ -57,6 +58,36 @@ func TestProfileBindsExactBindingTranslatorAndOrderedDescriptors(t *testing.T) {
 	}
 	if changedTranslator.Digest() == profile.Digest() {
 		t.Fatal("translator version did not affect profile identity")
+	}
+}
+
+func TestParseRequiresExactTypedRegeneration(t *testing.T) {
+	binding := testBinding(t, domain.AdapterCLI, "parse-exact")
+	profile, err := NewDerived(DerivedConfig{
+		TranslatorName: "CLI_PROJECTION_TO_PORTABLE", TranslatorVersion: "v1", Binding: binding,
+		Fields: []Descriptor{{
+			FieldID: "cli.stdout.bytes", Channel: "stdout", SourcePath: []string{"bytes"},
+			SourceKind: "BYTES", MissingPolicy: "REJECT_CHANNEL", PortableTag: portablevalue.TagBytes,
+		}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	reopened, err := Parse(profile.CanonicalBytes(), binding)
+	if err != nil || reopened.Digest() != profile.Digest() || !bytes.Equal(reopened.CanonicalBytes(), profile.CanonicalBytes()) {
+		t.Fatalf("exact profile did not reopen: %v", err)
+	}
+	var identity map[string]any
+	if err := json.Unmarshal(profile.CanonicalBytes(), &identity); err != nil {
+		t.Fatal(err)
+	}
+	identity["unknown_authority"] = true
+	unknown, err := canon.CanonicalizeTyped(identity)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Parse(unknown, binding); err == nil {
+		t.Fatal("unknown canonical profile member survived exact typed regeneration")
 	}
 }
 

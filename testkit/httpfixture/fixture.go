@@ -13,6 +13,9 @@ import (
 //go:embed server.mjs
 var fixtureProgram []byte
 
+//go:embed server_child_bind.mjs
+var portableFixtureProgram []byte
+
 // CandidateRole names one deliberately incompatible invoice authorization
 // behavior. The byte-identical server program reads only this immutable role
 // file to select the candidate behavior.
@@ -27,6 +30,7 @@ const (
 
 const (
 	Entrypoint                = "fixture/server.mjs"
+	PortableEntrypoint        = "fixture/server_child_bind.mjs"
 	SeedFilename              = "invoice-seed.json"
 	InvocationReceiptFilename = "http-invocation.json"
 	ContaminationFilename     = "authz-cache.json"
@@ -51,19 +55,34 @@ func (r CandidateRole) Valid() bool {
 // CandidateFiles returns one complete selected Git tree. The role file is
 // candidate identity; server.mjs is byte-identical across the four trees.
 func CandidateFiles(role CandidateRole) ([]gitrepo.File, error) {
+	return candidateFiles(role, Entrypoint, fixtureProgram)
+}
+
+// PortableCandidateFiles returns the distinct P07B child-bind fixture tree.
+// CandidateFiles and server.mjs remain byte-identical to the sealed U4 input.
+func PortableCandidateFiles(role CandidateRole) ([]gitrepo.File, error) {
+	return candidateFiles(role, PortableEntrypoint, portableFixtureProgram)
+}
+
+func candidateFiles(role CandidateRole, entrypoint string, program []byte) ([]gitrepo.File, error) {
 	if !role.Valid() {
 		return nil, fmt.Errorf("unsupported HTTP fixture role %q", role)
 	}
 	roleJSON := []byte(fmt.Sprintf("{\"role\":%q}", string(role)))
 	return []gitrepo.File{
 		{Path: "candidate-role.json", Mode: "100644", Content: roleJSON},
-		{Path: Entrypoint, Mode: "100755", Content: append([]byte(nil), fixtureProgram...)},
+		{Path: entrypoint, Mode: "100755", Content: append([]byte(nil), program...)},
 	}, nil
 }
 
 // Program returns a defensive copy for direct fixture tests.
 func Program() []byte {
 	return append([]byte(nil), fixtureProgram...)
+}
+
+// PortableProgram returns the distinct child-bind fixture bytes.
+func PortableProgram() []byte {
+	return append([]byte(nil), portableFixtureProgram...)
 }
 
 // SeedJSON is the exact declarative seed installed into every fresh fixture

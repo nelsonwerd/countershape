@@ -7,6 +7,7 @@ package projectionprofile
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"unicode/utf8"
@@ -198,6 +199,60 @@ func NewDerived(config DerivedConfig) (Profile, error) {
 		digest: digest, canonical: canonicalBytes, translatorName: config.TranslatorName,
 		translatorVersion: config.TranslatorVersion, binding: config.Binding, fields: fields,
 	}, nil
+}
+
+// Parse reconstructs one exact profile under the caller's already-retained
+// projection binding. It never resolves adapter semantics: callers that need
+// that stronger guarantee must still pair the result with adapter-owned
+// authority. Unknown members, alternate base64 spellings, normalized aliases,
+// and noncanonical JSON all fail the final byte-for-byte regeneration check.
+func Parse(exact []byte, expectedBinding domain.ProjectionDefinitionBinding) (Profile, error) {
+	if len(exact) == 0 || len(exact) > canon.MaxInputBytes || !expectedBinding.Valid() {
+		return Profile{}, refuse(CodeInvalidProfile, "exact profile bytes and projection binding are required")
+	}
+	value, err := canon.Parse(exact)
+	if err != nil {
+		return Profile{}, refuse(CodeInvalidProfile, "profile bytes are not strict canonical JSON")
+	}
+	canonical, err := value.CanonicalChecked()
+	if err != nil || !bytes.Equal(canonical, exact) {
+		return Profile{}, refuse(CodeInvalidProfile, "profile bytes are noncanonical")
+	}
+	var identity profileIdentity
+	if err := json.Unmarshal(exact, &identity); err != nil {
+		return Profile{}, refuse(CodeInvalidProfile, "profile typed decode failed")
+	}
+	if identity.SchemaVersion != domain.SchemaVersion || identity.Kind != "PortableProjectionProfile" ||
+		identity.AdapterDomain != string(expectedBinding.AdapterDomain()) ||
+		identity.ProjectionBindingDigest != expectedBinding.Digest().String() {
+		return Profile{}, refuse(CodeInvalidProfile, "profile identity differs from the expected binding")
+	}
+	bindingBytes, err := base64.StdEncoding.Strict().DecodeString(identity.ProjectionBindingBase64)
+	if err != nil || base64.StdEncoding.EncodeToString(bindingBytes) != identity.ProjectionBindingBase64 ||
+		!bytes.Equal(bindingBytes, expectedBinding.CanonicalBytes()) {
+		return Profile{}, refuse(CodeInvalidProfile, "profile binding bytes differ from the expected binding")
+	}
+	parsedBinding, err := domain.ParseProjectionDefinitionBinding(bindingBytes)
+	if err != nil || parsedBinding.Digest() != expectedBinding.Digest() ||
+		!bytes.Equal(parsedBinding.CanonicalBytes(), expectedBinding.CanonicalBytes()) {
+		return Profile{}, refuse(CodeInvalidProfile, "profile binding did not reconstruct exactly")
+	}
+	descriptors := make([]Descriptor, len(identity.Fields))
+	for index, field := range identity.Fields {
+		descriptors[index] = Descriptor{
+			FieldID: field.FieldID, Channel: field.Channel, SourcePath: append([]string(nil), field.SourcePath...),
+			SourceKind: field.SourceKind, MissingPolicy: field.MissingPolicy,
+			PortableTag: portablevalue.Tag(field.PresentTag), AllowMissing: field.AllowMissing, AllowNull: field.AllowNull,
+		}
+	}
+	rebuilt, err := NewDerived(DerivedConfig{
+		TranslatorName: identity.TranslatorName, TranslatorVersion: identity.TranslatorVersion,
+		Binding: parsedBinding, Fields: descriptors,
+	})
+	if err != nil || !bytes.Equal(rebuilt.CanonicalBytes(), exact) {
+		return Profile{}, refuse(CodeInvalidProfile, "profile did not regenerate byte-exactly")
+	}
+	return rebuilt, nil
 }
 
 func validMapping(source string, tag portablevalue.Tag) bool {

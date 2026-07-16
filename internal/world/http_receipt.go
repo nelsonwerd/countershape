@@ -3,6 +3,7 @@ package world
 import (
 	"bytes"
 	"crypto/sha256"
+	"encoding/base64"
 	"encoding/hex"
 	"errors"
 	"io"
@@ -20,25 +21,31 @@ const (
 	httpInvocationFilename         = "http-invocation.json"
 	maxHTTPInvocationBytes         = int64(4096)
 	httpReadinessReceiptAuthority  = "U4_INHERITED_FD_READINESS_RECEIPT_V1"
+	httpPortableReadinessAuthority = "P07B_CHILD_BIND_PIPE_FRAME_READINESS_RECEIPT_V1"
 	httpExchangeReceiptAuthority   = "U4_DIRECT_TCP_EXACTLY_ONE_EXCHANGE_RECEIPT_V1"
 	httpInvocationReceiptAuthority = "U4_FIXTURE_WRITTEN_EXACT_INVOCATION_RECEIPT_V1"
 )
 
 type HTTPReadinessReceipt struct {
-	digest         domain.Digest
-	canonicalBytes []byte
-	worldDigest    domain.Digest
-	attemptDigest  domain.Digest
-	bindingDigest  domain.Digest
-	endpoint       string
-	port           int
-	listenerFD     int
-	readinessFD    int
-	bytesObserved  int64
-	observedByte   byte
-	eofObserved    bool
-	accepted       bool
-	diagnosticCode string
+	digest          domain.Digest
+	canonicalBytes  []byte
+	worldDigest     domain.Digest
+	attemptDigest   domain.Digest
+	bindingDigest   domain.Digest
+	authority       string
+	protocol        string
+	endpoint        string
+	port            int
+	listenerPresent bool
+	listenerFD      int
+	readinessFD     int
+	bytesObserved   int64
+	observedByte    byte
+	frameBytes      []byte
+	frameDigest     domain.Digest
+	eofObserved     bool
+	accepted        bool
+	diagnosticCode  string
 }
 
 type httpReadinessReceiptIdentity struct {
@@ -60,18 +67,48 @@ type httpReadinessReceiptIdentity struct {
 	DiagnosticCode string `json:"diagnostic_code"`
 }
 
+type httpPortableReadinessReceiptIdentity struct {
+	SchemaVersion   string `json:"schema_version"`
+	Kind            string `json:"kind"`
+	Authority       string `json:"authority"`
+	WorldDigest     string `json:"world_instance_digest"`
+	AttemptDigest   string `json:"attempt_artifact_digest"`
+	BindingDigest   string `json:"http_execution_binding_digest"`
+	Endpoint        string `json:"literal_loopback_endpoint"`
+	Port            int    `json:"child_reported_port"`
+	ListenerPresent bool   `json:"inherited_listener_present"`
+	ReadinessFD     int    `json:"inherited_readiness_fd"`
+	Protocol        string `json:"readiness_protocol"`
+	FrameBase64     string `json:"readiness_frame_base64"`
+	FrameDigest     string `json:"readiness_frame_digest"`
+	BytesObserved   int64  `json:"readiness_bytes_observed"`
+	EOFObserved     bool   `json:"readiness_eof_observed"`
+	Accepted        bool   `json:"readiness_accepted"`
+	DiagnosticCode  string `json:"diagnostic_code"`
+}
+
 func newHTTPReadinessReceipt(
 	worldDigest, attemptDigest, bindingDigest domain.Digest,
 	physical httpReadinessPhysical,
 ) (HTTPReadinessReceipt, error) {
-	if !worldDigest.Valid() || !attemptDigest.Valid() || !bindingDigest.Valid() ||
+	if !worldDigest.Valid() || !attemptDigest.Valid() || !bindingDigest.Valid() {
+		return HTTPReadinessReceipt{}, refuse(CodeHTTPExecutionRejected, "readiness receipt input is incomplete", nil)
+	}
+	if physical.protocol == "" && physical.listenerFD == httpListenerChildFD && physical.readinessFD == httpReadinessChildFD {
+		physical.protocol = httpmodel.ReadinessProtocolV1
+	}
+	if physical.protocol == httpmodel.PortableReadinessProtocolV1 {
+		return newPortableHTTPReadinessReceipt(worldDigest, attemptDigest, bindingDigest, physical)
+	}
+	if physical.protocol != httpmodel.ReadinessProtocolV1 ||
 		physical.port < 1 || physical.port > 65535 || physical.endpoint != "127.0.0.1:"+strconv.Itoa(physical.port) ||
 		physical.listenerFD != httpListenerChildFD || physical.readinessFD != httpReadinessChildFD ||
+		len(physical.frameBytes) != 0 ||
 		physical.bytesObserved < 0 || physical.bytesObserved > 2 ||
 		physical.accepted != (physical.bytesObserved == 1 && physical.observedByte == httpmodel.ReadinessSuccessByte &&
 			physical.eofObserved && physical.diagnosticCode == "") ||
 		(!physical.accepted && physical.diagnosticCode == "") {
-		return HTTPReadinessReceipt{}, refuse(CodeHTTPExecutionRejected, "readiness receipt input is incomplete", nil)
+		return HTTPReadinessReceipt{}, refuse(CodeHTTPExecutionRejected, "legacy readiness receipt input is incomplete", nil)
 	}
 	identity := httpReadinessReceiptIdentity{
 		SchemaVersion: domain.SchemaVersion, Kind: "HTTPReadinessReceipt", Authority: httpReadinessReceiptAuthority,
@@ -90,10 +127,69 @@ func newHTTPReadinessReceipt(
 	}
 	return HTTPReadinessReceipt{
 		digest: parsed, canonicalBytes: canonicalBytes, worldDigest: worldDigest, attemptDigest: attemptDigest,
-		bindingDigest: bindingDigest, endpoint: physical.endpoint, port: physical.port,
-		listenerFD: physical.listenerFD, readinessFD: physical.readinessFD, bytesObserved: physical.bytesObserved,
-		observedByte: physical.observedByte, eofObserved: physical.eofObserved, accepted: physical.accepted,
+		bindingDigest: bindingDigest, authority: httpReadinessReceiptAuthority, protocol: httpmodel.ReadinessProtocolV1,
+		endpoint: physical.endpoint, port: physical.port,
+		listenerPresent: true, listenerFD: physical.listenerFD, readinessFD: physical.readinessFD, bytesObserved: physical.bytesObserved,
+		observedByte: physical.observedByte,
+		eofObserved:  physical.eofObserved, accepted: physical.accepted,
 		diagnosticCode: physical.diagnosticCode,
+	}, nil
+}
+
+func newPortableHTTPReadinessReceipt(
+	worldDigest, attemptDigest, bindingDigest domain.Digest,
+	physical httpReadinessPhysical,
+) (HTTPReadinessReceipt, error) {
+	if physical.listenerFD != 0 || physical.readinessFD != httpPortableReadinessChildFD ||
+		physical.bytesObserved != int64(len(physical.frameBytes)) || physical.bytesObserved < 0 ||
+		physical.bytesObserved > int64(httpmodel.PortableReadinessFrameMax+1) ||
+		(len(physical.frameBytes) == 0 && physical.observedByte != 0) ||
+		(len(physical.frameBytes) > 0 && physical.observedByte != physical.frameBytes[0]) {
+		return HTTPReadinessReceipt{}, refuse(CodeHTTPExecutionRejected, "portable readiness descriptor or frame evidence is incomplete", nil)
+	}
+	frame, frameErr := httpmodel.ParseHTTPReadyPortFrame(physical.frameBytes)
+	frameValid := frameErr == nil && frame.Valid() && physical.eofObserved
+	if frameValid {
+		if physical.port != int(frame.Port()) || physical.endpoint != "127.0.0.1:"+strconv.Itoa(physical.port) {
+			return HTTPReadinessReceipt{}, refuse(CodeHTTPExecutionRejected, "portable readiness endpoint differs from its exact frame", nil)
+		}
+	} else if physical.port != 0 || physical.endpoint != "" {
+		return HTTPReadinessReceipt{}, refuse(CodeHTTPExecutionRejected, "invalid portable readiness bytes cannot name an endpoint", nil)
+	}
+	if physical.accepted != (frameValid && physical.diagnosticCode == "") || (!physical.accepted && physical.diagnosticCode == "") {
+		return HTTPReadinessReceipt{}, refuse(CodeHTTPExecutionRejected, "portable readiness disposition disagrees with exact frame evidence", nil)
+	}
+	frameDigestRaw, err := canon.DigestBytes("HTTPPortableReadinessFrameBytes", physical.frameBytes)
+	if err != nil {
+		return HTTPReadinessReceipt{}, err
+	}
+	frameDigest, err := domain.ParseDigest(frameDigestRaw.String())
+	if err != nil {
+		return HTTPReadinessReceipt{}, err
+	}
+	identity := httpPortableReadinessReceiptIdentity{
+		SchemaVersion: domain.SchemaVersion, Kind: "HTTPReadinessReceipt", Authority: httpPortableReadinessAuthority,
+		WorldDigest: worldDigest.String(), AttemptDigest: attemptDigest.String(), BindingDigest: bindingDigest.String(),
+		Endpoint: physical.endpoint, Port: physical.port, ListenerPresent: false, ReadinessFD: physical.readinessFD,
+		Protocol: physical.protocol, FrameBase64: base64.StdEncoding.EncodeToString(physical.frameBytes),
+		FrameDigest: frameDigest.String(), BytesObserved: physical.bytesObserved, EOFObserved: physical.eofObserved,
+		Accepted: physical.accepted, DiagnosticCode: physical.diagnosticCode,
+	}
+	digest, canonicalBytes, err := canon.DigestTyped("HTTPReadinessReceipt", identity)
+	if err != nil {
+		return HTTPReadinessReceipt{}, err
+	}
+	parsed, err := domain.ParseDigest(digest.String())
+	if err != nil {
+		return HTTPReadinessReceipt{}, err
+	}
+	return HTTPReadinessReceipt{
+		digest: parsed, canonicalBytes: canonicalBytes, worldDigest: worldDigest, attemptDigest: attemptDigest,
+		bindingDigest: bindingDigest, authority: httpPortableReadinessAuthority, protocol: physical.protocol,
+		endpoint: physical.endpoint, port: physical.port, listenerPresent: false, listenerFD: physical.listenerFD, readinessFD: physical.readinessFD,
+		bytesObserved: physical.bytesObserved, observedByte: physical.observedByte,
+		frameBytes: append([]byte(nil), physical.frameBytes...), frameDigest: frameDigest,
+		eofObserved: physical.eofObserved, accepted: physical.accepted, diagnosticCode: physical.diagnosticCode,
 	}, nil
 }
 
@@ -106,22 +202,28 @@ func (r HTTPReadinessReceipt) AttemptArtifactDigest() domain.Digest  { return r.
 func (r HTTPReadinessReceipt) ExecutionBindingDigest() domain.Digest { return r.bindingDigest }
 func (r HTTPReadinessReceipt) Endpoint() string                      { return r.endpoint }
 func (r HTTPReadinessReceipt) Port() int                             { return r.port }
+func (r HTTPReadinessReceipt) ListenerFDPresent() bool               { return r.listenerPresent }
 func (r HTTPReadinessReceipt) ListenerFD() int                       { return r.listenerFD }
 func (r HTTPReadinessReceipt) ReadinessFD() int                      { return r.readinessFD }
-func (r HTTPReadinessReceipt) Protocol() string                      { return httpmodel.ReadinessProtocolV1 }
+func (r HTTPReadinessReceipt) Protocol() string                      { return r.protocol }
 func (r HTTPReadinessReceipt) BytesObserved() int64                  { return r.bytesObserved }
 func (r HTTPReadinessReceipt) ObservedByte() byte                    { return r.observedByte }
 func (r HTTPReadinessReceipt) EOFObserved() bool                     { return r.eofObserved }
 func (r HTTPReadinessReceipt) Accepted() bool                        { return r.accepted }
 func (r HTTPReadinessReceipt) DiagnosticCode() string                { return r.diagnosticCode }
-func (r HTTPReadinessReceipt) Authority() string                     { return httpReadinessReceiptAuthority }
+func (r HTTPReadinessReceipt) FrameBytes() []byte                    { return append([]byte(nil), r.frameBytes...) }
+func (r HTTPReadinessReceipt) FrameDigest() domain.Digest            { return r.frameDigest }
+func (r HTTPReadinessReceipt) Authority() string                     { return r.authority }
 func (r HTTPReadinessReceipt) Valid() bool {
 	rebuilt, err := newHTTPReadinessReceipt(r.worldDigest, r.attemptDigest, r.bindingDigest, httpReadinessPhysical{
-		listenerFD: r.listenerFD, readinessFD: r.readinessFD, endpoint: r.endpoint, port: r.port,
+		protocol: r.protocol, listenerFD: r.listenerFD, readinessFD: r.readinessFD, endpoint: r.endpoint, port: r.port,
 		bytesObserved: r.bytesObserved, observedByte: r.observedByte, eofObserved: r.eofObserved,
-		accepted: r.accepted, diagnosticCode: r.diagnosticCode,
+		frameBytes: r.FrameBytes(), accepted: r.accepted, diagnosticCode: r.diagnosticCode,
 	})
-	return err == nil && rebuilt.digest == r.digest && bytes.Equal(rebuilt.canonicalBytes, r.canonicalBytes)
+	return err == nil && rebuilt.digest == r.digest && rebuilt.authority == r.authority &&
+		rebuilt.protocol == r.protocol && rebuilt.frameDigest == r.frameDigest &&
+		rebuilt.listenerPresent == r.listenerPresent &&
+		bytes.Equal(rebuilt.canonicalBytes, r.canonicalBytes) && bytes.Equal(rebuilt.frameBytes, r.frameBytes)
 }
 
 type HTTPExchangeReceipt struct {

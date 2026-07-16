@@ -8,12 +8,13 @@ import (
 )
 
 const (
-	httpListenerChildFD         = 3
-	httpReadinessChildFD        = 4
-	httpResponseHeadLimit       = int64(64 << 10)
-	httpListenerFDEnvironment   = "COUNTERSHAPE_HTTP_LISTEN_FD"
-	httpReadinessFDEnvironment  = "COUNTERSHAPE_HTTP_READINESS_FD"
-	httpListenerPortEnvironment = "COUNTERSHAPE_HTTP_PORT"
+	httpListenerChildFD          = 3
+	httpReadinessChildFD         = 4
+	httpPortableReadinessChildFD = 3
+	httpResponseHeadLimit        = int64(64 << 10)
+	httpListenerFDEnvironment    = "COUNTERSHAPE_HTTP_LISTEN_FD"
+	httpReadinessFDEnvironment   = "COUNTERSHAPE_HTTP_READINESS_FD"
+	httpListenerPortEnvironment  = "COUNTERSHAPE_HTTP_PORT"
 )
 
 func isHTTPDescriptorEnvironmentName(name string) bool {
@@ -52,10 +53,12 @@ type httpServiceRequest struct {
 }
 
 type httpReadinessPhysical struct {
+	protocol       string
 	listenerFD     int
 	readinessFD    int
 	endpoint       string
 	port           int
+	frameBytes     []byte
 	bytesObserved  int64
 	observedByte   byte
 	eofObserved    bool

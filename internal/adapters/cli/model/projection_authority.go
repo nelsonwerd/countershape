@@ -34,6 +34,7 @@ type CLIProjectionAuthority struct {
 	digest         domain.Digest
 	canonicalBytes []byte
 	binding        domain.ProjectionDefinitionBinding
+	fieldIDs       []string
 }
 
 func ResolveCLIProjectionAuthority(
@@ -49,60 +50,24 @@ func ResolveCLIProjectionAuthority(
 	if err != nil || !bytes.Equal(canonical, canonicalBytes) {
 		return CLIProjectionAuthority{}, refuse(CodeInvalidBinding, "resolved CLI projection definition is not exact canonical bytes")
 	}
-	rehashed, err := canon.DigestBytes("CLIProjectionDefinition", canonicalBytes)
-	if err != nil || rehashed.String() != digest.String() {
-		return CLIProjectionAuthority{}, refuse(CodeInvalidBinding, "resolved CLI projection definition digest differs from its bytes")
-	}
 	var identity resolvedProjectionIdentity
-	if err := json.Unmarshal(canonicalBytes, &identity); err != nil ||
-		identity.SchemaVersion != domain.SchemaVersion || identity.Kind != "CLIProjectionDefinition" ||
-		identity.Version != "cli-projection/v1" || identity.ProjectionBindingDigest != binding.Digest().String() ||
-		identity.FieldRegistryDigest != binding.FieldRegistryDigest().String() ||
-		identity.ImplementationDigest != binding.ImplementationDigest().String() ||
-		identity.ConfigurationDigest != binding.ConfigurationDigest().String() ||
-		binding.Comparator() != domain.ProjectionComparatorExact ||
-		!equalStrings(binding.AcceptedChannels(), []string{"exit", "stderr", "stdout"}) {
-		return CLIProjectionAuthority{}, refuse(CodeInvalidBinding, "adapter definition and generic projection binding are cross-paired")
+	if err := json.Unmarshal(canonicalBytes, &identity); err != nil {
+		return CLIProjectionAuthority{}, refuse(CodeInvalidBinding, "resolved CLI projection definition typed decode failed")
 	}
-	configurationDigest, _, err := digestTyped("CLIProjectionConfiguration", struct {
-		SchemaVersion string   `json:"schema_version"`
-		Kind          string   `json:"kind"`
-		Version       string   `json:"version"`
-		Fields        []string `json:"fields"`
-	}{domain.SchemaVersion, "CLIProjectionConfiguration", "cli-projection/v1", identity.Fields})
-	if err != nil || configurationDigest != binding.ConfigurationDigest() {
-		return CLIProjectionAuthority{}, refuse(CodeInvalidBinding, "adapter fields do not resolve to the generic configuration digest")
+	expected, err := NewCLIProjectionAuthority(identity.Fields)
+	if err != nil || expected.digest != digest || !bytes.Equal(expected.canonicalBytes, canonicalBytes) ||
+		expected.binding.Digest() != binding.Digest() ||
+		!bytes.Equal(expected.binding.CanonicalBytes(), binding.CanonicalBytes()) {
+		return CLIProjectionAuthority{}, refuse(CodeInvalidBinding, "CLI projection differs from the closed v1 adapter schema")
 	}
-	implementationDigest, err := canon.DigestBytes(
-		"CLIProjectionImplementation",
-		[]byte("cli-projection/v1\x00closed-field-registry\x00visible-pure-operations\x00exact-canonical"),
-	)
-	if err != nil || implementationDigest.String() != binding.ImplementationDigest().String() {
-		return CLIProjectionAuthority{}, refuse(CodeInvalidBinding, "adapter implementation does not resolve to the generic binding")
-	}
-	bindingOperations := binding.Operations()
-	if len(identity.Operations) != len(bindingOperations) {
-		return CLIProjectionAuthority{}, refuse(CodeInvalidBinding, "adapter operation set differs from the generic binding")
-	}
-	for index, operation := range identity.Operations {
-		rule, ruleErr := canon.DigestBytes(
-			"CLIProjectionOperationRule", []byte(operation.Name+"\x00"+operation.Semantics),
-		)
-		if ruleErr != nil || rule.String() != operation.RuleDigest ||
-			operation.Name != bindingOperations[index].Name ||
-			operation.RuleDigest != bindingOperations[index].RuleDigest.String() {
-			return CLIProjectionAuthority{}, refuse(CodeInvalidBinding, "adapter operation transcript differs from the generic binding")
-		}
-	}
-	return CLIProjectionAuthority{
-		digest: digest, canonicalBytes: append([]byte(nil), canonicalBytes...), binding: binding,
-	}, nil
+	return expected, nil
 }
 
 func (a CLIProjectionAuthority) Valid() bool {
 	rebuilt, err := ResolveCLIProjectionAuthority(a.digest, a.canonicalBytes, a.binding)
 	return err == nil && rebuilt.digest == a.digest &&
-		bytes.Equal(rebuilt.canonicalBytes, a.canonicalBytes) && rebuilt.binding.Digest() == a.binding.Digest()
+		bytes.Equal(rebuilt.canonicalBytes, a.canonicalBytes) && rebuilt.binding.Digest() == a.binding.Digest() &&
+		equalStrings(rebuilt.fieldIDs, a.fieldIDs)
 }
 
 func (a CLIProjectionAuthority) Digest() domain.Digest { return a.digest }
@@ -110,3 +75,4 @@ func (a CLIProjectionAuthority) CanonicalBytes() []byte {
 	return append([]byte(nil), a.canonicalBytes...)
 }
 func (a CLIProjectionAuthority) Binding() domain.ProjectionDefinitionBinding { return a.binding }
+func (a CLIProjectionAuthority) FieldIDs() []string                          { return append([]string(nil), a.fieldIDs...) }

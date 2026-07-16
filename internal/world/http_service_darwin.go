@@ -60,14 +60,30 @@ func runPlatformLiveHTTPService(ctx context.Context, request httpServiceRequest)
 		return result
 	}
 
-	listener, listenerFile, endpoint, port, err := allocateInheritedLoopbackListener()
-	if err != nil {
-		result.process.primary = domain.ControlStartError
-		result.process.diagnosticCode = "HTTP_LOOPBACK_LISTENER_ALLOCATION_FAILED"
-		return result
+	portable := request.binding.StartSpec().Authority() == httpmodel.HTTPPortableStartAuthorityV1
+	var listenerFile *os.File
+	var endpoint string
+	var port int
+	if portable {
+		result.readiness.protocol = httpmodel.PortableReadinessProtocolV1
+		result.readiness.listenerFD = 0
+		result.readiness.readinessFD = httpPortableReadinessChildFD
+	} else {
+		listener, inheritedFile, inheritedEndpoint, inheritedPort, err := allocateInheritedLoopbackListener()
+		if err != nil {
+			result.process.primary = domain.ControlStartError
+			result.process.diagnosticCode = "HTTP_LOOPBACK_LISTENER_ALLOCATION_FAILED"
+			return result
+		}
+		_ = listener.Close()
+		listenerFile, endpoint, port = inheritedFile, inheritedEndpoint, inheritedPort
+		defer listenerFile.Close()
+		result.readiness.protocol = httpmodel.ReadinessProtocolV1
+		result.readiness.listenerFD = httpListenerChildFD
+		result.readiness.readinessFD = httpReadinessChildFD
+		result.readiness.endpoint = endpoint
+		result.readiness.port = port
 	}
-	_ = listener.Close()
-	defer listenerFile.Close()
 	readinessReader, readinessWriter, err := os.Pipe()
 	if err != nil {
 		result.process.primary = domain.ControlStartError
@@ -77,20 +93,19 @@ func runPlatformLiveHTTPService(ctx context.Context, request httpServiceRequest)
 	defer readinessReader.Close()
 	defer readinessWriter.Close()
 
-	result.readiness.listenerFD = httpListenerChildFD
-	result.readiness.readinessFD = httpReadinessChildFD
-	result.readiness.endpoint = endpoint
-	result.readiness.port = port
-	requestWire, err := httpmodel.EncodeRequest(request.binding.Stimulus(), port)
-	if err != nil || !requestWire.Valid() {
-		result.process.primary = domain.ControlStartError
-		result.process.diagnosticCode = "HTTP_REQUEST_WIRE_ENCODING_FAILED"
-		return result
+	var requestWire httpmodel.HTTPRequestWire
+	if !portable {
+		requestWire, err = httpmodel.EncodeRequest(request.binding.Stimulus(), port)
+		if err != nil || !requestWire.Valid() {
+			result.process.primary = domain.ControlStartError
+			result.process.diagnosticCode = "HTTP_REQUEST_WIRE_ENCODING_FAILED"
+			return result
+		}
+		result.exchange.requestWire = requestWire.Bytes()
+		result.exchange.requestSemanticDigest = requestWire.Digest()
+		result.exchange.requestRawSHA256 = requestWire.RawSHA256()
 	}
-	result.exchange.requestWire = requestWire.Bytes()
-	result.exchange.requestSemanticDigest = requestWire.Digest()
-	result.exchange.requestRawSHA256 = requestWire.RawSHA256()
-	request.environment, err = appendHTTPDescriptorEnvironment(request.environment, port)
+	request.environment, err = appendHTTPStartEnvironment(request.environment, request.binding.StartSpec().Authority(), port)
 	if err != nil {
 		result.process.primary = domain.ControlStartError
 		result.process.diagnosticCode = "HTTP_DESCRIPTOR_ENVIRONMENT_COLLISION"
@@ -116,6 +131,10 @@ func runPlatformLiveHTTPService(ctx context.Context, request httpServiceRequest)
 	}
 	defer stderrReader.Close()
 
+	extraFiles := []*os.File{readinessWriter}
+	if !portable {
+		extraFiles = []*os.File{listenerFile, readinessWriter}
+	}
 	command := &exec.Cmd{
 		Path:        request.tool.absolutePath,
 		Args:        append([]string(nil), request.logicalArgv...),
@@ -123,7 +142,7 @@ func runPlatformLiveHTTPService(ctx context.Context, request httpServiceRequest)
 		Dir:         request.cwd,
 		SysProcAttr: &syscall.SysProcAttr{Setpgid: true},
 		// MUTATION_ANCHOR: http-readiness-must-use-inherited-pipe-not-http-probe
-		ExtraFiles: []*os.File{listenerFile, readinessWriter},
+		ExtraFiles: extraFiles,
 		Stdout:     stdoutWriter,
 		Stderr:     stderrWriter,
 	}
@@ -140,7 +159,9 @@ func runPlatformLiveHTTPService(ctx context.Context, request httpServiceRequest)
 	}
 	_ = stdoutWriter.Close()
 	_ = stderrWriter.Close()
-	_ = listenerFile.Close()
+	if listenerFile != nil {
+		_ = listenerFile.Close()
+	}
 	_ = readinessWriter.Close()
 	result.process.started = true
 	result.process.pid = command.Process.Pid
@@ -171,8 +192,11 @@ func runPlatformLiveHTTPService(ctx context.Context, request httpServiceRequest)
 	if result.process.primary == "" {
 		readiness, earlyWait, control, diagnostic := awaitExactHTTPReadiness(
 			ctx, readinessReader, time.Duration(request.readinessBudgetMS)*time.Millisecond,
-			captures.stdout, captures.stderr, overflowC, waitC,
+			captures.stdout, captures.stderr, overflowC, waitC, request.binding.Readiness(),
 		)
+		if portable {
+			result.readiness.frameBytes = append([]byte(nil), readiness.bytes...)
+		}
 		result.readiness.bytesObserved = int64(len(readiness.bytes))
 		if len(readiness.bytes) > 0 {
 			result.readiness.observedByte = readiness.bytes[0]
@@ -181,12 +205,36 @@ func runPlatformLiveHTTPService(ctx context.Context, request httpServiceRequest)
 		result.readiness.accepted = control == ""
 		result.readiness.diagnosticCode = diagnostic
 		waited = earlyWait
+		if portable && readiness.eof {
+			frame, frameErr := httpmodel.ParseHTTPReadyPortFrame(readiness.bytes)
+			if frameErr == nil && frame.Valid() {
+				port = int(frame.Port())
+				endpoint = "127.0.0.1:" + strconv.Itoa(port)
+				result.readiness.port = port
+				result.readiness.endpoint = endpoint
+			}
+		}
 		if control != "" {
 			result.process.primary = control
 			result.process.diagnosticCode = diagnostic
-		} else if err := request.onReadinessAccepted(); err != nil {
-			result.process.primary = domain.ControlReadinessError
-			result.process.diagnosticCode = "HTTP_READINESS_STATE_TRANSITION_FAILED"
+		} else if portable {
+			requestWire, err = httpmodel.EncodeRequest(request.binding.Stimulus(), port)
+			if err != nil || !requestWire.Valid() {
+				result.process.primary = domain.ControlReadinessError
+				result.process.diagnosticCode = "HTTP_PORTABLE_ENDPOINT_ENCODING_FAILED"
+				result.readiness.accepted = false
+				result.readiness.diagnosticCode = result.process.diagnosticCode
+			} else {
+				result.exchange.requestWire = requestWire.Bytes()
+				result.exchange.requestSemanticDigest = requestWire.Digest()
+				result.exchange.requestRawSHA256 = requestWire.RawSHA256()
+			}
+		}
+		if result.process.primary == "" {
+			if err := request.onReadinessAccepted(); err != nil {
+				result.process.primary = domain.ControlReadinessError
+				result.process.diagnosticCode = "HTTP_READINESS_STATE_TRANSITION_FAILED"
+			}
 		}
 	}
 
@@ -368,8 +416,14 @@ func allocateInheritedLoopbackListener() (*net.TCPListener, *os.File, string, in
 }
 
 func appendHTTPDescriptorEnvironment(environment []string, port int) ([]string, error) {
+	return appendHTTPStartEnvironment(environment, httpmodel.HTTPStartAuthorityV1, port)
+}
+
+func appendHTTPStartEnvironment(environment []string, authority string, port int) ([]string, error) {
 	// MUTATION_ANCHOR: http-descriptor-environment-uses-only-plan-and-owned-facts
-	if port < 1 || port > 65535 {
+	legacy := authority == httpmodel.HTTPStartAuthorityV1
+	portable := authority == httpmodel.HTTPPortableStartAuthorityV1
+	if (!legacy && !portable) || (legacy && (port < 1 || port > 65535)) || (portable && port != 0) {
 		return nil, errors.New("HTTP listener port is outside the valid range")
 	}
 	values := make(map[string]string, len(environment)+3)
@@ -386,9 +440,15 @@ func appendHTTPDescriptorEnvironment(environment []string, port int) ([]string, 
 		}
 		values[name] = value
 	}
-	values[httpListenerFDEnvironment] = strconv.Itoa(httpListenerChildFD)
-	values[httpReadinessFDEnvironment] = strconv.Itoa(httpReadinessChildFD)
-	values[httpListenerPortEnvironment] = strconv.Itoa(port)
+	if legacy {
+		values[httpListenerFDEnvironment] = strconv.Itoa(httpListenerChildFD)
+		values[httpReadinessFDEnvironment] = strconv.Itoa(httpReadinessChildFD)
+		values[httpListenerPortEnvironment] = strconv.Itoa(port)
+	} else {
+		// The portable child owns one pipe only. It selects a literal-loopback
+		// ephemeral port itself and reports that port in the exact EOF frame.
+		values[httpReadinessFDEnvironment] = strconv.Itoa(httpPortableReadinessChildFD)
+	}
 	names := make([]string, 0, len(values))
 	for name := range values {
 		names = append(names, name)
@@ -408,9 +468,14 @@ func awaitExactHTTPReadiness(
 	stdout, stderr *cappedCapture,
 	overflowC <-chan struct{},
 	waitC <-chan waitResult,
+	contract httpmodel.HTTPReadinessContract,
 ) (httpReadinessRead, *waitResult, domain.ControlReason, string) {
+	readLimit := 2
+	if _, maxBytes, _, portable := contract.PortableFrameProfile(); portable {
+		readLimit = maxBytes + 1
+	}
 	resultC := make(chan httpReadinessRead, 1)
-	go readExactHTTPReadiness(reader, resultC)
+	go readExactHTTPReadiness(reader, readLimit, resultC)
 	timer := time.NewTimer(budget)
 	defer timer.Stop()
 	deadlineObserved := false
@@ -433,8 +498,17 @@ func awaitExactHTTPReadiness(
 			return finishHTTPReadinessAfterChildExit(reader, resultC, observed), waited, domain.ControlReadinessError, "HTTP_PROCESS_EXITED_BEFORE_READINESS"
 		}
 		if observed != nil {
-			// MUTATION_ANCHOR: http-readiness-requires-exact-one-byte-0x01-and-eof
-			if observed.err != nil || !observed.eof || len(observed.bytes) != 1 || observed.bytes[0] != httpmodel.ReadinessSuccessByte {
+			// MUTATION_ANCHOR: http-readiness-requires-exact-profile-bytes-and-eof
+			valid := observed.err == nil && observed.eof
+			if contract.Protocol() == httpmodel.ReadinessProtocolV1 {
+				valid = valid && len(observed.bytes) == 1 && observed.bytes[0] == httpmodel.ReadinessSuccessByte
+			} else if contract.Protocol() == httpmodel.PortableReadinessProtocolV1 {
+				frame, err := httpmodel.ParseHTTPReadyPortFrame(observed.bytes)
+				valid = valid && err == nil && frame.Valid()
+			} else {
+				valid = false
+			}
+			if !valid {
 				return *observed, waited, domain.ControlReadinessError, "HTTP_READINESS_PROTOCOL_REJECTED"
 			}
 			return *observed, waited, "", ""
@@ -499,7 +573,8 @@ func finishHTTPReadinessAfterChildExit(
 	}
 	// Direct-child exit has already won classification. Give the dedicated
 	// reader one bounded owner interval to retain any readiness bytes and EOF
-	// that the exiting child placed in the kernel pipe before closing fd 4.
+	// that the exiting child placed in the kernel pipe before closing its
+	// profile-selected readiness descriptor.
 	// A descendant may have inherited the writer, so this can never be an
 	// unbounded wait; after the interval the owner closes its read end.
 	timer := time.NewTimer(ownerDrainCloseBudget)
@@ -531,14 +606,17 @@ func stopHTTPReadinessRead(
 	}
 }
 
-func readExactHTTPReadiness(reader io.Reader, resultC chan<- httpReadinessRead) {
-	result := httpReadinessRead{bytes: make([]byte, 0, 2)}
+func readExactHTTPReadiness(reader io.Reader, readLimit int, resultC chan<- httpReadinessRead) {
+	if readLimit < 2 {
+		readLimit = 2
+	}
+	result := httpReadinessRead{bytes: make([]byte, 0, readLimit)}
 	buffer := make([]byte, 1)
 	for {
 		count, err := reader.Read(buffer)
 		if count > 0 {
 			result.bytes = append(result.bytes, buffer[:count]...)
-			if len(result.bytes) > 1 {
+			if len(result.bytes) >= readLimit {
 				resultC <- result
 				return
 			}

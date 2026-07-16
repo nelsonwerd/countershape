@@ -177,6 +177,82 @@ func TestHTTPInvoiceReferenceStudy(t *testing.T) {
 	}
 }
 
+func TestHTTPInvoicePortableChildBindPhysicalLineage(t *testing.T) {
+	config := referenceConfig(t)
+	config.PortableStart = true
+	config.Repetitions = 1
+	config.MaxTotalTrials = 4
+	result, err := Run(context.Background(), config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Binding.Authority() != counterhttp.HTTPPortableExecutionAuthorityV1 ||
+		result.StartSpec.Authority() != counterhttp.HTTPPortableStartAuthorityV1 ||
+		result.StartSpec.Entrypoint() != httpfixture.PortableEntrypoint ||
+		result.Readiness.Protocol() != counterhttp.PortableReadinessProtocolV1 ||
+		result.Observation.Status() != observe.ObservationComplete || len(result.Trials) != 4 {
+		t.Fatal("portable physical study did not retain its exact closed lineage")
+	}
+	for _, trial := range result.Trials {
+		if !trial.Admitted || !trial.Projected || trial.ProjectionRejection != nil {
+			t.Fatalf("portable trial %d was not eligible and projected", trial.Slot.Ordinal())
+		}
+		if got := stringMeasurement(t, trial.Measurements, dimensionExecutionAuthority); got != result.Binding.Authority() {
+			t.Fatalf("portable trial %d recorded execution authority %q, want %q", trial.Slot.Ordinal(), got, result.Binding.Authority())
+		}
+		process := trial.Result.Process()
+		if primary, present := process.PrimaryControl(); present || primary != "" ||
+			!process.Started() || !process.ProcessGroupOwned() || !process.DirectChildWaited() ||
+			!process.DrainsComplete() || !process.FinalGroupProbeClean() || process.TeardownError() || process.OrphanRisk() {
+			t.Fatalf("portable trial %d lacks a clean lifecycle: primary=%q/%t diagnostic=%q", trial.Slot.Ordinal(), primary, present, process.DiagnosticCode())
+		}
+		readiness, hasReadiness := trial.Result.HTTPReadiness()
+		exchange, hasExchange := trial.Result.HTTPExchange()
+		if !hasReadiness || !readiness.Valid() || !readiness.Accepted() ||
+			readiness.Authority() != "P07B_CHILD_BIND_PIPE_FRAME_READINESS_RECEIPT_V1" ||
+			readiness.Protocol() != counterhttp.PortableReadinessProtocolV1 || readiness.ListenerFDPresent() || readiness.ListenerFD() != 0 ||
+			readiness.ReadinessFD() != 3 || !readiness.EOFObserved() || !readiness.FrameDigest().Valid() ||
+			readiness.BytesObserved() != int64(len(readiness.FrameBytes())) || readiness.DiagnosticCode() != "" ||
+			!hasExchange || !exchange.Valid() || !exchange.ResponseParsed() || !exchange.RequestComplete() {
+			t.Fatalf("portable trial %d lacks exact readiness/exchange receipts", trial.Slot.Ordinal())
+		}
+		frame, err := counterhttp.ParseHTTPReadyPortFrame(readiness.FrameBytes())
+		if err != nil || !frame.Valid() || int(frame.Port()) != readiness.Port() ||
+			readiness.Endpoint() != fmt.Sprintf("127.0.0.1:%d", frame.Port()) {
+			t.Fatalf("portable trial %d frame/endpoint mismatch: %q %v", trial.Slot.Ordinal(), readiness.FrameBytes(), err)
+		}
+		encoded, err := counterhttp.EncodeRequest(result.Stimulus, readiness.Port())
+		if err != nil || !bytes.Equal(encoded.Bytes(), exchange.RequestWire()) {
+			t.Fatalf("portable trial %d request did not bind the child-reported port: %v", trial.Slot.Ordinal(), err)
+		}
+	}
+}
+
+func stringMeasurement(t *testing.T, measurements domain.InstanceMeasurements, name string) string {
+	t.Helper()
+	var identity struct {
+		Values []struct {
+			Name          string `json:"name"`
+			CanonicalJSON string `json:"canonical_json"`
+		} `json:"values"`
+	}
+	if err := json.Unmarshal(measurements.CanonicalBytes(), &identity); err != nil {
+		t.Fatalf("decode measurements: %v", err)
+	}
+	for _, value := range identity.Values {
+		if value.Name != name {
+			continue
+		}
+		var decoded string
+		if err := json.Unmarshal([]byte(value.CanonicalJSON), &decoded); err != nil {
+			t.Fatalf("decode measurement %q: %v", name, err)
+		}
+		return decoded
+	}
+	t.Fatalf("measurement %q not found", name)
+	return ""
+}
+
 // MUTATION_ANCHOR: invoice-fixture-request-facts-must-drive-policy
 func TestHTTPInvoiceRequestFactsDrivePhysicalPolicy(t *testing.T) {
 	testCases := []struct {
@@ -735,23 +811,26 @@ func statusForRole(t *testing.T, result StudyResult, role httpfixture.CandidateR
 
 func referenceConfig(t *testing.T) Config {
 	t.Helper()
-	gitPath, err := exec.LookPath("git")
-	if err != nil {
-		t.Skip("Git is not installed")
+	return DefaultConfig(t.TempDir(), studyTestExecutable(t, "git"), studyTestExecutable(t, "node"))
+}
+
+func studyTestExecutable(t *testing.T, name string) string {
+	t.Helper()
+	path := os.Getenv("COUNTERSHAPE_" + strings.ToUpper(name))
+	if path == "" {
+		var err error
+		path, err = exec.LookPath(name)
+		if err != nil {
+			t.Skipf("%s is not installed", name)
+		}
+	} else if !filepath.IsAbs(path) {
+		t.Fatalf("explicit %s test executable is not absolute", name)
 	}
-	git, err := filepath.EvalSymlinks(gitPath)
+	resolved, err := filepath.EvalSymlinks(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	nodePath, err := exec.LookPath("node")
-	if err != nil {
-		t.Skip("Node is not installed")
-	}
-	node, err := filepath.EvalSymlinks(nodePath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	return DefaultConfig(t.TempDir(), git, node)
+	return resolved
 }
 
 func runReferenceStudy(t *testing.T) StudyResult {
