@@ -1,0 +1,181 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://countershape.dev/spec/schema/v1/finalized-contract-run.schema.json",
+  "title": "Countershape FinalizedContractRun v1",
+  "description": "Immutable nonhead finalized physical-run authority for one exact ContractExecutionTarget. It binds the same target attempt, closed lifecycle evidence, a constructor-derived clean or controlled terminal disposition, the exact projected tuple when present, and scoped standalone evidence. Its domain-separated artifact digest is external to this body; parsed bytes are inert.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "run_version",
+    "publication_scope",
+    "contract_execution_target_digest",
+    "attempt_artifact_digest",
+    "lifecycle",
+    "terminal_disposition",
+    "observation",
+    "standalone_scope"
+  ],
+  "properties": {
+    "schema_version": { "const": "countershape/v1" },
+    "kind": { "const": "FinalizedContractRun" },
+    "run_version": { "const": "finalized-contract-run/v1" },
+    "publication_scope": { "const": "IMMUTABLE_NONHEAD_FINALIZED_RUN_V1" },
+    "contract_execution_target_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "attempt_artifact_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "lifecycle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "materialization_revalidation_digest",
+        "process_result_digest",
+        "teardown_result_digest",
+        "orphan_check_digest",
+        "finalization_marker_digest"
+      ],
+      "properties": {
+        "status": { "const": "FINALIZED" },
+        "materialization_revalidation_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+        "process_result_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+        "teardown_result_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+        "orphan_check_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+        "finalization_marker_digest": { "$ref": "common.schema.json#/$defs/Digest" }
+      }
+    },
+    "terminal_disposition": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status"],
+          "properties": {
+            "status": { "const": "ELIGIBLE_CLEAN" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "reason"],
+          "properties": {
+            "status": { "const": "INELIGIBLE_CONTROL" },
+            "reason": { "$ref": "common.schema.json#/$defs/ControlReason" }
+          }
+        }
+      ]
+    },
+    "observation": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "control_reason"],
+          "properties": {
+            "status": { "const": "NO_CAPTURE" },
+            "control_reason": { "$ref": "common.schema.json#/$defs/ControlReason" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "captured_observation_digest", "control_reason"],
+          "properties": {
+            "status": { "const": "CAPTURED_UNPROJECTED" },
+            "captured_observation_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+            "control_reason": { "$ref": "common.schema.json#/$defs/ControlReason" }
+          }
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["status", "captured_observation_digest", "projection_result_digest", "observed_tuple"],
+          "properties": {
+            "status": { "const": "PROJECTED" },
+            "captured_observation_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+            "projection_result_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+            "observed_tuple": { "$ref": "common.schema.json#/$defs/ExactTuple" }
+          }
+        }
+      ]
+    },
+    "standalone_scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scope",
+        "target_inventory_digest",
+        "child_bindings_digest",
+        "import_resolution_digest",
+        "service_bindings_digest",
+        "target_inventory_countershape_source_present",
+        "target_inventory_countershape_dependency_present",
+        "target_import_resolution_reached_countershape",
+        "child_path_contains_countershape",
+        "countershape_service_binding_present",
+        "named_parent_secret_sentinels_inherited",
+        "host_wide_absence_established",
+        "network_denial_established",
+        "package_registry_denial_established",
+        "confidentiality_established"
+      ],
+      "properties": {
+        "scope": { "const": "ISOLATED_TARGET_INVENTORY_AND_CHILD_BINDINGS_V1" },
+        "target_inventory_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+        "child_bindings_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+        "import_resolution_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+        "service_bindings_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+        "target_inventory_countershape_source_present": { "const": false },
+        "target_inventory_countershape_dependency_present": { "const": false },
+        "target_import_resolution_reached_countershape": { "const": false },
+        "child_path_contains_countershape": { "const": false },
+        "countershape_service_binding_present": { "const": false },
+        "named_parent_secret_sentinels_inherited": { "const": false },
+        "host_wide_absence_established": { "const": false },
+        "network_denial_established": { "const": false },
+        "package_registry_denial_established": { "const": false },
+        "confidentiality_established": { "const": false }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "terminal_disposition": {
+            "properties": { "status": { "const": "ELIGIBLE_CLEAN" } },
+            "required": ["status"]
+          }
+        },
+        "required": ["terminal_disposition"]
+      },
+      "then": {
+        "properties": {
+          "observation": {
+            "properties": { "status": { "const": "PROJECTED" } },
+            "required": ["status"]
+          }
+        }
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "terminal_disposition": {
+            "properties": { "status": { "const": "INELIGIBLE_CONTROL" } },
+            "required": ["status"]
+          }
+        },
+        "required": ["terminal_disposition"]
+      },
+      "then": {
+        "properties": {
+          "observation": {
+            "properties": { "status": { "enum": ["NO_CAPTURE", "CAPTURED_UNPROJECTED"] } },
+            "required": ["status"]
+          }
+        }
+      }
+    }
+  ]
+}

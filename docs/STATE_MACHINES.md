@@ -2,7 +2,7 @@
 
 - **Contract version:** U0 / `state-machines-v1`
 - **Target:** narrowed Darwin reference instrument
-- **Status:** normative separation of implemented and future transitions. U1–U5 receipt state lives in the corresponding status files. U6 names below describe the current source contract only until `status/U6.md` records a sealed strict-clean boundary. Any state explicitly labeled future target is not a U6 runtime state.
+- **Status:** normative separation of implemented and future transitions. U1–U6 receipt state lives in the corresponding status files. U6a is sealed through `RULING`; P07A and P07B names below remain future transitions until their own status files record sealed strict-clean boundaries.
 
 Countershape state is a set of immutable semantic artifacts connected by validated transitions. State names are not presentation copy. The Go domain model, JSON schemas, API DTOs, CLI, studio, generated residue, examples, and tests must agree on these names and preconditions.
 
@@ -13,7 +13,7 @@ Every semantic transition follows the same rules:
 1. **Validate from immutable inputs.** The transition names every input artifact by domain-separated digest and validates its schema, kind, lineage, and construction invariants.
 2. **Bind the current head.** If a mutable study head is involved, the request supplies the expected current digest. A stale compare-and-swap fails without creating the requested semantic object.
 3. **Create, never rewrite.** A successful transition writes a new immutable object. It does not edit an ancestor or replace bytes behind a digest.
-4. **Fail without partial publication.** A validation or emission failure may retain a typed nonadvancing failure artifact. It cannot publish a partially valid successor or a partial contract directory.
+4. **Fail without partial semantic publication.** A validation or pre-transition emission failure may retain a typed nonadvancing failure artifact. It cannot publish a partially valid successor or a partial final contract directory. After a terminal bundle residue is durable, a separate materialization failure reports `RESIDUE_PERSISTED_EXPORT_INCOMPLETE` and remains retryable from that residue; it does not pretend the semantic transition rolled back.
 5. **Advance only through a legal edge.** Presentation code cannot infer, skip, or manufacture an edge. The application service revalidates every browser/CLI request.
 6. **Do not edit an ancestor into freshness.** The full product target models semantic changes through successor studies and derived stale/invalidation status. U6 implements no such status graph: a changed ancestor cannot advance the existing fixed head and must use a distinct study or a future successor service.
 7. **Keep historical truth.** Stale, invalidated, cancelled, partial, deferred, and contradicted objects remain addressable and retain their original meaning.
@@ -23,7 +23,7 @@ Every semantic transition follows the same rules:
 
 ## Full-product immutable artifact lineage target
 
-The full-product happy-path semantic lineage is shown below. The sealed U6a boundary stops at `RULING`; `CONTRACT_BUNDLE` and `CONFORMANCE_EXECUTION` belong to P07/U6b.
+The full-product happy-path semantic lineage is shown below. The sealed U6a boundary stops at a legacy whole-projection `RULING`. P07A/U6b adds portable selected-field ruling authority without a new head stage. P07B/U6c adds terminal `CONTRACT_BUNDLE`; later `CONTRACT_EXECUTION` is immutable nonhead evidence, not another lineage stage.
 
 ```text
 SOURCE_SPEC
@@ -39,7 +39,8 @@ SOURCE_SPEC
   -> CHOICEPOINT_READY
   -> RULING
   -> CONTRACT_BUNDLE
-  -> CONFORMANCE_EXECUTION
+
+CONTRACT_BUNDLE -> CONTRACT_EXECUTION_EVIDENCE (immutable nonhead object)
 ```
 
 Each name denotes a distinct immutable object kind, not a mutable phase field.
@@ -54,8 +55,10 @@ Each name denotes a distinct immutable object kind, not a mutable phase field.
 | `REDUCTION_RESULT` | `FRESH_CONFIRMATION` | a crypto-random run challenge; challenge-and-ordinal-bound nonces; phase offset `1`; new attempts, worlds, process/root/invocation facts; and no prior-evidence reuse reproduce the exact comparable disposition | confirmation refusal |
 | `FRESH_CONFIRMATION` | `CHOICEPOINT_READY` | exact eligible candidate-to-fingerprint map and exact exclusion key/classification map are preserved; same freshly executed exclusion is allowed, changed disposition is not; all semantic ancestors are current | stale/ineligible Choicepoint draft |
 | `CHOICEPOINT_READY` | `RULING` | the local decision session completes against the exact current digest; action and selected/context fields are valid; caller attribution is recorded without human-authenticity proof | typed decision or durable-promotion refusal |
-| `RULING` | `CONTRACT_BUNDLE` | action is compilable; selected fields are nonempty and separate allowed/disallowed tuples; emitter creates exactly six deterministic files | `AMBIGUOUS_SCOPE`, noncompilable action, or emission refusal; no files |
-| `CONTRACT_BUNDLE` | `CONFORMANCE_EXECUTION` | current tree and exact bundle execute in a new attempt under a receiptable target profile | typed ineligible current execution |
+| `RULING` | `CONTRACT_BUNDLE` | current ruling uses the P07A adapter-bound portable mode; action is compilable; selected fields are nonempty and separate allowed/disallowed tuples; an exact PortableSource reconstructs the same plan/projection/minimized stimulus; the emitter creates one recoverable six-file body; the complete expected head token remains current | legacy/noncompilable/ambiguous/source/profile/stale refusal; no residue and no final directory |
+| `CONTRACT_BUNDLE` | immutable nonhead `CONTRACT_EXECUTION_TARGET` | exact bundle/source reopen; one explicit Git ref is pinned, inspected, privately materialized, and reopened; one Node runtime is measured/revalidated; one fresh conformance marker is durable; target publishes and reopens before spawn | any authority/materialization/runtime/freshness failure refuses target publication; study head remains the same bundle residue |
+| `CONTRACT_EXECUTION_TARGET` | immutable nonhead `FINALIZED_CONTRACT_RUN` | the exact reopened target capability runs; materialization revalidation, process result, teardown, orphan check, observation/projection, exact tuple when present, constructor-derived terminal disposition, and scoped standalone facts close against the same target attempt | target/attempt mismatch or incomplete lifecycle refuses finalization; study head remains the same bundle residue |
+| `FINALIZED_CONTRACT_RUN` | immutable `CONTRACT_EXECUTION_EVIDENCE` | exact target and exact target-bound finalized run reopen; `ELIGIBLE_CLEAN` plus its projected tuple derives conformance/contradiction, while `INELIGIBLE_CONTROL(reason)` derives the ineligible class | target/run or disposition mismatch refuses classification publication; study head remains the same bundle residue |
 
 `REJECT_ALL` and `DEFER` may create a final noncompilable `RULING`/`DecisionRecord`, but neither has an edge to `CONTRACT_BUNDLE`; U6 does not reopen a deferred head. A semantic `REFINE` DecisionRecord may be constructed, but durable promotion returns `REFINE_REQUIRES_SUCCESSOR_STUDY` before object publication or head mutation.
 
@@ -323,15 +326,46 @@ View/visit facts prove presentation only. They are not comprehension state.
 
 If selected fields fail the separation formula, finalization returns `AMBIGUOUS_SCOPE`; no DecisionRecord with compile eligibility and no files are created.
 
-## Future P07/U6b contract-emission state machine
+The table's “yes” is semantic compile eligibility inside sealed U6, not standalone portability. Until P07A lands, fresh U6 Choicepoints still select only the whole projection; P07B must refuse those legacy rulings even when their DecisionRecord carries the derived `compilable` fact.
+
+## Future P07A/U6b portable-ruling state machine
+
+P07A changes the construction authority inside `CHOICEPOINT_READY -> RULING`; it does not add a head stage:
+
+```text
+EXACT_CONFIRMED_PROJECTION_PROOFS
+  -> PROJECTION_BINDING_RESOLVED
+  -> HISTORICAL_ADAPTER_WIRES_STRICTLY_TRANSLATED
+  -> PORTABLE_COMPLETE_TUPLES_SEALED
+  -> PORTABLE_CHOICEPOINT_READY
+  -> SELECTED_FIELD_RULING
+```
+
+Alternative results are exact nonadvancing refusals:
+
+```text
+PROJECTION_PROFILE_UNRESOLVED
+PROJECTION_WIRE_NONEXACT
+CONFIRMED_PROOF_MISMATCH
+EMPTY_SELECTED_FIELDS
+AMBIGUOUS_SCOPE
+CUSTOM_EXPECTATION_ALREADY_OBSERVED
+```
+
+Legacy whole-projection Choicepoints remain addressable and may retain historical rulings. They do not enter the portable sequence and later compilation returns `LEGACY_WHOLE_PROJECTION_NOT_PORTABLE`.
+
+## Future P07B/U6c contract-emission state machine
 
 ```text
 DECISION_FINALIZED
-  -> COMPILE_ELIGIBILITY_VALIDATING
-  -> COMPILE_ELIGIBLE
-  -> EMITTING_PRIVATE_TEMP
-  -> BUNDLE_VALIDATED
-  -> CONTRACT_BUNDLE_PUBLISHED
+  -> CURRENT_PORTABLE_RULING_REOPENED
+  -> PORTABLE_SOURCE_RECONSTRUCTED
+  -> PURE_SIX_FILE_BUNDLE_COMPILED_IN_MEMORY
+  -> EXPECTED_RULING_TOKEN_REVALIDATED
+  -> CONTRACT_BUNDLE_OBJECT_PUBLISHED_AND_REOPENED
+  -> TERMINAL_RESIDUE_HEAD_PUBLISHED
+  -> MATERIALIZATION_PENDING
+  -> MATERIALIZED | RESIDUE_PERSISTED_EXPORT_INCOMPLETE
 ```
 
 Alternative terminal results from validation are:
@@ -339,34 +373,46 @@ Alternative terminal results from validation are:
 ```text
 NONCOMPILABLE_ACTION(action)
 AMBIGUOUS_SCOPE
-STALE_DECISION
-UNSUPPORTED_TARGET
-PARITY_UNRECEIPTED
+LEGACY_WHOLE_PROJECTION_NOT_PORTABLE
+PORTABLE_SOURCE_REQUIRED
+PORTABLE_SOURCE_MISMATCH
+NONPORTABLE_START_PROFILE
+STALE_CHOICEPOINT
 ```
 
-The emitter accepts a construction-safe `CompilableDecision`, not a generic DecisionRecord plus a boolean. It creates exactly `decision.json`, `fixture.json`, `contract.test.mjs`, `harness.mjs`, `README.md`, and `manifest.json` in a private temporary directory. It validates deterministic names, bytes, manifest hashes, target profile, and absence of forbidden dependencies before atomic publication.
+The emitter accepts a construction-safe current portable ruling plus an opaque exact source-reconstruction witness, not a generic DecisionRecord plus a Boolean or caller-paired digests. It creates all six path/mode/content triples in memory. The ContractBundle embeds every exact file byte; `manifest.json` covers the other five and excludes itself. The store revalidates the complete expected head before object/temp creation, durably publishes and reopens the bundle, and only then advances to terminal residue.
 
-Any error removes the unpublished temporary output and leaves the requested destination absent. An existing destination is never partially overwritten.
+A stale loser creates no object, temporary file, or final output. A crash after object publication but before head publication may leave an unreachable immutable object; a head cannot name a missing object. Final filesystem materialization begins only after residue and uses a private same-parent temporary directory plus create-new rename. An existing exact directory is idempotent; a partial/mismatched directory is never overwritten. Post-residue failure leaves recoverable semantic authority and an absent or refused final destination.
 
-`PARITY_UNRECEIPTED` distinguishes “source could be generated mechanically” from “standalone semantics have been claimed.” A later qualifying parity/absence receipt does not edit an older bundle; it creates a new claim mapping or successor bundle status.
+Go/Node parity disagreement blocks the external P07B ship-and-claim gate, not this semantic transition. didrun grades remain opaque external evidence and never authorize residue publication. A qualifying parity receipt maps to a claim without editing the bundle or study head; an absent receipt leaves the capability `UNRECEIPTED` rather than inventing a runtime transition result.
 
-## Future P07/U6b contract-execution state machine
+## Future P07B/U6c contract-execution state machine
 
-Historical evidence and current conformance are never merged:
+Historical evidence and later exact-target conformance are never merged:
 
 ```text
-CONTRACT_EXECUTION_CREATED
-  -> CURRENT_WORLD_RUNNING
-  -> ELIGIBLE_OBSERVATION
-       -> CONFORMS | CONTRADICTS
-     or INELIGIBLE_EXECUTION(reason)
+EXPLICIT_TARGET_REF_PINNED
+  -> TARGET_INSPECTED
+  -> TARGET_PRIVATELY_MATERIALIZED_AND_REOPENED
+  -> NODE_RUNTIME_ADMITTED_AND_REVALIDATED
+  -> CONFORMANCE_ATTEMPT_MARKER_DURABLE
+  -> CONTRACT_EXECUTION_TARGET_PUBLISHED_AND_REOPENED
+  -> TARGET_RUNNING
+  -> LIFECYCLE_OBSERVATION_AND_STANDALONE_SCOPE_CLOSED
+  -> FINALIZED_CONTRACT_RUN_PUBLISHED_AND_REOPENED
+  -> ELIGIBLE_CLEAN + PROJECTED(tuple) -> CONFORMS | CONTRADICTS
+     or INELIGIBLE_CONTROL(reason) -> INELIGIBLE_EXECUTION
 ```
 
-- `CONFORMS`: current eligible selected-field tuple is a member of the allowed complete-tuple set.
-- `CONTRADICTS`: current eligible selected-field tuple is not a member.
-- `INELIGIBLE_EXECUTION(reason)`: current materialization, start, readiness, timeout, capture, projection, output, orphan, or teardown control prevented an eligible tuple.
+`ContractExecutionTarget` is a nonhead pre-spawn object, not proof that a process ran. It is constructed only from the reopened bundle/source profile, opaque live `InspectedTree` plus its exact verified materialization, owned admitted Node capability, and fresh durable attempt allocation. It never routes through the comparison-only `SelectedTreeSet -> WorldPlan -> CandidateExecutionBinding -> WorldInstance` chain. A parsed target, copied OIDs/digests/runtime strings, dirty working-tree bytes, or a fake one-member candidate set cannot create execution authority.
 
-Both contradiction and ineligibility produce a nonzero ordinary test, but TAP diagnostics and machine codes remain distinct. A current conformance execution never freshens, modifies, or reclassifies the historical Choicepoint, even when it runs against a historical candidate tree.
+`FinalizedContractRun` is the nonhead proof boundary for that one physical run, not a predicate classification. It binds the exact external target digest and the same exact attempt-artifact digest to terminal lifecycle, one constructor-derived `ELIGIBLE_CLEAN` or `INELIGIBLE_CONTROL(reason)` disposition, the exact projected tuple when present, and scoped target-inventory/child-binding facts. A run from another target or attempt cannot be paired into a classification, even if its observed tuple bytes happen to match. `ContractExecution` cannot independently author a tuple or reason.
+
+- `CONFORMS`: target-eligible selected-field tuple is a member of the allowed complete-tuple set.
+- `CONTRADICTS`: target-eligible selected-field tuple is not a member.
+- `INELIGIBLE_EXECUTION(reason)`: target start, readiness, timeout, capture, projection, output, orphan, or teardown control prevented an eligible tuple.
+
+Both contradiction and ineligibility produce a nonzero ordinary test, but TAP diagnostics and machine codes remain distinct. Only `ELIGIBLE_CLEAN` plus an exact `PROJECTED` tuple in the exact target-bound `FinalizedContractRun` may produce eligible conformance. A target execution never freshens, modifies, or reclassifies the historical Choicepoint, even when its pinned tree equals a historical candidate tree. Each target/run/classification triple is separate immutable nonhead evidence with `study_head_advanced = false`; repeated runs leave the terminal residue unchanged.
 
 ## Future product study-presentation lifecycle target
 
@@ -417,6 +463,8 @@ A crash may leave finalized immutable semantic objects and nonadvancing partial-
 | --- | --- | --- |
 | moving display ref changes pinned candidate | keep original identity or create new lineage | ref spelling is not execution identity |
 | `CandidateExecutionKey` or copied digests -> evidence allocation | typed binding refusal | allocation requires opaque `CandidateExecutionBinding` plus actual matching `WorldPlan` |
+| copied target/tree/source/runtime fields, parsed `ContractExecutionTarget`, fake one-member candidate set, or historical `WorldInstance` -> contract run | target-authority refusal | only the exact reopened bundle, live Git-issued inspected/materialized target, fresh durable attempt, and admitted runtime may construct and execute a target |
+| finalized run for target/attempt A -> classification for target/attempt B | `TARGET_RUN_MISMATCH`; no classification | lifecycle and observation authority cannot be caller-paired across physical attempts |
 | unsupported Git entry omitted and remaining tree runs | `UNCOMPARABLE` | partial tree would misrepresent source |
 | `STARTING` before verified materialization | attempt control failure | execution source is not established |
 | projection before clean `FINALIZED` teardown | ineligible control | behavior cannot outrun lifecycle evidence |
@@ -437,10 +485,14 @@ A crash may leave finalized immutable semantic objects and nonadvancing partial-
 | empty or weak selected fields -> compile | `AMBIGUOUS_SCOPE`; no files | allowed/disallowed tuples are not separated |
 | allow-many fields expanded independently | reject tuple construction | cross-product adds unauthored outcomes |
 | context-only field emitted as assertion | emitter/vector failure | field was not selected |
+| legacy whole-projection ruling -> standalone compiler | `LEGACY_WHOLE_PROJECTION_NOT_PORTABLE`; no files | whole equality cannot authorize selected-field scope |
+| caller-paired raw bytes/digests -> PortableSource | source reconstruction refusal | a digest-shaped pair is not a typed adapter preimage |
+| inherited-listener HTTP ruling -> child-bind standalone source | `NONPORTABLE_START_PROFILE`; no files | the execution world changed and requires a new physical lineage |
 | `REJECT_ALL`, `DEFER`, or `REFINE` -> emitter | `NONCOMPILABLE_ACTION`; no files | no positive exact oracle |
-| partial six-file output -> publish | delete unpublished temp; no bundle | bundle is an atomic artifact set |
+| partial six-file output -> publish | no residue and no final directory | bundle is one recoverable semantic body |
+| post-residue materialization failure -> claim no durable change | `RESIDUE_PERSISTED_EXPORT_INCOMPLETE`; retry from bundle | source publication and filesystem export are separate truths |
 | bundle digest -> `CONFORMS` without execution | no transition | source bytes are not current behavior |
-| current conformance -> historical Choicepoint freshening | no transition | truth jurisdictions differ |
+| target conformance -> historical Choicepoint freshening or head advance | immutable nonhead ContractExecutionTarget, FinalizedContractRun, and ContractExecution only | truth jurisdictions differ |
 | stale CAS head -> last-write-wins | `CAS_CONFLICT` | concurrent/stale clients cannot overwrite intent |
 | crash -> process resume/replay | no resume; any already-persisted nonadvancing evidence stays inert and a retry allocates a new world | persistence is not an execution runtime and U6 writes no crash-time status object |
 | Wake session/effect/gate -> Countershape state | reject field/object | Wake is inert candidate provenance only |
@@ -461,7 +513,8 @@ Additional prohibited transitions include promoting an unqualified `STABLE` labe
 | U4 | HTTP phases/readiness/capture using the same eligibility service | no HTTP branch enters generic compare/reduce/choice truth |
 | U5 | reduction proposal/run/final-sweep/grade transitions | shape trap, cancellation, budget edge, unresolved neighbor, both grades pass |
 | U6a / P06 | CAS heads, physical confirmation, Choicepoint, blind semantic session, DecisionRecords, ruling promotion through `RULING` | stale/forged/reused-evidence/noncompilable/weak-field/blind-leak negatives pass; no public residue edge |
-| U6b / P07 | contract bundle and current execution | Go/Node parity, atomic bundle, absence, contradiction/ineligibility negatives pass |
+| U6b / P07A | adapter-bound portable tuple interpretation and selected-field rulings; no new head stage | unchanged historical bytes, exact profile/wire translation, selected-only custom expectation, legacy refusal, and physical CLI/HTTP studies pass |
+| U6c / P07B | PortableSource, portable HTTP lineage, terminal recoverable bundle, retryable materialization, and immutable nonhead current execution | source/world equality, raw-wire Go/Node parity, stale-before-publication, recovery, target-inventory absence, and contradiction/ineligibility negatives pass |
 | U7 | complete study lifecycle and both decisive reference lineages | three clean runs preserve semantic bytes while all attempts are new |
 | U8 | authenticated transport and full renderer state matrix | blind leakage, request forgery, presentation obligations, visual/accessibility gates pass |
 | U9 | export/packaging/final claim mapping | exact environment receipts, final strict verify, HTML evidence, honest handoff |

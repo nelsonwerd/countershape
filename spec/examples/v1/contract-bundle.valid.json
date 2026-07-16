@@ -1,57 +1,102 @@
 {
   "schema_version": "countershape/v1",
   "kind": "ContractBundle",
-  "artifact_digest": "sha256:e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2",
+  "bundle_version": "node-core-contract-bundle/v1",
   "decision_record_digest": "sha256:e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1",
+  "choicepoint_digest": "sha256:c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
+  "portable_source_digest": "sha256:d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1",
+  "portable_profile_digest": "sha256:f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1",
   "decision_action": "ALLOW_OBSERVED",
   "emitter_version": "node-exact-emitter/v1",
-  "target": {
-    "runtime": "NODE",
-    "major": 25,
-    "os": "darwin",
-    "semantic_profile": "countershape-node-core-exact/v1"
+  "source_profile": {
+    "runtime_family": "NODE",
+    "semantic_profile": "countershape-node-core-exact/v1",
+    "adapter_domain": "CLI",
+    "launch_profile": "NODE_REPO_SCRIPT_V1",
+    "subject_entrypoint": "harness.mjs",
+    "start_profile": "DIRECT_CHILD_V1",
+    "scope": "DECLARED_SOURCE_PROFILE_NOT_EXECUTION_EVIDENCE"
   },
   "predicate": {
     "kind": "one-of-exact/v1",
     "scope": "EXACT_WITNESSED_STIMULUS",
     "stimulus_digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
-    "selected_fields": ["http.status", "http.body.kind"],
+    "portable_profile_digest": "sha256:f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1",
+    "selected_fields": [
+      "cli.stdout.bytes"
+    ],
     "allowed_tuples": [
       {
-        "tuple_digest": "sha256:4141414141414141414141414141414141414141414141414141414141414141",
         "fields": [
-          { "field_id": "http.status", "value": { "tag": "INTEGER", "canonical": "404" } },
-          { "field_id": "http.body.kind", "value": { "tag": "STRING", "value": "not_found" } }
-        ]
-      },
-      {
-        "tuple_digest": "sha256:4242424242424242424242424242424242424242424242424242424242424242",
-        "fields": [
-          { "field_id": "http.status", "value": { "tag": "INTEGER", "canonical": "200" } },
-          { "field_id": "http.body.kind", "value": { "tag": "STRING", "value": "authorized_metadata" } }
+          {
+            "field_id": "cli.stdout.bytes",
+            "value": {
+              "base64": "b2sK",
+              "tag": "BYTES"
+            }
+          }
         ]
       }
     ]
   },
-  "artifacts": [
-    { "name": "README.md", "byte_digest": "sha256:5151515151515151515151515151515151515151515151515151515151515151", "byte_count": 640 },
-    { "name": "contract.test.mjs", "byte_digest": "sha256:5252525252525252525252525252525252525252525252525252525252525252", "byte_count": 1024 },
-    { "name": "decision.json", "byte_digest": "sha256:5353535353535353535353535353535353535353535353535353535353535353", "byte_count": 1500 },
-    { "name": "fixture.json", "byte_digest": "sha256:5454545454545454545454545454545454545454545454545454545454545454", "byte_count": 420 },
-    { "name": "harness.mjs", "byte_digest": "sha256:5555555555555555555555555555555555555555555555555555555555555555", "byte_count": 3100 },
-    { "name": "manifest.json", "byte_digest": "sha256:5656565656565656565656565656565656565656565656565656565656565656", "byte_count": 900 }
+  "files": [
+    {
+      "path": "README.md",
+      "mode": "100644",
+      "byte_count": 401,
+      "byte_sha256": "sha256:b84d616a00d9602144c9d841c5c6e0a141ee7c530762127cd318cfeb548aa1a8",
+      "content_base64": "IyBDb3VudGVyc2hhcGUgZXhlY3V0YWJsZSBwbGFubmluZyBmaXh0dXJlCgpUaGlzIHNpeC1maWxlIE5vZGUtY29yZSBidW5kbGUgaXMgYSBzY2hlbWEgYW5kIHZhbGlkYXRvciBmaXh0dXJlLCBub3QgYSBzaGlwcGVkIGVtaXR0ZXIgb3IgcG9ydGFiaWxpdHkgcmVjZWlwdC4KSXQgbGF1bmNoZXMgb25lIGxvY2FsIGNoaWxkIHByb2Nlc3MgYW5kIGNoZWNrcyBvbmUgZXhhY3QgQ0xJIHN0ZG91dC1ieXRlIHR1cGxlLgpJbnRlZ3JpdHkgY2hlY2tzIGRldGVjdCBjaGFuZ2VkIGRlY2xhcmVkIGJ5dGVzOyB0aGV5IGRvIG5vdCBlc3RhYmxpc2ggYXV0aG9yc2hpcCwgYXV0aGVudGljaXR5LCBjb25maWRlbnRpYWxpdHksIGNvbnRhaW5tZW50LCBvciBjb29yZGluYXRlZC1yZXBsYWNlbWVudCByZXNpc3RhbmNlLgo="
+    },
+    {
+      "path": "contract.test.mjs",
+      "mode": "100644",
+      "byte_count": 939,
+      "byte_sha256": "sha256:3ba24f6f6db4a0dace8dd0cd3b492dbd4a86f17bf75064c349b768c601f69153",
+      "content_base64": "aW1wb3J0IGFzc2VydCBmcm9tICJub2RlOmFzc2VydC9zdHJpY3QiOwppbXBvcnQgeyBjcmVhdGVIYXNoIH0gZnJvbSAibm9kZTpjcnlwdG8iOwppbXBvcnQgeyByZWFkRmlsZSB9IGZyb20gIm5vZGU6ZnMvcHJvbWlzZXMiOwppbXBvcnQgdGVzdCBmcm9tICJub2RlOnRlc3QiOwoKY29uc3QgYmFzZSA9IG5ldyBVUkwoIi4vIiwgaW1wb3J0Lm1ldGEudXJsKTsKY29uc3QgbWFuaWZlc3QgPSBKU09OLnBhcnNlKGF3YWl0IHJlYWRGaWxlKG5ldyBVUkwoIm1hbmlmZXN0Lmpzb24iLCBiYXNlKSwgInV0ZjgiKSk7CmZvciAoY29uc3QgZW50cnkgb2YgbWFuaWZlc3QuZmlsZXMpIHsKICBjb25zdCBieXRlcyA9IGF3YWl0IHJlYWRGaWxlKG5ldyBVUkwoZW50cnkucGF0aCwgYmFzZSkpOwogIGFzc2VydC5lcXVhbChieXRlcy5sZW5ndGgsIGVudHJ5LmJ5dGVfY291bnQpOwogIGFzc2VydC5lcXVhbCgic2hhMjU2OiIgKyBjcmVhdGVIYXNoKCJzaGEyNTYiKS51cGRhdGUoYnl0ZXMpLmRpZ2VzdCgiaGV4IiksIGVudHJ5LmJ5dGVfc2hhMjU2KTsKfQoKY29uc3QgeyBldmFsdWF0ZSwgcnVuRml4dHVyZSB9ID0gYXdhaXQgaW1wb3J0KCIuL2hhcm5lc3MubWpzIik7CmNvbnN0IGRlY2lzaW9uID0gSlNPTi5wYXJzZShhd2FpdCByZWFkRmlsZShuZXcgVVJMKCJkZWNpc2lvbi5qc29uIiwgYmFzZSksICJ1dGY4IikpOwpjb25zdCBmaXh0dXJlID0gSlNPTi5wYXJzZShhd2FpdCByZWFkRmlsZShuZXcgVVJMKCJmaXh0dXJlLmpzb24iLCBiYXNlKSwgInV0ZjgiKSk7Cgp0ZXN0KCJleGVjdXRhYmxlIHBsYW5uaW5nIGZpeHR1cmUgZXZhbHVhdGVzIG9uZSBleGFjdCB0dXBsZSIsICgpID0+IHsKICBjb25zdCBvYnNlcnZlZCA9IHJ1bkZpeHR1cmUoZml4dHVyZSk7CiAgYXNzZXJ0LmVxdWFsKGV2YWx1YXRlKGRlY2lzaW9uLCBvYnNlcnZlZCksICJDT05GT1JNUyIpOwp9KTsK"
+    },
+    {
+      "path": "decision.json",
+      "mode": "100644",
+      "byte_count": 254,
+      "byte_sha256": "sha256:f69ce5db26a37ad9b970500ad185b02fbd14bb943ede77ac631f1783ababbd95",
+      "content_base64": "eyJraW5kIjoiQ29tcGlsZWREZWNpc2lvbiIsInByZWRpY2F0ZSI6eyJhbGxvd2VkX3R1cGxlcyI6W3siZmllbGRzIjpbeyJmaWVsZF9pZCI6ImNsaS5zdGRvdXQuYnl0ZXMiLCJ2YWx1ZSI6eyJiYXNlNjQiOiJiMnNLIiwidGFnIjoiQllURVMifX1dfV0sImtpbmQiOiJvbmUtb2YtZXhhY3QvdjEiLCJzZWxlY3RlZF9maWVsZHMiOlsiY2xpLnN0ZG91dC5ieXRlcyJdfSwic2NoZW1hX3ZlcnNpb24iOiJjb3VudGVyc2hhcGUtY29udHJhY3QvdjEifQo="
+    },
+    {
+      "path": "fixture.json",
+      "mode": "100644",
+      "byte_count": 201,
+      "byte_sha256": "sha256:6c7c637c59d63a926cc279e54d7eea4edfae03c5d7bb5984778c99694b748aec",
+      "content_base64": "eyJhcmd2IjpbIi0tc3ViamVjdCJdLCJlbnRyeXBvaW50IjoiaGFybmVzcy5tanMiLCJleHBlY3RlZF9zdGRvdXRfYmFzZTY0IjoiYjJzSyIsImtpbmQiOiJQb3J0YWJsZUZpeHR1cmUiLCJzY2hlbWFfdmVyc2lvbiI6ImNvdW50ZXJzaGFwZS1jb250cmFjdC92MSIsInNvdXJjZV9wcm9maWxlIjoiUExBTk5JTkdfRVhFQ1VUQUJMRV9GSVhUVVJFX1YxIn0K"
+    },
+    {
+      "path": "harness.mjs",
+      "mode": "100644",
+      "byte_count": 1164,
+      "byte_sha256": "sha256:5ad534e07d3fa2207a48056ff6b01791b331134655e344dd691c892a69544dca",
+      "content_base64": "aW1wb3J0IHsgc3Bhd25TeW5jIH0gZnJvbSAibm9kZTpjaGlsZF9wcm9jZXNzIjsKaW1wb3J0IHsgZmlsZVVSTFRvUGF0aCB9IGZyb20gIm5vZGU6dXJsIjsKCmNvbnN0IHNlbGZQYXRoID0gZmlsZVVSTFRvUGF0aChpbXBvcnQubWV0YS51cmwpOwppZiAocHJvY2Vzcy5hcmd2WzFdID09PSBzZWxmUGF0aCAmJiBwcm9jZXNzLmFyZ3ZbMl0gPT09ICItLXN1YmplY3QiKSB7CiAgcHJvY2Vzcy5zdGRvdXQud3JpdGUoQnVmZmVyLmZyb20oImIyc0siLCAiYmFzZTY0IikpOwp9CgpleHBvcnQgZnVuY3Rpb24gcnVuRml4dHVyZShmaXh0dXJlKSB7CiAgaWYgKGZpeHR1cmUuZW50cnlwb2ludCAhPT0gImhhcm5lc3MubWpzIiB8fCBmaXh0dXJlLmV4cGVjdGVkX3N0ZG91dF9iYXNlNjQgIT09ICJiMnNLIikgewogICAgdGhyb3cgbmV3IEVycm9yKCJmaXh0dXJlIHByb2ZpbGUgbWlzbWF0Y2giKTsKICB9CiAgY29uc3QgY2hpbGQgPSBzcGF3blN5bmMocHJvY2Vzcy5leGVjUGF0aCwgW3NlbGZQYXRoLCAuLi5maXh0dXJlLmFyZ3ZdLCB7CiAgICBlbmNvZGluZzogbnVsbCwKICAgIGVudjogeyBMQU5HOiAiQyIsIFRaOiAiVVRDIiB9LAogICAgbWF4QnVmZmVyOiA2NTUzNiwKICAgIHRpbWVvdXQ6IDUwMDAsCiAgICB3aW5kb3dzSGlkZTogdHJ1ZSwKICB9KTsKICBpZiAoY2hpbGQuZXJyb3IpIHRocm93IGNoaWxkLmVycm9yOwogIGlmIChjaGlsZC5zaWduYWwgIT09IG51bGwgfHwgY2hpbGQuc3RhdHVzICE9PSAwKSB0aHJvdyBuZXcgRXJyb3IoInN1YmplY3QgZGlkIG5vdCBleGl0IGNsZWFubHkiKTsKICByZXR1cm4gewogICAgZmllbGRzOiBbewogICAgICBmaWVsZF9pZDogImNsaS5zdGRvdXQuYnl0ZXMiLAogICAgICB2YWx1ZTogeyBiYXNlNjQ6IGNoaWxkLnN0ZG91dC50b1N0cmluZygiYmFzZTY0IiksIHRhZzogIkJZVEVTIiB9LAogICAgfV0sCiAgfTsKfQoKZXhwb3J0IGZ1bmN0aW9uIGV2YWx1YXRlKGRlY2lzaW9uLCBvYnNlcnZlZCkgewogIGNvbnN0IGVuY29kZWQgPSBKU09OLnN0cmluZ2lmeShvYnNlcnZlZCk7CiAgcmV0dXJuIGRlY2lzaW9uLnByZWRpY2F0ZS5hbGxvd2VkX3R1cGxlcy5zb21lKCh0dXBsZSkgPT4gSlNPTi5zdHJpbmdpZnkodHVwbGUpID09PSBlbmNvZGVkKQogICAgPyAiQ09ORk9STVMiCiAgICA6ICJDT05UUkFESUNUUyI7Cn0K"
+    },
+    {
+      "path": "manifest.json",
+      "mode": "100644",
+      "byte_count": 857,
+      "byte_sha256": "sha256:6d57ba646aa65c66515bb75bbbc3c6c676a80e637c7581429b4c97a6626d9664",
+      "content_base64": "eyJzY2hlbWFfdmVyc2lvbiI6ImNvdW50ZXJzaGFwZS1jb250cmFjdC92MSIsImtpbmQiOiJJbnRlZ3JpdHlNYW5pZmVzdCIsIm1hbmlmZXN0X3ZlcnNpb24iOiJjb3VudGVyc2hhcGUtbWFuaWZlc3QvdjEiLCJmaWxlcyI6W3sicGF0aCI6IlJFQURNRS5tZCIsIm1vZGUiOiIxMDA2NDQiLCJieXRlX2NvdW50Ijo0MDEsImJ5dGVfc2hhMjU2Ijoic2hhMjU2OmI4NGQ2MTZhMDBkOTYwMjE0NGM5ZDg0MWM1YzZlMGExNDFlZTdjNTMwNzYyMTI3Y2QzMThjZmViNTQ4YWExYTgifSx7InBhdGgiOiJjb250cmFjdC50ZXN0Lm1qcyIsIm1vZGUiOiIxMDA2NDQiLCJieXRlX2NvdW50Ijo5MzksImJ5dGVfc2hhMjU2Ijoic2hhMjU2OjNiYTI0ZjZmNmRiNGEwZGFjZThkZDBjZDNiNDkyZGJkNGE4NmYxN2JmNzUwNjRjMzQ5Yjc2OGM2MDFmNjkxNTMifSx7InBhdGgiOiJkZWNpc2lvbi5qc29uIiwibW9kZSI6IjEwMDY0NCIsImJ5dGVfY291bnQiOjI1NCwiYnl0ZV9zaGEyNTYiOiJzaGEyNTY6ZjY5Y2U1ZGIyNmEzN2FkOWI5NzA1MDBhZDE4NWIwMmZiZDE0YmI5NDNlZGU3N2FjNjMxZjE3ODNhYmFiYmQ5NSJ9LHsicGF0aCI6ImZpeHR1cmUuanNvbiIsIm1vZGUiOiIxMDA2NDQiLCJieXRlX2NvdW50IjoyMDEsImJ5dGVfc2hhMjU2Ijoic2hhMjU2OjZjN2M2MzdjNTlkNjNhOTI2Y2MyNzllNTRkN2VlYTRlZGZhZTAzYzVkN2JiNTk4NDc3OGM5OTY5NGI3NDhhZWMifSx7InBhdGgiOiJoYXJuZXNzLm1qcyIsIm1vZGUiOiIxMDA2NDQiLCJieXRlX2NvdW50IjoxMTY0LCJieXRlX3NoYTI1NiI6InNoYTI1Njo1YWQ1MzRlMDdkM2ZhMjIwN2E0ODA1NmZmNmIwMTc5MWIzMzExMzQ2NTVlMzQ0ZGQ2OTFjODkyYTY5NTQ0ZGNhIn1dfQo="
+    }
   ],
-  "node_core_only": true,
-  "countershape_import_present": false,
-  "package_registry_required": false,
+  "manifest_policy": "COVERS_OTHER_FIVE_EXCLUDES_SELF_V1",
+  "runtime_dependency_profile": "NODE_CORE_ONLY_V1",
+  "countershape_runtime_binding": "ABSENT_BY_CONSTRUCTION",
+  "package_registry_binding": "NONE",
+  "environment_profile": "EXPLICIT_SPARSE_ALLOWLIST_V1",
+  "external_service_binding": "NONE",
   "determinism_profile": {
     "contains_time": false,
     "contains_random_id": false,
     "contains_absolute_path": false,
     "contains_candidate_identity": false,
-    "contains_secret": false
+    "contains_declared_secret_value": false,
+    "contains_host_runtime_fact": false,
+    "contains_execution_receipt": false
   },
-  "standalone_absence_receipt": {
-    "status": "UNRECEIPTED"
-  }
+  "confidentiality_established": false
 }

@@ -1,23 +1,15 @@
 {
   "schema_version": "countershape/v1",
   "kind": "ContractExecution",
-  "artifact_digest": "sha256:e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3e3",
-  "contract_bundle_digest": "sha256:e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2e2",
-  "current_tree_identity_digest": "sha256:bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-  "world_instance_digest": "sha256:e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4e4",
-  "attempt_artifact_digest": "sha256:e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5",
-  "runtime": {
-    "name": "node",
-    "major": 25,
-    "os": "darwin",
-    "architecture": "arm64"
-  },
-  "captured_observation_digest": "sha256:e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6",
-  "projection_result_digest": "sha256:e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7",
+  "execution_version": "contract-execution/v1",
+  "publication_scope": "IMMUTABLE_NONHEAD_EVIDENCE_V1",
+  "contract_execution_target_digest": "sha256:d1021cf215475b4db18fbc5f78d58fd79270f038f044a3bd871aa7c5e3fa415d",
+  "finalized_contract_run_digest": "sha256:9eb9ea9571f3461bfc57a38ccbb6b7003c798748c74bf9fdf86e0490a1d49a4e",
   "result": {
     "execution_class": "ELIGIBLE_OBSERVATION",
     "conformance": "CONFORMS"
   },
   "historical_execution_evidence_reused": false,
-  "choicepoint_freshened": false
+  "choicepoint_freshened": false,
+  "study_head_advanced": false
 }

@@ -1,0 +1,43 @@
+{
+  "schema_version": "countershape/v1",
+  "kind": "ContractExecutionTarget",
+  "target_version": "contract-execution-target/v1",
+  "publication_scope": "IMMUTABLE_NONHEAD_PRESPAWN_AUTHORITY_V1",
+  "contract_bundle_digest": "sha256:2d386060f61cc065cf709ba7a545fd9b9599f9b42a37387d5afdef8dda55f5a0",
+  "source_binding": {
+    "portable_source_digest": "sha256:d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1",
+    "portable_profile_digest": "sha256:f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1",
+    "source_profile_digest": "sha256:95bce5ba9f88599c289c6f95dddb633968da1cdfb9cb49ff80abecb74d33126c"
+  },
+  "tree_binding": {
+    "authority": "GIT_PIN_INSPECT_MATERIALIZE_V1",
+    "pinned_tree": {
+      "object_format": "sha1",
+      "commit_oid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "tree_oid": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "tree_identity_digest": "sha256:43a2ee21ecf1e11ec2dfbf7322cac9f4fa526ebe3c4f7acfc4b4f33b9521fd11"
+    },
+    "portable_tree_digest": "sha256:c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2",
+    "materialization_policy_digest": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
+    "materialization_manifest_digest": "sha256:c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4",
+    "execution_root_scope": "PRIVATE_PINNED_MATERIALIZATION_ONLY_V1"
+  },
+  "attempt_binding": {
+    "purpose": "CONFORMANCE",
+    "attempt_artifact_digest": "sha256:e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5",
+    "instance_nonce": "0123456789abcdef0123456789abcdef",
+    "allocation_profile": "PRIVATE_FRESH_ROOT_V1",
+    "marker_ordering": "DURABLE_BEFORE_SPAWN"
+  },
+  "runtime_binding": {
+    "authority": "ADMITTED_NODE_PROCESS_EXEC_PATH_V1",
+    "name": "node",
+    "version": "25.2.1",
+    "major": 25,
+    "os": "darwin",
+    "architecture": "arm64",
+    "executable_bytes_digest": "sha256:e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8",
+    "probe_program_digest": "sha256:e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9",
+    "child_resolution": "PROCESS_EXEC_PATH_EQUALS_ADMITTED_RUNTIME_V1"
+  }
+}

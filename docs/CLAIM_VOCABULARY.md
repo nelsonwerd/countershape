@@ -106,16 +106,21 @@ A naked `PreservationMapDigest`, display grouping, support count, or per-run adm
 | `Choicepoint` | immutable strict archive for one exact fresh-confirmed witness | current decision publication additionally requires the exact store-bound `CHOICEPOINT_READY` capability |
 | `identity-hidden blind step` | the U6 DTO omits candidate/ref/producer/count/support/order/reveal fields | behavior can reveal provenance; distinct outcome count remains visible; no anonymity claim |
 | `local-caller-attributed exact-witness ruling record` | a DecisionRecord applies only to one Choicepoint and explicit fields | `LOCAL_CALLER_ASSERTED_OPERATOR`; `AUTHENTICITY_NOT_ESTABLISHED_IN_U6`; presentation is not comprehension |
+| `adapter-bound portable ruling` | roster-verified unchanged adapter projection bytes were strictly interpreted under their exact projection binding into complete portable tuples | exact translator/profile version; not runnable-source authority; legacy whole-projection records are nonemittable |
+| `PortableSource reconstruction witness` | a closed adapter constructor retained runnable bytes and reproduced the exact Choicepoint plan, projection binding, minimized stimulus, portable profile, and every verified confirmation execution-binding digest; HTTP also matched the child-bind start authority | emission-time authority only; contains no confirmation proof/tuple bytes, is not a ruling, and does not prove the raw bytes were historically stored in the DecisionRecord |
 | `ALLOW_OBSERVED` | one or more complete confirmed observed tuples are positively allowed | exact alias expansion, tuple set, and separation proof |
-| `CUSTOM_EXPECTATION` | one reviewed authored tuple absent from every confirmed selected-field tuple is positively expected | matching an observed tuple is `CUSTOM_EXPECTATION_ALREADY_OBSERVED` |
+| `CUSTOM_EXPECTATION` | one reviewed authored tuple containing exactly the selected fields and absent from every confirmed selected-field tuple is positively expected | no unselected field; matching an observed tuple is `CUSTOM_EXPECTATION_ALREADY_OBSERVED` |
 | `REJECT_ALL` | dissatisfaction without a positive oracle | strict noncompilable DecisionRecord |
 | `DEFER` | finalized noncompilable defer DecisionRecord | U6 may store it at `RULING`; no executable residue or deferred-session reopening |
 | `REFINE` | semantic request for a successor study | U6 promotion returns `REFINE_REQUIRES_SUCCESSOR_STUDY`; no publication or head advance |
 | `AMBIGUOUS_SCOPE` | selected fields fail to separate allowed and disallowed confirmed tuples | no compilable DecisionRecord or emitted files |
-| `standalone selected-field test` | deterministic six-file Node bundle ran under its exact absence/parity receipt | exact Node major, native OS, predicate profile, selected fields |
-| `CONFORMS` | current eligible observation matches one allowed selected-field tuple | current execution only |
-| `CONTRADICTS` | current eligible observation matches no allowed selected-field tuple | current execution only |
-| `INELIGIBLE_EXECUTION(reason)` | current harness/control/capture/projection/teardown could not yield eligible conformance | not a contradiction |
+| `standalone selected-field test` | a recoverable deterministic six-file Node bundle compiled from a current portable ruling plus an exact source witness and ran under its exact target-inventory/parity evidence | exact target/runtime, predicate/source profile, selected fields; no host-wide absence or containment claim |
+| `ContractExecutionTarget` | immutable nonhead pre-spawn authority constructed from the reopened bundle/source, a live Git-issued explicit pinned and verified materialization, a fresh durable conformance attempt, and an admitted/revalidated Node runtime | external typed digest; parsed bytes and copied OIDs/digests are inert; no process-result or study-head claim |
+| `FinalizedContractRun` | immutable nonhead physical-run authority bound to one exact target and its exact attempt, closed lifecycle, constructor-derived clean/ineligible disposition, exact projected tuple when present, and scoped standalone evidence | no conformance classification, another-target pairing, host-wide absence, confidentiality, or study-head claim |
+| `ContractExecution` | immutable nonhead derived classification bound to one exact target and that target's exact finalized run | no independently supplied tuple/control reason, duplicate target/runtime/lifecycle/observation fields, historical freshening, or head advance |
+| `CONFORMS` | target-eligible observation matches one allowed selected-field tuple | this execution only |
+| `CONTRADICTS` | target-eligible observation matches no allowed selected-field tuple | this execution only |
+| `INELIGIBLE_EXECUTION(reason)` | target harness/control/capture/projection/teardown could not yield eligible conformance | not a contradiction |
 
 Visited UI panels prove presentation only. They do not prove reading, comprehension, reduced bias, or review compression.
 
@@ -157,7 +162,7 @@ Environment is part of the claim, never a footnote.
 | --- | --- | --- |
 | Darwin process lifecycle | native Darwin load-bearing suite through didrun on named architecture/kernel/tool versions | Linux, Windows, other architectures, different lifecycle code |
 | Linux compilation | cross-build command receipt | Linux runtime behavior, process groups, permissions, filesystem semantics |
-| Node standalone runtime | actual absence/parity/conformance run on exact Node major and native OS | other Node majors and OS combinations |
+| Node standalone runtime | actual target-inventory absence/parity/conformance run on exact Node version, major, native OS, and architecture | other versions, majors, OS/architecture combinations, host-wide absence, network or registry denial |
 | Git materialization | exact Git version/object-format fixture suite with network/replacement/fetch negatives | other Git versions/object formats or arbitrary repository success |
 | Reference-study timing | complete fresh study command on named machine and disclosed budgets | imported repository timing or other machines |
 | CLI surface | exact CLI workflow tests on current tree | studio behavior |
@@ -200,7 +205,8 @@ A receipt for a command that merely lists files cannot support runtime behavior.
 | U4 | “named HTTP and CLI fixtures reuse the bounded truth kernel” | arbitrary adapter/repository support |
 | U5 | exact `BEST_KNOWN` or `ONE_MINIMAL_UNDER(...)` with reducer/budget evidence | causal/global-minimum language |
 | U6a | strict Choicepoint/Decision codecs, physical confirmation, blind identity/support omission, and fixed Darwin CAS spine only when mapped to exact receipts | authenticated-human authorship, complete studio payload, successor/stale lifecycle, REFINE successor creation, deferred reopening, Node residue, other filesystems, power-loss recovery, or production security |
-| U6b | deterministic standalone residue only after exact Go/Node parity and Countershape-absence evidence | current correctness, broad portability, repository integration safety, or authenticated-human authorship |
+| U6b / P07A | adapter-bound portable selected-field ruling only after unchanged-wire/profile, legacy-compatibility, physical study, and mutation receipts | runnable source, standalone bundle, residue, current conformance, or broad adapter portability |
+| U6c / P07B | recoverable deterministic standalone residue only after exact source reconstruction, raw-wire Go/Node parity, stale-publication, retryable-materialization, target-inventory absence, and exact runtime evidence | current correctness, host-wide absence, broad portability, repository integration safety, confidentiality, or authenticated-human authorship |
 | U7 | “narrowed Darwin reference studies passed the named acceptance gates” | arbitrary-repository success or human benefit |
 | U8 | exact authenticated/blind/viewport/accessibility observations | comprehension, bias reduction, production web security |
 | U9 | per-capability final receipt map and minimized local export | umbrella completion, market validation, maintainability |

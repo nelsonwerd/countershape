@@ -8,14 +8,14 @@
 - **Objective:** autonomously research, design, red-team, prompt-pack, build, and multi-pass exercise an ambitious local-first 2026 AI/vibe-coder infrastructure project, with didrun evidence at every shippable build unit.
 - **Working product:** **Countershape**, narrowed to a Darwin reference instrument for exact witnessed decisions.
 - **Product verb:** resolve a Choicepoint.
-- **One-line promise:** compare exact repository candidates inside declared fresh comparison envelopes, locally reduce an observed-stable split under named rules, record one exact local-caller-attributed expectation without branch/majority cues, and emit a standalone selected-field regression contract.
+- **One-line promise:** compare exact repository candidates inside declared fresh comparison envelopes, locally reduce an observed-stable split under named rules, record one exact local-caller-attributed expectation without branch/majority cues, and emit a standalone selected-field regression contract only when exact runnable source reconstructs that same witness.
 
 ## Current state
 
-- **Pipeline phase:** U0–U6 are sealed and strict-clean. P07/U6b, the standalone contract compiler and fresh conformance execution boundary, is next.
+- **Pipeline phase:** U0–U6 are sealed and strict-clean. The P07 implementation-time red team found a real authority gap and split the work. The corrected planning-contract boundary is being receipted; P07A/U6b portable selected-field ruling authority is the next source unit, followed by P07B/U6c standalone residue.
 - **Git:** repository is on `codex/countershape-autopilot`. The last sealed implementation boundary is U6a commit `64b65cbfa6099f9be88c2de3cc2cc4dd5ff9ff81`, tree `27dc5f5d4930cc9a4f759e4e4973ed7fb4d5b6d6`; the U6 receipt-document boundary is the commit carrying this handoff and `docs/status/U6.md`, so resolve it locally instead of copying a self-referential hash from prose. Treat all identifiers as orientation until confirmed locally.
 - **didrun:** installed globally. The first shared pre-commit ledger broke under concurrent writers and is preserved, never claimed or sealed. The replacement ledger is serialized. See `docs/status/DIDRUN_BUGS.md` before recording evidence.
-- **Build:** U5 adds the sealed bounded tri-valued reducer, strict transcript/replay boundary, typed CLI/HTTP neighbors, and durable sweep authority. Sealed U6 adds a bounded immutable semantic object store, full-token CAS fixed head spine through `RULING`, physical fresh confirmation, strict Choicepoint/DecisionRecord codecs, blind semantic DTO/session, sealed compile eligibility, and predecessor/action-bound opaque publication capabilities. `REFINE` may exist as a semantic noncompilable DecisionRecord, but durable promotion returns `REFINE_REQUIRES_SUCCESSOR_STUDY` with no object or head mutation. No emitter, standalone bundle, product CLI, server, dashboard, visual renderer, or report exists.
+- **Build:** U5 adds the sealed bounded tri-valued reducer, strict transcript/replay boundary, typed CLI/HTTP neighbors, and durable sweep authority. Sealed U6 adds a bounded immutable semantic object store, full-token CAS fixed head spine through `RULING`, physical fresh confirmation, strict Choicepoint/DecisionRecord codecs, blind semantic DTO/session, sealed compile eligibility, and predecessor/action-bound opaque publication capabilities. Fresh U6 Choicepoints still use only `WHOLE_EXACT_CANONICAL_PROJECTION_V1`; they cannot honestly emit a selected-field contract. `REFINE` may exist as a semantic noncompilable DecisionRecord, but durable promotion returns `REFINE_REQUIRES_SUCCESSOR_STUDY` with no object or head mutation. P07 planning includes an executable generated six-file schema fixture only; it is not store-bound source authority or a runtime emitter. No portable selected-field ruling, source witness, runtime-generated standalone bundle, product CLI, server, dashboard, visual renderer, or report exists.
 - **External APIs:** none used in the product. Current web research is read-only. Real model integrations remain human-gated and must never be faked.
 
 ## Read first, in order
@@ -24,15 +24,16 @@
 2. `docs/CONCEPT_BRIEF.md`
 3. `docs/SEMANTICS.md`
 4. `docs/PROJECTION_ALGEBRA.md`
-5. `research/ideation/07-divergence-and-selection.md`
-6. `research/ideation/06-founder-falsification.md`
-7. `research/ideation/05-counterfactual-prior-art.md`
-8. `research/ideation/04-finalist-duel.md`
-9. `research/ideation/02-wake-overlap-audit.md`
-10. `research/grounding/00-last30days-synthesis.md`
-11. this handoff
+5. `research/deep-dive/11-p07-implementation-red-team.md`
+6. `research/ideation/07-divergence-and-selection.md`
+7. `research/ideation/06-founder-falsification.md`
+8. `research/ideation/05-counterfactual-prior-art.md`
+9. `research/ideation/04-finalist-duel.md`
+10. `research/ideation/02-wake-overlap-audit.md`
+11. `research/grounding/00-last30days-synthesis.md`
+12. this handoff
 
-Read `research/deep-dive/07-SYNTHESIS.md` and `08-RED_TEAM.md` immediately after the brief and before the ideation files.
+Read `research/deep-dive/07-SYNTHESIS.md`, `08-RED_TEAM.md`, and the later P07 implementation-time correction immediately after the semantic contracts and before the ideation files.
 
 ## Why the original idea was killed
 
@@ -56,7 +57,7 @@ A Choicepoint contains:
 - comparability-first tri-valued reduction: U1 owns only `PRESERVES`, `CHANGES`, `UNRESOLVED`, and logical sweep evidence; sealed U5 may award only `UNCHANGED`, `BEST_KNOWN`, or `ONE_MINIMAL_UNDER` under its durable authority;
 - blind-first local-caller ruling: allow one/many, custom expectation, reject all, or defer may promote to the fixed `RULING` head; semantic `REFINE` is noncompilable and durable promotion refuses because successor-study construction is not implemented;
 - exact-witness scope only, no-default selected fields, nonasserted fields, and mandatory allowed/disallowed separation;
-- separate DecisionRecord, deterministic ContractBundle, and fresh ContractExecution; derived wire facts such as `compilable` are reconstructed and never accepted as emitter authority;
+- separate DecisionRecord, deterministic ContractBundle, pre-spawn ContractExecutionTarget, exact FinalizedContractRun, and fresh ContractExecution classification; derived wire facts such as `compilable` are reconstructed and never accepted as emitter authority;
 - Go/Node semantic parity vectors and physical Countershape-absence proof;
 - receipt references without grade inflation.
 
@@ -76,6 +77,25 @@ Stop if implementation becomes:
 ## Completed deep-dive ruling
 
 All six specialist lanes, synthesis, and adversarial red team are complete under `research/deep-dive/`. The red team granted only a conditional go for a narrowed Darwin reference instrument. It cut symlinks, general compatible-world language, execution-evidence reuse, broad imported-repository/cross-platform claims, and safe/shareable-report language. It made Go/Node parity and a falsification-first stateful proof blockers.
+
+## P07 implementation-time red-team correction
+
+The preimplementation P07 review found that sealed U6 cannot support its original prompt literally:
+
+- every fresh Choicepoint constructs only the whole projection, so its current DecisionRecord cannot authorize `http.status`, `cli.stdout.json.mode`, an unselected-field change, or a selected-only custom `401` expectation;
+- canonical stimuli retain content digests but not every stdin/body/fixture/seed byte needed to run a standalone test;
+- rewriting adapter projection envelopes would invalidate sealed fingerprints and downstream evidence;
+- the inherited-listener HTTP start cannot be reproduced by a reference-quality Node-only parent, and Node's high-level HTTP client normalizes bytes differently from the Go wire parser;
+- the old ContractBundle/ContractExecution planning schemas placed a self digest inside its own preimage, omitted recoverable file bytes, and mixed later absence evidence into deterministic source; and
+- the first corrected ContractExecution plan still tried to reuse a 2–4-candidate historical `WorldInstance` for an arbitrary later tree and admitted an unproven generic repository executable; and
+- terminal `RESIDUE` cannot also act as a mutable execution head.
+
+The locked correction in `research/deep-dive/11-p07-implementation-red-team.md` is:
+
+1. **P07A/U6b:** preserve every historical CLI/HTTP projection byte and the 27-member Choicepoint body; strictly translate roster-verified adapter wires under the exact projection binding into a closed portable algebra; make fresh Choicepoints use `ADAPTER_BOUND_PORTABLE_FIELDS_V1`; add real selectable/differing fields and selected-only custom expectations; keep legacy whole-projection records byte-identical and nonemittable.
+2. **P07B/U6c:** require the current portable ruling plus a byte-complete `PortableSource` that reconstructs the exact plan/binding/minimized stimulus and matches every verified confirmation execution-binding digest; independently retranslate reopened confirmation projections rather than trusting source-carried tuples; add and freshly observe the HTTP child-bind/pipe-readiness profile; support only the antecedent-backed logical-Node-plus-repository-script launch; compile a recoverable six-file bundle; stale-check before publication; make post-residue materialization retryable; use raw `node:net` parity; publish/reopen a capability-only `ContractExecutionTarget` for one explicit pinned/verified tree, fresh attempt, and admitted runtime before spawn; publish a matching `FinalizedContractRun` only after the exact lifecycle closes with a constructor-derived disposition, exact projected tuple when present, and scoped standalone evidence; and publish `ContractExecution` as immutable nonhead derived classification bound to both exact objects, with no independently supplied tuple or control reason.
+
+This is a prerequisite repair, not a scope reduction. P07A selected-field authority is explicitly not yet export-ready source authority.
 
 ## Smallest proof now locked
 
@@ -207,10 +227,10 @@ U6a sealed at implementation commit `64b65cbfa609`, tree `27dc5f5d4930`. `NO_COL
 
 The plain seal stopped on 54 aggregate entropy findings. After the exact inventory and scoped credential-prefix scan, U6 sealed with `--allow-secrets (redacted export)`. This is not a secret-free finding or security review. Permanent failed events `651`, `656`, `662`, `671`, `672`, `680`, `698`, `699`, `701`, `728`, and `759` support no capability. Events through `728` record defects found and fixed during the build; event `759` records an operator-invoked stale planning-check path. The exact qualification ledger lives in `docs/status/U6.md`.
 
-### U6 operational facts that P07 must preserve
+### U6 operational facts that P07A/P07B must preserve
 
 - **Store/layout:** closed `countershape/v1` canonical payloads live under `objects/sha256/<prefix>/<digest>`; mutable heads live under `studies/<derived-study-id>/head.json`; private capture material has a separate private directory. This is a local Darwin reference layout, not a stable public migration format.
-- **Head spine:** `SOURCE_PLAN -> BASELINE -> DIVERGENCE -> REDUCTION -> CONFIRMATION -> CHOICEPOINT_READY -> RULING`. U6a exposes no `RESIDUE` transition, branching lineage, archived history, partial resume, or cancelled resume.
+- **Head spine:** `SOURCE_PLAN -> BASELINE -> DIVERGENCE -> REDUCTION -> CONFIRMATION -> CHOICEPOINT_READY -> RULING`. U6a and P07A expose no `RESIDUE` transition, branching lineage, archived history, partial resume, or cancelled resume. P07B may add one terminal ContractBundle residue; ContractExecutionTarget, FinalizedContractRun, and ContractExecution remain separate immutable nonhead objects.
 - **Freshness:** confirmation creates a fresh 32-byte challenge, derives an exact ordinal nonce, requires finalized `CONFIRMATION` process-edge facts, and enforces current-run plus discovery/reduction evidence disjointness. This is relative physical-fixture evidence, not hostile-process attestation or timestamp truth.
 - **Blind kernel:** the closed DTO omits system-supplied candidate/ref/producer identity, support counts, total candidate count, source order, and reveal data; fingerprint-only aliases/order ignore support. Caller-authored scenario or behavior content may still reveal identity, and U6 says nothing about DOM/accessibility/CSS behavior.
 - **Attribution:** a DecisionRecord says `LOCAL_CALLER_ASSERTED_OPERATOR` and `AUTHENTICITY_NOT_ESTABLISHED_IN_U6`. Review-surface markers prove recorded presentation only, not comprehension or debiasing.
@@ -220,10 +240,10 @@ The plain seal stopped on 54 aggregate entropy findings. After the exact invento
 ## Exact next actions if this task resumes elsewhere
 
 1. Run `git status --short --branch`; confirm U6 implementation commit `64b65cbfa6099f9be88c2de3cc2cc4dd5ff9ff81` and this receipt-document boundary are sealed and strict-clean, and ensure no `.didrun` path is staged or tracked.
-2. Read `docs/prompts/P07-U6-STANDALONE-CONTRACT.md`, `docs/status/U6.md`, and the controlling semantic/architecture contracts. Deep-dive and red-team P07's load-bearing compiler/execution claims before writing code; narrow the prompt when evidence requires it.
-3. Implement only P07/U6b: deterministic standalone contract emission from current store-bound `promotion.Ruling`, exact bundle/manifest bytes, isolated fixture execution, absence traps, and parity. Do not begin the product CLI/server/studio work owned by U7/U8.
+2. Read `research/deep-dive/11-p07-implementation-red-team.md`, `docs/prompts/P07A-U6-PORTABLE-RULING.md`, `docs/status/U6.md`, and the controlling semantic/architecture contracts. Confirm the separately receipted planning correction is strict-clean before source edits.
+3. Implement only P07A/U6b: unchanged historical projection bytes, strict adapter-bound portable profiles/translators, selected-field Choicepoints and rulings, real selectable/differing fields, selected-only custom expectations, and legacy nonemittable preservation. Do not add PortableSource, portable HTTP start, bundle emission, residue, product CLI, server, or studio.
 4. Wrap every load-bearing verification command in `didrun run --`. Any nonzero command or mutant survivor is a real unfinished result: repair, rerun, preserve failed history, and never weaken or relabel the gate.
-5. At the P07 shippable boundary, declare only successful final-tree claims, stage exact intended paths, commit, run `didrun seal --commit HEAD`, and loop `NO_COLOR=1 didrun verify --strict` until exit `0`.
+5. At the P07A shippable boundary, declare only successful final-tree claims, stage exact intended paths, commit, run `didrun seal --commit HEAD`, and loop `NO_COLOR=1 didrun verify --strict` until exit `0`. Only then read and execute the corrected P07B prompt.
 6. Keep the root as sole writer and sole didrun/claim/Git/seal operator. Parallel agents may perform bounded read-only audits only; never allow parallel didrun writers in this repository.
 7. Human surfaces arrive in U8. Run at least three functional/visual loops and a real different-model critic there; label that external evidence honestly.
 8. Before final delivery, run the human-cleared S6 disposable real-agent protocol, produce strict plus HTML didrun reports, map every claim to its verbatim grade, and disclose the adoption, production-hardening, security-review, cross-platform, and maintainership tail.
@@ -236,6 +256,6 @@ Before editing, reply in your working notes with:
 2. the three distinct truth authorities (Git, Choicepoint observations/ruling, didrun receipts);
 3. two things the system must never claim;
 4. the current last sealed implementation commit (`64b65cbfa6099f9be88c2de3cc2cc4dd5ff9ff81`, verify locally), its `18/18 TREE-EXACT` strict didrun verdict, and U6's explicit nonclaims; and
-5. the current bounded shippable unit (P07/U6b standalone contract and fresh conformance execution only).
+5. the current bounded shippable unit (P07A/U6b portable selected-field ruling authority only; no runnable source or residue yet).
 
 If any answer is missing, read the files above again. Do not infer a didrun grade from this handoff; run strict verification locally.

@@ -2,8 +2,8 @@
 
 - **Working name:** Countershape (package, domain, trademark, and legal clearance not performed)
 - **Mode:** open-source-first experimental infrastructure
-- **State:** deep dive and adversarial red team complete; U1–U6 sealed and strict-clean; P07 standalone-contract work is next
-- **Last updated:** 2026-07-16
+- **State:** deep dive and adversarial red team complete; U1–U6 sealed and strict-clean; the implementation-time P07 red team split portable ruling authority from standalone residue; P07A is next
+- **Last updated:** 2026-07-15
 - **Founder persona:** Soren Vale
 - **Confidence:** 8/10 in the truth kernel; 6/10 in the bounded reference instrument; 3/10 in review compression; 3/10 in adoption
 - **Semantic authority:** `docs/SEMANTICS.md` and `docs/PROJECTION_ALGEBRA.md` control structural identity, measurement/admission, and preservation semantics
@@ -12,7 +12,7 @@
 
 ### One-line promise
 
-**Countershape compares exact repository candidates inside declared fresh comparison envelopes, locally reduces an observed-stable behavioral split under named rules, lets a local caller state one exact witnessed expectation without branch or majority cues, and emits a standalone selected-field regression contract.**
+**Countershape compares exact repository candidates inside declared fresh comparison envelopes, locally reduces an observed-stable behavioral split under named rules, lets a local caller state one exact witnessed expectation without branch or majority cues, and—only when exact runnable source reconstructs that same witness—emits a standalone selected-field regression contract.**
 
 ### What it is—and is not
 
@@ -51,8 +51,9 @@ On a named Darwin reference machine, each checked-in dependency-free study must 
 9. a physically new confirmation batch with fresh attempt artifacts and fixture-observed invocation evidence;
 10. blind-first allow-one, allow-many, custom expectation, reject-all, and defer semantics;
 11. weak selected fields failing closed with `AMBIGUOUS_SCOPE`;
-12. a deterministic Node-core bundle running with Countershape absent; and
-13. current conformance that distinguishes eligible contradiction from an ineligible harness execution.
+12. an adapter-bound selected-field ruling whose exact historical projection bytes remain the fingerprint authority;
+13. a byte-complete source witness reconstructing that ruling's exact minimized stimulus before any deterministic Node-core bundle runs with Countershape absent from the target inventory; and
+14. current conformance that distinguishes eligible contradiction from an ineligible harness execution without advancing the terminal study head.
 
 The 15-minute metric applies only to the two reference studies. Imported repositories receive explicit trial, wall, byte, and setup budgets and no latency, comparability, or success guarantee.
 
@@ -99,7 +100,7 @@ A negative fixture demonstrates why the machinery matters: a deliberately naive 
 
 A physically new confirmation batch uses new attempt artifacts, invocation counters outside the selected predicate, and a rotated schedule. The blind-first ruling allows the `404` outcome, selects status only, shows the metadata body as nonasserted, and reveals provenance before finalization. A deliberately weak field set must return `AMBIGUOUS_SCOPE`.
 
-The emitted bundle runs with Countershape binaries, source, packages, services, and package registry absent; loopback remains available because the local HTTP service is the test subject. Candidate B conforms; A and C contradict. Candidate D's current execution is classified from current evidence and never rewrites its historical instability. A custom `401` expectation makes every eligible stable candidate contradict. `REJECT_ALL` emits no code.
+The emitted bundle runs without a Countershape runtime, package, import, service binding, or `PATH` dependency in the isolated target inventory. No package-registry denial is claimed; loopback remains available because the local HTTP service is the test subject. Candidate B conforms; A and C contradict. Candidate D's current execution is classified from current evidence and never rewrites its historical instability. A custom `401` expectation makes every eligible stable candidate contradict. `REJECT_ALL` emits no code.
 
 ### CLI precedence study
 
@@ -150,9 +151,12 @@ This study proves the second typed adapter while reusing only identity, eligibil
 | What compared equal? | `ProjectionDefinition` + exact canonical `ProjectionResult` | correctness or semantic equivalence |
 | What split was observed? | confirmed `CandidateOutcomeMap` after admission and eligibility | majority truth, determinism, or physical freshness from structure alone |
 | What was reduced? | transcript, budgets, reducer set, grade | global minimum, root cause, or comprehension |
-| What did the human state here? | immutable `DecisionRecord` | broader intent, safety, or branch endorsement |
-| What source was emitted? | deterministic `ContractBundle` digest | current conformance or authenticity |
-| Does the current tree satisfy the predicate? | fresh `ContractExecution` | recreation of historical evidence or overall correctness |
+| What did the local caller state here? | immutable `DecisionRecord` over exact confirmed projection evidence | human authenticity, broader intent, safety, or branch endorsement |
+| Which runnable bytes reconstruct that exact witness? | strict live `PortableSource` preimage witness at emission time | a ruling by itself retaining or recovering raw source |
+| What source was emitted? | recoverable deterministic `ContractBundle` at its external typed digest | current conformance, receipt status, or authenticity |
+| What exact later target may run the contract? | fresh immutable nonhead `ContractExecutionTarget` | process execution, dirty working-tree inclusion, or historical `WorldInstance` authority |
+| What physically finalized against that exact target? | fresh immutable nonhead `FinalizedContractRun` | classification, another target/attempt, host-wide absence, or confidentiality |
+| Does that exact finalized run satisfy the predicate? | fresh immutable nonhead `ContractExecution` | recreation of historical evidence, head advancement, or overall correctness |
 | Did a command run against a Git tree? | didrun's verbatim grade, when present | any stronger product claim |
 
 Every persisted Countershape object has a schema version, kind, canonical bytes, and domain-separated SHA-256 digest. The Go identity layer rejects duplicate object names, unsafe internal integers, negative zero, non-finite numbers, invalid UTF-8, lone surrogates, and unsupported numeric forms before typed values exist. It never Unicode-normalizes.
@@ -171,10 +175,13 @@ The normative objects are:
 10. `ProjectionDefinition` and `ProjectionResult`: pure, versioned, visible operations ending in exact canonical bytes or typed rejection.
 11. `StableBatch` and `CandidateOutcomeMap`: tagged repeated trials, a shared ordered per-repetition admission-digest set across candidate batches, explicit exclusions, globally unique evidence identities, and the canonical sorted `candidate_execution_key -> projection_fingerprint` map. Display clusters are derived views with no identity.
 12. `ReductionRun`: U5's inert bounded-run body with a separate `ReductionTranscript`; it carries only `UNCHANGED` or `BEST_KNOWN`. Transcript bytes reconstruct intent but cannot execute replay without the exact compare-owned divergent baseline, and replay receipts establish only bounded same-domain digest noncollision. `CompletedSweepDraft` is separately persisted, and only the outward store-backed `ReductionGrade` may carry `ONE_MINIMAL_UNDER`.
-13. `Choicepoint`: immutable fresh-confirmed decision-ready revision with original/minimized stimuli, exact maps, evidence, exclusions, and a U5 reduction grade.
-14. `DecisionRecord`: blind/reveal facts, local-caller-attributed action, selected and nonasserted fields, exact scope, rationale, the explicit `AUTHENTICITY_NOT_ESTABLISHED_IN_U6` nonclaim, and verbatim receipt references. Derived wire booleans such as `compilable` are reconstructed, never emitter inputs.
-15. `ContractBundle`: deterministic six-file Node-core source bundle with a typed exact predicate.
-16. `ContractExecution`: current eligible conformance/contradiction or typed ineligible execution evidence; it never freshens the Choicepoint.
+13. `Choicepoint`: immutable fresh-confirmed decision-ready revision with original/minimized stimuli, exact maps, evidence, exclusions, and a U5 reduction grade. Sealed U6 fresh construction currently uses only the legacy whole-projection ruling mode; P07A owns the new adapter-bound portable mode while retaining the same 27-member body.
+14. `DecisionRecord`: blind/reveal facts, local-caller-attributed action, selected and nonasserted fields, exact scope, rationale, the explicit `AUTHENTICITY_NOT_ESTABLISHED_IN_U6` nonclaim, and verbatim receipt references. Derived wire booleans such as `compilable` are reconstructed, never emitter inputs. A legacy whole-projection record remains historical but cannot authorize standalone emission.
+15. `PortableSource`: a future P07B live exact reconstruction witness, not a ruling or self-authenticating serialized claim. Its closed adapter constructor retains bounded runnable bytes and must reproduce the Choicepoint's exact plan, projection binding, and minimized stimulus before compilation.
+16. `ContractBundle`: deterministic recoverable six-file Node-core source, typed exact predicate, and every exact file byte. Its domain-separated digest is external to its canonical body.
+17. `ContractExecutionTarget`: immutable nonhead pre-spawn authority over the reopened bundle/source profile, one explicit Git-pinned inspected and verified private materialization, one fresh durable conformance attempt, and one admitted/revalidated Node runtime. Its external typed digest is absent from its body; parsed bytes are inert.
+18. `FinalizedContractRun`: immutable nonhead physical-run authority bound to one exact target and the same exact fresh attempt, with closed lifecycle, a constructor-derived clean/ineligible disposition, the exact projected tuple when present, and scoped target-inventory/child-binding evidence. Its external typed digest is absent from its body.
+19. `ContractExecution`: separately published derived conformance/contradiction or ineligible classification bound to one exact target and its exact finalized run; it independently authors neither tuple nor control reason, duplicates no target/lifecycle/observation authority, and never freshens the Choicepoint or changes the terminal study head.
 
 Git is content authority. Countershape is authority only for the canonical artifacts and transitions it creates. The human is authority only for the fields and exact witness they explicitly rule on. didrun remains external; an unknown grade round-trips unchanged and missing evidence is `UNRECEIPTED`.
 
@@ -225,7 +232,7 @@ The v1 actions are:
 - `DEFER`; and
 - `REFINE` as a semantic request for a successor study. U6 can construct the noncompilable record, but durable promotion returns `REFINE_REQUIRES_SUCCESSOR_STUDY` before publication or head mutation; successor-study construction remains future work.
 
-Only allow-observed and custom-expectation records can compile. Exact witnessed stimulus is the only scope. No field is preselected. Each differing projected field is explicitly `Assert` or `Context only`; nonasserted fields remain visible.
+Only allow-observed and custom-expectation records are semantically compilable. Exact witnessed stimulus is the only scope. No field is preselected. Each differing projected field is explicitly `Assert` or `Context only`; nonasserted fields remain visible. Sealed U6 currently offers only one whole-projection field, so those records are not standalone-portable. P07A must derive a closed adapter-bound field profile from the exact WorldPlan projection binding, verify and strictly translate the unchanged historical projection bytes, and only then expose real selectable and differing fields.
 
 U6 actor fields establish caller-supplied local attribution only: `actor_attribution = LOCAL_CALLER_ASSERTED_OPERATOR` and `actor_authenticity = AUTHENTICITY_NOT_ESTABLISHED_IN_U6`. Canonical bytes do not prove that an authenticated human authored the action. `DEFER` may become a noncompilable fixed-stage `RULING`, but deferred-session reopening is not implemented.
 
@@ -235,13 +242,25 @@ For selected fields `F`, allowed outcomes `A`, and disallowed confirmed outcomes
 for every a in A and d in D: select_F(a) != select_F(d)
 ```
 
-Missing remains tagged missing. Empty selection returns `EMPTY_SELECTED_FIELDS`; a nonseparating field set returns `AMBIGUOUS_SCOPE`; neither creates files. Candidate-neutral differing fields may be suggested but never auto-selected. Allow-many is a canonical set of complete selected-field tuples derived from confirmed outcomes, never a cross-product. Selected-field scope intentionally permits future changes in nonasserted fields; the UI and emitted README say this directly.
+Missing remains tagged missing. Empty selection returns `EMPTY_SELECTED_FIELDS`; a nonseparating field set returns `AMBIGUOUS_SCOPE`; neither creates files. Candidate-neutral differing fields may be suggested but never auto-selected. Allow-many is a canonical set of complete selected-field tuples derived from confirmed outcomes, never a cross-product. Selected-field scope intentionally permits future changes in nonasserted fields; the UI and emitted README say this directly. The portable algebra distinguishes missing, null, empty string, empty bytes, empty ordered list, and a present ordered list containing an empty string.
 
-A `CUSTOM_EXPECTATION` must be distinct from every confirmed selected-field tuple. A match is refused as `CUSTOM_EXPECTATION_ALREADY_OBSERVED`; the caller must use `ALLOW_OBSERVED` for an observed tuple.
+A `CUSTOM_EXPECTATION` contains exactly the selected fields and no unselected field. It must be distinct from every confirmed selected-field tuple. A match is refused as `CUSTOM_EXPECTATION_ALREADY_OBSERVED`; the caller must use `ALLOW_OBSERVED` for an observed tuple.
 
-## P07/U6b future standalone contract boundary
+## P07A/U6b portable ruling boundary
 
-`DecisionRecord`, `ContractBundle`, and `ContractExecution` are separate truth objects.
+P07A preserves every sealed CLI/HTTP projection byte and fingerprint. A strict versioned translator first verifies each original projection proof against the exact confirmation roster, resolves the exact adapter definition from the WorldPlan projection binding, and then interprets the existing adapter wire as one complete portable tuple. The derived profile binds translator version, adapter domain, the complete projection binding, and ordered adapter-owned field descriptors. Its digest is a new downstream identity; it never replaces or relabels the adapter's field-registry digest.
+
+Fresh Choicepoints retain the existing 27-member body but use `ADAPTER_BOUND_PORTABLE_FIELDS_V1`. Legacy `WHOLE_EXACT_CANONICAL_PROJECTION_V1` Choicepoints remain byte-identical and parseable only as nonportable history; emission returns `LEGACY_WHOLE_PROJECTION_NOT_PORTABLE`. P07A carries no runnable fixture bytes and makes no export-ready claim.
+
+The portable value profile is closed to tagged missing, null, Boolean, safe canonical integer, exact string, exact bytes, ordered string list, and strict canonical JSON. The HTTP ordered list preserves duplicates and order. The CLI/HTTP historical wire formats remain different and unchanged; the translator freezes both exact compatibility codecs instead of normalizing fingerprints.
+
+## P07B/U6c future standalone contract boundary
+
+`DecisionRecord`, `ContractBundle`, `ContractExecutionTarget`, `FinalizedContractRun`, and `ContractExecution` are separate truth objects.
+
+The compiler requires a current store-bound P07A portable ruling plus one byte-complete live `PortableSource`. Closed adapter constructors must reconstruct and exact-match the Choicepoint's plan, projection binding, adapter, minimized-stimulus canonical bytes/digest, portable profile, and every verified FreshConfirmation execution-binding digest before any file byte exists. HTTP additionally requires exact child-bind/pipe-readiness start authority. The application service independently retranslates reopened confirmation projection proofs and requires exact equality with the ruling tuples; source contains no proof or tuple bytes. A ruling alone cannot manufacture stdin, body, fixture, or seed bytes retained historically only by digest. Missing source returns `PORTABLE_SOURCE_REQUIRED` with zero artifacts.
+
+The existing inherited-listener HTTP profile remains nonemittable. P07B adds `NODE_LOOPBACK_CHILD_BIND_PIPE_READY_V1`, creates a new physical HTTP observation/confirmation/ruling under that exact profile, and generates raw HTTP/1.1 with `node:net`. It never treats Node's normalizing high-level HTTP API as equivalent to the sealed Go wire parser.
 
 The reference emitter produces a deterministic directory containing:
 
@@ -254,11 +273,17 @@ README.md
 manifest.json
 ```
 
-The bundle uses a closed `one-of-exact/v1` predicate AST and only the HTTP/CLI fields exercised by the proof studies. It contains no time, randomness, absolute path, candidate/branch name, secret, formatter drift, Countershape import, package install, or external service. The exact Node major and native OS are claimed only after their standalone matrix runs.
+The bundle uses a closed `one-of-exact/v1` predicate AST and only the HTTP/CLI fields exercised by the proof studies. It embeds path, mode, count, raw-byte digest, and exact base64 content for all six files, so a reopened terminal residue can rematerialize itself. `manifest.json` covers the other five files and never itself; the outer ContractBundle covers all six. The bundle's typed digest is external, no generated file embeds it, and no execution/didrun receipt enters deterministic source. It contains no time, randomness, absolute path, candidate/branch name, secret binding, formatter drift, Countershape import, package install, shell, or external service. The generic Node-core source profile receipts no runtime; exact Node version/major/native OS/architecture are claimed only after their standalone matrix entries run.
 
-Standalone means a clean checkout can invoke the test with Countershape absent from `PATH`, source, dependencies, services, and registry. Local loopback remains available only for the HTTP target. `ELIGIBLE_OBSERVATION` yields `CONFORMS` or `CONTRADICTS`; harness, capture, projection, and teardown failures are typed `INELIGIBLE_EXECUTION`, even though both contradiction and ineligibility produce a nonzero ordinary test.
+Standalone means an isolated target inventory can invoke the test with Countershape absent from that inventory's `PATH`, source, dependencies, import graph, and service-call closure. It is not a host-wide filesystem, network, registry, or containment claim. Local loopback remains available only for the HTTP target. `ELIGIBLE_OBSERVATION` yields `CONFORMS` or `CONTRADICTS`; harness, capture, projection, and teardown failures are typed `INELIGIBLE_EXECUTION`, even though both contradiction and ineligibility produce a nonzero ordinary test.
 
-The vendored Node harness is a second semantic implementation. A single normative corpus must drive Go and Node through strict parsing, field selection, missing/empty distinctions, HTTP/CLI capture, projection, eligible/ineligible taxonomy, and selected-field mutations. Standalone is unclaimed until those bytes/results agree for the exercised profile. Artifact hashes establish byte integrity, not authorship.
+The vendored Node harness is a second semantic implementation. A single normative corpus must drive Go and Node through strict parsing, field selection, missing/empty distinctions, raw HTTP/CLI capture, projection, eligible/ineligible taxonomy, and selected-field mutations. Standalone is unclaimed until those bytes/results agree for the exercised profile. Artifact hashes establish byte integrity, not authorship.
+
+Publication revalidates the complete expected `RULING` token under the store transition before creating an object or temporary file. A stale loser publishes nothing. The bundle object becomes durable before the head advances to terminal `RESIDUE`; a crash between those operations may leave an unreachable immutable object, never a head that names a missing object. No executable directory exists before residue. Materialization then reconstructs from the committed bundle through a private sibling temporary directory, exact reopen/hash checks, and create-new rename. A post-residue export failure is explicitly retryable and does not pretend the durable transition was rolled back.
+
+Later checks begin by publishing and reopening an independent immutable `ContractExecutionTarget`. The target is constructed only from the exact reopened bundle/source profile, a live Git-issued single-target capability whose once-pinned object was inspected and verified into a private materialization, a fresh durably allocated `CONFORMANCE` attempt, and a measured/revalidated explicit Node runtime. It never reuses the historical 2–4-candidate `WorldInstance` authority; copied OIDs/digests, a parsed target, or dirty working-tree bytes cannot substitute. The initial CLI profile is only logical `node` plus one exact clean repository-relative JavaScript entrypoint; arbitrary repository executables require a new physically confirmed lineage.
+
+After the target runs and materialization, process, teardown, and orphan evidence are terminal, `FinalizedContractRun` binds that exact target, the same attempt-artifact digest, the closed lifecycle, one `ELIGIBLE_CLEAN` or `INELIGIBLE_CONTROL(reason)` disposition, the exact projected tuple when present, and scoped standalone evidence. `ContractExecution` then binds only the external target digest, that exact finalized-run digest, and the derived conformance or ineligible class; it cannot independently supply a tuple or reason, and bundle/tree/attempt/runtime/lifecycle/observation facts are not duplicated for caller pairing. If Git pinning/inspection/materialization, runtime admission, target publication, run finalization, or target/run matching is unavailable, the outer service refuses classification publication. Direct Node execution remains independent. ContractExecutions fix `historical_execution_evidence_reused = false`, `choicepoint_freshened = false`, and `study_head_advanced = false`; repeated runs allocate distinct targets/runs/executions while leaving the study at the same terminal bundle residue.
 
 ## Execution and security boundary
 
@@ -303,8 +328,13 @@ internal/observe/       eligibility, schedules, repeated classification
 internal/compare/       exact fingerprints, comparison basis, and CandidateOutcomeMap
 internal/reduce/        pure bounded tri-valued search and logical sweep drafts
 internal/reduction/     outward reducer/store composition and authoritative grades
+internal/portablevalue/ closed exact selected-field algebra
+internal/projectionprofile/ derived adapter-bound portable profile identity
+internal/projectiontranslate/ strict unchanged CLI/HTTP projection-wire translators
 internal/choice/        immutable lineage and ruling validation
+internal/contractsource/ future byte-complete runnable-source reconstruction
 internal/emit/node/     deterministic standalone source
+internal/contractexec/  future immutable nonhead current execution evidence
 internal/store/         content-addressed artifacts and atomic heads
 internal/server/        authenticated loopback API
 internal/report/        default-minimized local evidence export
@@ -312,7 +342,7 @@ web/                    React/Vite decision bench; no truth recomputation
 testkit/                generated Git repos, negative worlds, vectors
 ```
 
-Persistence is a semantic content-addressed graph, not an append-only command/event log, process replay engine, or crash-resume runtime. Future in-flight progress may stream as disposable SSE. A crash may leave already-finalized immutable objects or previously persisted nonadvancing evidence; U6 writes no crash-time `PARTIAL` or status object and cannot resume. A retry allocates an entirely new confirmation run.
+Persistence is a semantic content-addressed graph, not an append-only command/event log, process replay engine, or crash-resume runtime. Future in-flight progress may stream as disposable SSE. A crash may leave already-finalized immutable objects, an unreachable content-addressed object published before a head transition, or previously persisted nonadvancing evidence; U6 writes no crash-time `PARTIAL` or status object and cannot resume. A retry allocates an entirely new confirmation run. P07B's materialization retry is narrower: it may reproduce files from an already-terminal recoverable ContractBundle without rerunning the historical study.
 
 Generic packages may own only identity, eligibility, batch classification, exact-map comparison, tri-valued reduction orchestration, lineage, and ruling validation. Domain stimuli, captures, projections, and neighbors remain typed. React displays server-computed truth and never produces canonical digests or classifications.
 
@@ -355,10 +385,12 @@ Budget exhaustion is an ordinary result, never hidden retry success. Prepared ro
 SOURCE_SPEC -> COMPILED_PLAN -> MATERIALIZED_CANDIDATE_SET
 -> BASELINE_OBSERVATION -> DIVERGENCE -> REDUCTION_RESULT
 -> FRESH_CONFIRMATION -> CHOICEPOINT_READY -> RULING
--> CONTRACT_BUNDLE -> CONFORMANCE_EXECUTION
+-> CONTRACT_BUNDLE
+
+CONTRACT_BUNDLE -> CONTRACT_EXECUTION_EVIDENCE (immutable nonhead object)
 ```
 
-The full product target above remains an immutable successor-study model. U6a implements only the public typed spine `SOURCE_PLAN -> BASELINE -> DIVERGENCE -> REDUCTION -> CONFIRMATION -> CHOICEPOINT_READY -> RULING`. Its internal stage table reserves terminal `RESIDUE`, but P07 owns the first public construction-safe residue transition. U6a does not implement durable successor branches, `STALE`/`INVALIDATED` status objects, deferred-session reopening, or archived head history. `CANCELLED` and `PARTIAL` remain nonadvancing evidence concepts. Future work must add new objects rather than edit current Choicepoint bytes.
+The full product target above remains an immutable successor-study model. U6a implements only the public typed spine `SOURCE_PLAN -> BASELINE -> DIVERGENCE -> REDUCTION -> CONFIRMATION -> CHOICEPOINT_READY -> RULING`. Its internal stage table reserves terminal `RESIDUE`; P07A repairs portable ruling authority without advancing it, and P07B owns the first public construction-safe residue transition. ContractExecutionTarget, FinalizedContractRun, and ContractExecution are never stages. U6a does not implement durable successor branches, `STALE`/`INVALIDATED` status objects, deferred-session reopening, or archived head history. `CANCELLED` and `PARTIAL` remain nonadvancing evidence concepts. Future work must add new objects rather than edit historical Choicepoint bytes.
 
 ### Execution attempt
 
@@ -373,7 +405,7 @@ Each state can terminate in a typed control result. Only eligible `FINALIZED` ev
 
 - Future study-presentation target: `EMPTY`, `PREPARING`, `ACTIVE`, `PARTIAL`, `ERROR`, `COMPLETED`; these are not U6 durable objects.
 - Candidate eligibility: `OBSERVED_STABLE(k/k)`, `UNSTABLE`, `UNCOMPARABLE`, `INCOMPLETE`.
-- U6a public durable head: `SOURCE_PLAN`, `BASELINE`, `DIVERGENCE`, `REDUCTION`, `CONFIRMATION`, `CHOICEPOINT_READY`, and `RULING`; `RESIDUE` is reserved internally for P07 and has no U6a public transition.
+- U6a public durable head: `SOURCE_PLAN`, `BASELINE`, `DIVERGENCE`, `REDUCTION`, `CONFIRMATION`, `CHOICEPOINT_READY`, and `RULING`; `RESIDUE` is reserved internally for P07B and has no U6a/P07A public transition.
 - U6 decision session: `BLIND_OPEN`, `PROVISIONAL_RECORDED`, `REVEALED`, `POST_REVEAL_RECORDED`, `FINALIZED`.
 - Future presentation/status target: `DISCOVERED`, derived `RESOLVED`/`DEFERRED`, successor-relative `STALE`, and explicit `INVALIDATED`; these are not current Choicepoint wire fields.
 
@@ -390,10 +422,11 @@ Each unit is separately verified, claimed, committed, sealed, and gated on `NO_C
 5. **U4 — HTTP observation spine:** fixture-owned readiness, one request, typed capture/projection, contamination negative fixture, shared truth services.
 6. **U5 — bounded reducer:** typed neighbors, tri-valued evaluations, map-digest preservation, budgets/transcript, shape trap, and a minimal content-addressed durable-sweep authority required for the local grade.
 7. **U6a/P06 — Choicepoint and ruling source boundary:** immutable store/CAS, physical confirmation, strict Choicepoint/Decision codecs, blind semantic DTO/session, separation obligation, and typed ruling promotion through `RULING`; no public residue transition.
-8. **U6b/P07 — standalone residue:** Go/Node vector corpus, deterministic six-file bundle, absence checks, and current conformance execution.
-9. **U7 — complete CLI and reference studies:** safe next actions, both end-to-end proofs, allow-many, custom none-conforms, reject/defer, three clean reproductions, named-machine timings.
-10. **U8 — secure decision bench:** authenticated loopback API, complete state renderer, 1440/375 flows, at least three full visual passes, Playwright/axe/manual checks, and a real different-model screenshot critic.
-11. **U9 — local export, packaging, and hardening:** minimized evidence export, embedded assets/single binary, docs/license/contributor path, adversarial suite, performance/limitations ledger, final strict verify, didrun HTML evidence, receipts handoff.
+8. **U6b/P07A — portable ruling authority:** unchanged historical projection bytes, strict adapter-bound translators, portable exact tuples, real selectable/differing fields, selected-only custom expectations, and legacy nonemittable preservation.
+9. **U6c/P07B — standalone residue:** byte-complete source reconstruction, portable HTTP child-bind lineage, Go/Node raw-wire corpus, deterministic recoverable six-file bundle, stale-safe terminal publication, retryable materialization, target-inventory absence checks, and immutable nonhead current execution.
+10. **U7 — complete CLI and reference studies:** safe next actions, both end-to-end proofs, allow-many, custom none-conforms, reject/defer, three clean reproductions, named-machine timings.
+11. **U8 — secure decision bench:** authenticated loopback API, complete state renderer, 1440/375 flows, at least three full visual passes, Playwright/axe/manual checks, and a real different-model screenshot critic.
+12. **U9 — local export, packaging, and hardening:** minimized evidence export, embedded assets/single binary, docs/license/contributor path, adversarial suite, performance/limitations ledger, final strict verify, didrun HTML evidence, receipts handoff.
 
 Honest fallback milestones are allowed: truth-kernel prototype, observation-only instrument, one-domain instrument, DecisionRecord-only residue, or CLI-only surface. None inherits the full-system claim.
 
@@ -402,14 +435,15 @@ Honest fallback milestones are allowed: truth-kernel prototype, observation-only
 | Capability | Required pass bar | Failure disposition |
 | --- | --- | --- |
 | Canonical authority | all malformed/golden Go vectors, properties, state tests, and required mutants pass | stop before subprocess code |
-| Go/Node parity | one byte/result vector corpus and selected-field/error mutations agree for the exact contract profile | DecisionRecord only |
+| Portable ruling authority | unchanged adapter projection bytes translate only under the exact bound profile; legacy bytes round-trip; selected-only custom expectations and real selectable/differing fields pass physical CLI/HTTP studies | legacy DecisionRecord only |
+| Go/Node parity | one byte/result vector corpus and selected-field/error mutations agree for the exact contract profile | selected-field DecisionRecord only |
 | Git materialization | moving ref stays pinned; blobs/modes rehash; no filters/hooks/archive/replacements/fetch/network; unsupported forms refuse | remove tree-import claim |
 | Fresh Darwin attempts | roots/state/attempts differ; fixture counters prove invocation; ordinary descendants die; caps/control taxonomy hold | observation-only or unsupported OS |
 | Stability | constant, alternating, timeout, incomplete, projection, teardown fixtures classify exactly | no divergence readiness |
 | Outcome map | candidate permutation and serialized API/UI shape trap preserve exact map digest | kill Choicepoint claim |
 | Reduction | both domains shrink; unresolved yields `BEST_KNOWN`; one complete durable sweep earns local grade | observation-only |
 | Rulings | legal transitions exact; no defaults; tuple-set allow-many; weak fields reject; noncompilable actions emit nothing | no executable residue |
-| Standalone bundle | cross-root byte identity; Countershape absent; exercised Node/OS receipt; selected fields only; none-conforms works | DecisionRecord only |
+| Standalone bundle | exact source preimage matches the ruling; cross-root recoverable byte identity; stale loser writes nothing; materialization retries; Countershape absent from the target inventory; exercised Node/OS/architecture receipt; selected fields only; none-conforms works | selected-field DecisionRecord only |
 | Decisive proof | contamination, flake, visible projection, shape trap, physical confirmation, separation, and absence each change/refuse a false result | relabel observation/approval prototype |
 | Two-domain kernel | no domain branches/coercions in generic identity/observe/compare/reduce/choice services | narrow to one domain |
 | Studio security | auth/Host/Origin/CORS/CSRF/CAS attacks fail; blind payload omits identity/support; output inert | CLI only |
@@ -454,6 +488,8 @@ didrun references remain opaque verbatim receipt grades associated with their ex
 
 ### Strong engineering inferences still to test
 
+- Strict downstream translation can preserve historical adapter projection fingerprints while adding exact selected-field authority.
+- A byte-complete source preimage can reconstruct the exact minimized adapter stimulus without entering the historical DecisionRecord.
 - A constrained Node harness can match the Go semantic profile under one normative corpus.
 - Blind-first selected-field UX can faithfully capture one scoped ruling.
 
@@ -472,4 +508,4 @@ didrun references remain opaque verbatim receipt grades associated with their ex
 
 ## Handoff state
 
-**U0–U6 are sealed and strict-clean. P07/U6b is the next bounded implementation unit.** The U6a implementation boundary is commit `64b65cbfa609`, tree `27dc5f5d4930`; exact events, permanent failures, and verbatim grades live in `docs/status/U6.md`. U6's red-team pass locked the immutable object store and full-token CAS head spine through `RULING`, exact physical confirmation authority, strict Choicepoint/DecisionRecord codecs, blind semantic DTO/session, and sealed compile eligibility. `REFINE` remains a valid semantic noncompilable DecisionRecord but durable promotion refuses it without object publication or head mutation. P07 owns deterministic contract emission and execution; it must not reinterpret U6 authority into a broader claim.
+**U0–U6 are sealed and strict-clean. The separately receipted P07 planning correction is in progress; P07A/U6b is the next source implementation unit.** The U6a implementation boundary is commit `64b65cbfa609`, tree `27dc5f5d4930`; exact events, permanent failures, and verbatim grades live in `docs/status/U6.md`. U6's red-team pass locked the immutable object store and full-token CAS head spine through `RULING`, exact physical confirmation authority, strict Choicepoint/DecisionRecord codecs, blind semantic DTO/session, and sealed semantic compile eligibility. Its fresh Choicepoints still authorize only whole-projection rulings. The implementation-time P07 red team therefore prohibited direct emission, preserved all historical adapter projection bytes/fingerprints, and split the work: P07A creates construction-safe adapter-bound selected-field rulings; P07B additionally requires an exact source-reconstruction witness before deterministic recoverable emission, terminal residue, and immutable nonhead execution evidence. `REFINE` remains a valid semantic noncompilable DecisionRecord but durable promotion refuses it without object publication or head mutation.

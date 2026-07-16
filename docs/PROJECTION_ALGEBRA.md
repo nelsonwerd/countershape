@@ -67,6 +67,67 @@ Physical U6 confirmation applies the same comparability-first operation to the r
 
 `ConfirmedOutcomeMap` remains structural by itself. U6 `confirmation.Draft` adds live physical authority, `FreshConfirmation` is its strict inert restart record, and `promotion.StoredConfirmation` proves that exact record is the current `CONFIRMATION` head. Serialization cannot recreate either live capability.
 
+## Adapter-bound portable tuple interpretation
+
+The exact projection bytes remain historical equality authority. P07A does not rewrite them into a common adapter envelope. Instead it defines a closed downstream interpretation:
+
+```text
+profile = ResolveExactProfile(WorldPlan.ProjectionDefinitionBinding)
+
+for each confirmed candidate c:
+    proof = Confirmation.ExactProjectionProof(c)
+    require Confirmation.ProjectionRoster.Verify(c, proof.bytes)
+    tuple[c] = StrictTranslate(profile, proof.bytes)
+```
+
+`ResolveExactProfile` may use only adapter-owned constructors and the complete binding canonical bytes/digest. It may not resolve from adapter name, a field-registry digest, operation labels, or the fields observed in a proof. For CLI it reconstructs the one exact active subset of the seven closed descriptors. For HTTP it reconstructs the fixed four-field definition. The profile identity binds translator version, complete binding, and exact ordered descriptors; it is not the historical projection fingerprint or adapter field-registry digest.
+
+`StrictTranslate` requires the original canonical adapter wire exactly, including root/member shape, roster/order, tags, unused payload zero values, base64/JSON canonical form, and bounded values. It returns one complete tuple in the portable algebra:
+
+```text
+MISSING | NULL | BOOLEAN | INTEGER | STRING |
+BYTES | ORDERED_STRING_LIST | CANONICAL_JSON
+```
+
+Value identity is exact tagged bytes. In particular:
+
+```text
+MISSING != STRING("")
+MISSING != BYTES(empty)
+MISSING != ORDERED_STRING_LIST([])
+ORDERED_STRING_LIST([]) != ORDERED_STRING_LIST([""])
+["a", "b"] != ["b", "a"]
+["a", "a"] != ["a"]
+```
+
+Blind cards and aliases remain keyed by the full original projection fingerprint, not by the portable tuple or selected subset. Selectable fields are the exact profile roster. Differing fields are those whose exact portable value identity has cardinality greater than one across cards. Neither list implies a default selection.
+
+For selected field set `F`, portable selection is exact ordered restriction:
+
+```text
+select_F(tuple) = complete tuple containing exactly F in registry order
+```
+
+Allow-observed uses a canonical set of complete `select_F` tuples. It is never represented as independent allowed values per field. Separation remains:
+
+```text
+for every allowed a and disallowed d:
+    select_F(a) != select_F(d)
+```
+
+`CUSTOM_EXPECTATION` contains exactly `F`, no unselected fields, and must differ from every confirmed `select_F(tuple)`. Whole-projection U6 records remain parseable history but do not satisfy this adapter-bound portability relation.
+
+A later `PortableSource` is a separate preimage condition, not part of tuple equality:
+
+```text
+Reconstruct(source).plan == Choicepoint.plan
+Reconstruct(source).projection_binding == profile.binding
+Reconstruct(source).stimulus.canonical_bytes == Choicepoint.minimized_stimulus.canonical_bytes
+Reconstruct(source).execution_binding.digest == every reopened FreshConfirmation proof.execution_binding_digest
+```
+
+For HTTP, the reconstructed binding must additionally expose exact child-bind/pipe-readiness start authority `NODE_LOOPBACK_CHILD_BIND_PIPE_READY_V1`; inherited-listener authority is not equivalent. Separately, the application service retranslates the reopened confirmation projection proofs under the resolved source-matched profile and requires exact equality with the sealed ruling tuples. Source retains none of those proof or tuple bytes. Only after all preimage, binding-lineage, and independent tuple relations hold may the portable predicate enter standalone compilation. A later capability-only `ContractExecutionTarget` binds the exact pinned target/source/runtime before spawn; its exact target-bound `FinalizedContractRun` owns the newly projected portable tuple and physical lifecycle; the matching `ContractExecution` compares that tuple with the compiled complete-tuple set and does not change historical preservation, confirmation, or Choicepoint identity.
+
 ## Reduction evidence and grades
 
 U1 owns only:

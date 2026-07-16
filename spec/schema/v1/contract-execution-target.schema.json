@@ -1,0 +1,130 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://countershape.dev/spec/schema/v1/contract-execution-target.schema.json",
+  "title": "Countershape ContractExecutionTarget v1",
+  "description": "Immutable nonhead pre-spawn authority for one exact ContractBundle, pinned Git materialization, fresh conformance attempt, and admitted Node runtime. Its domain-separated artifact digest is external to this body. A parsed body is inert and cannot recreate the live construction capability.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "target_version",
+    "publication_scope",
+    "contract_bundle_digest",
+    "source_binding",
+    "tree_binding",
+    "attempt_binding",
+    "runtime_binding"
+  ],
+  "properties": {
+    "schema_version": { "const": "countershape/v1" },
+    "kind": { "const": "ContractExecutionTarget" },
+    "target_version": { "const": "contract-execution-target/v1" },
+    "publication_scope": { "const": "IMMUTABLE_NONHEAD_PRESPAWN_AUTHORITY_V1" },
+    "contract_bundle_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "source_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["portable_source_digest", "portable_profile_digest", "source_profile_digest"],
+      "properties": {
+        "portable_source_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+        "portable_profile_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+        "source_profile_digest": { "$ref": "common.schema.json#/$defs/Digest" }
+      }
+    },
+    "tree_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authority",
+        "pinned_tree",
+        "portable_tree_digest",
+        "materialization_policy_digest",
+        "materialization_manifest_digest",
+        "execution_root_scope"
+      ],
+      "properties": {
+        "authority": { "const": "GIT_PIN_INSPECT_MATERIALIZE_V1" },
+        "pinned_tree": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["object_format", "commit_oid", "tree_oid", "tree_identity_digest"],
+          "properties": {
+            "object_format": { "enum": ["sha1", "sha256"] },
+            "commit_oid": { "type": "string", "pattern": "^[0-9a-f]{40}(?:[0-9a-f]{24})?$" },
+            "tree_oid": { "type": "string", "pattern": "^[0-9a-f]{40}(?:[0-9a-f]{24})?$" },
+            "tree_identity_digest": { "$ref": "common.schema.json#/$defs/Digest" }
+          },
+          "allOf": [
+            {
+              "if": {
+                "properties": { "object_format": { "const": "sha1" } },
+                "required": ["object_format"]
+              },
+              "then": {
+                "properties": {
+                  "commit_oid": { "pattern": "^[0-9a-f]{40}$" },
+                  "tree_oid": { "pattern": "^[0-9a-f]{40}$" }
+                }
+              }
+            },
+            {
+              "if": {
+                "properties": { "object_format": { "const": "sha256" } },
+                "required": ["object_format"]
+              },
+              "then": {
+                "properties": {
+                  "commit_oid": { "pattern": "^[0-9a-f]{64}$" },
+                  "tree_oid": { "pattern": "^[0-9a-f]{64}$" }
+                }
+              }
+            }
+          ]
+        },
+        "portable_tree_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+        "materialization_policy_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+        "materialization_manifest_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+        "execution_root_scope": { "const": "PRIVATE_PINNED_MATERIALIZATION_ONLY_V1" }
+      }
+    },
+    "attempt_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["purpose", "attempt_artifact_digest", "instance_nonce", "allocation_profile", "marker_ordering"],
+      "properties": {
+        "purpose": { "const": "CONFORMANCE" },
+        "attempt_artifact_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+        "instance_nonce": { "type": "string", "pattern": "^[0-9a-f]{32,128}$" },
+        "allocation_profile": { "const": "PRIVATE_FRESH_ROOT_V1" },
+        "marker_ordering": { "const": "DURABLE_BEFORE_SPAWN" }
+      }
+    },
+    "runtime_binding": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "authority",
+        "name",
+        "version",
+        "major",
+        "os",
+        "architecture",
+        "executable_bytes_digest",
+        "probe_program_digest",
+        "child_resolution"
+      ],
+      "properties": {
+        "authority": { "const": "ADMITTED_NODE_PROCESS_EXEC_PATH_V1" },
+        "name": { "const": "node" },
+        "version": { "type": "string", "pattern": "^v?[1-9][0-9]*\\.[0-9]+(?:\\.[0-9]+)?(?:[-+][0-9A-Za-z.-]+)?$" },
+        "major": { "type": "integer", "minimum": 1, "maximum": 9007199254740991 },
+        "os": { "enum": ["darwin", "linux", "windows", "other"] },
+        "architecture": { "type": "string", "minLength": 1, "maxLength": 128 },
+        "executable_bytes_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+        "probe_program_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+        "child_resolution": { "const": "PROCESS_EXEC_PATH_EQUALS_ADMITTED_RUNTIME_V1" }
+      }
+    }
+  }
+}

@@ -2,7 +2,7 @@
 
 **State:** living execution contract. Prompt outcomes remain design requirements until their exact status file names a sealed strict-clean commit and verbatim receipt grades.
 
-**System:** Countershape, a narrowed Darwin reference instrument for comparing exact Git candidates in declared fresh comparison envelopes, preserving an exact candidate-to-projection-fingerprint map, reducing one typed witness under named local rules, recording one locally caller-attributed exact-witness ruling record with human authenticity outside canonical proof, and emitting a standalone selected-field Node contract.
+**System:** Countershape, a narrowed Darwin reference instrument for comparing exact Git candidates in declared fresh comparison envelopes, preserving an exact candidate-to-projection-fingerprint map, reducing one typed witness under named local rules, recording one locally caller-attributed exact-witness ruling record with human authenticity outside canonical proof, translating exact adapter projections into a portable selected-field ruling, and emitting a standalone Node contract only when a separate byte-complete source witness reconstructs that ruling's exact world.
 
 **Operating persona:** Soren Vale—compiler and distributed-systems builder, creative-tools founder, allergic to hidden authority. Agents are speculative co-processors; disagreement is evidence of missing intent; a refusal with provenance is more useful than a confident fiction. Build something unusually coherent and tactile, but never spend correctness or trust language for spectacle.
 
@@ -13,7 +13,7 @@ Execute one prompt at a time, in order, in a fresh chat with the repository root
 The living authority order is:
 
 1. `docs/CONCEPT_BRIEF.md` for the locked product and truth contract;
-2. `research/deep-dive/08-RED_TEAM.md` and `07-SYNTHESIS.md` for cuts and blocker reasoning;
+2. `research/deep-dive/11-p07-implementation-red-team.md`, then `08-RED_TEAM.md` and `07-SYNTHESIS.md`, for implementation-time corrections, cuts, and blocker reasoning;
 3. the current prompt for unit ownership and acceptance;
 4. `docs/HANDOFF_MODE_C.md` for observed repository state.
 
@@ -23,7 +23,7 @@ If these conflict, preserve the narrower truth claim and record the discrepancy 
 
 ## Non-negotiable operating contract
 
-`CandidateExecutionKey` is only a wire/display reference; opaque `CandidateExecutionBinding` plus the actual matching `WorldPlan` allocates structural `WorldInstance` identity. Runtime facts belong to `InstanceMeasurements` and edge receipts. `AssessComparison` persists one exact admission matrix per repetition or a pre-batch rejection. Candidate batches may share a map only with the same ordered admission-digest set. Reduction first checks full-map comparability and only then exact eligible labeled-map equality; a naked digest is never sufficient. U1 owns logical decisions, not reduction grades. Any prompt language to the contrary is superseded.
+`CandidateExecutionKey` is only a wire/display reference; opaque `CandidateExecutionBinding` plus the actual matching `WorldPlan` allocates structural `WorldInstance` identity. Runtime facts belong to `InstanceMeasurements` and edge receipts. `AssessComparison` persists one exact admission matrix per repetition or a pre-batch rejection. Candidate batches may share a map only with the same ordered admission-digest set. Reduction first checks full-map comparability and only then exact eligible labeled-map equality; a naked digest is never sufficient. U1 owns logical decisions, not reduction grades. P07B later-target execution must not reuse this 2–4-candidate chain: it uses a separate capability-only `ContractExecutionTarget` over an explicit pinned/verified Git materialization, fresh attempt, and admitted Node runtime, then a target-bound `FinalizedContractRun`, then a classification-only `ContractExecution`. Any prompt language to the contrary is superseded.
 
 ### Product and novelty boundaries
 
@@ -74,7 +74,8 @@ If a stop condition fires, commit and receipt the narrowest honest fallback rath
 | [P04 — U4 HTTP observation](prompts/P04-U4-HTTP-OBSERVATION.md) | U4 | typed local HTTP readiness/request/capture/projection and contamination proof | same truth algebra; no HTTP coercion in generic kernel |
 | [P05 — U5 bounded reducer](prompts/P05-U5-BOUNDED-REDUCER.md) | U5 | typed terminating neighbors, tri-valued new evaluation, comparability-first exact labeled-map preservation, store-issued durable sweep grade | shape/digest traps, changed basis or eligibility, unresolved, crash/corruption refusal, final sweep, both domains |
 | [P06 — U6 Choicepoint store](prompts/P06-U6-CHOICEPOINT-STORE.md) | U6a | bounded semantic object store, fixed Darwin CAS spine, physical FreshConfirmation, strict Choicepoint/Decision codecs, blind identity/support omission, and noncompilable REFINE refusal | exact physical evidence, full-token CAS-before-publication, canonical body-field plus valid-example parity, blind leakage/alias/order attacks, and explicit successor/staleness nonclaims |
-| [P07 — U6 standalone contract](prompts/P07-U6-STANDALONE-CONTRACT.md) | U6b | field separation, Go/Node vectors, deterministic six-file bundle, absence/current execution | parity, selected fields, none-conforms, Countershape absent |
+| [P07A — U6 portable ruling authority](prompts/P07A-U6-PORTABLE-RULING.md) | U6b | strict translation of unchanged CLI/HTTP projection bytes into adapter-bound portable tuples, real selectable/differing fields, selected-only custom expectations, and legacy nonportable preservation | binding/profile substitution, historical-wire malformed corpus, selected-field physical studies, restart compatibility, race/vet/architecture, and semantic mutation closure |
+| [P07B — U6 standalone residue](prompts/P07-U6-STANDALONE-CONTRACT.md) | U6c | exact PortableSource reconstruction, portable HTTP child-bind lineage, Node-script-only launch, pure recoverable six-file bundle, terminal residue, retryable materialization, raw-wire Go/Node parity, capability-only immutable execution target, and immutable result | source/world equality, stale-before-publication, bundle recovery, manifest bootstrap, copied-target refusal, pinned-byte execution, physical target inventory, exact runtime tuple, and no execution head advance |
 | [P08 — U7 CLI/reference studies](prompts/P08-U7-CLI-REFERENCE-STUDIES.md) | U7 | safe-next-action CLI and complete HTTP/CLI falsification studies | contamination/flake/projection/shape/freshness/residue proof, three reproductions |
 | [P09 — U8 secure studio](prompts/P09-U8-SECURE-STUDIO.md) | U8a | authenticated loopback decision bench, complete blind presentation, and any newly implemented derived-status or successor services | auth/Host/Origin/CSRF/CAS/blind/injection gates; no human-authenticity claim; no stale/defer/refine transition without durable authority |
 | [P10 — U8 visual build loop](prompts/P10-U8-VISUAL-BUILD-LOOP.md) | U8b | reference-quality responsive/accessibility loop and real different-model critic | three visual passes plus final regression; all findings dispositioned |

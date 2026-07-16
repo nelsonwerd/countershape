@@ -85,7 +85,9 @@ Git object database
   -> private immutable evidence store
   -> authenticated loopback API
   -> inert studio renderer / explicit local export
+  -> exact PortableSource reconstruction boundary
   -> deterministic standalone repository artifact
+  -> immutable nonhead current execution evidence
 ```
 
 Each arrow is a validation boundary, not a change of OS security principal. The materialized root, process, store, and server normally run as the same user. Content-addressed identity detects byte substitution inside Countershape's artifact model; it does not make the host trustworthy.
@@ -236,13 +238,13 @@ The blind-first boundary begins as a semantic information-separation boundary. U
 
 ### T15 — Standalone semantic drift and artifact substitution
 
-**Threat.** Node accepts bytes Go rejected, joins headers differently, conflates missing/empty, follows redirects, changes signal semantics, asserts a context-only field, depends on Countershape or a registry, or the bundle is changed after emission.
+**Threat.** A legacy whole-projection ruling is mislabeled as selected-field authority; caller-paired bytes/digests substitute for exact runnable source; an inherited-listener HTTP observation is silently translated into child-bind execution; Node accepts bytes Go rejected, normalizes or joins headers differently, conflates missing/empty, follows redirects, changes signal semantics, asserts a context-only field, depends on Countershape or a registry, or the bundle is changed after emission.
 
-**Required controls.** A closed `one-of-exact/v1` profile and one normative Go/Node corpus cover strict parsing, field selection, CLI/HTTP capture, projection, and error taxonomy. Mutation tests exercise both implementations. Emission is deterministic and manifest hashes cover all six files. The absence run removes Countershape from PATH, source, packages, services, and registry; HTTP retains only subject loopback. Current execution distinguishes `CONTRADICTS` from `INELIGIBLE_EXECUTION`.
+**Required controls.** P07A preserves exact historical adapter wires and derives portable tuples only after roster verification and complete projection-binding resolution. P07B requires a closed byte-complete source constructor to reconstruct the exact plan and minimized stimulus; HTTP emission requires a new physical child-bind/pipe-readiness lineage. Initial launch authority is only logical `node` plus one exact repository-relative JavaScript entrypoint; generic repository executables are excluded. A closed `one-of-exact/v1` profile and one normative Go/Node corpus cover strict parsing, field selection, CLI/raw-HTTP capture, projection, and error taxonomy. Mutation tests exercise both implementations. Emission is deterministic; `manifest.json` covers the other five files, while the outer recoverable ContractBundle covers all six. Before later spawn, a nonhead `ContractExecutionTarget` is constructed only from the reopened bundle/source profile, one live Git-issued pinned/inspected/verified private materialization, a fresh durable conformance attempt, and an admitted/revalidated explicit Node runtime; it publishes and reopens first. The target-inventory run removes Countershape from that inventory's PATH, source, dependencies, imports, and service-call closure; HTTP retains only subject loopback. After the run is terminal, a separate `FinalizedContractRun` binds the exact target and attempt to closed lifecycle, a constructor-derived clean/ineligible disposition, the exact projected tuple when present, and scoped standalone evidence. `ContractExecution` may then bind only that target and exact finalized run, derive `CONTRADICTS` or `INELIGIBLE_EXECUTION` without accepting another tuple/reason, and never advance the terminal study head.
 
-**Refusal.** Vector disagreement, unreceipted runtime, file mismatch, dependency resolution, external connection, unsupported target, or harness/control ambiguity blocks standalone claims.
+**Refusal.** Legacy ruling, source/world/profile mismatch, nonportable start profile, generic repository executable, vector disagreement, stale publication, unrecoverable file body, manifest mismatch, copied or parsed target authority, OID/tree-identity mismatch, missing verified materialization, dirty working-tree execution, reused attempt, unadmitted runtime, target/run mismatch, forbidden dependency resolution, external connection, or harness/control ambiguity blocks the applicable target, execution, or standalone claim. Post-residue materialization failure remains a typed retryable export failure and cannot be reported as if no residue was published.
 
-**Residual risk.** Hashes prove byte integrity, not authorship or long-term maintainability. Node runtime compromise and repository integration changes remain outside the artifact digest.
+**Residual risk.** Hashes prove byte integrity, not authorship, authenticity, confidentiality, or long-term maintainability. The target-inventory check is not host-wide absence, network denial, registry denial, or containment. Node runtime compromise and repository integration changes remain outside the artifact digest.
 
 ### T16 — Receipt or provenance overstatement
 
@@ -312,7 +314,8 @@ No fallback may silently keep the stronger public claim.
 | U4 | HTTP ownership and readiness | wrong service, transport/response split, body cap, contamination fixture |
 | U5 | exact-map reduction | same-shape/different-map trap, cancellation, unresolved final neighbor |
 | U6a / P06 | CAS, physical confirmation, Choicepoint, blind semantic kernel, rulings | stale/forged authority, reused evidence, blind identity/support/order leak, cross-product, context assertion, noncompilable promotion |
-| U6b / P07 | Go/Node parity, bundle publication, absence, current execution | Node drift, partial bundle, forbidden dependency, Countershape presence, contradiction/ineligibility collapse |
+| U6b / P07A | exact projection-wire translation and selected-field ruling authority | profile substitution, fingerprint migration, malformed historical wire, bytes/list collapse, selected-field widening, legacy upgrade |
+| U6c / P07B | source reconstruction, portable HTTP lineage, Node-script-only launch, raw-wire Go/Node parity, terminal recoverable publication, retryable materialization, capability-only nonhead execution target, target-inventory absence, nonhead execution result | source/world mismatch, normalized HTTP, generic executable, stale publication, unrecoverable/partial bundle, copied/parsed target, dirty worktree, reused attempt, runtime substitution, forbidden dependency, Countershape presence, contradiction/ineligibility collapse, execution head advance |
 | U7 | decisive studies | false one-shot result, fresh invocation evidence, all decision actions |
 | U8 | loopback and blind renderer | auth/Host/Origin/CORS/CSRF/CAS, identity/support leak, injection, mobile parity |
 | U9 | export and packaging | secret fixtures, structural injection, raw opt-in, absent warnings, final receipt map |

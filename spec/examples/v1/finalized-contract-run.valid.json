@@ -1,0 +1,52 @@
+{
+  "schema_version": "countershape/v1",
+  "kind": "FinalizedContractRun",
+  "run_version": "finalized-contract-run/v1",
+  "publication_scope": "IMMUTABLE_NONHEAD_FINALIZED_RUN_V1",
+  "contract_execution_target_digest": "sha256:d1021cf215475b4db18fbc5f78d58fd79270f038f044a3bd871aa7c5e3fa415d",
+  "attempt_artifact_digest": "sha256:e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5",
+  "lifecycle": {
+    "status": "FINALIZED",
+    "materialization_revalidation_digest": "sha256:f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2",
+    "process_result_digest": "sha256:f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3",
+    "teardown_result_digest": "sha256:f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4",
+    "orphan_check_digest": "sha256:f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5",
+    "finalization_marker_digest": "sha256:f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6"
+  },
+  "terminal_disposition": {
+    "status": "ELIGIBLE_CLEAN"
+  },
+  "observation": {
+    "status": "PROJECTED",
+    "captured_observation_digest": "sha256:e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6",
+    "projection_result_digest": "sha256:e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7",
+    "observed_tuple": {
+      "fields": [
+        {
+          "field_id": "cli.stdout.bytes",
+          "value": {
+            "base64": "b2sK",
+            "tag": "BYTES"
+          }
+        }
+      ]
+    }
+  },
+  "standalone_scope": {
+    "scope": "ISOLATED_TARGET_INVENTORY_AND_CHILD_BINDINGS_V1",
+    "target_inventory_digest": "sha256:f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7",
+    "child_bindings_digest": "sha256:f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8",
+    "import_resolution_digest": "sha256:f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9",
+    "service_bindings_digest": "sha256:fafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafa",
+    "target_inventory_countershape_source_present": false,
+    "target_inventory_countershape_dependency_present": false,
+    "target_import_resolution_reached_countershape": false,
+    "child_path_contains_countershape": false,
+    "countershape_service_binding_present": false,
+    "named_parent_secret_sentinels_inherited": false,
+    "host_wide_absence_established": false,
+    "network_denial_established": false,
+    "package_registry_denial_established": false,
+    "confidentiality_established": false
+  }
+}

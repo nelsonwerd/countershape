@@ -2,45 +2,28 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://countershape.dev/spec/schema/v1/contract-execution.schema.json",
   "title": "Countershape ContractExecution v1",
-  "description": "Fresh current-checkout execution evidence. It never rewrites or freshens historical Choicepoint evidence.",
+  "description": "Derived exact-target conformance classification published as an immutable nonhead object. It references one separately published ContractExecutionTarget and one matching FinalizedContractRun; the exact tuple or control reason lives only in that finalized run. Its domain-separated artifact digest is external to this canonical body. It never rewrites or freshens historical Choicepoint evidence.",
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "schema_version", "kind", "artifact_digest", "contract_bundle_digest", "current_tree_identity_digest",
-    "world_instance_digest", "attempt_artifact_digest", "runtime", "captured_observation_digest",
-    "projection_result_digest", "result", "historical_execution_evidence_reused", "choicepoint_freshened"
+    "schema_version",
+    "kind",
+    "execution_version",
+    "publication_scope",
+    "contract_execution_target_digest",
+    "finalized_contract_run_digest",
+    "result",
+    "historical_execution_evidence_reused",
+    "choicepoint_freshened",
+    "study_head_advanced"
   ],
   "properties": {
     "schema_version": { "const": "countershape/v1" },
     "kind": { "const": "ContractExecution" },
-    "artifact_digest": { "$ref": "common.schema.json#/$defs/Digest" },
-    "contract_bundle_digest": { "$ref": "common.schema.json#/$defs/Digest" },
-    "current_tree_identity_digest": { "$ref": "common.schema.json#/$defs/Digest" },
-    "world_instance_digest": { "$ref": "common.schema.json#/$defs/Digest" },
-    "attempt_artifact_digest": { "$ref": "common.schema.json#/$defs/Digest" },
-    "runtime": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["name", "major", "os", "architecture"],
-      "properties": {
-        "name": { "const": "node" },
-        "major": { "type": "integer", "minimum": 1 },
-        "os": { "enum": ["darwin", "linux", "windows", "other"] },
-        "architecture": { "type": "string", "minLength": 1 }
-      }
-    },
-    "captured_observation_digest": {
-      "oneOf": [
-        { "$ref": "common.schema.json#/$defs/Digest" },
-        { "type": "null" }
-      ]
-    },
-    "projection_result_digest": {
-      "oneOf": [
-        { "$ref": "common.schema.json#/$defs/Digest" },
-        { "type": "null" }
-      ]
-    },
+    "execution_version": { "const": "contract-execution/v1" },
+    "publication_scope": { "const": "IMMUTABLE_NONHEAD_EVIDENCE_V1" },
+    "contract_execution_target_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "finalized_contract_run_digest": { "$ref": "common.schema.json#/$defs/Digest" },
     "result": {
       "oneOf": [
         {
@@ -55,15 +38,15 @@
         {
           "type": "object",
           "additionalProperties": false,
-          "required": ["execution_class", "reason"],
+          "required": ["execution_class"],
           "properties": {
-            "execution_class": { "const": "INELIGIBLE_EXECUTION" },
-            "reason": { "$ref": "common.schema.json#/$defs/ControlReason" }
+            "execution_class": { "const": "INELIGIBLE_EXECUTION" }
           }
         }
       ]
     },
     "historical_execution_evidence_reused": { "const": false },
-    "choicepoint_freshened": { "const": false }
+    "choicepoint_freshened": { "const": false },
+    "study_head_advanced": { "const": false }
   }
 }

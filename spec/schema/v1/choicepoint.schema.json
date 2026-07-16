@@ -74,7 +74,9 @@
     "fresh_confirmation_digest": { "$ref": "common.schema.json#/$defs/Digest" },
     "confirmed_outcome_map_digest": { "$ref": "common.schema.json#/$defs/Digest" },
     "confirmed_preservation_map_digest": { "$ref": "common.schema.json#/$defs/Digest" },
-    "choice_projection_mode": { "const": "WHOLE_EXACT_CANONICAL_PROJECTION_V1" },
+    "choice_projection_mode": {
+      "enum": ["WHOLE_EXACT_CANONICAL_PROJECTION_V1", "ADAPTER_BOUND_PORTABLE_FIELDS_V1"]
+    },
     "evidence_receipts": {
       "type": "array",
       "items": { "$ref": "common.schema.json#/$defs/ReceiptReference" }
