@@ -23,7 +23,7 @@ Every semantic transition follows the same rules:
 
 ## Full-product immutable artifact lineage target
 
-The full-product happy-path semantic lineage is shown below. The current U6a candidate stops at `RULING`; `CONTRACT_BUNDLE` and `CONFORMANCE_EXECUTION` belong to P07/U6b.
+The full-product happy-path semantic lineage is shown below. The sealed U6a boundary stops at `RULING`; `CONTRACT_BUNDLE` and `CONFORMANCE_EXECUTION` belong to P07/U6b.
 
 ```text
 SOURCE_SPEC
@@ -261,7 +261,7 @@ Entry requires a U5-graded reduction result. Each confirmation run receives a cr
 
 Only `CONFIRMED_EXACT_MAP` can construct `CHOICEPOINT_READY`.
 
-## Current unreceipted U6 candidate Choicepoint/ruling spine
+## Sealed U6 Choicepoint/ruling spine
 
 ```text
 CONFIRMATION

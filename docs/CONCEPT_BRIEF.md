@@ -2,7 +2,7 @@
 
 - **Working name:** Countershape (package, domain, trademark, and legal clearance not performed)
 - **Mode:** open-source-first experimental infrastructure
-- **State:** deep dive and adversarial red team complete; U1–U5 sealed; narrowed U6 Choicepoint/store boundary under verification
+- **State:** deep dive and adversarial red team complete; U1–U6 sealed and strict-clean; P07 standalone-contract work is next
 - **Last updated:** 2026-07-16
 - **Founder persona:** Soren Vale
 - **Confidence:** 8/10 in the truth kernel; 6/10 in the bounded reference instrument; 3/10 in review compression; 3/10 in adoption
@@ -472,4 +472,4 @@ didrun references remain opaque verbatim receipt grades associated with their ex
 
 ## Handoff state
 
-**U0–U5 are sealed and strict-clean. U6a is the current unreceipted candidate under verification; P07 remains blocked until U6a is committed, sealed, and strict-clean.** The U5 implementation boundary is commit `497418ef3d9c`, tree `f38ee227a22f`; exact events, permanent failures, and verbatim grades live in `docs/status/U5.md`. U5's red-team pass further narrowed the contract: the strong reduction grade requires a live matching compiled-`WorldPlan` budget and durable authority, establishes logical evidence-identity nonreuse rather than physical freshness, treats wall deadlines as cooperative, and keeps exact reducible values in stimulus/proposal identity rather than the policy-scope digest. Build must preserve those cuts even when they make the demo less convenient.
+**U0–U6 are sealed and strict-clean. P07/U6b is the next bounded implementation unit.** The U6a implementation boundary is commit `64b65cbfa609`, tree `27dc5f5d4930`; exact events, permanent failures, and verbatim grades live in `docs/status/U6.md`. U6's red-team pass locked the immutable object store and full-token CAS head spine through `RULING`, exact physical confirmation authority, strict Choicepoint/DecisionRecord codecs, blind semantic DTO/session, and sealed compile eligibility. `REFINE` remains a valid semantic noncompilable DecisionRecord but durable promotion refuses it without object publication or head mutation. P07 owns deterministic contract emission and execution; it must not reinterpret U6 authority into a broader claim.

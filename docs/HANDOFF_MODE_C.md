@@ -12,10 +12,10 @@
 
 ## Current state
 
-- **Pipeline phase:** U0–U5 are sealed and strict-clean. U6a/P06 is the current unreceipted candidate under verification. P07/U6b is blocked until U6a is committed, sealed, and strict-clean.
-- **Git:** repository is on `codex/countershape-autopilot`. The last sealed implementation boundary is U5 commit `497418ef3d9ca87658a9a524e8beedd0ca07319e`, tree `f38ee227a22f2dddc9a24e3791a728e5f239e75b`; the U5 receipt-document boundary is commit `c0d615a36163`. Treat copied identifiers as orientation only and confirm them locally before relying on them.
+- **Pipeline phase:** U0–U6 are sealed and strict-clean. P07/U6b, the standalone contract compiler and fresh conformance execution boundary, is next.
+- **Git:** repository is on `codex/countershape-autopilot`. The last sealed implementation boundary is U6a commit `64b65cbfa6099f9be88c2de3cc2cc4dd5ff9ff81`, tree `27dc5f5d4930cc9a4f759e4e4973ed7fb4d5b6d6`; the U6 receipt-document boundary is the commit carrying this handoff and `docs/status/U6.md`, so resolve it locally instead of copying a self-referential hash from prose. Treat all identifiers as orientation until confirmed locally.
 - **didrun:** installed globally. The first shared pre-commit ledger broke under concurrent writers and is preserved, never claimed or sealed. The replacement ledger is serialized. See `docs/status/DIDRUN_BUGS.md` before recording evidence.
-- **Build:** U5 adds the sealed bounded tri-valued reducer, strict transcript/replay boundary, typed CLI/HTTP neighbors, and durable sweep authority. The uncommitted U6 candidate adds a bounded immutable semantic object store, full-token CAS fixed head spine through `RULING`, physical fresh confirmation, strict Choicepoint/DecisionRecord codecs, blind semantic DTO/session, sealed compile eligibility, and predecessor/action-bound opaque publication capabilities. `REFINE` may exist as a semantic noncompilable DecisionRecord, but durable promotion returns `REFINE_REQUIRES_SUCCESSOR_STUDY` with no object or head mutation. No emitter, standalone bundle, product CLI, server, dashboard, visual renderer, or report exists.
+- **Build:** U5 adds the sealed bounded tri-valued reducer, strict transcript/replay boundary, typed CLI/HTTP neighbors, and durable sweep authority. Sealed U6 adds a bounded immutable semantic object store, full-token CAS fixed head spine through `RULING`, physical fresh confirmation, strict Choicepoint/DecisionRecord codecs, blind semantic DTO/session, sealed compile eligibility, and predecessor/action-bound opaque publication capabilities. `REFINE` may exist as a semantic noncompilable DecisionRecord, but durable promotion returns `REFINE_REQUIRES_SUCCESSOR_STUDY` with no object or head mutation. No emitter, standalone bundle, product CLI, server, dashboard, visual renderer, or report exists.
 - **External APIs:** none used in the product. Current web research is read-only. Real model integrations remain human-gated and must never be faked.
 
 ## Read first, in order
@@ -180,21 +180,53 @@ U5 is sealed at implementation commit `497418ef3d9ca87658a9a524e8beedd0ca07319e`
 
 U5 sealed with `--allow-secrets (redacted export)` after 66 aggregate entropy findings and exact staged-scope review. This is not a secret-free finding or security review. Permanent failed events and the exact qualification ledger remain authoritative in `docs/status/U5.md`.
 
-## U6a candidate ledger — explicitly UNRECEIPTED
+## U6a receipt boundary
 
-The working tree contains the U6a/P06 candidate, but no U6 capability has a commit-bound didrun grade yet. Successful working-tree commands are development evidence only until final claims, commit, seal, and strict verification. Permanent failed events `651`, `656`, `662`, `671`, `672`, `680`, `698`, `699`, `701`, `728`, and `759` support no capability. Events through `728` record defects found during the build; event `759` records an operator-invoked stale planning-check path and is retained even though it did not exercise product code. The final U6 status file must preserve this history and add the final event-to-claim/verbatim-grade map only after the implementation commit is sealed and strict-clean.
+U6a sealed at implementation commit `64b65cbfa609`, tree `27dc5f5d4930`. `NO_COLOR=1 didrun verify --strict` exited `0` with `ALL RECORDED-EXACT` and `18/18 claims recorded-exact`. Every grade below is copied verbatim; no stronger grade is inferred.
+
+| Event | Claimed capability | Verbatim grade |
+| ---: | --- | --- |
+| 760 | `U6 planning validator syntax` | `TREE-EXACT` |
+| 761 | `U6 planning schemas and examples` | `TREE-EXACT` |
+| 762 | `U6 planning validator hostile self-test` | `TREE-EXACT` |
+| 763 | `U6 architecture boundary checker` | `TREE-EXACT` |
+| 764 | `U6 architecture checker 49-case hostile self-test` | `TREE-EXACT` |
+| 765 | `U6 complete repository Go suite` | `TREE-EXACT` |
+| 766 | `U6 Go vet` | `TREE-EXACT` |
+| 767 | `U6 store confirmation and choice race suite` | `TREE-EXACT` |
+| 768 | `U6 cross-instance CAS single-winner stress` | `TREE-EXACT` |
+| 769 | `U6 physical CLI and HTTP confirmation flows` | `TREE-EXACT` |
+| 770 | `U6 schema freshness and session matrix` | `TREE-EXACT` |
+| 771 | `U6 mutation driver hostile self-test` | `TREE-EXACT` |
+| 772 | `U6 exact 17-mutant A-B-A closure` | `TREE-EXACT` |
+| 773 | `U6 working diff check` | `TREE-EXACT` |
+| 774 | `U6 staged diff check` | `TREE-EXACT` |
+| 775 | `U6 no unstaged changes at implementation boundary` | `TREE-EXACT` |
+| 776 | `U6 exact 70-path staged inventory` | `TREE-EXACT` |
+| 777 | `U6 scoped staged credential-prefix scan` | `TREE-EXACT` |
+
+The plain seal stopped on 54 aggregate entropy findings. After the exact inventory and scoped credential-prefix scan, U6 sealed with `--allow-secrets (redacted export)`. This is not a secret-free finding or security review. Permanent failed events `651`, `656`, `662`, `671`, `672`, `680`, `698`, `699`, `701`, `728`, and `759` support no capability. Events through `728` record defects found and fixed during the build; event `759` records an operator-invoked stale planning-check path. The exact qualification ledger lives in `docs/status/U6.md`.
+
+### U6 operational facts that P07 must preserve
+
+- **Store/layout:** closed `countershape/v1` canonical payloads live under `objects/sha256/<prefix>/<digest>`; mutable heads live under `studies/<derived-study-id>/head.json`; private capture material has a separate private directory. This is a local Darwin reference layout, not a stable public migration format.
+- **Head spine:** `SOURCE_PLAN -> BASELINE -> DIVERGENCE -> REDUCTION -> CONFIRMATION -> CHOICEPOINT_READY -> RULING`. U6a exposes no `RESIDUE` transition, branching lineage, archived history, partial resume, or cancelled resume.
+- **Freshness:** confirmation creates a fresh 32-byte challenge, derives an exact ordinal nonce, requires finalized `CONFIRMATION` process-edge facts, and enforces current-run plus discovery/reduction evidence disjointness. This is relative physical-fixture evidence, not hostile-process attestation or timestamp truth.
+- **Blind kernel:** the closed DTO omits system-supplied candidate/ref/producer identity, support counts, total candidate count, source order, and reveal data; fingerprint-only aliases/order ignore support. Caller-authored scenario or behavior content may still reveal identity, and U6 says nothing about DOM/accessibility/CSS behavior.
+- **Attribution:** a DecisionRecord says `LOCAL_CALLER_ASSERTED_OPERATOR` and `AUTHENTICITY_NOT_ESTABLISHED_IN_U6`. Review-surface markers prove recorded presentation only, not comprehension or debiasing.
+- **Receipt behavior:** didrun grades are inert verbatim strings; missing remains `UNRECEIPTED`; Countershape never interprets receipt text as conformance authority.
+- **Resource ceilings:** canonical input/object 1 MiB; study label and actor 512 bytes; Choicepoint scenario 8 KiB; nested Choicepoint evidence 600 KiB; reveal display/provenance 2 KiB; decision annotation 32 KiB; confirmation projection proof 512 KiB. These are parser/orchestration bounds, not hostile same-user resource isolation.
 
 ## Exact next actions if this task resumes elsewhere
 
-1. Run `git status --short --branch`; confirm the last sealed implementation boundary is U5 commit `497418ef3d9ca87658a9a524e8beedd0ca07319e`, inspect the uncommitted U6 candidate, and ensure no `.didrun` path is staged or tracked.
-2. Read `docs/prompts/P06-U6-CHOICEPOINT-STORE.md`, `docs/status/U5.md`, the controlling semantic/architecture contracts, and the permanent U6 failure ledger above. Do not start P07.
-3. Finish the U6 multi-pass gate: architecture checker and checksum-pinned hostile selftest, planning validator, schema/runtime example checks, focused/store/promotion/full/race/vet suites, physical CLI/HTTP flows, exact 17-mutant closure, and staged diff/inventory/credential-prefix review. Wrap every load-bearing command in `didrun run --`.
-4. Any nonzero command or mutant survivor is a real unfinished result. Repair the implementation, checker, test, or contract; rerun through didrun; preserve the failed receipt as permanent history. Never weaken or relabel the gate.
-5. At the U6a shippable boundary, declare only successful final-tree claims, stage the exact intended paths, review the staged diff, commit, run `didrun seal --commit HEAD`, and loop `NO_COLOR=1 didrun verify --strict` until exit `0`.
-6. Only after the sealed implementation boundary is strict-clean, create `docs/status/U6.md`, update this handoff with exact event indexes and verbatim grades, commit that receipt documentation, seal, and strict-verify it. P07 remains blocked until then.
-7. Keep the root as sole writer and sole didrun/claim/Git/seal operator. Parallel agents may perform bounded read-only audits only; never allow parallel didrun writers in this repository.
-8. Human surfaces arrive in U8. Run at least three functional/visual loops and a real different-model critic there; label that external evidence honestly.
-9. Before final delivery, run the human-cleared S6 disposable real-agent protocol, produce strict plus HTML didrun reports, map every claim to its verbatim grade, and disclose the adoption, production-hardening, security-review, cross-platform, and maintainership tail.
+1. Run `git status --short --branch`; confirm U6 implementation commit `64b65cbfa6099f9be88c2de3cc2cc4dd5ff9ff81` and this receipt-document boundary are sealed and strict-clean, and ensure no `.didrun` path is staged or tracked.
+2. Read `docs/prompts/P07-U6-STANDALONE-CONTRACT.md`, `docs/status/U6.md`, and the controlling semantic/architecture contracts. Deep-dive and red-team P07's load-bearing compiler/execution claims before writing code; narrow the prompt when evidence requires it.
+3. Implement only P07/U6b: deterministic standalone contract emission from current store-bound `promotion.Ruling`, exact bundle/manifest bytes, isolated fixture execution, absence traps, and parity. Do not begin the product CLI/server/studio work owned by U7/U8.
+4. Wrap every load-bearing verification command in `didrun run --`. Any nonzero command or mutant survivor is a real unfinished result: repair, rerun, preserve failed history, and never weaken or relabel the gate.
+5. At the P07 shippable boundary, declare only successful final-tree claims, stage exact intended paths, commit, run `didrun seal --commit HEAD`, and loop `NO_COLOR=1 didrun verify --strict` until exit `0`.
+6. Keep the root as sole writer and sole didrun/claim/Git/seal operator. Parallel agents may perform bounded read-only audits only; never allow parallel didrun writers in this repository.
+7. Human surfaces arrive in U8. Run at least three functional/visual loops and a real different-model critic there; label that external evidence honestly.
+8. Before final delivery, run the human-cleared S6 disposable real-agent protocol, produce strict plus HTML didrun reports, map every claim to its verbatim grade, and disclose the adoption, production-hardening, security-review, cross-platform, and maintainership tail.
 
 ## Orientation handshake for a fresh agent/chat
 
@@ -203,7 +235,7 @@ Before editing, reply in your working notes with:
 1. the one product verb;
 2. the three distinct truth authorities (Git, Choicepoint observations/ruling, didrun receipts);
 3. two things the system must never claim;
-4. the current last sealed implementation commit (`497418ef3d9ca87658a9a524e8beedd0ca07319e`, verify locally), its strict didrun verdict, and the fact that U6 remains unreceipted; and
-5. the current bounded shippable unit (finish P06/U6a only; P07 is blocked).
+4. the current last sealed implementation commit (`64b65cbfa6099f9be88c2de3cc2cc4dd5ff9ff81`, verify locally), its `18/18 TREE-EXACT` strict didrun verdict, and U6's explicit nonclaims; and
+5. the current bounded shippable unit (P07/U6b standalone contract and fresh conformance execution only).
 
 If any answer is missing, read the files above again. Do not infer a didrun grade from this handoff; run strict verification locally.

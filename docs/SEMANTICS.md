@@ -14,7 +14,7 @@ Some envelopes also carry a separately derived companion digest. In particular, 
 
 Schema acceptance proves only that a wire value has the declared closed shape. It does not prove strict canonical parsing, semantic construction, source provenance, physical freshness, host truth, comparison admission, durability, or current-head authority. Strings and collections may have stricter UTF-8 byte caps in Go than JSON Schema's code-point-oriented `maxLength` can express.
 
-U1 did not supply explicit runtime-to-wire codecs for every target schema. U6 now has strict runtime codecs plus exact canonical body-field sets and one valid runtime/example intersection for `Choicepoint` and `DecisionRecord`, but those capabilities remain `UNRECEIPTED` until `status/U6.md` names a sealed strict-clean commit and exact event-bound grades. This is not equivalence between the JSON-Schema and strict-Go acceptance languages: schemas intentionally overapproximate some UTF-8 byte caps and semantic authority. Future standalone, studio, and export schemas remain planning authorities until their owning units implement and receipt their named parity gates.
+U1 did not supply explicit runtime-to-wire codecs for every target schema. Sealed U6 adds strict runtime codecs, exact canonical body-field sets, and one valid runtime/example intersection for `Choicepoint` and `DecisionRecord`; the exact receipt boundary and grades live in `status/U6.md`. This is not equivalence between the JSON-Schema and strict-Go acceptance languages: schemas intentionally overapproximate some UTF-8 byte caps and semantic authority. Future standalone, studio, and export schemas remain planning authorities until their owning units implement and receipt their named parity gates.
 
 ## Projection definition and result authority
 
@@ -87,7 +87,7 @@ In U1, “expected roster” means the exact caller-declared structural roster s
 
 ## Persistence and reconstruction
 
-Opaque Go types are the in-process authority boundary. Schemas and examples are wire projections, never alternate constructors. When the current unreceipted U6 candidate store reopens a bounded semantic object it must:
+Opaque Go types are the in-process authority boundary. Schemas and examples are wire projections, never alternate constructors. When the sealed U6 store reopens a bounded semantic object it must:
 
 1. verify the external artifact digest against the exact canonical body and kind domain;
 2. parse through the strict canonical profile without information loss;
