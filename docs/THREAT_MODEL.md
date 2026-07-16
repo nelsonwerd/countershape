@@ -45,7 +45,7 @@ These are design objectives, not a completed security review.
 | Captured observations | can contain secrets, paths, customer-like data, and terminal controls | private `CapturedObservation` after capture policy |
 | Projection definition and result | determines what values are compared and shown | versioned projection authority |
 | Outcome map | determines the exact witnessed disagreement | canonical labeled-map digest |
-| Decision record | records a human's scoped intent | authenticated, CAS-bound human action |
+| Decision record | records one locally caller-attributed exact-witness decision | strict session validation plus current Choicepoint CAS; actor authenticity is not established in U6 |
 | Contract bundle | executable residue placed in a repository | deterministic emitter + bundle digest |
 | Store heads | choose the current semantic lineage | authenticated atomic CAS |
 | Loopback bearer and CSRF token | authorize local reads and mutations | server session boundary |
@@ -90,7 +90,7 @@ Git object database
 
 Each arrow is a validation boundary, not a change of OS security principal. The materialized root, process, store, and server normally run as the same user. Content-addressed identity detects byte substitution inside Countershape's artifact model; it does not make the host trustworthy.
 
-The blind-first boundary is an information-separation boundary inside the API. Candidate identity, producer/model provenance, total candidate count, per-outcome support counts, and candidate ordering do not cross into the blind DTO or accessibility tree. The number and facts of distinct outcomes do cross because the human must decide among them.
+The blind-first boundary begins as a semantic information-separation boundary. U6 structurally omits candidate identity, producer/model provenance, total candidate count, per-outcome support counts, candidate ordering, and reveal material from the blind DTO. U8 must separately prove those fields do not enter the DOM, accessibility tree, visual metadata, or analytics labels. The number and facts of distinct outcomes necessarily cross because the caller must decide among them.
 
 ## Threat register
 
@@ -178,7 +178,7 @@ The blind-first boundary is an information-separation boundary inside the API. C
 
 **Threat.** A cache, reducer, API, or UI preserves only group count or membership while candidate outputs change, yielding a false local-reduction grade.
 
-**Required controls.** Store, reducer, confirmation, API, and UI carry full typed `CandidateOutcomeMap` values or an opaque result from `ComparableForPreservation`, never a naked `PreservationMapDigest`. Comparability requires equal plan, envelope, stimulus-independent comparison basis, expected roster, eligible set, exclusions, and exclusion classifications. Only comparable maps use the complete sorted candidate-key-to-fingerprint digest: equality is `PRESERVES`, inequality is `CHANGES`; every comparability failure is `UNRESOLVED`. The digest is distinct from the evidence-bearing `OutcomeArtifactDigest`. Concrete per-repetition admission artifacts may differ across stimuli/phases, while each map requires one exact admission-digest set shared by all candidate batches. Display aliases and groups have no semantic identity. Construction of `ONE_MINIMAL_UNDER(...)` requires a durable-store authority over a complete direct-neighbor sweep whose result set is entirely fresh `CHANGES`; this constructor is absent before U5.
+**Required controls.** Store, reducer, confirmation, API, and UI carry full typed `CandidateOutcomeMap` values or an opaque result from `ComparableForPreservation`, never a naked `PreservationMapDigest`. Comparability requires equal plan, envelope, stimulus-independent comparison basis, expected roster, eligible set, exclusions, and exclusion classifications. Only comparable maps use the complete sorted candidate-key-to-fingerprint digest: equality is `PRESERVES`, inequality is `CHANGES`; every comparability failure is `UNRESOLVED`. The digest is distinct from the evidence-bearing `OutcomeArtifactDigest`. Concrete per-repetition admission artifacts may differ across stimuli/phases, while each map requires one exact admission-digest set shared by all candidate batches. Display aliases and groups have no semantic identity. Construction of `ONE_MINIMAL_UNDER(...)` requires a durable-store authority over a complete direct-neighbor sweep whose result set is entirely typed `CHANGES` with the required evidence/content-digest nonoverlap; the grade itself does not establish physical execution or freshness. This constructor is absent before U5.
 
 **Refusal.** Any unresolved neighbor, exhausted budget, cancellation, partial sweep, changed plan, changed eligibility, or absent durable completion record limits the grade to `BEST_KNOWN` or `UNCHANGED` as defined by the run.
 
@@ -188,19 +188,19 @@ The blind-first boundary is an information-separation boundary inside the API. C
 
 **Threat.** Branch/model identity, producer provenance, candidate support counts, majority, or ordering leaks through payloads, DOM attributes, accessible names, card size, typography, analytics labels, or stable aliases and steers the ruling.
 
-**Required controls.** The blind DTO is a distinct server type that cannot contain candidate or producer identity, total candidates, per-outcome support, or source order. Opaque aliases are Choicepoint-scoped. Deterministic order derives from a persisted Choicepoint-scoped hash independent of support and candidate order. Cards have equal weight. Candidate facts appear only after explicit reveal. Early reveal and post-reveal change are recorded. Candidate-generated behavior facts are rendered separately from human-authored scenario text.
+**Required controls.** The U6 blind DTO is a core semantic type, not yet an authenticated server response. It structurally omits candidate/ref/producer identity, total candidate count, per-outcome support, source order, and reveal material. Aliases bind the Choicepoint digest and exact projection fingerprint and expand all supporting outcomes. Deterministic order hashes only the unexposed projection fingerprint and therefore cannot read support count or candidate order. U8 must add equal visual weight, accessibility-tree parity, analytics discipline, complete warning copy, and the authenticated server boundary.
 
 **Refusal.** Payload or accessibility-tree leakage, majority-coded order/weight, or a finalization path that skips provenance reveal blocks studio completion.
 
-**Residual risk.** Behavior itself can reveal authorship. The number of distinct outcomes is necessarily visible. Rendering/visit records prove presentation, not reading, comprehension, anonymity, or improved judgment.
+**Residual risk.** Behavior facts can reveal authorship. Projection-fingerprint-derived order can remain stable across Choicepoints containing the same facts; it is support-neutral, not anonymous or unlinkable. Distinct outcome count is visible. Visit records prove presentation only.
 
 ### T11 — Weak, forged, or stale rulings
 
 **Threat.** A stale tab finalizes against an old Choicepoint; a malicious page forges a request; fields default to asserted; allow-many becomes independent value sets; selected fields fail to distinguish allowed from disallowed outcomes; or a noncompilable action reaches the emitter.
 
-**Required controls.** Authenticated write plus exact Host, Origin, JSON content type, CSRF, and current digest CAS. The server repeats all transition validation. No field is preselected. Missing differs from present-empty. Apply the full field-separation formula to every allowed/disallowed confirmed tuple. Allow-many stores complete tuples. Emitter input is a construction-safe compilable decision type available only for `ALLOW_OBSERVED` or separately reviewed `CUSTOM_EXPECTATION`.
+**Required controls.** U6 supplies strict session transitions, no default-selected fields, exact missing/empty separation, complete-tuple allow-many, custom-review binding, sealed compile eligibility, full store-token CAS, and stale-ready refusal. Its actor fields are local caller assertions. Bearer, Host, Origin, content-type, CSRF, and browser-server controls are U8 targets and remain `UNRECEIPTED` before that unit. Emitter input remains a future construction-safe compilable decision authority available only for `ALLOW_OBSERVED` or separately reviewed `CUSTOM_EXPECTATION`.
 
-**Refusal.** Stale CAS, empty fields (`EMPTY_SELECTED_FIELDS`), invalid field path, weak separation (`AMBIGUOUS_SCOPE`), tuple cross-product, absent reveal, or `REJECT_ALL`/`DEFER`/`REFINE` returns a typed refusal and creates no files.
+**Refusal.** Stale or foreign store authority, missing reveal, omitted or empty selections, `EMPTY_SELECTED_FIELDS`, invalid field path, `AMBIGUOUS_SCOPE`, tuple cross-product, observed-tuple custom expectation, or noncompilable emitter coercion is refused. `REFINE` specifically returns `REFINE_REQUIRES_SUCCESSOR_STUDY` before semantic-object publication or head mutation. `REJECT_ALL` and `DEFER` may create noncompilable DecisionRecords but cannot reach an emitter.
 
 **Residual risk.** The exact selected fields intentionally permit changes in context-only fields. The ruling does not express broader intent or approve a candidate implementation.
 
@@ -252,6 +252,16 @@ The blind-first boundary is an information-separation boundary inside the API. C
 
 **Residual risk.** Receipts do not validate novelty, comprehension, bias reduction, market adoption, maintainability, or review completeness.
 
+### T17 — Store tamper, filesystem semantics, and durability overclaim
+
+**Threat.** A stale or forged token wins, a loser publishes an orphan successor, a same-UID process edits object or head bytes, filesystem semantics differ from local Darwin, or fsync usage is described as proof of power-loss recovery.
+
+**U6 controls.** Private mode-0700 directories; mode-0600 object and head files; path, symlink, case-alias, kind, canonical-byte, and digest validation; retained directory identity; Darwin hard-link create-if-absent object publication; per-study `flock`; full-token comparison before successor-object creation; typed and opaque sensitive transitions; atomic head replacement; directory synchronization; and exact reopen and reverification.
+
+**Refusal.** Foreign, incomplete, or stale token; illegal revision, stage, kind, or predecessor; substituted directory; malformed or oversized bytes; mismatched kind or digest; nonprivate mode; alias; or post-publication corruption fails closed.
+
+**Residual risk.** These controls govern conforming Countershape writers on the exercised local Darwin filesystem. Mode `0600` does not stop the same UID. There is no hostile same-user race defense, NFS or network-filesystem claim, forced-power-loss receipt, archived head chain, garbage collection, deletion or retention guarantee, or administrative recovery protocol.
+
 ## Local server control contract
 
 | Request class | Bearer | Exact Host | Exact Origin | JSON content type | CSRF | CAS current digest |
@@ -267,12 +277,13 @@ Exact Origin means the literal server-created `http://127.0.0.1:{port}` origin. 
 ## Data handling contract
 
 - Private store directories are mode 0700 and private artifact files are mode 0600 where supported on the receipted Darwin filesystem.
+- `private-captures/` is currently a reserved validated private directory; U6 does not implement a distinct captured-body persistence or retention API.
 - Secret values never enter `WorldPlan`, canonical digests intended for display, URLs, routine logs, or receipts. A secret-slot policy records presence without the bytes.
 - Captured evidence can still contain secrets emitted by the program. It is private by default and subject to byte caps.
 - Projection is not redaction unless an operation is explicitly named as redaction. Transformed bytes are not called raw.
 - The studio shows only server-approved typed previews; it does not fetch arbitrary artifact paths.
 - Export paths are created by the operator under a safe tool-owned name. Candidate bytes cannot choose a path.
-- Deletion/retention guarantees are not yet implemented or claimed in U0.
+- Deletion and retention guarantees are not implemented or claimed through U6a.
 
 ## Security refusal policy
 
@@ -300,7 +311,8 @@ No fallback may silently keep the stronger public claim.
 | U3 | CLI eligibility and sparse environment | control laundering, alternating output, inherited HOME, terminal bytes |
 | U4 | HTTP ownership and readiness | wrong service, transport/response split, body cap, contamination fixture |
 | U5 | exact-map reduction | same-shape/different-map trap, cancellation, unresolved final neighbor |
-| U6 | CAS, rulings, parity, absence | stale/forged actions, cross-product, context assertion, Node drift |
+| U6a / P06 | CAS, physical confirmation, Choicepoint, blind semantic kernel, rulings | stale/forged authority, reused evidence, blind identity/support/order leak, cross-product, context assertion, noncompilable promotion |
+| U6b / P07 | Go/Node parity, bundle publication, absence, current execution | Node drift, partial bundle, forbidden dependency, Countershape presence, contradiction/ineligibility collapse |
 | U7 | decisive studies | false one-shot result, fresh invocation evidence, all decision actions |
 | U8 | loopback and blind renderer | auth/Host/Origin/CORS/CSRF/CAS, identity/support leak, injection, mobile parity |
 | U9 | export and packaging | secret fixtures, structural injection, raw opt-in, absent warnings, final receipt map |

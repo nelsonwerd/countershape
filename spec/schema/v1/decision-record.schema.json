@@ -2,131 +2,329 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://countershape.dev/spec/schema/v1/decision-record.schema.json",
   "title": "Countershape DecisionRecord v1",
-  "description": "Future U5 wire target for a human-scoped exact-witness ruling. Only explicit selected fields are asserted; unselected fields remain context. This schema is planning guidance, not implemented durable authority.",
-  "$comment": "No U1 constructor emits or validates DecisionRecord. In a future U5 implementation, compilable is a deterministic derived wire projection of action and validated oracle content; an emitter must never supply it as independent input.",
+  "description": "The exact 40-member U6 DecisionRecord archive body. Its digest is external to these bytes. Serialized compilability is a reconstructed projection, never emitter authority; strict Go reconstruction against the exact Choicepoint is authoritative.",
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "schema_version", "kind", "artifact_digest", "choicepoint_digest", "actor", "interaction_facts",
-    "action", "selected_fields", "nonasserted_fields", "confirmed_allowed_projection_fingerprints",
-    "confirmed_disallowed_projection_fingerprints", "allowed_complete_tuples", "scope", "separation_check",
-    "human_annotation", "compilable", "didrun_receipts"
+    "schema_version",
+    "kind",
+    "choicepoint_digest",
+    "blind_payload_digest",
+    "original_stimulus_digest",
+    "minimized_stimulus_digest",
+    "scope",
+    "generalization_claimed",
+    "provisional_ruling_base64",
+    "provisional_ruling_digest",
+    "provisional_action",
+    "final_ruling_base64",
+    "final_ruling_digest",
+    "reveal_base64",
+    "reveal_digest",
+    "early_reveal",
+    "changed_after_reveal",
+    "post_reveal_change_rationale",
+    "visited_surfaces",
+    "pre_reveal_visited_surfaces",
+    "post_reveal_visited_surfaces",
+    "presentation_fact_scope",
+    "actor_id",
+    "actor_attribution",
+    "actor_authenticity",
+    "human_annotation",
+    "action",
+    "selected_fields",
+    "nonasserted_fields",
+    "allowed_aliases",
+    "confirmed_allowed_outcome_ids",
+    "confirmed_disallowed_outcome_ids",
+    "allowed_complete_tuples",
+    "disallowed_complete_tuples",
+    "separation_check",
+    "compile_eligibility",
+    "compilable",
+    "didrun_receipts",
+    "receipt_status_when_empty",
+    "receipt_interpretation"
   ],
   "properties": {
     "schema_version": { "const": "countershape/v1" },
     "kind": { "const": "DecisionRecord" },
-    "artifact_digest": { "$ref": "common.schema.json#/$defs/Digest" },
     "choicepoint_digest": { "$ref": "common.schema.json#/$defs/Digest" },
-    "actor": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["actor_id", "attribution"],
-      "properties": {
-        "actor_id": { "type": "string", "minLength": 1 },
-        "attribution": { "const": "HUMAN_OPERATOR" }
-      }
+    "blind_payload_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "original_stimulus_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "minimized_stimulus_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "scope": { "const": "EXACT_WITNESSED_STIMULUS_V1" },
+    "generalization_claimed": { "const": false },
+    "provisional_ruling_base64": { "$ref": "#/$defs/OptionalBase64" },
+    "provisional_ruling_digest": {
+      "oneOf": [
+        { "const": "" },
+        { "$ref": "common.schema.json#/$defs/Digest" }
+      ]
     },
-    "interaction_facts": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "blind_payload_identity_hidden", "support_counts_absent", "visited_surfaces", "provisional_action",
-        "early_reveal", "provenance_revealed_before_finalization", "post_reveal_action", "post_reveal_change_rationale"
-      ],
-      "properties": {
-        "blind_payload_identity_hidden": { "type": "boolean" },
-        "support_counts_absent": { "type": "boolean" },
-        "visited_surfaces": {
-          "type": "array",
-          "items": {
-            "enum": ["ORIGINAL_AND_MINIMIZED", "REDUCTION_DERIVATION", "CAPTURE_TO_PROJECTION", "NONASSERTED_FIELDS", "PROVENANCE_REVEAL"]
-          }
-        },
-        "provisional_action": { "enum": ["ALLOW_OBSERVED", "CUSTOM_EXPECTATION", "REJECT_ALL", "DEFER", "REFINE"] },
-        "early_reveal": { "type": "boolean" },
-        "provenance_revealed_before_finalization": { "type": "boolean" },
-        "post_reveal_action": { "enum": ["ALLOW_OBSERVED", "CUSTOM_EXPECTATION", "REJECT_ALL", "DEFER", "REFINE"] },
-        "post_reveal_change_rationale": {
-          "oneOf": [
-            { "type": "string", "minLength": 1 },
-            { "type": "null" }
-          ]
-        }
-      }
+    "provisional_action": {
+      "oneOf": [
+        { "const": "" },
+        { "$ref": "#/$defs/Action" }
+      ]
     },
-    "action": { "enum": ["ALLOW_OBSERVED", "CUSTOM_EXPECTATION", "REJECT_ALL", "DEFER", "REFINE"] },
+    "final_ruling_base64": { "$ref": "#/$defs/NonemptyBase64" },
+    "final_ruling_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "reveal_base64": { "$ref": "#/$defs/NonemptyBase64" },
+    "reveal_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "early_reveal": { "type": "boolean" },
+    "changed_after_reveal": { "type": "boolean" },
+    "post_reveal_change_rationale": { "type": "string", "maxLength": 8192 },
+    "visited_surfaces": {
+      "const": [
+        "ORIGINAL_WITNESS",
+        "MINIMIZED_WITNESS",
+        "REDUCTION_DERIVATION",
+        "PROJECTION_OPERATIONS",
+        "NONASSERTED_FIELDS",
+        "PROVENANCE_REVEAL"
+      ]
+    },
+    "pre_reveal_visited_surfaces": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/PreRevealSurface" }
+    },
+    "post_reveal_visited_surfaces": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/ReviewSurface" }
+    },
+    "presentation_fact_scope": { "const": "PRESENTED_NOT_COMPREHENDED_OR_DEBIASED" },
+    "actor_id": { "type": "string", "minLength": 1, "maxLength": 512 },
+    "actor_attribution": { "const": "LOCAL_CALLER_ASSERTED_OPERATOR" },
+    "actor_authenticity": { "const": "AUTHENTICITY_NOT_ESTABLISHED_IN_U6" },
+    "human_annotation": { "type": "string", "maxLength": 32768 },
+    "action": {
+      "enum": ["ALLOW_OBSERVED", "CUSTOM_EXPECTATION", "REJECT_ALL", "DEFER", "REFINE"]
+    },
     "selected_fields": {
       "type": "array",
-      "items": { "$ref": "common.schema.json#/$defs/FieldId" }
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/FieldID" }
     },
     "nonasserted_fields": {
       "type": "array",
-      "items": { "$ref": "common.schema.json#/$defs/FieldId" }
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/FieldID" }
     },
-    "confirmed_allowed_projection_fingerprints": {
+    "allowed_aliases": {
       "type": "array",
-      "items": { "$ref": "common.schema.json#/$defs/Digest" }
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/BlindAlias" }
     },
-    "confirmed_disallowed_projection_fingerprints": {
+    "confirmed_allowed_outcome_ids": {
       "type": "array",
-      "items": { "$ref": "common.schema.json#/$defs/Digest" }
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/OutcomeID" }
+    },
+    "confirmed_disallowed_outcome_ids": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/OutcomeID" }
     },
     "allowed_complete_tuples": {
       "type": "array",
-      "items": { "$ref": "common.schema.json#/$defs/ExactTuple" }
+      "items": { "$ref": "#/$defs/ExactTuple" }
     },
-    "scope": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["kind", "stimulus_digest", "generalization_claimed"],
-      "properties": {
-        "kind": { "const": "EXACT_WITNESSED_STIMULUS" },
-        "stimulus_digest": { "$ref": "common.schema.json#/$defs/Digest" },
-        "generalization_claimed": { "const": false }
-      }
+    "disallowed_complete_tuples": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/ExactTuple" }
     },
-    "separation_check": {
-      "oneOf": [
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["status", "checked_allowed_tuple_count", "checked_disallowed_outcome_count"],
-          "properties": {
-            "status": { "const": "PASSED" },
-            "checked_allowed_tuple_count": { "type": "integer", "minimum": 1 },
-            "checked_disallowed_outcome_count": { "type": "integer", "minimum": 0 }
-          }
-        },
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["status", "reason"],
-          "properties": {
-            "status": { "const": "NOT_APPLICABLE" },
-            "reason": { "enum": ["NONCOMPILABLE_ACTION", "NO_POSITIVE_ORACLE"] }
-          }
-        }
-      ]
+    "separation_check": { "$ref": "#/$defs/SeparationCheck" },
+    "compile_eligibility": {
+      "enum": ["COMPILE_ELIGIBLE_EXACT_PREDICATE", "NONCOMPILABLE_ACTION"]
     },
-    "human_annotation": { "type": "string" },
-    "compilable": {
-      "description": "Future derived wire projection. It is reconstructed from action and validated oracle content and is never trusted as emitter input.",
-      "type": "boolean"
-    },
+    "compilable": { "type": "boolean" },
     "didrun_receipts": {
       "type": "array",
       "items": { "$ref": "common.schema.json#/$defs/ReceiptReference" }
+    },
+    "receipt_status_when_empty": { "const": "UNRECEIPTED" },
+    "receipt_interpretation": { "const": "OPAQUE_VERBATIM_REFERENCE_NOT_CONFORMANCE" }
+  },
+  "$defs": {
+    "Action": {
+      "enum": ["ALLOW_OBSERVED", "CUSTOM_EXPECTATION", "REJECT_ALL", "DEFER", "REFINE"]
+    },
+    "ReviewSurface": {
+      "enum": [
+        "ORIGINAL_WITNESS",
+        "MINIMIZED_WITNESS",
+        "REDUCTION_DERIVATION",
+        "PROJECTION_OPERATIONS",
+        "NONASSERTED_FIELDS",
+        "PROVENANCE_REVEAL"
+      ]
+    },
+    "PreRevealSurface": {
+      "enum": [
+        "ORIGINAL_WITNESS",
+        "MINIMIZED_WITNESS",
+        "REDUCTION_DERIVATION",
+        "PROJECTION_OPERATIONS",
+        "NONASSERTED_FIELDS"
+      ]
+    },
+    "FieldID": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 128
+    },
+    "BlindAlias": {
+      "type": "string",
+      "pattern": "^blind:[0-9a-f]{64}$"
+    },
+    "OutcomeID": {
+      "type": "string",
+      "pattern": "^outcome:[0-9a-f]{64}$"
+    },
+    "OptionalBase64": {
+      "type": "string",
+      "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"
+    },
+    "NonemptyBase64": {
+      "type": "string",
+      "minLength": 4,
+      "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"
+    },
+    "ExactValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tag", "text", "boolean", "canonical_json_base64"],
+      "properties": {
+        "tag": { "enum": ["MISSING", "STRING", "INTEGER", "BOOLEAN", "NULL", "CANONICAL_JSON"] },
+        "text": { "type": "string" },
+        "boolean": { "type": "boolean" },
+        "canonical_json_base64": { "$ref": "#/$defs/OptionalBase64" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "tag": { "const": "MISSING" } }, "required": ["tag"] },
+          "then": { "properties": { "text": { "const": "" }, "boolean": { "const": false }, "canonical_json_base64": { "const": "" } } }
+        },
+        {
+          "if": { "properties": { "tag": { "const": "NULL" } }, "required": ["tag"] },
+          "then": { "properties": { "text": { "const": "" }, "boolean": { "const": false }, "canonical_json_base64": { "const": "" } } }
+        },
+        {
+          "if": { "properties": { "tag": { "enum": ["STRING", "INTEGER"] } }, "required": ["tag"] },
+          "then": { "properties": { "boolean": { "const": false }, "canonical_json_base64": { "const": "" } } }
+        },
+        {
+          "if": { "properties": { "tag": { "const": "BOOLEAN" } }, "required": ["tag"] },
+          "then": { "properties": { "text": { "const": "" }, "canonical_json_base64": { "const": "" } } }
+        },
+        {
+          "if": { "properties": { "tag": { "const": "CANONICAL_JSON" } }, "required": ["tag"] },
+          "then": { "properties": { "text": { "const": "" }, "boolean": { "const": false }, "canonical_json_base64": { "$ref": "#/$defs/NonemptyBase64" } } }
+        }
+      ]
+    },
+    "ExactField": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["field_id", "value"],
+      "properties": {
+        "field_id": { "$ref": "#/$defs/FieldID" },
+        "value": { "$ref": "#/$defs/ExactValue" }
+      }
+    },
+    "ExactTuple": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fields"],
+      "properties": {
+        "fields": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/ExactField" }
+        }
+      }
+    },
+    "SeparationCheck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "allowed_tuple_count",
+        "disallowed_tuple_count",
+        "allowed_outcome_count",
+        "disallowed_outcome_count",
+        "compared_pair_count"
+      ],
+      "properties": {
+        "status": { "enum": ["PASSED", "NOT_APPLICABLE"] },
+        "allowed_tuple_count": { "type": "integer", "minimum": 0 },
+        "disallowed_tuple_count": { "type": "integer", "minimum": 0 },
+        "allowed_outcome_count": { "type": "integer", "minimum": 0 },
+        "disallowed_outcome_count": { "type": "integer", "minimum": 0 },
+        "compared_pair_count": { "type": "integer", "minimum": 0 }
+      }
     }
   },
   "allOf": [
+    {
+      "if": { "properties": { "early_reveal": { "const": true } }, "required": ["early_reveal"] },
+      "then": {
+        "properties": {
+          "provisional_ruling_base64": { "const": "" },
+          "provisional_ruling_digest": { "const": "" },
+          "provisional_action": { "const": "" }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "early_reveal": { "const": false } }, "required": ["early_reveal"] },
+      "then": {
+        "properties": {
+          "provisional_ruling_base64": { "$ref": "#/$defs/NonemptyBase64" },
+          "provisional_ruling_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+          "provisional_action": { "$ref": "#/$defs/Action" },
+          "pre_reveal_visited_surfaces": {
+            "const": [
+              "ORIGINAL_WITNESS",
+              "MINIMIZED_WITNESS",
+              "REDUCTION_DERIVATION",
+              "PROJECTION_OPERATIONS",
+              "NONASSERTED_FIELDS"
+            ]
+          },
+          "post_reveal_visited_surfaces": { "const": ["PROVENANCE_REVEAL"] }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "changed_after_reveal": { "const": true } }, "required": ["changed_after_reveal"] },
+      "then": {
+        "properties": {
+          "early_reveal": { "const": false },
+          "post_reveal_change_rationale": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    {
+      "if": { "properties": { "changed_after_reveal": { "const": false } }, "required": ["changed_after_reveal"] },
+      "then": {
+        "properties": { "post_reveal_change_rationale": { "const": "" } }
+      }
+    },
     {
       "if": { "properties": { "action": { "enum": ["ALLOW_OBSERVED", "CUSTOM_EXPECTATION"] } }, "required": ["action"] },
       "then": {
         "properties": {
           "selected_fields": { "minItems": 1 },
           "allowed_complete_tuples": { "minItems": 1 },
-          "compilable": { "const": true },
-          "separation_check": { "properties": { "status": { "const": "PASSED" } }, "required": ["status"] }
+          "separation_check": { "properties": { "status": { "const": "PASSED" } }, "required": ["status"] },
+          "compile_eligibility": { "const": "COMPILE_ELIGIBLE_EXACT_PREDICATE" },
+          "compilable": { "const": true }
         }
       }
     },
@@ -135,11 +333,29 @@
       "then": {
         "properties": {
           "selected_fields": { "maxItems": 0 },
+          "allowed_aliases": { "maxItems": 0 },
+          "confirmed_allowed_outcome_ids": { "maxItems": 0 },
+          "confirmed_disallowed_outcome_ids": { "maxItems": 0 },
           "allowed_complete_tuples": { "maxItems": 0 },
-          "compilable": { "const": false },
-          "separation_check": { "properties": { "status": { "const": "NOT_APPLICABLE" } }, "required": ["status"] }
+          "disallowed_complete_tuples": { "maxItems": 0 },
+          "separation_check": {
+            "properties": {
+              "status": { "const": "NOT_APPLICABLE" },
+              "allowed_tuple_count": { "const": 0 },
+              "disallowed_tuple_count": { "const": 0 },
+              "allowed_outcome_count": { "const": 0 },
+              "disallowed_outcome_count": { "const": 0 },
+              "compared_pair_count": { "const": 0 }
+            }
+          },
+          "compile_eligibility": { "const": "NONCOMPILABLE_ACTION" },
+          "compilable": { "const": false }
         }
       }
+    },
+    {
+      "if": { "properties": { "action": { "const": "ALLOW_OBSERVED" } }, "required": ["action"] },
+      "then": { "properties": { "allowed_aliases": { "minItems": 1 } } }
     }
   ]
 }

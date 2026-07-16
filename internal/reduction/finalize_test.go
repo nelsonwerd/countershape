@@ -488,12 +488,23 @@ func TestFinalizeReopensAndRefusesCorruptionAfterAuthorityIssuance(t *testing.T)
 	run, draft := finalizationRun(t, 6, false)
 	value, root := newFinalizationStore(t)
 	completion := publishCompletion(t, value, draft)
-	objects := filepath.Join(root, "objects")
-	entries, err := os.ReadDir(objects)
-	if err != nil || len(entries) != 1 {
-		t.Fatalf("published objects = %d, err=%v", len(entries), err)
+	objects := filepath.Join(root, "objects", "sha256")
+	objectPath := ""
+	err := filepath.WalkDir(objects, func(path string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.Type().IsRegular() {
+			if objectPath != "" {
+				return fmt.Errorf("multiple immutable objects found")
+			}
+			objectPath = path
+		}
+		return nil
+	})
+	if err != nil || objectPath == "" {
+		t.Fatalf("published object path = %q, err=%v", objectPath, err)
 	}
-	objectPath := filepath.Join(objects, entries[0].Name())
 	body := draft.CanonicalBytes()
 	body[0] = '['
 	if err := os.WriteFile(objectPath, body, 0o600); err != nil {

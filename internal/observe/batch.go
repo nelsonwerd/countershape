@@ -217,6 +217,8 @@ func cloneSchedule(input RotatedSchedule) RotatedSchedule {
 		canonical:   append([]byte(nil), input.canonical...),
 		roster:      append([]domain.CandidateExecutionKey(nil), input.roster...),
 		repetitions: input.repetitions,
+		phase:       input.phase,
+		startOffset: input.startOffset,
 		trials:      append([]ScheduledTrial(nil), input.trials...),
 	}
 }
@@ -252,7 +254,7 @@ func runObservation(
 		config.Plan.ComparisonEnvelopeDigest() != config.Envelope.Digest() {
 		return ObservationRun{}, &domain.Error{Code: "INVALID_OBSERVATION_CONFIG"}
 	}
-	schedule, err := NewRotatedSchedule(config.CandidateRoster, config.Repetitions)
+	schedule, err := NewPhaseRotatedSchedule(config.CandidateRoster, config.Repetitions, config.Purpose)
 	if err != nil {
 		return ObservationRun{}, err
 	}

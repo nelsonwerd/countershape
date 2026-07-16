@@ -480,7 +480,9 @@ func TestProjectionAndReviewerInputCapsFailClosed(t *testing.T) {
 		AllowedObserved: overfullObserved,
 	})
 	assertRefusal(t, err, CodeInputLimitExceeded)
-	for _, reviewer := range []string{"", "   ", string([]byte{0xff}), strings.Repeat("r", maxReviewerBytes+1)} {
+	for _, reviewer := range []string{
+		"", "   ", string([]byte{0xff}), "reviewer\nforged", strings.Repeat("r", maxReviewerBytes+1),
+	} {
 		_, reviewErr := NewCustomExpectationReview(confirmed, selected, expectation, reviewer, reviewDigest())
 		assertRefusal(t, reviewErr, CodeInvalidReviewFact)
 	}
@@ -686,22 +688,20 @@ func TestMissingNullAndPresentEmptyRemainDistinct(t *testing.T) {
 func TestNoncompilableActionsProduceSealedVariant(t *testing.T) {
 	_, confirmed := testConfirmed(t, defaultSpecs()...)
 	for _, action := range []Action{ActionRejectAll, ActionDefer, ActionRefine} {
-		t.Run(string(action), func(t *testing.T) {
-			validated, err := ValidateRuling(confirmed, RulingInput{
-				Action:          action,
-				SelectedFields:  []string{},
-				AllowedObserved: []ConfirmedOutcomeRef{},
-			})
-			if err != nil {
-				t.Fatalf("validate: %v", err)
-			}
-			if _, ok := validated.CompileEligibility().(NoncompilableRuling); !ok {
-				t.Fatalf("eligibility type = %T", validated.CompileEligibility())
-			}
-			if _, ok := validated.CompileEligibility().(CompilableRuling); ok {
-				t.Fatal("noncompilable action reached compilable variant")
-			}
+		validated, err := ValidateRuling(confirmed, RulingInput{
+			Action:          action,
+			SelectedFields:  []string{},
+			AllowedObserved: []ConfirmedOutcomeRef{},
 		})
+		if err != nil {
+			t.Fatalf("%s validate: %v", action, err)
+		}
+		if _, ok := validated.CompileEligibility().(NoncompilableRuling); !ok {
+			t.Fatalf("%s eligibility type = %T", action, validated.CompileEligibility())
+		}
+		if _, ok := validated.CompileEligibility().(CompilableRuling); ok {
+			t.Fatalf("%s reached compilable variant", action)
+		}
 	}
 }
 

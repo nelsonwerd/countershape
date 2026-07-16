@@ -1,8 +1,8 @@
 # Countershape execution prompt pack
 
-**State:** U0 build plan, authored after deep dive and adversarial red team. The prompts are implementation contracts, not evidence that the product exists.
+**State:** living execution contract. Prompt outcomes remain design requirements until their exact status file names a sealed strict-clean commit and verbatim receipt grades.
 
-**System:** Countershape, a narrowed Darwin reference instrument for comparing exact Git candidates in declared fresh comparison envelopes, preserving an exact candidate-to-projection-fingerprint map, reducing one typed witness under named local rules, recording one human exact-witness ruling, and emitting a standalone selected-field Node contract.
+**System:** Countershape, a narrowed Darwin reference instrument for comparing exact Git candidates in declared fresh comparison envelopes, preserving an exact candidate-to-projection-fingerprint map, reducing one typed witness under named local rules, recording one locally caller-attributed exact-witness ruling record with human authenticity outside canonical proof, and emitting a standalone selected-field Node contract.
 
 **Operating persona:** Soren Vale—compiler and distributed-systems builder, creative-tools founder, allergic to hidden authority. Agents are speculative co-processors; disagreement is evidence of missing intent; a refusal with provenance is more useful than a confident fiction. Build something unusually coherent and tactile, but never spend correctness or trust language for spectacle.
 
@@ -17,7 +17,9 @@ The living authority order is:
 3. the current prompt for unit ownership and acceptance;
 4. `docs/HANDOFF_MODE_C.md` for observed repository state.
 
-If these conflict, preserve the narrower truth claim and record the discrepancy before editing. Never silently broaden scope. The prompt pack may be refined only as a committed U0 contract change with its own receipt.
+An implementation-time red-team correction section inside a prompt supersedes conflicting older prompt prose when that correction narrows authority, is covered by the planning validator, and is committed and receipted with the owning unit. Broadening authority or changing acceptance scope requires a separately receipted planning-contract change.
+
+If these conflict, preserve the narrower truth claim and record the discrepancy before editing. Never silently broaden scope.
 
 ## Non-negotiable operating contract
 
@@ -35,7 +37,7 @@ This is a repository-scale composition with acknowledged prior art, not a new di
 
 Inspect `git status --short` before every unit. Existing changes belong to the user or another active lane; preserve them. Respect the exact ownership in each prompt and record unavoidable cross-unit edits. Use `apply_patch` for hand edits. Do not use destructive Git commands, amend or erase sealed history, commit `.didrun/`, add AI co-author trailers, push, publish, release, or open a PR unless the user separately authorizes it.
 
-Subagents may investigate and implement bounded nonoverlapping work, but they share the same filesystem. The owning agent must read required skill instructions and final artifacts itself, review all delegated changes, and ensure every subagent uses the same didrun discipline for load-bearing verification. Parallel speed never relaxes the sequential unit gate.
+Parallel agents are bounded read-only auditors and critics because they share the same filesystem and didrun ledger. The owning root is the sole repository writer and sole didrun, claim, Git, and seal operator. Parallel speed never relaxes the sequential unit gate, and parallel didrun writers are forbidden.
 
 ### didrun discipline—every shippable slice
 
@@ -71,10 +73,10 @@ If a stop condition fires, commit and receipt the narrowest honest fallback rath
 | [P03 — U3 CLI observation](prompts/P03-U3-CLI-OBSERVATION.md) | U3 | typed one-shot CLI stimulus/capture/projection, rotated repeats, control taxonomy | stable/flake/incomplete/control fixtures exact |
 | [P04 — U4 HTTP observation](prompts/P04-U4-HTTP-OBSERVATION.md) | U4 | typed local HTTP readiness/request/capture/projection and contamination proof | same truth algebra; no HTTP coercion in generic kernel |
 | [P05 — U5 bounded reducer](prompts/P05-U5-BOUNDED-REDUCER.md) | U5 | typed terminating neighbors, tri-valued new evaluation, comparability-first exact labeled-map preservation, store-issued durable sweep grade | shape/digest traps, changed basis or eligibility, unresolved, crash/corruption refusal, final sweep, both domains |
-| [P06 — U6 Choicepoint store](prompts/P06-U6-CHOICEPOINT-STORE.md) | U6a | extend U5 object storage with artifact graph/CAS, lineage/staleness, fresh confirmation, blind ruling DTO; reconstruct derived wire facts rather than trusting emitter booleans | new physical evidence and illegal-transition refusals |
+| [P06 — U6 Choicepoint store](prompts/P06-U6-CHOICEPOINT-STORE.md) | U6a | bounded semantic object store, fixed Darwin CAS spine, physical FreshConfirmation, strict Choicepoint/Decision codecs, blind identity/support omission, and noncompilable REFINE refusal | exact physical evidence, full-token CAS-before-publication, canonical body-field plus valid-example parity, blind leakage/alias/order attacks, and explicit successor/staleness nonclaims |
 | [P07 — U6 standalone contract](prompts/P07-U6-STANDALONE-CONTRACT.md) | U6b | field separation, Go/Node vectors, deterministic six-file bundle, absence/current execution | parity, selected fields, none-conforms, Countershape absent |
 | [P08 — U7 CLI/reference studies](prompts/P08-U7-CLI-REFERENCE-STUDIES.md) | U7 | safe-next-action CLI and complete HTTP/CLI falsification studies | contamination/flake/projection/shape/freshness/residue proof, three reproductions |
-| [P09 — U8 secure studio](prompts/P09-U8-SECURE-STUDIO.md) | U8a | authenticated loopback API and complete blind-first functional bench | auth/Host/Origin/CSRF/CAS/blind/injection and core flows |
+| [P09 — U8 secure studio](prompts/P09-U8-SECURE-STUDIO.md) | U8a | authenticated loopback decision bench, complete blind presentation, and any newly implemented derived-status or successor services | auth/Host/Origin/CSRF/CAS/blind/injection gates; no human-authenticity claim; no stale/defer/refine transition without durable authority |
 | [P10 — U8 visual build loop](prompts/P10-U8-VISUAL-BUILD-LOOP.md) | U8b | reference-quality responsive/accessibility loop and real different-model critic | three visual passes plus final regression; all findings dispositioned |
 | [P11 — U9 export/package/hardening](prompts/P11-U9-EXPORT-PACKAGING-HARDENING.md) | U9 | minimized local export, embedded binary, public docs, adversarial/performance closure | clean-root package, three studies, export warning/injection gates |
 | [P12 — final evidence/S6/handoff](prompts/P12-FINAL-EVIDENCE-S6-HANDOFF.md) | closure | real-agent didrun S6, final comprehensive audit, receipt ledger, strict HTML, honest human tail | final commit sealed; strict exit 0; HTML bound to exact commit |

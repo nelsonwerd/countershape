@@ -8,7 +8,7 @@ Build a pure deterministic Go compiler from one current, freshly confirmed, comp
 
 The three authorities remain separate:
 
-1. `DecisionRecord` is immutable historical human provenance for one Choicepoint digest.
+1. `DecisionRecord` is immutable, locally caller-attributed historical ruling provenance for one Choicepoint digest. U6 does not authenticate that the actor is human.
 2. `ContractBundle` is deterministic emitted source and byte identity.
 3. `ContractExecution` is new evidence against the current checkout; it neither recreates nor freshens the historical world.
 
@@ -16,9 +16,9 @@ Do not describe the output as a universal specification, semantic equivalence, s
 
 ## Locked compilation boundary
 
-The emitter accepts only a construction-safe `CompilableRuling`: `ALLOW_OBSERVED` or separately reviewed `CUSTOM_EXPECTATION`. A serialized `DecisionRecord.compilable` Boolean is a deterministic derived wire projection, never emitter input or reconstruction authority; rebuild the ruling from validated action and oracle content. `REJECT_ALL`, `DEFER`, and `REFINE` cannot reach it through type assertions, API coercion, or stale replay. Emission checks the current Choicepoint/head digest with compare-and-swap semantics; a changed projection, confirmation, candidate set, selected fields, target, or ruling returns `STALE_CHOICEPOINT` and writes nothing.
+The emitter begins from the current store-bound `promotion.Ruling`, reopens and validates its exact DecisionRecord, Choicepoint, and FreshConfirmation predecessors, and only then requests `DecisionRecord.CompilableRuling()`. That construction-safe value may represent `ALLOW_OBSERVED` or separately reviewed `CUSTOM_EXPECTATION`. A serialized `DecisionRecord.compilable` Boolean is a deterministic derived wire projection, never emitter input or reconstruction authority. `REJECT_ALL`, `DEFER`, and `REFINE` cannot reach emission through type assertions, API coercion, or stale replay. Emission checks the current Choicepoint/head digest with compare-and-swap semantics; a changed projection, confirmation, candidate set, selected fields, target, or ruling returns `STALE_CHOICEPOINT` and writes nothing.
 
-The only executable predicate is `one-of-exact/v1` over a closed typed portable field registry. Allow-observed compiles selected behavior tuples, never candidate identities, branch names, producer provenance, first/majority outcomes, or support counts. Allow-many is a canonical set of complete tuples, never a cross-product. Before bytes exist, enforce the separation obligation: every allowed confirmed outcome's selected tuple differs from every disallowed confirmed outcome's tuple. Weak fields return `AMBIGUOUS_SCOPE` and zero artifacts. Empty fields are forbidden. Custom expectation is the only path to an executable `none conforms`; `REJECT_ALL` emits a record only.
+The only executable predicate is `one-of-exact/v1` over a closed typed portable field registry. Allow-observed compiles selected behavior tuples, never candidate identities, branch names, producer provenance, first/majority outcomes, or support counts. Allow-many is a canonical set of complete tuples, never a cross-product. Before bytes exist, enforce the separation obligation: every allowed confirmed outcome's selected tuple differs from every disallowed confirmed outcome's tuple. Weak fields return `AMBIGUOUS_SCOPE` and zero artifacts. Empty fields are forbidden. `CUSTOM_EXPECTATION` is the only path to an executable `none conforms`, must be distinct from every confirmed selected-field tuple, and must retain its separate review authority. `REJECT_ALL`, `DEFER`, and `REFINE` never emit.
 
 ## Owned paths and exact bundle
 
@@ -35,7 +35,7 @@ README.md
 manifest.json
 ```
 
-`manifest.json` covers the other five files with sorted paths, modes, and SHA-256 byte digests; it is byte integrity, not authenticity. Output is LF UTF-8 with all defaults materialized and contains no current time, random value, absolute path, user name, temp port, candidate/ref/branch name, secret, host formatter drift, Countershape import, Wake artifact, didrun interpretation, package install, shell command, or external service. Receipt references are inert verbatim strings; missing is `UNRECEIPTED`.
+`manifest.json` covers the other five files with sorted paths, modes, and SHA-256 byte digests; it is byte integrity, not authenticity. Output is LF UTF-8 with all defaults materialized and contains no current time, random value, absolute path, user name, temp port, candidate/ref/branch name, secret, host formatter drift, Countershape import, Wake artifact, didrun interpretation, package install, shell command, or external service. Receipt references retain their verbatim grade and opaque digest/commit association; `receipt_status_when_empty = UNRECEIPTED` and `receipt_interpretation = OPAQUE_VERBATIM_REFERENCE_NOT_CONFORMANCE` remain exact.
 
 ## Implementation passes
 

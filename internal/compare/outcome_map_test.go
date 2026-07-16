@@ -1,6 +1,7 @@
 package compare
 
 import (
+	"bytes"
 	"fmt"
 	"testing"
 
@@ -8,6 +9,36 @@ import (
 	"github.com/nelsonwerd/countershape/internal/domain"
 	"github.com/nelsonwerd/countershape/internal/observe"
 )
+
+func TestCandidateOutcomeMapStrictWireRoundTripAndUnknownFieldRefusal(t *testing.T) {
+	fixture := newComparisonFixtureWithConfirmationRepeats(t, 3, 1, 2, 3)
+	set := buildCandidateBatches(
+		t, fixture, testStimulus, domain.AttemptConfirmation, batchRunOptions{evidenceSalt: 120, scheduled: true},
+		observed(1, 10), observed(2, 11), unstable(3, 12),
+	)
+	outcome := mapFrom(t, testStimulus, fixture.envelope, set.roster, set.batches...)
+	parsed, err := ParseCandidateOutcomeMap(outcome.CanonicalBytes())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if parsed.ArtifactDigest() != outcome.ArtifactDigest() ||
+		parsed.PreservationDigest() != outcome.PreservationDigest() ||
+		parsed.ScheduleStartOffset() != 1 || !bytes.Equal(parsed.CanonicalBytes(), outcome.CanonicalBytes()) {
+		t.Fatal("strict map parser changed exact identity")
+	}
+	wire := outcome.CanonicalBytes()
+	unknown := append([]byte(nil), wire[:len(wire)-1]...)
+	unknown = append(unknown, []byte(`,"zz_unknown":true}`)...)
+	if _, err := ParseCandidateOutcomeMap(unknown); err == nil {
+		t.Fatal("strict map parser accepted an unknown canonical member")
+	}
+	left := []byte(outcome.CandidateRoster()[0].String())
+	right := []byte(outcome.CandidateRoster()[1].String())
+	labelMutation := bytes.Replace(wire, left, right, 1)
+	if _, err := ParseCandidateOutcomeMap(labelMutation); err == nil {
+		t.Fatal("strict map parser accepted a changed candidate label under old derived facts")
+	}
+}
 
 var testStimulus = digestNumber(1)
 
@@ -306,7 +337,7 @@ func buildCandidateBatches(
 	var schedule observe.RotatedSchedule
 	if options.scheduled {
 		var err error
-		schedule, err = observe.NewRotatedSchedule(roster, repetitions)
+		schedule, err = observe.NewPhaseRotatedSchedule(roster, repetitions, purpose)
 		if err != nil {
 			t.Fatal(err)
 		}

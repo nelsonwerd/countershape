@@ -2,7 +2,7 @@
 
 - **Contract version:** U0 / `state-machines-v1`
 - **Target:** narrowed Darwin reference instrument
-- **Status:** normative transition contract; U1–U4 receipts, including exact Git, CLI, and HTTP edge execution, are enumerated in `status/U1.md` through `status/U4.md`; reduction, persistence, and product transitions remain `UNRECEIPTED`
+- **Status:** normative separation of implemented and future transitions. U1–U5 receipt state lives in the corresponding status files. U6 names below describe the current source contract only until `status/U6.md` records a sealed strict-clean boundary. Any state explicitly labeled future target is not a U6 runtime state.
 
 Countershape state is a set of immutable semantic artifacts connected by validated transitions. State names are not presentation copy. The Go domain model, JSON schemas, API DTOs, CLI, studio, generated residue, examples, and tests must agree on these names and preconditions.
 
@@ -15,15 +15,15 @@ Every semantic transition follows the same rules:
 3. **Create, never rewrite.** A successful transition writes a new immutable object. It does not edit an ancestor or replace bytes behind a digest.
 4. **Fail without partial publication.** A validation or emission failure may retain a typed nonadvancing failure artifact. It cannot publish a partially valid successor or a partial contract directory.
 5. **Advance only through a legal edge.** Presentation code cannot infer, skip, or manufacture an edge. The application service revalidates every browser/CLI request.
-6. **Propagate semantic staleness.** A changed plan, candidate set, stimulus, capture policy, projection, reducer set, confirmed map, or decision scope creates a successor lineage. Descendants of the old semantic ancestor are `STALE` for the new lineage.
+6. **Do not edit an ancestor into freshness.** The full product target models semantic changes through successor studies and derived stale/invalidation status. U6 implements no such status graph: a changed ancestor cannot advance the existing fixed head and must use a distinct study or a future successor service.
 7. **Keep historical truth.** Stale, invalidated, cancelled, partial, deferred, and contradicted objects remain addressable and retain their original meaning.
 8. **Do not upgrade external evidence.** didrun grades are opaque references. They do not cause a Countershape state transition.
 
 `CANCELLED` and `PARTIAL` are honest nonadvancing dispositions. They retain completed evidence but never satisfy a missing precondition. A new run allocates fresh attempts; it does not resume a candidate process.
 
-## Immutable artifact lineage
+## Full-product immutable artifact lineage target
 
-The happy-path semantic lineage is:
+The full-product happy-path semantic lineage is shown below. The current U6a candidate stops at `RULING`; `CONTRACT_BUNDLE` and `CONFORMANCE_EXECUTION` belong to P07/U6b.
 
 ```text
 SOURCE_SPEC
@@ -51,15 +51,15 @@ Each name denotes a distinct immutable object kind, not a mutable phase field.
 | `MATERIALIZED_CANDIDATE_SET` | `BASELINE_OBSERVATION` | opaque bindings plus matching plans allocate structural worlds; complete measurement matrices are admitted; peer candidate batches share the exact per-repetition admission set; all required batches reach an honest classification | rejected comparison, partial/control artifacts; no token, batch, or baseline as applicable |
 | `BASELINE_OBSERVATION` | `DIVERGENCE` | at least two eligible candidates are `OBSERVED_STABLE(k/k,h)` and at least two fingerprints exist | no-divergence disposition |
 | `DIVERGENCE` | `REDUCTION_RESULT` | typed reducer has a decreasing measure; every accepted proposal passes full-map comparability and preserves the exact eligible labeled map; U5 grade construction succeeds | cancelled/partial/best available grade according to rules |
-| `REDUCTION_RESULT` | `FRESH_CONFIRMATION` | new attempts, roots, process lifecycles, invocation evidence, and rotated schedule reproduce the exact minimized map | confirmation refusal |
-| `FRESH_CONFIRMATION` | `CHOICEPOINT_READY` | all candidates included in the map remain eligible; confirmation map equals reduction baseline map; all semantic ancestors are current | stale/ineligible Choicepoint draft |
-| `CHOICEPOINT_READY` | `RULING` | authenticated human protocol completes against current digest; action and selected/context fields are valid | deferred/refine/nonadvancing or typed decision refusal |
+| `REDUCTION_RESULT` | `FRESH_CONFIRMATION` | a crypto-random run challenge; challenge-and-ordinal-bound nonces; phase offset `1`; new attempts, worlds, process/root/invocation facts; and no prior-evidence reuse reproduce the exact comparable disposition | confirmation refusal |
+| `FRESH_CONFIRMATION` | `CHOICEPOINT_READY` | exact eligible candidate-to-fingerprint map and exact exclusion key/classification map are preserved; same freshly executed exclusion is allowed, changed disposition is not; all semantic ancestors are current | stale/ineligible Choicepoint draft |
+| `CHOICEPOINT_READY` | `RULING` | the local decision session completes against the exact current digest; action and selected/context fields are valid; caller attribution is recorded without human-authenticity proof | typed decision or durable-promotion refusal |
 | `RULING` | `CONTRACT_BUNDLE` | action is compilable; selected fields are nonempty and separate allowed/disallowed tuples; emitter creates exactly six deterministic files | `AMBIGUOUS_SCOPE`, noncompilable action, or emission refusal; no files |
 | `CONTRACT_BUNDLE` | `CONFORMANCE_EXECUTION` | current tree and exact bundle execute in a new attempt under a receiptable target profile | typed ineligible current execution |
 
-`REJECT_ALL` may create a final `RULING`/`DecisionRecord`, but it has no edge to `CONTRACT_BUNDLE`. `DEFER` creates a deferred decision fact. `REFINE` creates a successor-study request whose only forward edge is a new `SOURCE_SPEC`; it does not edit the current lineage.
+`REJECT_ALL` and `DEFER` may create a final noncompilable `RULING`/`DecisionRecord`, but neither has an edge to `CONTRACT_BUNDLE`; U6 does not reopen a deferred head. A semantic `REFINE` DecisionRecord may be constructed, but durable promotion returns `REFINE_REQUIRES_SUCCESSOR_STUDY` before object publication or head mutation.
 
-## Semantic ancestry and staleness
+## Future semantic ancestry and staleness target
 
 The following changes are semantic and always create a successor lineage:
 
@@ -74,7 +74,7 @@ The following changes are semantic and always create a successor lineage:
 - selected fields, allowed/custom tuples, or exact witness scope; and
 - contract emitter or predicate profile.
 
-A display-only change—such as ref spelling, human annotation, or nonsemantic layout preference—must be stored outside identity-bearing objects or explicitly modeled so it cannot silently alter semantic digests.
+A display-only change—such as ref spelling, caller annotation, or nonsemantic layout preference—must be stored outside identity-bearing objects or explicitly modeled so it cannot silently alter semantic digests.
 
 Staleness rules:
 
@@ -88,7 +88,7 @@ CURRENT ancestor + semantic change
 
 To continue, reconstruct the necessary descendants from the new ancestor. Revalidation cannot flip an old byte-identical object from `STALE` to fresh; it creates a new artifact linked to new evidence.
 
-`INVALIDATED(reason,replacement?)` is an explicit terminal disposition for a known defect, policy withdrawal, or supersession. It records a reason and optional replacement digest. Invalidating an object never deletes or rewrites it.
+`INVALIDATED(reason,replacement?)` is a future explicit terminal disposition for a known defect, policy withdrawal, or supersession. U6 implements neither this object nor successor lineage construction.
 
 ## Store-head state machine
 
@@ -102,12 +102,13 @@ HEAD(A) --advance(expected=X,new=B)----> CAS_CONFLICT   when X != A
 
 Rules:
 
-- `new` must reference an existing valid object of the head's permitted kind.
-- `expected` must match byte-for-byte; no last-write-wins mode exists.
-- `CAS_CONFLICT` creates no target semantic object and does not advance the head.
-- A head may point to a successor status/lineage object, never mutate the object it previously selected.
-- Deleting or force-moving a semantic head is outside v1. Administrative recovery creates an explicit invalidation/successor record.
-- Progress SSE is disposable. Replaying progress messages cannot recreate or advance a head.
+- `next` is a valid in-memory `SemanticObject` of the exact kind permitted at the next fixed revision.
+- The complete opaque expected token binds store instance, study, revision, stage, current kind/digest, immediate previous object, lineage root, and head digest; it must match the reopened current head.
+- CAS comparison and legal-edge validation occur before successor object or temporary-file creation.
+- `CAS_CONFLICT` and `ILLEGAL_LINEAGE` publish no successor object and do not advance the head.
+- A successful advance publishes/reopens the object, atomically replaces `head.json`, and reopens both head and object.
+- Only the current head body is retained. Previous head/object digests are identity commitments, not a persisted navigable history.
+- Deletion, rewind, branch, successor-study, invalidation, administrative repair, and progress SSE are outside U6.
 
 ## Execution-attempt state machine
 
@@ -203,7 +204,7 @@ ELIGIBLE_CAPTURE
      or PROJECTION_REJECTED(reason)
 ```
 
-`PROJECTION_REJECTED` makes the trial ineligible. It is not an output fingerprint. Each operation must be named, deterministic, and linked to captured input. Changing an operation or field registry creates a new `ProjectionDefinition` and successor lineage.
+`PROJECTION_REJECTED` makes the trial ineligible. It is not an output fingerprint. Each operation must be named, deterministic, and linked to captured input. Changing an operation or field registry creates a new `ProjectionDefinition`. In U6 the old fixed spine simply cannot advance with that changed ancestor; an independently named study is unlinked, while construction-safe successor lineage is a future service.
 
 The only equality edge is exact canonical-byte/fingerprint equality under the same projection definition. No display formatting, locale order, ordinal group number, or browser serializer participates.
 
@@ -238,7 +239,7 @@ Grade construction is exact:
 | --- | --- | --- |
 | `UNCHANGED` | no smaller proposal was accepted | that all neighbors were resolved or that the original is locally minimal |
 | `BEST_KNOWN` | at least one smaller proposal was accepted, and budget ended, sweep was incomplete, or at least one direct neighbor is `UNRESOLVED` | local minimality |
-| `ONE_MINIMAL_UNDER(reducer_set_digest)` | current witness is valid; final neighbor enumeration is complete and durable; every enumerated direct neighbor has a new result; the enumerated set exactly equals the fresh `CHANGES` set | global minimum, cause, or comprehension |
+| `ONE_MINIMAL_UNDER(reducer_set_digest)` | current witness is valid; final neighbor enumeration is complete and durable; every enumerated direct neighbor has a typed result with required evidence/content-digest nonoverlap; the enumerated set exactly equals the typed `CHANGES` set | physical freshness, global minimum, cause, or comprehension |
 
 If no smaller proposal was accepted and the run is partial/unresolved, the truthful grade is `UNCHANGED` with transcript/budget limitations; it is not promoted to `BEST_KNOWN` merely to sound more informative.
 
@@ -254,39 +255,31 @@ CONFIRMATION_NOT_STARTED
   -> CONFIRMED_EXACT_MAP | CONFIRMATION_REFUSED(reason)
 ```
 
-Entry requires a U5-graded reduction result. Each trial must reference an attempt artifact created before spawn, new private roots, a new process lifecycle, fixture-observed invocation evidence outside the selected predicate, and a candidate schedule rotated from discovery/reduction. The minimized `CandidateOutcomeMap` must be reconstructed from newly admitted `OBSERVED_STABLE(k/k,h)` batches, pass full-map comparability with the reduced baseline, and then match its exact eligible labeled-map digest.
+Entry requires a U5-graded reduction result. Each confirmation run receives a crypto-random challenge; each instance nonce binds that challenge and its schedule ordinal. The schedule is phase-bound and begins at offset `1` from discovery. Every trial references an attempt artifact created before spawn, new private roots, a new process lifecycle, fixture-observed invocation evidence outside the selected predicate, and evidence identities absent from discovery/reduction. The minimized `CandidateOutcomeMap` is reconstructed from the new batches and must pass full-map comparability with the reduced baseline before matching the exact eligible labeled-map digest. Exact exclusion keys/classifications are part of comparability, but their fresh batch/evidence identities are expected to differ: the same candidate may, for example, remain freshly `UNSTABLE`. A changed eligible/excluded disposition or exclusion classification refuses readiness.
 
-`CONFIRMATION_REFUSED` is terminal for that confirmation object. A retry creates a successor confirmation with entirely new attempts. A new nonce attached to copied capture, projection, or process evidence is an illegal transition.
+`CONFIRMATION_REFUSED` is terminal for that run. A retry allocates an entirely new confirmation run and attempts; U6 creates no successor-study/status object for the refusal. A new nonce attached to copied capture, projection, or process evidence is an illegal transition.
 
 Only `CONFIRMED_EXACT_MAP` can construct `CHOICEPOINT_READY`.
 
-## Choicepoint lifecycle
-
-The public Choicepoint states are:
+## Current unreceipted U6 candidate Choicepoint/ruling spine
 
 ```text
-DISCOVERED
-  -> DECISION_READY
-  -> RESOLVED | DEFERRED
-
-DISCOVERED | DECISION_READY | RESOLVED | DEFERRED
-  -> STALE | INVALIDATED(reason,replacement?)
-
-DEFERRED
-  -> DECISION_READY   (explicit new decision session; ancestors still current)
+CONFIRMATION
+  -> CHOICEPOINT_READY
+  -> RULING
 ```
 
-Preconditions:
+`CHOICEPOINT_READY` is a store-head stage and live `promotion.Ready` capability, not a mutable field inside `ChoicepointRecord`.
 
-- `DISCOVERED` requires an eligible divergence and may include a reduction result, but not yet sufficient confirmation.
-- `DECISION_READY` requires a fresh-confirmed exact map, current semantic ancestors, complete blind DTO, and no unresolved construction refusal.
-- `RESOLVED` requires a finalized `ALLOW_OBSERVED`, `CUSTOM_EXPECTATION`, or `REJECT_ALL` DecisionRecord after the reveal protocol. Only the first two may be compile-eligible.
-- `DEFERRED` requires a finalized `DEFER` record. Reopening creates a new decision-session artifact and retains the earlier defer record.
-- `REFINE` does not create `RESOLVED`; it creates a successor-study request and leaves the current Choicepoint as a historical decision input.
-- `STALE` is irreversible for that Choicepoint digest. A successor is reconstructed from the changed ancestor.
-- `INVALIDATED` is explicit and terminal for that digest.
+- `ALLOW_OBSERVED`, `CUSTOM_EXPECTATION`, `REJECT_ALL`, and `DEFER` can produce strict DecisionRecords and may advance the fixed head to `RULING`.
+- Only the first two may yield `CompilableRuling`.
+- `DEFER` records a noncompilable decision; U6 does not reopen the same head into a new session.
+- `REFINE` remains a valid noncompilable semantic decision but cannot advance the U6 head; promotion returns `REFINE_REQUIRES_SUCCESSOR_STUDY` without publication.
+- U6 has no durable `DISCOVERED`, `RESOLVED`, `DEFERRED`, `STALE`, or `INVALIDATED` state object.
 
-A resolved or deferred Choicepoint can later be described as stale relative to a successor lineage without rewriting its original DecisionRecord.
+## Future product lifecycle target
+
+`DISCOVERED`, derived `RESOLVED`/`DEFERRED` presentation status, deferred-session reopening, successor studies, and explicit `STALE`/`INVALIDATED` status remain future application-service work. Those states must not be inferred from UI flags or added to Choicepoint canonical bytes. If implemented, they require new immutable objects and construction-safe transitions with their own receipts.
 
 ## Blind-first decision-session state machine
 
@@ -294,54 +287,43 @@ The interaction state is separate from Choicepoint truth:
 
 ```text
 BLIND_OPEN
-  -> EVIDENCE_PRESENTED
-  -> PROVISIONAL_AUTHORED
-  -> PROVENANCE_REVEALED
+  -> PROVISIONAL_RECORDED
+  -> REVEALED
+  -> POST_REVEAL_RECORDED
   -> FINALIZED
 ```
 
-Required presentation obligations before `EVIDENCE_PRESENTED` are:
+U6's closed blind semantic kernel carries scenario, exact scope, original and minimized stimulus bytes, bounded reduction facts, configured repeat counts, projection operations, deterministic cards, and trust warnings. It structurally omits system-supplied candidate/ref/producer identity, total candidate count, per-outcome support, source order, and reveal material. Behavior and caller-authored scenario text may themselves reveal provenance; DOM/accessibility omission and the complete comparison-envelope/security/derivation presentation remain U8 work.
 
-- scenario and exact-witness scope;
-- comparison-envelope boundary and observation/confirmation counts;
-- original and reduced stimuli together;
-- reducer names, grade, budget, derivation, and unresolved count;
-- Captured-to-Projection operations;
-- every differing field, initially unselected, with the requirement that the human later mark it `Assert` or `Context only`; and
-- security warning and experiment jurisdiction.
+The semantic session records visits to exact named surfaces rather than claiming that it can inspect a future UI. `ORIGINAL_WITNESS`, `MINIMIZED_WITNESS`, `REDUCTION_DERIVATION`, `PROJECTION_OPERATIONS`, and `NONASSERTED_FIELDS` must be recorded before a standard-path proposal. `PROVENANCE_REVEAL` becomes visitable only after reveal.
 
-The blind payload and accessibility tree omit candidate identity, producer/model provenance, total candidate support, per-outcome candidate support, and candidate order. Distinct outcome count and deterministic outcome facts are present.
+`PROVISIONAL_RECORDED` records an action, complete tuple choice or custom tuple as applicable, an explicit disposition for every differing field, and the exact preview. It is not a ruling.
 
-`PROVISIONAL_AUTHORED` records an action, complete tuple choice or custom tuple as applicable, an explicit disposition for every differing field, and the exact preview. It is not a ruling.
-
-`PROVENANCE_REVEALED` is mandatory before finalization. A change after reveal preserves both provisional and final values and requires a rationale.
+`REVEALED` is mandatory before finalization. A subsequent `POST_REVEAL_RECORDED` state preserves both provisional and final values; a changed draft requires a rationale.
 
 An early reveal is legal but explicit:
 
 ```text
-BLIND_OPEN | EVIDENCE_PRESENTED
-  -> PROVENANCE_REVEALED_EARLY
-  -> POST_REVEAL_AUTHORED
-  -> FINALIZED
+BLIND_OPEN -> REVEALED -> POST_REVEAL_RECORDED -> FINALIZED
 ```
 
-This path records that no pre-reveal provisional ruling exists. It cannot be presented as completion of the standard blind-first sequence. All evidence-presentation obligations still apply.
+This path records that no pre-reveal provisional ruling exists. It cannot be presented as completion of the standard blind-first sequence. The exact required surfaces on both paths are `ORIGINAL_WITNESS`, `MINIMIZED_WITNESS`, `REDUCTION_DERIVATION`, `PROJECTION_OPERATIONS`, `NONASSERTED_FIELDS`, and `PROVENANCE_REVEAL`. In the standard path the first five must be visited before the provisional ruling; both paths require all six before finalization.
 
 View/visit facts prove presentation only. They are not comprehension state.
 
 ### Final action validation
 
-| Action | Final Choicepoint state | Compilable? | Additional rule |
-| --- | --- | ---: | --- |
-| `ALLOW_OBSERVED` | `RESOLVED` | yes | allowed set is one or more complete confirmed tuples; selected fields separate all allowed/disallowed tuples |
-| `CUSTOM_EXPECTATION` | `RESOLVED` | yes | separately authored complete typed tuple; explicit review; selected fields nonempty |
-| `REJECT_ALL` | `RESOLVED` | no | records dissatisfaction without a positive oracle |
-| `DEFER` | `DEFERRED` | no | no ruling or source emitted |
-| `REFINE` | historical Choicepoint + successor request | no | starts a new `SOURCE_SPEC`; no in-place mutation |
+| Action | U6 semantic result | Durable U6 behavior | Compilable? |
+| --- | --- | --- | ---: |
+| `ALLOW_OBSERVED` | exact observed tuple-set DecisionRecord | may advance current head to `RULING` | yes |
+| `CUSTOM_EXPECTATION` | one reviewed tuple distinct from every confirmed selected tuple | may advance current head to `RULING` | yes |
+| `REJECT_ALL` | dissatisfaction record without positive oracle | may advance to noncompilable `RULING` | no |
+| `DEFER` | noncompilable defer record | may advance to `RULING`; reopening is future work | no |
+| `REFINE` | semantic successor-study request record | promotion returns `REFINE_REQUIRES_SUCCESSOR_STUDY`; no object/head mutation | no |
 
 If selected fields fail the separation formula, finalization returns `AMBIGUOUS_SCOPE`; no DecisionRecord with compile eligibility and no files are created.
 
-## Contract-emission state machine
+## Future P07/U6b contract-emission state machine
 
 ```text
 DECISION_FINALIZED
@@ -368,7 +350,7 @@ Any error removes the unpublished temporary output and leaves the requested dest
 
 `PARITY_UNRECEIPTED` distinguishes “source could be generated mechanically” from “standalone semantics have been claimed.” A later qualifying parity/absence receipt does not edit an older bundle; it creates a new claim mapping or successor bundle status.
 
-## Contract-execution state machine
+## Future P07/U6b contract-execution state machine
 
 Historical evidence and current conformance are never merged:
 
@@ -386,7 +368,9 @@ CONTRACT_EXECUTION_CREATED
 
 Both contradiction and ineligibility produce a nonzero ordinary test, but TAP diagnostics and machine codes remain distinct. A current conformance execution never freshens, modifies, or reclassifies the historical Choicepoint, even when it runs against a historical candidate tree.
 
-## Study lifecycle
+## Future product study-presentation lifecycle target
+
+The following coarse application states are not U6 durable objects or head stages. U6 implements only the fixed typed head spine described above; it does not persist `COMPLETED`, `PARTIAL`, or `ERROR` study-status records and does not create successor runs.
 
 Study presentation state is deliberately coarser than semantic artifact state:
 
@@ -402,13 +386,13 @@ EMPTY
 | `EMPTY` | no compiled plan exists | author/compile source spec |
 | `PREPARING` | plan/source validation and candidate preparation are in progress | enter `ACTIVE`, or finish `PARTIAL`/`ERROR` with evidence |
 | `ACTIVE` | finite declared work is executing | finish `COMPLETED`, `PARTIAL`, or `ERROR` |
-| `COMPLETED` | declared budgets ended and every item has an honest disposition | create successor study/decision actions; no in-place resume |
-| `PARTIAL` | cancellation/crash/budget left declared work without all dispositions | inspect; create a successor run with fresh attempts |
-| `ERROR` | a nonrecoverable study-level control prevented honest completion | inspect; create corrected successor spec/run |
+| `COMPLETED` | declared budgets ended and every item has an honest disposition | future application may create a construction-safe successor; no in-place resume |
+| `PARTIAL` | cancellation/crash/budget left declared work without all dispositions | future application may inspect and create a fresh successor run |
+| `ERROR` | a nonrecoverable study-level control prevented honest completion | future application may create a corrected successor spec/run |
 
 `COMPLETED` never means verified software, all candidates agree, or every Choicepoint is resolved. It means the finite study ledger has no undisposed item.
 
-A crash may leave finalized immutable semantic objects and a `PARTIAL` study status. It may not resume a candidate process or treat pre-crash executed observations as fresh confirmation. The successor run may reuse pure canonical transformations of immutable bytes, but every evidentiary attempt is new.
+A crash may leave finalized immutable semantic objects and nonadvancing partial-attempt evidence, but U6 does not publish a `PARTIAL` head or study-status object. It may not resume a candidate process or treat pre-crash executed observations as fresh confirmation. A future successor run may reuse pure canonical transformations of immutable bytes, but every evidentiary attempt must be new.
 
 ## Legal transition summary
 
@@ -421,9 +405,9 @@ A crash may leave finalized immutable semantic objects and a `PARTIAL` study sta
 | neighbor -> `UNRESOLVED` | no complete map exists or the full maps fail plan/basis/roster/eligibility/exclusion comparability |
 | incomplete final sweep -> `BEST_KNOWN` | a smaller preserving witness exists, but local proof is incomplete |
 | complete all-`CHANGES` sweep -> `ONE_MINIMAL_UNDER(R)` | construction invariant has all required durable evidence |
-| confirmed Choicepoint -> `DEFERRED` | authenticated human chose no ruling; no source created |
-| `DEFERRED` -> new decision session | same ancestors remain current; prior defer fact retained |
-| `REJECT_ALL` -> `RESOLVED` DecisionRecord | dissatisfaction is valid human evidence, though noncompilable |
+| confirmed Choicepoint -> noncompilable `DEFER` DecisionRecord | local caller deferred; U6 may advance to fixed `RULING`, but no source or reopening authority exists |
+| semantic `REFINE` request -> nonadvancing promotion refusal | `REFINE_REQUIRES_SUCCESSOR_STUDY`; no object is published and the current Choicepoint/head remains unchanged |
+| confirmed Choicepoint -> noncompilable `REJECT_ALL` DecisionRecord | local caller recorded dissatisfaction; U6 may advance to fixed `RULING`, but does not create a `RESOLVED` object or prove human authenticity |
 | custom tuple matching no observed candidate -> bundle | separately authored positive oracle passes typing/separation |
 | current eligible mismatch -> `CONTRADICTS` | harness ran correctly and selected tuple was outside allowed set |
 
@@ -445,20 +429,20 @@ A crash may leave finalized immutable semantic objects and a `PARTIAL` study sta
 | boolean false substitutes for `CHANGES`/`UNRESOLVED` | reject schema/type | unresolved evidence blocks local grade |
 | any unresolved neighbor -> `ONE_MINIMAL_UNDER(...)` | grade at most `BEST_KNOWN` when a smaller witness exists | final sweep is incomplete |
 | copied capture + new nonce -> fresh confirmation | `CONFIRMATION_REFUSED` | metadata is not execution |
-| changed plan/projection/candidate under old reduction | mark descendants `STALE` | semantic ancestry changed |
+| changed plan/projection/candidate under old reduction | reject the old fixed-spine authority; use a distinct unlinked StudyID until a successor service exists | U6 publishes no `STALE` object and cannot advance changed ancestry |
 | add a candidate under an existing `CandidateOutcomeMap` | new baseline lineage | exact candidate set is map identity |
-| ruling before exact fresh confirmation | no `DECISION_READY` | historical/discovery evidence is insufficient |
-| finalization before required presentation/reveal | decision refusal | human protocol incomplete |
+| ruling before exact fresh confirmation | no `CHOICEPOINT_READY` authority | historical/discovery evidence is insufficient |
+| finalization before required presentation/reveal | decision refusal | local decision protocol is incomplete |
 | stale tab writes a ruling | `CAS_CONFLICT` | current lineage changed |
 | empty or weak selected fields -> compile | `AMBIGUOUS_SCOPE`; no files | allowed/disallowed tuples are not separated |
 | allow-many fields expanded independently | reject tuple construction | cross-product adds unauthored outcomes |
-| context-only field emitted as assertion | emitter/vector failure | human did not select it |
+| context-only field emitted as assertion | emitter/vector failure | field was not selected |
 | `REJECT_ALL`, `DEFER`, or `REFINE` -> emitter | `NONCOMPILABLE_ACTION`; no files | no positive exact oracle |
 | partial six-file output -> publish | delete unpublished temp; no bundle | bundle is an atomic artifact set |
 | bundle digest -> `CONFORMS` without execution | no transition | source bytes are not current behavior |
 | current conformance -> historical Choicepoint freshening | no transition | truth jurisdictions differ |
 | stale CAS head -> last-write-wins | `CAS_CONFLICT` | concurrent/stale clients cannot overwrite intent |
-| crash -> process resume/replay | terminal partial attempt; new world required | persistence is not an execution runtime |
+| crash -> process resume/replay | no resume; any already-persisted nonadvancing evidence stays inert and a retry allocates a new world | persistence is not an execution runtime and U6 writes no crash-time status object |
 | Wake session/effect/gate -> Countershape state | reject field/object | Wake is inert candidate provenance only |
 | didrun grade -> Countershape classification | round-trip only | external receipt authority is separate |
 
@@ -476,7 +460,8 @@ Additional prohibited transitions include promoting an unqualified `STABLE` labe
 | U3 | CLI projection and stable-batch classifications | constant/alternating/control/incomplete fixtures classify exactly |
 | U4 | HTTP phases/readiness/capture using the same eligibility service | no HTTP branch enters generic compare/reduce/choice truth |
 | U5 | reduction proposal/run/final-sweep/grade transitions | shape trap, cancellation, budget edge, unresolved neighbor, both grades pass |
-| U6 | CAS heads, fresh confirmation, Choicepoint, blind session, decisions, bundle and current execution | stale/forged/noncompilable/weak-field/parity/absence negatives pass |
+| U6a / P06 | CAS heads, physical confirmation, Choicepoint, blind semantic session, DecisionRecords, ruling promotion through `RULING` | stale/forged/reused-evidence/noncompilable/weak-field/blind-leak negatives pass; no public residue edge |
+| U6b / P07 | contract bundle and current execution | Go/Node parity, atomic bundle, absence, contradiction/ineligibility negatives pass |
 | U7 | complete study lifecycle and both decisive reference lineages | three clean runs preserve semantic bytes while all attempts are new |
 | U8 | authenticated transport and full renderer state matrix | blind leakage, request forgery, presentation obligations, visual/accessibility gates pass |
 | U9 | export/packaging/final claim mapping | exact environment receipts, final strict verify, HTML evidence, honest handoff |

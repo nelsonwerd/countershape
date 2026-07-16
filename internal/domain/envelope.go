@@ -2,6 +2,7 @@ package domain
 
 import (
 	"bytes"
+	"encoding/json"
 	"sort"
 
 	"github.com/nelsonwerd/countershape/internal/canon"
@@ -236,6 +237,42 @@ func (e ComparisonEnvelope) CanonicalBytes() []byte {
 
 func (e ComparisonEnvelope) Config() ComparisonEnvelopeConfig {
 	return cloneEnvelopeConfig(e.config)
+}
+
+// ParseComparisonEnvelope strictly reconstructs the closed policy object.
+func ParseComparisonEnvelope(exact []byte) (ComparisonEnvelope, error) {
+	var identity comparisonEnvelopeIdentity
+	if err := json.Unmarshal(exact, &identity); err != nil {
+		return ComparisonEnvelope{}, refuse("INVALID_COMPARISON_ENVELOPE", "wire decode failed")
+	}
+	if identity.SchemaVersion != SchemaVersion || identity.Kind != "ComparisonEnvelope" ||
+		identity.AdmissionClaim != "MEASURED_ASSESSMENT_ONLY" || identity.BehavioralCompatibilityEstablished ||
+		identity.PlaceholderControlFlowIrrelevance {
+		return ComparisonEnvelope{}, refuse("INVALID_COMPARISON_ENVELOPE", "closed wire facts disagree")
+	}
+	config := ComparisonEnvelopeConfig{
+		Version: identity.EnvelopeVersion, Measured: identity.MeasuredDimensions,
+		RequiredEqual: make([]RequiredEqualDimension, len(identity.RequiredEqualDimensions)),
+		Tolerated:     make([]ToleratedDimension, len(identity.ToleratedDimensions)),
+		Rejected:      identity.RejectedDimensions, Uncontrolled: identity.UncontrolledDimensions,
+	}
+	for index, required := range identity.RequiredEqualDimensions {
+		if required.Comparator != "EXACT" {
+			return ComparisonEnvelope{}, refuse("INVALID_COMPARISON_ENVELOPE", "required comparator differs")
+		}
+		config.RequiredEqual[index] = RequiredEqualDimension{Name: required.Name}
+	}
+	for index, tolerated := range identity.ToleratedDimensions {
+		if tolerated.Nonclaim != "CONTROL_FLOW_IRRELEVANCE_NOT_ESTABLISHED" {
+			return ComparisonEnvelope{}, refuse("INVALID_COMPARISON_ENVELOPE", "tolerance nonclaim differs")
+		}
+		config.Tolerated[index] = ToleratedDimension{Name: tolerated.Name, Tolerance: tolerated.Tolerance}
+	}
+	rebuilt, err := NewComparisonEnvelope(config)
+	if err != nil || !bytes.Equal(rebuilt.canonicalBytes, exact) {
+		return ComparisonEnvelope{}, refuse("INVALID_COMPARISON_ENVELOPE", "wire is nonexact")
+	}
+	return rebuilt, nil
 }
 
 type MeasurementValue struct {

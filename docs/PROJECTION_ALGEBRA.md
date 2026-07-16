@@ -61,7 +61,11 @@ The reducer and durable store must consume either the full typed maps or an opaq
 
 `DivergentBaseline` is a sealed refinement requiring at least two eligible candidates and two distinct projection fingerprints.
 
-`ConfirmedOutcomeMap` is a separate sealed refinement requiring the confirmation purpose and a still-divergent complete map. In U1 this is structural binding only. Physical fresh-confirmation authority requires U2 execution evidence and the later durable Choicepoint transition.
+`ConfirmedOutcomeMap` is a separate sealed refinement requiring the confirmation purpose and a still-divergent complete map. In U1 this is structural binding only.
+
+Physical U6 confirmation applies the same comparability-first operation to the reduced and newly executed confirmation maps. Concrete batch, admission, attempt, world, observation, process, root, invocation, schedule, and phase evidence must differ as required by freshness. Preservation comparability intentionally compares excluded candidate keys and classifications, not their fresh batch digests. Therefore the same candidate may remain freshly `UNSTABLE` and excluded while the eligible labeled map is preserved. A changed eligible or excluded set, or changed exclusion classification, yields `UNRESOLVED("CANDIDATE_ELIGIBILITY_OR_ADMISSION_CHANGED")` before digest equality is interpreted.
+
+`ConfirmedOutcomeMap` remains structural by itself. U6 `confirmation.Draft` adds live physical authority, `FreshConfirmation` is its strict inert restart record, and `promotion.StoredConfirmation` proves that exact record is the current `CONFIRMATION` head. Serialization cannot recreate either live capability.
 
 ## Reduction evidence and grades
 

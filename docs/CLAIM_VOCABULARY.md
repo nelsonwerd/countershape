@@ -77,7 +77,7 @@ Admission under an envelope never claims behavioral equivalence or physical fres
 | `exact projection equality` | canonical projection bytes have the same fingerprint | semantic equivalence |
 | `OBSERVED_STABLE(k/k,h)` | all `k` required new eligible trials yielded `h` | determinism or future repetition |
 | `UNSTABLE(histogram)` | at least two eligible fingerprints were observed | which behavior is intended |
-| `UNCOMPARABLE(reasons)` | source, envelope, control, or projection was ineligible | program contradiction |
+| `UNCOMPARABLE(reasons)` | after admission, source, control, or projection was ineligible | program contradiction; envelope rejection is a pre-batch `RejectedComparison`, not this classification |
 | `INCOMPLETE` | budget ended before required eligible trials | equality, instability, or pass |
 | `no observed difference under N named finite probes` | eligible projections agreed for exactly those probes | equivalence outside them |
 | `eligible divergence` | at least two eligible candidates produced at least two fingerprints | correctness, recommendation, or majority truth |
@@ -94,7 +94,7 @@ An HTTP `500`, CLI exit `2`, or complete empty stdout may be eligible behavior. 
 | `UNRESOLVED` | full maps were not comparable or no complete eligible map existed | typed basis/roster/eligibility/exclusion/control reasons and budgets |
 | `UNCHANGED` | no accepted smaller typed stimulus | reducer set and transcript |
 | `BEST_KNOWN under R and budgets B` | a smaller preserving stimulus exists but the final proof is incomplete | unresolved count, budget/sweep facts, reducer digest |
-| `ONE_MINIMAL_UNDER(R)` | every constructible direct neighbor in the complete durable sweep freshly produced `CHANGES` | exact enumerated neighbor set and sweep completion artifact |
+| `ONE_MINIMAL_UNDER(R)` | every enumerated constructible direct neighbor in the complete durable sweep has a typed `CHANGES` result with the required same-domain evidence/content-digest nonoverlap | exact enumerated neighbor set and sweep completion artifact; the grade itself does not establish physical execution or freshness |
 | `locally reduced witness` | the recorded accepted path preserved the exact map | original/reduced stimuli, measure, transcript |
 
 A naked `PreservationMapDigest`, display grouping, support count, or per-run admission artifact is never enough to claim preservation. `ComparisonBasisDigest` is stable across stimuli/repetitions only because it covers plan, envelope, roster, and equality basis rather than concrete measurement rows. `ONE_MINIMAL_UNDER(R)` is a local construction-grade label. It does not establish global minimum, root cause, semantic necessity, or human comprehension. Any `UNRESOLVED` direct neighbor, incomplete sweep, cancellation, budget exhaustion, changed ancestor, or reused executed observation makes that grade impossible to construct.
@@ -103,15 +103,15 @@ A naked `PreservationMapDigest`, display grouping, support count, or per-run adm
 
 | Use this term | Exact meaning | Required qualifiers |
 | --- | --- | --- |
-| `Choicepoint` | Countershape's immutable provenance-bound decision record format | fresh-confirmed exact witness and lineage digest |
-| `identity-hidden blind step` | candidate/producer/support cues are absent before reveal | behavior itself may reveal identity; no anonymity claim |
-| `human-scoped exact-witness ruling` | human action applies only to the named witness and selected fields | selected and context-only fields, reveal facts, rationale |
-| `ALLOW_OBSERVED` | one or more complete confirmed observed tuples are positively allowed | exact tuple set and separation proof |
-| `CUSTOM_EXPECTATION` | a separately authored typed tuple is positively expected | explicit review and separation proof |
-| `REJECT_ALL` | human rejects all shown observations without a positive oracle | noncompilable |
-| `DEFER` | no ruling is finalized | noncompilable |
-| `REFINE` | request for a successor study | noncompilable; never mutates current Choicepoint |
-| `AMBIGUOUS_SCOPE` | selected fields fail to separate allowed and disallowed confirmed tuples | no files emitted |
+| `Choicepoint` | immutable strict archive for one exact fresh-confirmed witness | current decision publication additionally requires the exact store-bound `CHOICEPOINT_READY` capability |
+| `identity-hidden blind step` | the U6 DTO omits candidate/ref/producer/count/support/order/reveal fields | behavior can reveal provenance; distinct outcome count remains visible; no anonymity claim |
+| `local-caller-attributed exact-witness ruling record` | a DecisionRecord applies only to one Choicepoint and explicit fields | `LOCAL_CALLER_ASSERTED_OPERATOR`; `AUTHENTICITY_NOT_ESTABLISHED_IN_U6`; presentation is not comprehension |
+| `ALLOW_OBSERVED` | one or more complete confirmed observed tuples are positively allowed | exact alias expansion, tuple set, and separation proof |
+| `CUSTOM_EXPECTATION` | one reviewed authored tuple absent from every confirmed selected-field tuple is positively expected | matching an observed tuple is `CUSTOM_EXPECTATION_ALREADY_OBSERVED` |
+| `REJECT_ALL` | dissatisfaction without a positive oracle | strict noncompilable DecisionRecord |
+| `DEFER` | finalized noncompilable defer DecisionRecord | U6 may store it at `RULING`; no executable residue or deferred-session reopening |
+| `REFINE` | semantic request for a successor study | U6 promotion returns `REFINE_REQUIRES_SUCCESSOR_STUDY`; no publication or head advance |
+| `AMBIGUOUS_SCOPE` | selected fields fail to separate allowed and disallowed confirmed tuples | no compilable DecisionRecord or emitted files |
 | `standalone selected-field test` | deterministic six-file Node bundle ran under its exact absence/parity receipt | exact Node major, native OS, predicate profile, selected fields |
 | `CONFORMS` | current eligible observation matches one allowed selected-field tuple | current execution only |
 | `CONTRADICTS` | current eligible observation matches no allowed selected-field tuple | current execution only |
@@ -132,7 +132,7 @@ Visited UI panels prove presentation only. They do not prove reading, comprehens
 | “locally reduced witness” | “smallest behavior,” “root cause,” or “global minimum” | reduction is local to named typed neighbors and budgets |
 | `BEST_KNOWN under R and B` | “minimal” | the final sweep was unresolved or incomplete |
 | `ONE_MINIMAL_UNDER(R)` | “the minimum case” | only constructible direct neighbors under R were ruled out |
-| “human-scoped exact-witness ruling” | “complete intent” or “specification discovered” | the human selected only fields for one witnessed stimulus |
+| “local-caller-attributed exact-witness ruling record” | “complete intent,” “authenticated human action,” or “specification discovered” | the record covers only selected fields for one witnessed stimulus and does not establish actor authenticity |
 | “selected-field contract” | “correctness proof,” “safety proof,” or “security approval” | nonasserted and unobserved behavior remains unconstrained |
 | “candidate outcomes” | “winner,” “best branch,” “recommended implementation,” or “majority answer” | candidates are sensors, not voters or judges |
 | “trusted local execution with `HOST_ALLOWED`” | “sandboxed,” “isolated,” “network blocked,” or “safe for untrusted PRs” | code has the user's permissions and host network |
@@ -199,7 +199,8 @@ A receipt for a command that merely lists files cannot support runtime behavior.
 | U3 | “named CLI fixtures received exact batch classifications and map” | HTTP/two-domain or decision claims |
 | U4 | “named HTTP and CLI fixtures reuse the bounded truth kernel” | arbitrary adapter/repository support |
 | U5 | exact `BEST_KNOWN` or `ONE_MINIMAL_UNDER(...)` with reducer/budget evidence | causal/global-minimum language |
-| U6 | DecisionRecord; standalone only after exact parity and absence evidence | current correctness or broad portability |
+| U6a | strict Choicepoint/Decision codecs, physical confirmation, blind identity/support omission, and fixed Darwin CAS spine only when mapped to exact receipts | authenticated-human authorship, complete studio payload, successor/stale lifecycle, REFINE successor creation, deferred reopening, Node residue, other filesystems, power-loss recovery, or production security |
+| U6b | deterministic standalone residue only after exact Go/Node parity and Countershape-absence evidence | current correctness, broad portability, repository integration safety, or authenticated-human authorship |
 | U7 | “narrowed Darwin reference studies passed the named acceptance gates” | arbitrary-repository success or human benefit |
 | U8 | exact authenticated/blind/viewport/accessibility observations | comprehension, bias reduction, production web security |
 | U9 | per-capability final receipt map and minimized local export | umbrella completion, market validation, maintainability |

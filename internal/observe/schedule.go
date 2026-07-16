@@ -20,6 +20,8 @@ type rotatedScheduleIdentity struct {
 	Kind          string   `json:"kind"`
 	Roster        []string `json:"candidate_roster"`
 	Repetitions   int      `json:"repetitions"`
+	Phase         string   `json:"phase"`
+	StartOffset   int      `json:"start_offset"`
 	Rotation      string   `json:"rotation"`
 	Sequential    bool     `json:"sequential"`
 }
@@ -53,15 +55,32 @@ type RotatedSchedule struct {
 	canonical   []byte
 	roster      []domain.CandidateExecutionKey
 	repetitions int
+	phase       domain.AttemptPurpose
+	startOffset int
 	trials      []ScheduledTrial
 }
 
 func NewRotatedSchedule(roster []domain.CandidateExecutionKey, repetitions int) (RotatedSchedule, error) {
+	return NewPhaseRotatedSchedule(roster, repetitions, domain.AttemptDiscovery)
+}
+
+// NewPhaseRotatedSchedule derives its offset from the attempt phase. The
+// caller cannot smuggle in an arbitrary ordering: CONFIRMATION starts one slot
+// after discovery/reduction so a fresh batch does not repeat discovery order.
+// All other v1 phases retain the declared start-by-repetition order.
+func NewPhaseRotatedSchedule(
+	roster []domain.CandidateExecutionKey,
+	repetitions int,
+	phase domain.AttemptPurpose,
+) (RotatedSchedule, error) {
 	if len(roster) < minScheduledCandidates || len(roster) > maxScheduledCandidates {
 		return RotatedSchedule{}, &domain.Error{Code: "INVALID_OBSERVATION_ROSTER", Detail: "candidate count outside 2..4"}
 	}
 	if repetitions < 1 || repetitions > maxScheduledRepetitions {
 		return RotatedSchedule{}, &domain.Error{Code: "INVALID_OBSERVATION_REPEATS", Detail: "repeat count outside 1..5"}
+	}
+	if !phase.Valid() {
+		return RotatedSchedule{}, &domain.Error{Code: "INVALID_OBSERVATION_PHASE"}
 	}
 	canonicalRoster := append([]domain.CandidateExecutionKey(nil), roster...)
 	sort.Slice(canonicalRoster, func(i, j int) bool {
@@ -76,10 +95,14 @@ func NewRotatedSchedule(roster []domain.CandidateExecutionKey, repetitions int) 
 		}
 	}
 
+	startOffset := 0
+	if phase == domain.AttemptConfirmation {
+		startOffset = 1 % len(canonicalRoster) // MUTANT_U6_CONFIRMATION_SCHEDULE_OFFSET_ZERO
+	}
 	trials := make([]ScheduledTrial, 0, len(canonicalRoster)*repetitions)
 	for repetition := 0; repetition < repetitions; repetition++ {
 		for position := range canonicalRoster {
-			candidate := canonicalRoster[(repetition+position)%len(canonicalRoster)]
+			candidate := canonicalRoster[(startOffset+repetition+position)%len(canonicalRoster)]
 			trials = append(trials, ScheduledTrial{
 				candidateKey: candidate,
 				repetition:   repetition,
@@ -97,6 +120,8 @@ func NewRotatedSchedule(roster []domain.CandidateExecutionKey, repetitions int) 
 		Kind:          "RotatedSchedule",
 		Roster:        rosterIdentity,
 		Repetitions:   repetitions,
+		Phase:         string(phase),
+		StartOffset:   startOffset,
 		Rotation:      string(domain.ScheduleRotationStartByRepetitionV1),
 		Sequential:    true,
 	})
@@ -112,6 +137,8 @@ func NewRotatedSchedule(roster []domain.CandidateExecutionKey, repetitions int) 
 		canonical:   append([]byte(nil), canonicalBytes...),
 		roster:      canonicalRoster,
 		repetitions: repetitions,
+		phase:       phase,
+		startOffset: startOffset,
 		trials:      trials,
 	}, nil
 }
@@ -120,7 +147,7 @@ func (s RotatedSchedule) Valid() bool {
 	if !s.digest.Valid() || len(s.canonical) == 0 {
 		return false
 	}
-	rebuilt, err := NewRotatedSchedule(s.roster, s.repetitions)
+	rebuilt, err := NewPhaseRotatedSchedule(s.roster, s.repetitions, s.phase)
 	return err == nil && rebuilt.digest == s.digest && bytes.Equal(rebuilt.canonical, s.canonical) &&
 		sameScheduledTrials(rebuilt.trials, s.trials)
 }
@@ -134,6 +161,9 @@ func (s RotatedSchedule) CanonicalBytes() []byte {
 func (s RotatedSchedule) Rotation() domain.ScheduleRotation {
 	return domain.ScheduleRotationStartByRepetitionV1
 }
+
+func (s RotatedSchedule) Phase() domain.AttemptPurpose { return s.phase }
+func (s RotatedSchedule) StartOffset() int             { return s.startOffset }
 
 func (s RotatedSchedule) Roster() []domain.CandidateExecutionKey {
 	return append([]domain.CandidateExecutionKey(nil), s.roster...)

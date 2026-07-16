@@ -71,6 +71,7 @@ type CandidateOutcomeMap struct {
 	phase                      domain.AttemptPurpose
 	scheduleDigest             domain.Digest
 	rotation                   string
+	scheduleStartOffset        int
 	roster                     []domain.CandidateExecutionKey
 	entries                    []Entry
 	exclusions                 []Exclusion
@@ -111,6 +112,7 @@ func NewCandidateOutcomeMap(
 	var phase domain.AttemptPurpose
 	var scheduleDigest domain.Digest
 	var rotation string
+	var scheduleStartOffset int
 	seenAttempts := map[domain.Digest]struct{}{}
 	seenWorlds := map[domain.Digest]struct{}{}
 	seenObservations := map[domain.Digest]struct{}{}
@@ -143,11 +145,13 @@ func NewCandidateOutcomeMap(
 			phase = batch.Phase()
 			scheduleDigest = batch.ScheduleDigest()
 			rotation = batch.Rotation()
+			scheduleStartOffset = batch.ScheduleStartOffset()
 			// MUTANT_U1_COMPARE_IGNORE_SHARED_ADMISSION_SET: every candidate must come from the same concrete matrices.
 		} else if !sameDigestList(batchAdmissions, admissionDigests) || batch.PlanDigest() != planDigest ||
 			batch.CapturePolicyDigest() != capturePolicyDigest || batch.ProjectionDefinitionDigest() != projectionDefinitionDigest ||
 			batch.ComparisonBasisDigest() != basisDigest || batch.Phase() != phase ||
-			batch.ScheduleDigest() != scheduleDigest || batch.Rotation() != rotation {
+			batch.ScheduleDigest() != scheduleDigest || batch.Rotation() != rotation ||
+			batch.ScheduleStartOffset() != scheduleStartOffset {
 			return CandidateOutcomeMap{}, &domain.Error{Code: "MIXED_BATCH_ADMISSION_OR_PHASE"}
 		}
 		for _, digest := range batch.AttemptDigests() {
@@ -239,6 +243,7 @@ func NewCandidateOutcomeMap(
 		phase,
 		scheduleDigest,
 		rotation,
+		scheduleStartOffset,
 		roster,
 		entries,
 		exclusions,
@@ -262,6 +267,7 @@ func NewCandidateOutcomeMap(
 		phase:                      phase,
 		scheduleDigest:             scheduleDigest,
 		rotation:                   rotation,
+		scheduleStartOffset:        scheduleStartOffset,
 		roster:                     append([]domain.CandidateExecutionKey(nil), roster...),
 		entries:                    append([]Entry(nil), entries...),
 		exclusions:                 append([]Exclusion(nil), exclusions...),
@@ -450,6 +456,7 @@ func digestOutcomeArtifact(
 	phase domain.AttemptPurpose,
 	scheduleDigest domain.Digest,
 	rotation string,
+	scheduleStartOffset int,
 	roster []domain.CandidateExecutionKey,
 	entries []Entry,
 	exclusions []Exclusion,
@@ -480,6 +487,7 @@ func digestOutcomeArtifact(
 		Phase                          string              `json:"phase"`
 		ScheduleDigest                 string              `json:"schedule_digest"`
 		Rotation                       string              `json:"rotation"`
+		ScheduleStartOffset            int                 `json:"schedule_start_offset"`
 		ExpectedCandidateRoster        []string            `json:"expected_candidate_roster"`
 		Entries                        []artifactEntry     `json:"entries"`
 		Exclusions                     []artifactExclusion `json:"excluded_candidates"`
@@ -505,6 +513,7 @@ func digestOutcomeArtifact(
 		Phase:                          string(phase),
 		ScheduleDigest:                 scheduleDigest.String(),
 		Rotation:                       rotation,
+		ScheduleStartOffset:            scheduleStartOffset,
 		ExpectedCandidateRoster:        make([]string, len(roster)),
 		Entries:                        make([]artifactEntry, len(entries)),
 		Exclusions:                     make([]artifactExclusion, len(exclusions)),
@@ -763,6 +772,7 @@ func (m CandidateOutcomeMap) AdmissionDigests() []domain.Digest {
 func (m CandidateOutcomeMap) Phase() domain.AttemptPurpose  { return m.phase }
 func (m CandidateOutcomeMap) ScheduleDigest() domain.Digest { return m.scheduleDigest }
 func (m CandidateOutcomeMap) Rotation() string              { return m.rotation }
+func (m CandidateOutcomeMap) ScheduleStartOffset() int      { return m.scheduleStartOffset }
 
 func (m CandidateOutcomeMap) CandidateRoster() []domain.CandidateExecutionKey {
 	return append([]domain.CandidateExecutionKey(nil), m.roster...)

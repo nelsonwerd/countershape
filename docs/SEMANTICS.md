@@ -4,17 +4,17 @@
 - **Status:** controlling model; runtime truth and durable publication remain `UNRECEIPTED` until their owning units are sealed
 - **Purpose:** separate structural identity, measured facts, comparison assessment, observed behavior, and storage/wire projection
 
-Countershape does not treat a digest-shaped string, a status enum, or a JSON object as evidence merely because it has the right fields. Each stronger state is available only through the operation that can establish it. JSON schemas describe closed storage/wire projections; production constructors must rebuild the corresponding opaque authority from stricter inputs.
+Countershape does not treat a digest-shaped string, a status enum, or a JSON object as evidence merely because it has the right fields. Each stronger state is available only through the operation that can establish it. Some schemas describe exact canonical artifact bodies; others describe external storage or wire envelopes. Production constructors must rebuild the corresponding opaque authority from stricter inputs.
 
 ## Canonical body and wire envelope
 
-Every persisted semantic artifact has a canonical body containing `schema_version`, `kind`, and its identity-bearing semantic fields. Its domain-separated digest is computed over that body and accompanies it in the storage/wire envelope as `artifact_digest`; the digest is not part of its own hash preimage.
+Every persisted semantic artifact has a canonical body containing `schema_version`, `kind`, and its identity-bearing semantic fields. Its domain-separated digest is computed over that body and addresses it externally in the object path, head, typed reference, or an envelope that explicitly defines `artifact_digest`; the digest is not part of its own hash preimage. The U6 `choicepoint.schema.json` and `decision-record.schema.json` files describe exact canonical bodies and therefore intentionally reject a self-referential `artifact_digest` member.
 
 Some envelopes also carry a separately derived companion digest. In particular, `preservation_map_digest` addresses the eligible labeled map derived from a `CandidateOutcomeMap`; it is not part of the enclosing outcome artifact's hash preimage and is never sufficient by itself to classify preservation.
 
 Schema acceptance proves only that a wire value has the declared closed shape. It does not prove strict canonical parsing, semantic construction, source provenance, physical freshness, host truth, comparison admission, durability, or current-head authority. Strings and collections may have stricter UTF-8 byte caps in Go than JSON Schema's code-point-oriented `maxLength` can express.
 
-U1 does not yet supply the explicit runtime-to-wire codecs for every target schema. Until U6 implements and receipts those codecs, example/schema validation is planning-artifact validation only and runtime/schema round-trip parity is `UNRECEIPTED`.
+U1 did not supply explicit runtime-to-wire codecs for every target schema. U6 now has strict runtime codecs plus exact canonical body-field sets and one valid runtime/example intersection for `Choicepoint` and `DecisionRecord`, but those capabilities remain `UNRECEIPTED` until `status/U6.md` names a sealed strict-clean commit and exact event-bound grades. This is not equivalence between the JSON-Schema and strict-Go acceptance languages: schemas intentionally overapproximate some UTF-8 byte caps and semantic authority. Future standalone, studio, and export schemas remain planning authorities until their owning units implement and receipt their named parity gates.
 
 ## Projection definition and result authority
 
@@ -87,7 +87,7 @@ In U1, “expected roster” means the exact caller-declared structural roster s
 
 ## Persistence and reconstruction
 
-Opaque Go types are the in-process authority boundary. Schemas and examples are wire projections, never alternate constructors. When a future store reopens an object it must:
+Opaque Go types are the in-process authority boundary. Schemas and examples are wire projections, never alternate constructors. When the current unreceipted U6 candidate store reopens a bounded semantic object it must:
 
 1. verify the external artifact digest against the exact canonical body and kind domain;
 2. parse through the strict canonical profile without information loss;

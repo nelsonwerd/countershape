@@ -357,6 +357,7 @@ type StableBatch struct {
 	phase                      domain.AttemptPurpose
 	scheduleDigest             domain.Digest
 	rotation                   string
+	scheduleStartOffset        int
 	scheduleOrdinals           []int
 	trials                     []TrialFact
 	observationDigests         []domain.Digest
@@ -365,7 +366,7 @@ type StableBatch struct {
 }
 
 func Classify(input BatchInput) (StableBatch, error) {
-	return classifyBatch(input.Trials, domain.Digest(""), "NOT_ESTABLISHED_IN_U1", false)
+	return classifyBatch(input.Trials, domain.Digest(""), "NOT_ESTABLISHED_IN_U1", 0, false)
 }
 
 // ClassifyScheduled is the only U3 batch constructor. It proves that every
@@ -406,6 +407,7 @@ func ClassifyScheduled(input ScheduledBatchInput) (StableBatch, error) {
 		input.Trials,
 		input.Schedule.digest,
 		string(input.Schedule.Rotation()),
+		input.Schedule.startOffset,
 		input.RunIncomplete,
 	)
 }
@@ -414,6 +416,7 @@ func classifyBatch(
 	trials []TrialFact,
 	scheduleDigest domain.Digest,
 	rotation string,
+	scheduleStartOffset int,
 	forceIncomplete bool,
 ) (StableBatch, error) {
 	if len(trials) == 0 {
@@ -583,6 +586,7 @@ func classifyBatch(
 		Schedule: scheduleIdentity{
 			Phase:          string(phase),
 			Rotation:       rotation,
+			StartOffset:    scheduleStartOffset,
 			ScheduleDigest: scheduleDigest.String(),
 			Ordinals:       append([]int(nil), scheduleOrdinals...),
 		},
@@ -613,6 +617,7 @@ func classifyBatch(
 		phase:                      phase,
 		scheduleDigest:             scheduleDigest,
 		rotation:                   rotation,
+		scheduleStartOffset:        scheduleStartOffset,
 		scheduleOrdinals:           append([]int(nil), scheduleOrdinals...),
 		trials:                     append([]TrialFact(nil), trials...),
 		observationDigests:         append([]domain.Digest(nil), observationDigests...),
@@ -687,6 +692,7 @@ func (b StableBatch) AdmissionRoster() []domain.CandidateExecutionKey {
 func (b StableBatch) Phase() domain.AttemptPurpose   { return b.phase }
 func (b StableBatch) ScheduleDigest() domain.Digest  { return b.scheduleDigest }
 func (b StableBatch) Rotation() string               { return b.rotation }
+func (b StableBatch) ScheduleStartOffset() int       { return b.scheduleStartOffset }
 func (b StableBatch) RequiredFreshTrials() int       { return b.requiredFreshTrials }
 func (b StableBatch) Classification() Classification { return b.classification }
 func (b StableBatch) Trials() []TrialFact            { return append([]TrialFact(nil), b.trials...) }

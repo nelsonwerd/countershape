@@ -141,6 +141,8 @@ type FieldDefinition struct {
 	AllowNull    bool
 }
 
+const WholeProjectionFieldID = "countershape.exact_projection"
+
 // FieldID can only be obtained through a validated FieldRegistry.
 type FieldID struct{ text string }
 
@@ -295,6 +297,45 @@ func (r FieldRegistry) FieldRegistryDigest() domain.Digest { return r.fieldRegis
 
 func (r FieldRegistry) ProjectionDefinitionDigest() domain.Digest {
 	return r.projectionDefinitionDigest
+}
+
+// NewWholeProjectionRegistry provides the safe adapter-neutral U6 ruling
+// surface: one selectable field containing the entire exact canonical
+// projection. It never guesses adapter field semantics or permits a partial
+// predicate to escape the projection definition that the confirmed map binds.
+func NewWholeProjectionRegistry(projectionDefinitionDigest domain.Digest) (FieldRegistry, error) {
+	if !projectionDefinitionDigest.Valid() {
+		return FieldRegistry{}, refusal(CodeInvalidFieldRegistry, "whole-projection registry requires an exact projection definition")
+	}
+	definition := FieldDefinition{ID: WholeProjectionFieldID, Path: []string{}, Type: FieldCanonicalJSON}
+	digest, _, err := canon.DigestTyped("ChoiceWholeProjectionRegistry", struct {
+		SchemaVersion              string `json:"schema_version"`
+		Kind                       string `json:"kind"`
+		ProjectionDefinitionDigest string `json:"projection_definition_digest"`
+		FieldID                    string `json:"field_id"`
+	}{domain.SchemaVersion, "ChoiceWholeProjectionRegistry", projectionDefinitionDigest.String(), WholeProjectionFieldID})
+	if err != nil {
+		return FieldRegistry{}, refusal(CodeInvalidFieldRegistry, "whole-projection registry identity could not be derived")
+	}
+	parsed, err := domain.ParseDigest(digest.String())
+	if err != nil {
+		return FieldRegistry{}, refusal(CodeInvalidFieldRegistry, "whole-projection registry digest is invalid")
+	}
+	return FieldRegistry{
+		definitions: map[string]FieldDefinition{WholeProjectionFieldID: definition},
+		orderedIDs:  []string{WholeProjectionFieldID}, fieldRegistryDigest: parsed,
+		projectionDefinitionDigest: projectionDefinitionDigest,
+	}, nil
+}
+
+func (r FieldRegistry) Definitions() []FieldDefinition {
+	result := make([]FieldDefinition, 0, len(r.orderedIDs))
+	for _, id := range r.orderedIDs {
+		definition := r.definitions[id]
+		definition.Path = append([]string(nil), definition.Path...)
+		result = append(result, definition)
+	}
+	return result
 }
 
 func NewProjectionDefinition(config ProjectionDefinitionConfig) (ProjectionDefinition, error) {
@@ -506,8 +547,9 @@ func (r ConfirmedOutcomeRef) ProjectionFingerprint() domain.ProjectionFingerprin
 }
 
 type confirmedOutcome struct {
-	ref   ConfirmedOutcomeRef
-	tuple CompleteTuple
+	ref                 ConfirmedOutcomeRef
+	tuple               CompleteTuple
+	canonicalProjection []byte
 }
 
 // ConfirmedOutcomeSet is immutable and constructible only through verified
@@ -592,8 +634,9 @@ func NewConfirmedOutcomeSet(
 		}
 		seenCandidates[candidateKey] = struct{}{}
 		outcome := confirmedOutcome{
-			ref:   ConfirmedOutcomeRef{id: id, candidate: input.CandidateExecutionKey, fingerprint: fingerprint},
-			tuple: cloneTuple(tuple),
+			ref:                 ConfirmedOutcomeRef{id: id, candidate: input.CandidateExecutionKey, fingerprint: fingerprint},
+			tuple:               cloneTuple(tuple),
+			canonicalProjection: append([]byte(nil), input.CanonicalProjection...),
 		}
 		set.byID[id.text] = outcome
 		set.ordered = append(set.ordered, outcome)
@@ -698,6 +741,23 @@ func (s ConfirmedOutcomeSet) PreservationDigest() compare.PreservationMapDigest 
 	return s.preservationDigest
 }
 
+func (s ConfirmedOutcomeSet) Valid() bool {
+	return s.valid && s.seal != (canon.Digest{}) && len(s.ordered) > 0 && len(s.byID) == len(s.ordered)
+}
+
+func (s ConfirmedOutcomeSet) Registry() FieldRegistry { return s.registry.clone() }
+
+func (s ConfirmedOutcomeSet) ProjectionProofs() []ProjectionProofInput {
+	result := make([]ProjectionProofInput, len(s.ordered))
+	for index, outcome := range s.ordered {
+		result[index] = ProjectionProofInput{
+			CandidateExecutionKey: outcome.ref.candidate,
+			CanonicalProjection:   append([]byte(nil), outcome.canonicalProjection...),
+		}
+	}
+	return result
+}
+
 func (r FieldRegistry) tupleFromProjection(projection canon.Value) (CompleteTuple, error) {
 	tuple := CompleteTuple{Fields: make([]FieldValue, 0, len(r.orderedIDs))}
 	retainedBytes := 0
@@ -789,7 +849,8 @@ func NewCustomExpectationReview(confirmed ConfirmedOutcomeSet, selectedFields []
 	if !confirmed.valid || len(confirmed.byID) == 0 {
 		return CustomExpectationReview{}, refusal(CodeInvalidConfirmedOutcomeSet, "custom review requires a sealed confirmed universe")
 	}
-	if reviewer == "" || len(reviewer) > maxReviewerBytes || !utf8.ValidString(reviewer) || strings.TrimSpace(reviewer) == "" || !evidence.Valid() {
+	if reviewer == "" || len(reviewer) > maxReviewerBytes || !utf8.ValidString(reviewer) ||
+		strings.TrimSpace(reviewer) == "" || containsControl(reviewer) || !evidence.Valid() {
 		return CustomExpectationReview{}, refusal(CodeInvalidReviewFact, "reviewer and review-evidence digest must be explicit and valid")
 	}
 	selected, err := confirmed.registry.resolveSelected(selectedFields)

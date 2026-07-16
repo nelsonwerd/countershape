@@ -2,8 +2,8 @@
 
 - **Working name:** Countershape (package, domain, trademark, and legal clearance not performed)
 - **Mode:** open-source-first experimental infrastructure
-- **State:** deep dive and adversarial red team complete; narrowed Darwin reference instrument approved subject to U0 gates
-- **Last updated:** 2026-07-14
+- **State:** deep dive and adversarial red team complete; U1–U5 sealed; narrowed U6 Choicepoint/store boundary under verification
+- **Last updated:** 2026-07-16
 - **Founder persona:** Soren Vale
 - **Confidence:** 8/10 in the truth kernel; 6/10 in the bounded reference instrument; 3/10 in review compression; 3/10 in adoption
 - **Semantic authority:** `docs/SEMANTICS.md` and `docs/PROJECTION_ALGEBRA.md` control structural identity, measurement/admission, and preservation semantics
@@ -12,7 +12,7 @@
 
 ### One-line promise
 
-**Countershape compares exact repository candidates inside declared fresh comparison envelopes, locally reduces an observed-stable behavioral split under named rules, lets a human state one exact witnessed expectation without branch or majority cues, and emits a standalone selected-field regression contract.**
+**Countershape compares exact repository candidates inside declared fresh comparison envelopes, locally reduces an observed-stable behavioral split under named rules, lets a local caller state one exact witnessed expectation without branch or majority cues, and emits a standalone selected-field regression contract.**
 
 ### What it is—and is not
 
@@ -20,9 +20,9 @@ Parallel coding agents make plausible implementations cheap. They do not make ta
 
 Countershape treats those candidates as **sensors for underspecified intent**, never voters and never judges. It executes the same finite declared stimulus against exact candidate trees, retains bounded captured evidence, applies a visible versioned projection, forms an exact candidate-to-outcome map, refuses unstable or ineligible evidence, locally reduces the stimulus while preserving that complete labeled map, and asks a human to author a predicate for the witnessed case.
 
-The durable human object is a **Choicepoint**: Countershape's immutable, provenance-bound decision record format. It is not a newly invented semantic primitive or human operation. Socrates / *Choose, Don't Label* already covers candidate programs, discriminating behavior regions, semantic clusters, and human multiple choice. TiCoder, ARHF, FlashProg, SpecFix, xTestCluster, differential testing, delta debugging, property-based shrinking, approval testing, and Pact-style contracts establish much of the abstract lifecycle. Countershape's remaining hypothesis is a repository-scale operational composition across exact Git candidates, measured execution envelopes, explicit instability, visible projection, strict reduction provenance, plural rulings, and standalone test residue.
+The durable decision context is a **Choicepoint**: Countershape's immutable, provenance-bound fresh-confirmed context. The distinct **DecisionRecord** carries the local caller's ruling. Neither is a newly invented semantic primitive or human operation. Socrates / *Choose, Don't Label* already covers candidate programs, discriminating behavior regions, semantic clusters, and human multiple choice. TiCoder, ARHF, FlashProg, SpecFix, xTestCluster, differential testing, delta debugging, property-based shrinking, approval testing, and Pact-style contracts establish much of the abstract lifecycle. Countershape's remaining hypothesis is a repository-scale operational composition across exact Git candidates, measured execution envelopes, explicit instability, visible projection, strict reduction provenance, plural rulings, and standalone test residue.
 
-It does **not** identify the best branch, prove correctness or safety, discover a root cause, establish semantic equivalence, infer complete intent, or invent an oracle. Its strongest output is: under one declared finite experiment, these eligible candidates produced these exact projected values; this locally reduced witness preserved the exact map; this human selected this exact field predicate.
+It does **not** identify the best branch, prove correctness or safety, discover a root cause, establish semantic equivalence, infer complete intent, authenticate a human actor, or invent an oracle. Its strongest output is: under one declared finite experiment, these eligible candidates produced these exact projected values; this locally reduced witness preserved the exact map; the local caller recorded this exact field predicate.
 
 ### Primary user and job
 
@@ -172,7 +172,7 @@ The normative objects are:
 11. `StableBatch` and `CandidateOutcomeMap`: tagged repeated trials, a shared ordered per-repetition admission-digest set across candidate batches, explicit exclusions, globally unique evidence identities, and the canonical sorted `candidate_execution_key -> projection_fingerprint` map. Display clusters are derived views with no identity.
 12. `ReductionRun`: U5's inert bounded-run body with a separate `ReductionTranscript`; it carries only `UNCHANGED` or `BEST_KNOWN`. Transcript bytes reconstruct intent but cannot execute replay without the exact compare-owned divergent baseline, and replay receipts establish only bounded same-domain digest noncollision. `CompletedSweepDraft` is separately persisted, and only the outward store-backed `ReductionGrade` may carry `ONE_MINIMAL_UNDER`.
 13. `Choicepoint`: immutable fresh-confirmed decision-ready revision with original/minimized stimuli, exact maps, evidence, exclusions, and a U5 reduction grade.
-14. `DecisionRecord`: blind/reveal facts, human action, selected and nonasserted fields, exact scope, rationale, and verbatim receipt references. Derived wire booleans such as `compilable` are reconstructed, never emitter inputs.
+14. `DecisionRecord`: blind/reveal facts, local-caller-attributed action, selected and nonasserted fields, exact scope, rationale, the explicit `AUTHENTICITY_NOT_ESTABLISHED_IN_U6` nonclaim, and verbatim receipt references. Derived wire booleans such as `compilable` are reconstructed, never emitter inputs.
 15. `ContractBundle`: deterministic six-file Node-core source bundle with a typed exact predicate.
 16. `ContractExecution`: current eligible conformance/contradiction or typed ineligible execution evidence; it never freshens the Choicepoint.
 
@@ -213,7 +213,9 @@ The phrase “smallest behavior” is prohibited. Membership shape and a naked d
 
 No execution evidence is reused. Pure parsing/canonical/projection transforms of immutable bytes may be memoized. Fresh confirmation requires newly created attempt artifacts before spawn, fresh roots/process lifecycles, fixture-observed invocation evidence, and a rotated schedule.
 
-### Human ruling and separation
+Fresh confirmation preserves the full comparable disposition, not an all-candidates-eligible fiction. A candidate excluded as `UNSTABLE` may remain excluded after physically new confirmation when the excluded key and classification are exact; its new batch and evidence identities are expected to differ. Any changed eligible/excluded set or exclusion classification refuses preservation before labeled-map equality is considered. The confirmation schedule starts at phase offset `1`, and every instance nonce binds a crypto-random run challenge plus schedule ordinal.
+
+### Local ruling and separation
 
 The v1 actions are:
 
@@ -221,9 +223,11 @@ The v1 actions are:
 - `CUSTOM_EXPECTATION` for one separately authored typed tuple;
 - `REJECT_ALL` for dissatisfaction without a positive oracle;
 - `DEFER`; and
-- `REFINE` as a request for a successor study, not an in-place ruling.
+- `REFINE` as a semantic request for a successor study. U6 can construct the noncompilable record, but durable promotion returns `REFINE_REQUIRES_SUCCESSOR_STUDY` before publication or head mutation; successor-study construction remains future work.
 
 Only allow-observed and custom-expectation records can compile. Exact witnessed stimulus is the only scope. No field is preselected. Each differing projected field is explicitly `Assert` or `Context only`; nonasserted fields remain visible.
+
+U6 actor fields establish caller-supplied local attribution only: `actor_attribution = LOCAL_CALLER_ASSERTED_OPERATOR` and `actor_authenticity = AUTHENTICITY_NOT_ESTABLISHED_IN_U6`. Canonical bytes do not prove that an authenticated human authored the action. `DEFER` may become a noncompilable fixed-stage `RULING`, but deferred-session reopening is not implemented.
 
 For selected fields `F`, allowed outcomes `A`, and disallowed confirmed outcomes `D`, compilation requires:
 
@@ -233,7 +237,9 @@ for every a in A and d in D: select_F(a) != select_F(d)
 
 Missing remains tagged missing. Empty selection returns `EMPTY_SELECTED_FIELDS`; a nonseparating field set returns `AMBIGUOUS_SCOPE`; neither creates files. Candidate-neutral differing fields may be suggested but never auto-selected. Allow-many is a canonical set of complete selected-field tuples derived from confirmed outcomes, never a cross-product. Selected-field scope intentionally permits future changes in nonasserted fields; the UI and emitted README say this directly.
 
-## Standalone contract boundary
+A `CUSTOM_EXPECTATION` must be distinct from every confirmed selected-field tuple. A match is refused as `CUSTOM_EXPECTATION_ALREADY_OBSERVED`; the caller must use `ALLOW_OBSERVED` for an observed tuple.
+
+## P07/U6b future standalone contract boundary
 
 `DecisionRecord`, `ContractBundle`, and `ContractExecution` are separate truth objects.
 
@@ -268,11 +274,11 @@ The studio binds literal `127.0.0.1`, starts with a high-entropy fragment token 
 
 Captured artifacts are private. The default export omits captured bodies, includes only previewed projected fields, escapes all candidate content, records redaction/minimization operations, and says `CONFIDENTIALITY NOT ESTABLISHED`. Known-secret fixture tests prove only those fixtures. `--include-raw` is an explicit dangerous export; redacted output is never called raw.
 
-## Blind-first human protocol
+## U8 visual protocol target over the U6 semantic kernel
 
 1. Show authored scenario, exact scope, comparison envelope, observed/confirmation counts, and security boundary.
 2. Show reduced and original stimuli together with derivation, reducer names, grade, budget, and unresolved-neighbor count.
-3. Show deterministic equally weighted outcome facts. Candidate identity, producer/model provenance, total candidate support, and per-outcome support counts are absent from the payload and accessibility tree. Distinct outcome count is necessarily visible.
+3. Show deterministic equally weighted outcome facts. U6 structurally omits system-supplied candidate identity, producer/model provenance, total candidate support, and per-outcome support counts from the blind DTO. U8 must separately prove those fields do not enter the DOM, accessibility tree, visual metadata, or analytics labels. Distinct outcome count is necessarily visible.
 4. Record a provisional action and explicit field selection. Preview the complete tuple set and `Not asserted` fields.
 5. Reveal candidate identities and implications before finalization. Record early reveal; preserve and explain any post-reveal ruling change.
 
@@ -282,7 +288,7 @@ Original/derivation, Captured-to-Projection operations, nonasserted fields, and 
 
 ## Reference architecture
 
-The Go core owns identity and behavior state:
+The Go core owns identity and behavior state. The emitter, server, report, and web paths shown below are future P07/U8/U9 targets until their own sealed receipts exist:
 
 ```text
 cmd/countershape/
@@ -306,7 +312,7 @@ web/                    React/Vite decision bench; no truth recomputation
 testkit/                generated Git repos, negative worlds, vectors
 ```
 
-Persistence is a semantic content-addressed graph, not an append-only command/event log, process replay engine, or crash-resume runtime. In-flight progress may stream as disposable SSE. A crash preserves completed immutable objects and marks the attempt partial; Countershape reruns from a fresh world rather than resuming a process.
+Persistence is a semantic content-addressed graph, not an append-only command/event log, process replay engine, or crash-resume runtime. Future in-flight progress may stream as disposable SSE. A crash may leave already-finalized immutable objects or previously persisted nonadvancing evidence; U6 writes no crash-time `PARTIAL` or status object and cannot resume. A retry allocates an entirely new confirmation run.
 
 Generic packages may own only identity, eligibility, batch classification, exact-map comparison, tri-valued reduction orchestration, lineage, and ruling validation. Domain stimuli, captures, projections, and neighbors remain typed. React displays server-computed truth and never produces canonical digests or classifications.
 
@@ -330,6 +336,14 @@ Every `WorldPlan` materializes explicit finite budgets and shows trial multiplic
 | proposed shrink stimuli | 40 | 200 |
 | total candidate trials | 300 | 2,000 |
 | shrink wall time | 10 min | 60 min |
+| canonical semantic body | 1 MiB | 1 MiB |
+| Choicepoint retained nested raw bytes | 600 KiB | 600 KiB |
+| Choicepoint scenario UTF-8 bytes | 8 KiB | 8 KiB |
+| display-ref plus producer metadata per candidate | 2 KiB | 2 KiB |
+| confirmation projection proofs aggregate | 512 KiB | 512 KiB |
+| decision actor ID | 512 bytes | 512 bytes |
+| decision annotation | 32 KiB | 32 KiB |
+| post-reveal rationale | 8 KiB | 8 KiB |
 
 Budget exhaustion is an ordinary result, never hidden retry success. Prepared roots and execution caches do not exist in this run.
 
@@ -344,7 +358,7 @@ SOURCE_SPEC -> COMPILED_PLAN -> MATERIALIZED_CANDIDATE_SET
 -> CONTRACT_BUNDLE -> CONFORMANCE_EXECUTION
 ```
 
-Every edge creates a new object. `CANCELLED` and `PARTIAL` retain evidence without advancing. Semantic ancestor changes create a new lineage and make descendants `STALE`; explicit replacement creates `INVALIDATED(reason,replacement)`. Ruling before fresh confirmation, contract emission from a noncompilable action, added candidates under an old map, or resumed reduction under a changed plan is illegal.
+The full product target above remains an immutable successor-study model. U6a implements only the public typed spine `SOURCE_PLAN -> BASELINE -> DIVERGENCE -> REDUCTION -> CONFIRMATION -> CHOICEPOINT_READY -> RULING`. Its internal stage table reserves terminal `RESIDUE`, but P07 owns the first public construction-safe residue transition. U6a does not implement durable successor branches, `STALE`/`INVALIDATED` status objects, deferred-session reopening, or archived head history. `CANCELLED` and `PARTIAL` remain nonadvancing evidence concepts. Future work must add new objects rather than edit current Choicepoint bytes.
 
 ### Execution attempt
 
@@ -357,9 +371,11 @@ Each state can terminate in a typed control result. Only eligible `FINALIZED` ev
 
 ### Product state jurisdictions
 
-- Study: `EMPTY`, `PREPARING`, `ACTIVE`, `PARTIAL`, `ERROR`, `COMPLETED`.
+- Future study-presentation target: `EMPTY`, `PREPARING`, `ACTIVE`, `PARTIAL`, `ERROR`, `COMPLETED`; these are not U6 durable objects.
 - Candidate eligibility: `OBSERVED_STABLE(k/k)`, `UNSTABLE`, `UNCOMPARABLE`, `INCOMPLETE`.
-- Choicepoint: `DISCOVERED`, `DECISION_READY`, `RESOLVED`, `DEFERRED`, `STALE`, `INVALIDATED`.
+- U6a public durable head: `SOURCE_PLAN`, `BASELINE`, `DIVERGENCE`, `REDUCTION`, `CONFIRMATION`, `CHOICEPOINT_READY`, and `RULING`; `RESIDUE` is reserved internally for P07 and has no U6a public transition.
+- U6 decision session: `BLIND_OPEN`, `PROVISIONAL_RECORDED`, `REVEALED`, `POST_REVEAL_RECORDED`, `FINALIZED`.
+- Future presentation/status target: `DISCOVERED`, derived `RESOLVED`/`DEFERRED`, successor-relative `STALE`, and explicit `INVALIDATED`; these are not current Choicepoint wire fields.
 
 `COMPLETED` means budgets ended and each item has an honest disposition. It never means verified software.
 
@@ -373,10 +389,11 @@ Each unit is separately verified, claimed, committed, sealed, and gated on `NO_C
 4. **U3 — CLI observation spine:** typed stimulus/capture/projection, rotated repeats, constant/alternating/control fixtures, exact map.
 5. **U4 — HTTP observation spine:** fixture-owned readiness, one request, typed capture/projection, contamination negative fixture, shared truth services.
 6. **U5 — bounded reducer:** typed neighbors, tri-valued evaluations, map-digest preservation, budgets/transcript, shape trap, and a minimal content-addressed durable-sweep authority required for the local grade.
-7. **U6 — Choicepoint and residue:** immutable store/CAS, new confirmation evidence, blind ruling DTO, separation obligation, Go/Node vector corpus, deterministic six-file bundle, absent-runtime conformance.
-8. **U7 — complete CLI and reference studies:** safe next actions, both end-to-end proofs, allow-many, custom none-conforms, reject/defer, three clean reproductions, named-machine timings.
-9. **U8 — secure decision bench:** authenticated loopback API, complete state renderer, 1440/375 flows, at least three full visual passes, Playwright/axe/manual checks, and a real different-model screenshot critic.
-10. **U9 — local export, packaging, and hardening:** minimized evidence export, embedded assets/single binary, docs/license/contributor path, adversarial suite, performance/limitations ledger, final strict verify, didrun HTML evidence, receipts handoff.
+7. **U6a/P06 — Choicepoint and ruling source boundary:** immutable store/CAS, physical confirmation, strict Choicepoint/Decision codecs, blind semantic DTO/session, separation obligation, and typed ruling promotion through `RULING`; no public residue transition.
+8. **U6b/P07 — standalone residue:** Go/Node vector corpus, deterministic six-file bundle, absence checks, and current conformance execution.
+9. **U7 — complete CLI and reference studies:** safe next actions, both end-to-end proofs, allow-many, custom none-conforms, reject/defer, three clean reproductions, named-machine timings.
+10. **U8 — secure decision bench:** authenticated loopback API, complete state renderer, 1440/375 flows, at least three full visual passes, Playwright/axe/manual checks, and a real different-model screenshot critic.
+11. **U9 — local export, packaging, and hardening:** minimized evidence export, embedded assets/single binary, docs/license/contributor path, adversarial suite, performance/limitations ledger, final strict verify, didrun HTML evidence, receipts handoff.
 
 Honest fallback milestones are allowed: truth-kernel prototype, observation-only instrument, one-domain instrument, DecisionRecord-only residue, or CLI-only surface. None inherits the full-system claim.
 
@@ -403,7 +420,7 @@ Honest fallback milestones are allowed: truth-kernel prototype, observation-only
 
 ## Claim language
 
-Allowed: `repository-scale operationalization` only after the decisive proof; `comparison matrix admitted under envelope E`; `observed stable k/k`; `no observed difference under N named finite probes`; `exact projection equality`; `BEST_KNOWN under named reducers and budgets`; `ONE_MINIMAL_UNDER the recorded reducer set`; `human-scoped exact-witness ruling`; `standalone selected-field test` after absence/parity receipts.
+Allowed: `repository-scale operationalization` only after the decisive proof; `comparison matrix admitted under envelope E`; `observed stable k/k`; `no observed difference under N named finite probes`; `exact projection equality`; `BEST_KNOWN under named reducers and budgets`; `ONE_MINIMAL_UNDER the recorded reducer set`; `local-caller-attributed exact-witness ruling record`; `standalone selected-field test` after absence/parity receipts. “Human-scoped” additionally requires independent knowledge of the operator interaction; Countershape canonical bytes alone do not establish it.
 
 <!-- countershape-validator: allow-prohibited-terms begin -->
 Prohibited: invented disambiguation; new Choicepoint primitive; first implementation-derived intent question; first behavior clustering or feedback-to-test loop; oracle-free verification; compatible/deterministic worlds; raw after redaction; smallest/root cause/global minimum; semantic equivalence; correctness/safety/security approval; winner/best branch; complete intent; universal portability; sandboxed/network blocked; safely shareable; reproducible without a named envelope; or any didrun grade summarized upward.
@@ -429,12 +446,14 @@ didrun references remain opaque verbatim receipt grades associated with their ex
 - Finite repeats cannot prove determinism; failures cannot become product values; shape-only reduction can ask a different question.
 - `REJECT_ALL` has no positive executable oracle; weak selected fields can broaden a ruling.
 
+### Receipted on named trees and curated fixtures—not universal guarantees
+
+- Strict Go canonicalization, typed maps, and refusal states have sealed U1 receipts.
+- Regular/executable Git-object materialization and fresh Darwin fixture attempts have sealed U2 receipts for the named platform and fixtures.
+- The shared typed truth kernel has sealed CLI and HTTP adapter receipts from U3 and U4 without HTTP coercion into generic comparison semantics.
+
 ### Strong engineering inferences still to test
 
-- Strict Go canonicalization plus exact maps can make refusal states construction-safe.
-- Regular/executable Git-object materialization is a tractable bounded source path.
-- Fresh Darwin attempts plus explicit comparison envelopes control enough curated variance for a useful experiment.
-- One truth kernel can orchestrate typed CLI and HTTP adapters without coercion.
 - A constrained Node harness can match the Go semantic profile under one normative corpus.
 - Blind-first selected-field UX can faithfully capture one scoped ruling.
 
@@ -453,4 +472,4 @@ didrun references remain opaque verbatim receipt grades associated with their ex
 
 ## Handoff state
 
-**U0–U5 are sealed and strict-clean; U6 Choicepoint persistence is the next permitted unit.** The U5 implementation boundary is commit `497418ef3d9c`, tree `f38ee227a22f`; exact events, permanent failures, and verbatim grades live in `docs/status/U5.md`. U5's red-team pass further narrowed the contract: the strong reduction grade requires a live matching compiled-`WorldPlan` budget and durable authority, establishes logical evidence-identity nonreuse rather than physical freshness, treats wall deadlines as cooperative, and keeps exact reducible values in stimulus/proposal identity rather than the policy-scope digest. Build must preserve those cuts even when they make the demo less convenient.
+**U0–U5 are sealed and strict-clean. U6a is the current unreceipted candidate under verification; P07 remains blocked until U6a is committed, sealed, and strict-clean.** The U5 implementation boundary is commit `497418ef3d9c`, tree `f38ee227a22f`; exact events, permanent failures, and verbatim grades live in `docs/status/U5.md`. U5's red-team pass further narrowed the contract: the strong reduction grade requires a live matching compiled-`WorldPlan` budget and durable authority, establishes logical evidence-identity nonreuse rather than physical freshness, treats wall deadlines as cooperative, and keeps exact reducible values in stimulus/proposal identity rather than the policy-scope digest. Build must preserve those cuts even when they make the demo less convenient.

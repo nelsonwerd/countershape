@@ -2,6 +2,7 @@ package domain
 
 import (
 	"bytes"
+	"encoding/json"
 	"regexp"
 	"unicode/utf8"
 
@@ -113,6 +114,20 @@ func (b CandidateExecutionBinding) Identity() CandidateExecutionIdentity { retur
 
 func (b CandidateExecutionBinding) CanonicalBytes() []byte {
 	return append([]byte(nil), b.canonicalBytes...)
+}
+
+// ParseCandidateExecutionBinding strictly reconstructs the complete binding.
+// Parsing a bare CandidateExecutionKey remains intentionally insufficient.
+func ParseCandidateExecutionBinding(exact []byte) (CandidateExecutionBinding, error) {
+	var identity CandidateExecutionIdentity
+	if err := json.Unmarshal(exact, &identity); err != nil {
+		return CandidateExecutionBinding{}, refuse(ErrInvalidCandidateKey, "candidate binding wire")
+	}
+	rebuilt, err := NewCandidateExecutionBinding(identity)
+	if err != nil || !bytes.Equal(rebuilt.canonicalBytes, exact) {
+		return CandidateExecutionBinding{}, refuse(ErrInvalidCandidateKey, "candidate binding wire is nonexact")
+	}
+	return rebuilt, nil
 }
 
 func ParseCandidateExecutionKey(raw string) (CandidateExecutionKey, error) {

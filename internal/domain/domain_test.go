@@ -2,6 +2,7 @@ package domain
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -232,6 +233,67 @@ func TestProjectionDefinitionBindingPreservesPipelineOrderAndNormalizesChannels(
 	}
 	if first.Digest() == third.Digest() {
 		t.Fatal("ordered projection pipeline collapsed into a set identity")
+	}
+}
+
+func TestStrictAuthorityWireParsersRoundTripAndRejectUnknownMembers(t *testing.T) {
+	config := validPlanConfig()
+	plan, err := NewWorldPlan(config)
+	if err != nil {
+		t.Fatal(err)
+	}
+	projection, err := ParseProjectionDefinitionBinding(config.ProjectionDefinition.CanonicalBytes())
+	if err != nil || projection.Digest() != config.ProjectionDefinition.Digest() {
+		t.Fatalf("projection binding round trip: %v", err)
+	}
+	parsedPlan, err := ParseWorldPlan(plan.CanonicalBytes(), projection)
+	if err != nil || parsedPlan.Digest() != plan.Digest() {
+		t.Fatalf("world plan round trip: %v", err)
+	}
+	binding, err := NewCandidateExecutionBinding(CandidateExecutionIdentity{
+		TreeIdentityDigest: testDigest("c"), MaterializationPolicyDigest: plan.MaterializationPolicyDigest(),
+		WorldPlanDigest: plan.Digest(), AdapterDigest: plan.AdapterDigest(), RunnerDigest: plan.Adapter().RunnerDigest,
+		ProjectionDefinitionDigest: plan.ProjectionDefinitionDigest(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	parsedBinding, err := ParseCandidateExecutionBinding(binding.CanonicalBytes())
+	if err != nil || parsedBinding.Key() != binding.Key() {
+		t.Fatalf("candidate binding round trip: %v", err)
+	}
+
+	for name, exact := range map[string][]byte{
+		"projection": config.ProjectionDefinition.CanonicalBytes(),
+		"plan":       plan.CanonicalBytes(),
+		"candidate":  binding.CanonicalBytes(),
+	} {
+		var identity map[string]any
+		if err := json.Unmarshal(exact, &identity); err != nil {
+			t.Fatal(err)
+		}
+		identity["unknown_member"] = "must refuse"
+		encoded, err := json.Marshal(identity)
+		if err != nil {
+			t.Fatal(err)
+		}
+		unknown, err := canon.Canonicalize(encoded)
+		if err != nil {
+			t.Fatal(err)
+		}
+		accepted := false
+		switch name {
+		case "projection":
+			_, err = ParseProjectionDefinitionBinding(unknown)
+		case "plan":
+			_, err = ParseWorldPlan(unknown, projection)
+		case "candidate":
+			_, err = ParseCandidateExecutionBinding(unknown)
+		}
+		accepted = err == nil
+		if accepted {
+			t.Fatalf("%s parser accepted an unknown member", name)
+		}
 	}
 }
 

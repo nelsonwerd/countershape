@@ -2,7 +2,7 @@
 
 - **Contract version:** U0 / `architecture-v1`
 - **Target:** narrowed Darwin reference instrument
-- **Status:** controlling design; U1–U5 receipts are enumerated without reinterpretation in `status/U1.md` through `status/U5.md`; U6 and later capabilities remain `UNRECEIPTED` until their own sealed boundaries
+- **Status:** controlling design; U1–U5 receipts are enumerated without reinterpretation in `status/U1.md` through `status/U5.md`; the current U6 candidate implements only the bounded store, physical-confirmation, Choicepoint, blind-semantic, and ruling source boundary described below and remains `UNRECEIPTED` until its sealed strict-clean boundary
 - **Authority order:** `CONCEPT_BRIEF.md`, `SEMANTICS.md`, `PROJECTION_ALGEBRA.md`, then the stricter rulings in `research/deep-dive/08-RED_TEAM.md`, then this document
 
 Countershape is a repository-scale operational composition for resolving one witnessed behavioral disagreement among exact repository candidates. It is not an agent runtime, candidate ranker, generalized workflow runner, correctness oracle, or new disambiguation algorithm. The reference instrument accepts trusted local code from a curated Git repository, performs finite fresh executions, compares exact projected bytes, and preserves a human-authored selected-field decision as standalone Node source.
@@ -38,7 +38,7 @@ This document fixes the component boundaries, dependency direction, truth owners
 | What finite split was observed? | `StableBatch` and `CandidateOutcomeMap` | tagged trials, shared per-repetition admission set, exact labeled map, exclusions, and global evidence identities | determinism, physical freshness, majority truth, or complete intent |
 | What was locally reduced? | `ReductionRun` | typed neighbors, decreasing measure, nonoverlapping declared evidence identities, transcript, budgets, complete logical sweep if present | physical freshness, root cause, global minimum, or comprehension |
 | What is ready for a human decision? | `Choicepoint` | fresh-confirmed lineage and all governing artifact digests | a recommendation or branch endorsement |
-| What did the human state? | `DecisionRecord` | exact Choicepoint, blind/reveal facts, action, selected and nonasserted fields | intent outside the witness or security approval |
+| What ruling did the local caller record? | `DecisionRecord` | exact Choicepoint, blind/reveal presentation facts, caller-asserted actor, action, selected and nonasserted fields | actor authenticity, comprehension, intent outside the witness, or security approval |
 | What source bytes were emitted? | `ContractBundle` | deterministic six-file set and bundle digest | authorship, current execution, or long-term fidelity |
 | What happened against the current tree? | `ContractExecution` | current Git identity, fresh execution, bundle digest, eligible or ineligible result | recreation of historical evidence or overall correctness |
 | Did an external command run on a Git tree? | didrun's referenced verbatim grade, when present | its exact command and Git association | any Countershape classification or stronger unreceipted claim |
@@ -202,11 +202,11 @@ The minimized witness must pass a physically new confirmation batch with new att
 
 ## Choicepoint and decision boundary
 
-A `Choicepoint` is an immutable, decision-ready revision. It binds original and reduced stimuli, exact candidates, plan, envelope, capture and projection definitions, baseline and fresh-confirmed maps, exclusions, reduction transcript and grade, and evidence digests. Any semantic ancestor change creates a new lineage. Existing descendants become `STALE`; explicit replacement creates `INVALIDATED(reason,replacement)`.
+A `Choicepoint` is an immutable `CHOICEPOINT_READY` revision. It binds original and reduced stimuli, exact candidates, plan, envelope, projection identity, fresh-confirmed exact map and exclusions, bounded reduction facts, and evidence references. The U6 store implements one fixed linear head spine only; branching successor lineages and durable `STALE`/`INVALIDATED` status objects are target architecture, not current authority.
 
-The blind-first DTO contains scenario context, exact scope, envelope summary, observation counts, original/reduced stimuli and derivation, projection operations, deterministic outcome facts, distinct outcome count, and reduction evidence. It must omit candidate identity, producer/model provenance, total candidates, per-outcome support counts, candidate order, and any hidden DOM/accessibility metadata encoding those facts.
+The U6 blind semantic DTO kernel contains caller-authored scenario text, exact scope, original/reduced stimuli, bounded reduction facts, configured repeat counts, projection operations, deterministic outcome facts, and distinct outcome count. It omits system-supplied candidate identity, producer metadata, total candidates, per-outcome support counts, candidate source order, and reveal data in its closed canonical shape. Ordering is fingerprint-only and aliases are Choicepoint-scoped. Free-form scenario text and behavior bytes may themselves reveal identity; U6 does not establish anonymity, content-taint safety, DOM/accessibility omission, or the complete U8 presentation payload.
 
-The server records a provisional action and explicit field decisions, then reveals provenance before finalization. Early reveal and post-reveal changes are facts, not proof of understanding. No field is preselected. Every differing projected field is explicitly `Assert` or `Context only`.
+The U6 semantic session records a provisional action and explicit field decisions, then records provenance reveal before finalization. Early reveal and post-reveal changes are facts, not proof of understanding. No field is preselected. Every differing projected field is explicitly `Assert` or `Context only`. A server rendering and transporting this session remains U8 work.
 
 Compilable actions are `ALLOW_OBSERVED` and `CUSTOM_EXPECTATION`. For selected fields `F`, allowed tuples `A`, and disallowed confirmed tuples `D`, compilation requires:
 
@@ -214,7 +214,7 @@ Compilable actions are `ALLOW_OBSERVED` and `CUSTOM_EXPECTATION`. For selected f
 for every a in A and d in D: select_F(a) != select_F(d)
 ```
 
-Missing and present-empty values remain distinct. Allow-many is a canonical set of complete selected-field tuples derived from a sealed confirmed-outcome set. It is never a cross-product. Empty selection returns `EMPTY_SELECTED_FIELDS`; failed separation returns `AMBIGUOUS_SCOPE`. Both create no files. `REJECT_ALL`, `DEFER`, and `REFINE` are noncompilable by construction; refine requests a successor study.
+Missing and present-empty values remain distinct. Allow-many is a canonical set of complete selected-field tuples derived from a sealed confirmed-outcome set. It is never a cross-product. Empty selection returns `EMPTY_SELECTED_FIELDS`; failed separation returns `AMBIGUOUS_SCOPE`. A custom expectation equal to any confirmed selected-field tuple returns `CUSTOM_EXPECTATION_ALREADY_OBSERVED`. These failures create no compilable authority. `REJECT_ALL`, `DEFER`, and `REFINE` are noncompilable by construction. U6 can construct a semantic `REFINE` DecisionRecord, but durable promotion refuses it until successor-study creation exists.
 
 ## Standalone residue and Go/Node parity
 
@@ -235,24 +235,28 @@ The closed predicate profile is `one-of-exact/v1`. Bundle bytes contain no curre
 
 One normative corpus must exercise Go and Node strict parsing, field selection, missing/empty distinctions, CLI and HTTP capture profiles, projection bytes, and eligible/ineligible errors. Mutations that accept duplicate names, use independent allow-many value sets, assert a context-only field, or collapse ineligibility into contradiction must fail in both authorities. Standalone remains `UNRECEIPTED` until this corpus and a physical absence run pass on the exact Node major and native OS named in the receipt.
 
-## Content-addressed semantic artifact graph
+## Bounded semantic object store and fixed study-head spine
 
 The durable store has two concepts:
 
 1. **Immutable objects:** canonical semantic artifacts addressed by domain-separated digest. A digest collision or mismatched kind/bytes is fatal. Objects are written to a private temporary file, fsynced as required by the platform policy, published with an atomic create-if-absent operation, reopened, and rehashed before authority is returned. The Darwin U5 sweep store uses a same-directory hard link rather than a replacing rename, then unlinks the temporary name and fsyncs the directory.
 2. **CAS heads:** small mutable selectors such as a study's current lineage. A write supplies the expected old digest and desired new digest. Missing or stale expectations fail without creating a semantic transition.
 
-Graph edges are digest references inside immutable objects. A new revision never edits an ancestor. Partial and cancelled evidence may be retained as immutable nonadvancing objects. Staleness is derived from semantic ancestry and recorded in a successor status object; old bytes are never rewritten as fresh.
+The raw head-advance primitive is unexported. Public baseline, divergence, and reduction transitions consume live exact typed values; confirmation, Choicepoint, and ruling transitions consume opaque publication capabilities bound to the exact predecessor. The confirmation issuer is confined to the confirmation subtree, and Choicepoint/ruling issuers to the store-validating promotion subtree. Strict serialized records remain inert and cannot recreate those capabilities. `REFINE` is denied before ruling authority issuance and again by the store's closed ruling-action set.
 
-The store is explicitly not a command journal, fleet history, agent session, effects ledger, process-resume mechanism, fork/replay engine, or causal timeline. SSE may report best-effort in-flight progress to the local studio. A crash can preserve finalized immutable objects and an honest partial attempt. It cannot resume the process; the next evidentiary trial starts in a new world.
+Object edges are digest references inside immutable bodies. A new revision never edits an ancestor. U6a's public typed spine advances through `SOURCE_PLAN -> BASELINE -> DIVERGENCE -> REDUCTION -> CONFIRMATION -> CHOICEPOINT_READY -> RULING`. The internal stage table reserves the terminal `RESIDUE` slot, but no public residue transition exists until P07 introduces construction-safe `ContractBundle` authority. `PARTIAL` and `CANCELLED` do not advance the head. Only the current head plus immediate predecessor object/head digests are retained in `head.json`; there is no archived head-body history, durable staleness/invalidation record, branching, deletion, garbage collection, retention, or administrative recovery.
 
-## Local API and studio boundary
+The receiptable U6 storage authority is deliberately narrow: conforming Countershape writers on the natively exercised local Darwin filesystem. Darwin `flock`, same-directory hard-link create-if-absent publication, and atomic head rename protect cooperating writers. Direct same-UID mutation remains possible despite `0600` object modes. NFS/network/synchronizing filesystems, hostile same-UID races, forced power-loss recovery, and crash consistency beyond the exercised reopen checks are not established. `private-captures/` is a validated reserved `0700` directory; U6 does not yet expose a specialized captured-body publication API.
 
-The local server binds literal `127.0.0.1`. A high-entropy fragment token is transferred to session storage and removed from the visible URL. Reads and writes require bearer authorization. Writes additionally require exact Host and Origin, JSON content type, CSRF, and the expected current digest for CAS. There is no permissive CORS.
+The store is explicitly not a command journal, fleet history, agent session, effects ledger, process-resume mechanism, fork/replay engine, or causal timeline. Future SSE may report best-effort in-flight progress to the local studio. A crash may leave already-finalized immutable objects or previously persisted nonadvancing evidence; U6 writes no crash-time `PARTIAL` or status object and cannot resume. A retry allocates an entirely new confirmation run.
 
-The server computes all classifications, digests, transition availability, blind/reveal separation, and compile eligibility. The React/Vite client renders inert typed facts and sends human inputs. Candidate content never becomes HTML, a URL, a class name, an accessible label without encoding, or executable script. Desktop and mobile render the same trust-boundary facts; if evidence parity is absent, mobile is triage/defer-only.
+## Future U8/U9 local API, studio, and report targets
 
-The report edge creates a default-minimized local evidence export. It omits captured bodies, contains only previewed selected projection data, structurally escapes candidate text, records minimization/redaction operations, and displays `CONFIDENTIALITY NOT ESTABLISHED`. `--include-raw` is an explicit dangerous path and does not rename transformed bytes as raw.
+The future local server will bind literal `127.0.0.1`. A high-entropy fragment token will be transferred to session storage and removed from the visible URL. Reads and writes will require bearer authorization. Writes will additionally require exact Host and Origin, JSON content type, CSRF, and the expected current digest for CAS. There will be no permissive CORS.
+
+The future server will consume core-computed classifications, digests, transition availability, blind/reveal separation, and compile eligibility. The React/Vite client will render inert typed facts and send caller inputs. Candidate content must never become HTML, a URL, a class name, an accessible label without encoding, or executable script. Desktop and mobile must render the same trust-boundary facts; if evidence parity is absent, mobile becomes triage/defer-only.
+
+The future report edge will create a default-minimized local evidence export. It must omit captured bodies, contain only previewed selected projection data, structurally escape candidate text, record minimization/redaction operations, and display `CONFIDENTIALITY NOT ESTABLISHED`. `--include-raw` is an explicit dangerous future path and must not rename transformed bytes as raw.
 
 ## Wake and didrun boundaries
 
@@ -270,7 +274,8 @@ didrun references are opaque strings associated with their exact external comman
 | U3 | typed CLI observation, rotation, classification, exact map | CLI observation spine |
 | U4 | typed HTTP observation and fixture-owned readiness | two typed observation spines if generic boundaries remain clean |
 | U5 | typed neighbors, tri-valued orchestration, transcript, shape trap, minimal content-addressed durable-sweep authority | local reduction grades under named rules and budgets |
-| U6 | artifact graph/CAS, confirmation, decision records, Go/Node corpus, deterministic residue | DecisionRecord only unless parity and absence gates pass |
+| U6a / P06 | fixed linear artifact store/CAS, physical confirmation, Choicepoint, blind semantic kernel, and DecisionRecord/ruling promotion through `RULING` | may claim only the exact source/store boundary mapped to P06 receipts; no public residue transition |
+| U6b / P07 | Go/Node corpus, deterministic bundle publication, absence proof, and current execution | standalone remains future until P07 parity, bundle, and absence gates pass |
 | U7 | complete CLI and both reference studies, repeated clean runs and timing | narrowed Darwin reference studies only |
 | U8 | authenticated decision bench, blind-first flow, visual/accessibility loops | studio-complete only if every security and evidence-parity gate passes |
 | U9 | minimized export, packaging, adversarial hardening, final evidence and handoff | only the capabilities mapped to verbatim receipts |

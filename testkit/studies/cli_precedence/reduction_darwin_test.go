@@ -3,14 +3,19 @@
 package cli_precedence
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"path/filepath"
 	"slices"
 	"testing"
 	"time"
 
 	countercli "github.com/nelsonwerd/countershape/internal/adapters/cli"
+	"github.com/nelsonwerd/countershape/internal/choice"
+	"github.com/nelsonwerd/countershape/internal/choice/promotion"
 	"github.com/nelsonwerd/countershape/internal/compare"
+	"github.com/nelsonwerd/countershape/internal/confirmation"
 	"github.com/nelsonwerd/countershape/internal/domain"
 	reducer "github.com/nelsonwerd/countershape/internal/reduce"
 	grade "github.com/nelsonwerd/countershape/internal/reduction"
@@ -43,12 +48,20 @@ func TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence(t *test
 	}
 	baselineConfig := cliPhysicalReductionConfig(t)
 	baselineConfig.StimulusOverride = &noisyStimulus
+	baselineCheckpoint, err := Run(context.Background(), baselineConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
 	baselineResult, err := Run(context.Background(), baselineConfig)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !baselineResult.HasOutcomeMap || baselineResult.OutcomeMap.Phase() != domain.AttemptDiscovery {
 		t.Fatal("physical CLI baseline did not produce a discovery outcome map")
+	}
+	if !baselineCheckpoint.HasOutcomeMap || baselineCheckpoint.Plan.Digest() != baselineResult.Plan.Digest() ||
+		compare.AssessPreservation(baselineCheckpoint.OutcomeMap, baselineResult.OutcomeMap).Relation() != compare.PreservationEqual {
+		t.Fatal("physical CLI pre-divergence baseline checkpoint changed semantic plan or labeled behavior")
 	}
 	baseline, err := compare.RequireDivergence(baselineResult.OutcomeMap)
 	if err != nil {
@@ -69,6 +82,7 @@ func TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence(t *test
 		t.Fatalf("compiled CLI reduction budget = %d/%d/%s", budget.ProposalLimit(), budget.CandidateTrialLimit(), budget.WallLimit())
 	}
 	var evaluatorErr error
+	var minimizedStudy StudyResult
 	run, err := reducer.Run(context.Background(), reducer.RunInput[countercli.CLIStimulus]{
 		Original: baselineResult.Stimulus,
 		Reference: func(stimulus countercli.CLIStimulus) (domain.Digest, reducer.Measure, bool) {
@@ -108,6 +122,9 @@ func TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence(t *test
 				return reducer.EvaluationObservation{}, evaluatorErr
 			}
 			outcome := result.OutcomeMap
+			if compare.AssessPreservation(baseline.OutcomeMap(), outcome).Relation() == compare.PreservationEqual {
+				minimizedStudy = result
+			}
 			return reducer.EvaluationObservation{OutcomeMap: &outcome, CandidateTrials: uint64(len(result.Trials))}, nil
 		},
 		Baseline: baseline, ReducerSet: policy.ReducerSet(), Budget: budget,
@@ -158,6 +175,411 @@ func TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence(t *test
 	if err != nil || !finalized.Valid() || finalized.Grade().Status() != grade.StatusOneMinimalUnder {
 		t.Fatalf("physical CLI durable grade was not quantified: status=%s err=%v",
 			finalized.Grade().Status(), err)
+	}
+	if !minimizedStudy.HasOutcomeMap || minimizedStudy.Stimulus.Digest() != run.MinimizedStimulusDigest() {
+		t.Fatal("physical CLI reducer did not retain the exact minimized preserving study")
+	}
+	reducedBaseline, err := compare.RequireDivergence(minimizedStudy.OutcomeMap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	confirmationConfig := cliPhysicalReductionConfig(t)
+	confirmationConfig.Purpose = domain.AttemptConfirmation
+	confirmationConfig.StimulusOverride = &minimizedStudy.Stimulus
+	confirmationConfig.Confirmation = &ConfirmationInput{
+		ReducedBaseline: reducedBaseline, ReductionRun: run, ReductionResult: finalized,
+	}
+	confirmedStudy, err := Run(context.Background(), confirmationConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !confirmedStudy.HasConfirmation || !confirmedStudy.Confirmation.Valid() || !confirmedStudy.HasOutcomeMap ||
+		confirmedStudy.OutcomeMap.Phase() != domain.AttemptConfirmation ||
+		confirmedStudy.OutcomeMap.ScheduleStartOffset() != 1 || len(confirmedStudy.Confirmation.Draft().PhysicalFacts()) != 9 {
+		t.Fatal("physical CLI confirmation did not produce one complete fresh phase-bound matrix")
+	}
+	confirmationDraft := confirmedStudy.Confirmation.Draft()
+	if parsed, parseErr := confirmation.ParseRecord(confirmationDraft.CanonicalBytes()); parseErr != nil || parsed.Digest() != confirmationDraft.Digest() {
+		t.Fatalf("physical CLI confirmation did not round trip strictly: %v", parseErr)
+	}
+	confirmationWire := confirmationDraft.CanonicalBytes()
+	unknownConfirmation := append([]byte(nil), confirmationWire[:len(confirmationWire)-1]...)
+	unknownConfirmation = append(unknownConfirmation, []byte(`,"zz_unknown":true}`)...)
+	if _, parseErr := confirmation.ParseRecord(unknownConfirmation); parseErr == nil {
+		t.Fatal("FreshConfirmation parser accepted an unknown canonical member")
+	}
+	confirmationStore, err := store.OpenObjectStore(filepath.Join(t.TempDir(), "confirmation-store"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	object, err := store.NewSemanticObject("FreshConfirmation", confirmationDraft.Digest(), confirmationDraft.CanonicalBytes())
+	if err != nil {
+		t.Fatal(err)
+	}
+	confirmationAuthority, err := confirmationStore.Publish(context.Background(), object)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := confirmationStore.Validate(context.Background(), object, confirmationAuthority); err != nil {
+		t.Fatal(err)
+	}
+	originalArtifact, err := choice.NewCanonicalArtifact(
+		"CLIStimulus", baselineResult.Stimulus.Digest(), baselineResult.Stimulus.CanonicalBytes(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	minimizedArtifact, err := choice.NewCanonicalArtifact(
+		"CLIStimulus", confirmedStudy.Stimulus.Digest(), confirmedStudy.Stimulus.CanonicalBytes(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reveals := make([]choice.CandidateReveal, len(confirmedStudy.CandidateBindings))
+	for index, binding := range confirmedStudy.CandidateBindings {
+		reveals[index] = choice.CandidateReveal{
+			CandidateExecutionKey: binding.Key(), DisplayRef: string(confirmedStudy.CandidateRoles[binding.Key()]),
+			ProducerMetadata: "local deterministic CLI fixture",
+		}
+	}
+	choicepoint, err := choice.NewChoicepointRecord(choice.ChoicepointInput{
+		Scenario: "Which exact CLI precedence behavior should become the accepted contract?",
+		Plan:     confirmedStudy.Plan, Envelope: confirmedStudy.Envelope,
+		CandidateBindings: confirmedStudy.CandidateBindings, OriginalStimulus: originalArtifact,
+		MinimizedStimulus: minimizedArtifact, Confirmation: confirmationDraft.Record(), CandidateReveals: reveals,
+		EvidenceReceipts: []domain.ReceiptReference{},
+	})
+	if err != nil || !choicepoint.Valid() {
+		t.Fatalf("physical CLI Choicepoint construction failed: %v", err)
+	}
+	parsedChoicepoint, err := choice.ParseChoicepointRecord(choicepoint.CanonicalBytes())
+	if err != nil || parsedChoicepoint.Digest() != choicepoint.Digest() {
+		t.Fatalf("physical CLI Choicepoint did not round trip strictly: %v", err)
+	}
+	blind, err := choice.NewBlindView(choicepoint)
+	if err != nil || len(blind.DTO().Cards()) != confirmedStudy.OutcomeMap.DistinctProjectionCount() {
+		t.Fatalf("physical CLI blind DTO did not group exact outcomes: %v", err)
+	}
+	blindBytes := blind.DTO().CanonicalBytes()
+	for _, binding := range confirmedStudy.CandidateBindings {
+		for _, forbidden := range []string{
+			binding.Key().String(), binding.Identity().TreeIdentityDigest.String(),
+			string(confirmedStudy.CandidateRoles[binding.Key()]), "local deterministic CLI fixture",
+		} {
+			if forbidden != "" && bytes.Contains(blindBytes, []byte(forbidden)) {
+				t.Fatalf("blind DTO leaked reveal or candidate identity %q", forbidden)
+			}
+		}
+	}
+	for _, entry := range confirmedStudy.OutcomeMap.Entries() {
+		if bytes.Contains(blindBytes, []byte(entry.ProjectionFingerprint.String())) {
+			t.Fatal("blind DTO leaked a raw projection fingerprint")
+		}
+	}
+	choiceObject, err := store.NewSemanticObject("Choicepoint", choicepoint.Digest(), choicepoint.CanonicalBytes())
+	if err != nil {
+		t.Fatal(err)
+	}
+	choiceAuthority, err := confirmationStore.Publish(context.Background(), choiceObject)
+	if err != nil || confirmationStore.Validate(context.Background(), choiceObject, choiceAuthority) != nil {
+		t.Fatalf("physical CLI Choicepoint did not persist immutably: %v", err)
+	}
+	promotionRoot := filepath.Join(t.TempDir(), "promotion-store")
+	promotionStore, err := store.OpenObjectStore(promotionRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	studyID, err := store.NewStudyID("physical CLI choicepoint promotion")
+	if err != nil {
+		t.Fatal(err)
+	}
+	head, err := promotionStore.CreateStudy(context.Background(), studyID, confirmedStudy.Plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	head, err = promotionStore.AdvanceBaseline(context.Background(), head, baselineCheckpoint.OutcomeMap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	head, err = promotionStore.AdvanceDivergence(context.Background(), head, baseline)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wrongDivergence, err := compare.RequireDivergence(baselineCheckpoint.OutcomeMap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wrongStudyID, err := store.NewStudyID("physical CLI mismatched reduction lineage")
+	if err != nil {
+		t.Fatal(err)
+	}
+	wrongHead, err := promotionStore.CreateStudy(context.Background(), wrongStudyID, confirmedStudy.Plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wrongHead, err = promotionStore.AdvanceBaseline(context.Background(), wrongHead, baselineResult.OutcomeMap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wrongHead, err = promotionStore.AdvanceDivergence(context.Background(), wrongHead, wrongDivergence)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := promotionStore.AdvanceReduction(context.Background(), wrongHead, run); err == nil {
+		t.Fatal("ReductionRun advanced beneath a different exact divergence predecessor")
+	}
+	unchangedWrongHead, err := promotionStore.OpenHead(context.Background(), wrongStudyID)
+	if err != nil || unchangedWrongHead.HeadDigest() != wrongHead.HeadDigest() ||
+		unchangedWrongHead.Stage() != store.StageDivergence {
+		t.Fatalf("rejected reduction lineage changed its head: %v", err)
+	}
+	if _, _, err := promotionStore.Read(context.Background(), "ReductionRun", run.Digest()); err == nil {
+		t.Fatal("rejected reduction lineage published its successor object")
+	}
+	head, err = promotionStore.AdvanceReduction(context.Background(), head, run)
+	if err != nil {
+		t.Fatal(err)
+	}
+	storedConfirmation, err := promotion.PersistConfirmation(context.Background(), promotionStore, head, confirmationDraft)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ready, err := promotion.Promote(context.Background(), promotionStore, storedConfirmation, promotion.ChoicepointRequest{
+		Scenario: "Which exact CLI precedence behavior should become the accepted contract?",
+		Plan:     confirmedStudy.Plan, Envelope: confirmedStudy.Envelope,
+		CandidateBindings: confirmedStudy.CandidateBindings, OriginalStimulus: originalArtifact,
+		MinimizedStimulus: minimizedArtifact, CandidateReveals: reveals,
+		EvidenceReceipts: []domain.ReceiptReference{},
+	})
+	if err != nil || ready.Record().Digest() != choicepoint.Digest() {
+		t.Fatalf("physical CLI store-bound Choicepoint promotion failed: %v", err)
+	}
+	restartedStore, err := store.OpenObjectStore(promotionRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reopenedReady, err := promotion.OpenReady(context.Background(), restartedStore, studyID)
+	if err != nil || reopenedReady.Record().Digest() != ready.Record().Digest() {
+		t.Fatalf("physical CLI CHOICEPOINT_READY did not survive restart: %v", err)
+	}
+	if _, err := promotion.Promote(context.Background(), promotionStore, storedConfirmation, promotion.ChoicepointRequest{
+		Scenario: "stale confirmation must not promote again", Plan: confirmedStudy.Plan, Envelope: confirmedStudy.Envelope,
+		CandidateBindings: confirmedStudy.CandidateBindings, OriginalStimulus: originalArtifact,
+		MinimizedStimulus: minimizedArtifact, CandidateReveals: reveals, EvidenceReceipts: []domain.ReceiptReference{},
+	}); err == nil {
+		t.Fatal("superseded confirmation authority promoted a second Choicepoint")
+	}
+
+	decisionSession, err := choice.NewSession(reopenedReady.Record())
+	if err != nil {
+		t.Fatal(err)
+	}
+	cards := decisionSession.BlindDTO().Cards()
+	if len(cards) < 2 {
+		t.Fatal("divergent CLI Choicepoint did not expose at least two blind outcome cards")
+	}
+	standardInput := choice.RulingDraftInput{
+		Action: choice.ActionAllowObserved, SelectedFields: []string{choice.WholeProjectionFieldID},
+		AllowedAliases: []string{cards[0].Alias},
+	}
+	if _, err := decisionSession.Propose(standardInput); !choice.IsRefusal(err, choice.CodeRequiredSurfaceNotVisited) {
+		t.Fatalf("standard blind proposal bypassed evidence presentation: %v", err)
+	}
+	for _, surface := range []choice.ReviewSurface{
+		choice.SurfaceOriginalWitness, choice.SurfaceMinimizedWitness, choice.SurfaceReductionDerivation,
+		choice.SurfaceProjectionOperations, choice.SurfaceNonassertedFields,
+	} {
+		decisionSession, err = decisionSession.Visit(surface)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	decisionSession, err = decisionSession.Propose(standardInput)
+	if err != nil {
+		t.Fatal(err)
+	}
+	decisionSession, reveal, err := decisionSession.Reveal()
+	if err != nil || len(reveal.Groups()) != len(cards) {
+		t.Fatalf("standard decision reveal failed: %v", err)
+	}
+	groups := reveal.Groups()
+	if len(groups[0].Candidates) == 0 {
+		t.Fatal("reveal group omitted its exact supporting candidates")
+	}
+	originalDisplayRef := groups[0].Candidates[0].DisplayRef
+	groups[0].Candidates[0].DisplayRef = "mutated caller copy"
+	if reveal.Groups()[0].Candidates[0].DisplayRef != originalDisplayRef {
+		t.Fatal("RevealDTO nested candidate slices were not defensively copied")
+	}
+	decisionSession, err = decisionSession.Visit(choice.SurfaceProvenance)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := decisionSession.Revise(standardInput, "unnecessary"); !choice.IsRefusal(err, choice.CodeUnnecessaryChangeRationale) {
+		t.Fatalf("semantic no-op post-reveal ruling accepted a rationale: %v", err)
+	}
+	changedInput := standardInput
+	changedInput.AllowedAliases = []string{cards[1].Alias}
+	if _, err := decisionSession.Revise(changedInput, ""); !choice.IsRefusal(err, choice.CodeChangeRationaleRequired) {
+		t.Fatalf("changed post-reveal ruling omitted its rationale: %v", err)
+	}
+	const changedRationale = "Provenance changed which exact outcome I accept."
+	changedSession, changeErr := decisionSession.Revise(changedInput, changedRationale)
+	if changeErr != nil || changedSession.State() != choice.SessionPostRevealRecorded {
+		t.Fatalf("rationalized post-reveal change was refused: %v", changeErr)
+	}
+	_, changedDecision, changeErr := changedSession.Finalize(
+		"local-test-operator", "Changed exact CLI witness after reveal.", []domain.ReceiptReference{},
+	)
+	if changeErr != nil || !changedDecision.ChangedAfterReveal() ||
+		changedDecision.PostRevealChangeRationale() != changedRationale {
+		t.Fatalf("rationalized post-reveal change was not retained in DecisionRecord: %v", changeErr)
+	}
+	parsedChanged, changeErr := choice.ParseDecisionRecord(changedDecision.CanonicalBytes(), reopenedReady.Record())
+	if changeErr != nil || parsedChanged.Digest() != changedDecision.Digest() || !parsedChanged.ChangedAfterReveal() {
+		t.Fatalf("rationalized DecisionRecord did not round trip strictly: %v", changeErr)
+	}
+	decisionSession, err = decisionSession.Revise(standardInput, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	finalizedSession, decision, err := decisionSession.Finalize("local-test-operator", "Exact CLI witness only.", []domain.ReceiptReference{})
+	if err != nil || !decision.Valid() || decision.EarlyReveal() || decision.ChangedAfterReveal() ||
+		decision.ReceiptStatusWhenEmpty() != domain.Unreceipted() || len(decision.Receipts()) != 0 {
+		t.Fatalf("standard DecisionRecord did not preserve exact blind/reveal facts: %v", err)
+	}
+	if _, ok := decision.CompilableRuling(); !ok {
+		t.Fatal("validated ALLOW_OBSERVED DecisionRecord lost sealed compile eligibility")
+	}
+	parsedDecision, err := choice.ParseDecisionRecord(decision.CanonicalBytes(), reopenedReady.Record())
+	if err != nil || parsedDecision.Digest() != decision.Digest() {
+		t.Fatalf("DecisionRecord did not round trip strictly: %v", err)
+	}
+	tamperedCompilable := bytes.Replace(decision.CanonicalBytes(), []byte(`"compilable":true`), []byte(`"compilable":false`), 1)
+	if bytes.Equal(tamperedCompilable, decision.CanonicalBytes()) {
+		t.Fatal("DecisionRecord test did not locate the derived compilable projection")
+	}
+	if _, err := choice.ParseDecisionRecord(tamperedCompilable, reopenedReady.Record()); err == nil {
+		t.Fatal("DecisionRecord parser trusted a tampered derived compilable projection")
+	}
+	if _, err := finalizedSession.Visit(choice.SurfaceOriginalWitness); !choice.IsRefusal(err, choice.CodeInvalidSessionState) {
+		t.Fatalf("finalized decision session remained mutable: %v", err)
+	}
+
+	earlySession, err := choice.NewSession(reopenedReady.Record())
+	if err != nil {
+		t.Fatal(err)
+	}
+	earlySession, _, err = earlySession.Reveal()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, surface := range []choice.ReviewSurface{
+		choice.SurfaceOriginalWitness, choice.SurfaceMinimizedWitness, choice.SurfaceReductionDerivation,
+		choice.SurfaceProjectionOperations, choice.SurfaceNonassertedFields, choice.SurfaceProvenance,
+	} {
+		earlySession, err = earlySession.Visit(surface)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	earlyInput := choice.RulingDraftInput{
+		Action: choice.ActionRejectAll, SelectedFields: []string{}, AllowedAliases: []string{},
+	}
+	earlySession, err = earlySession.Revise(earlyInput, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	firstReceipt, err := domain.NewDidrunReceipt(
+		confirmationDraft.Digest().String()+"\x00opaque-grade", "test-commit", choicepoint.Digest(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	secondReceipt, err := domain.NewDidrunReceipt(
+		"opaque-grade", "test-commit\x00"+choicepoint.Digest().String(), confirmationDraft.Digest(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, rejectedDecision, err := earlySession.Finalize(
+		"local-test-operator", "No positive oracle.", []domain.ReceiptReference{firstReceipt, secondReceipt},
+	)
+	if err != nil || !rejectedDecision.Valid() || !rejectedDecision.EarlyReveal() ||
+		rejectedDecision.ChangedAfterReveal() || len(rejectedDecision.Receipts()) != 2 {
+		t.Fatalf("early-reveal noncompilable DecisionRecord was invalid: %v", err)
+	}
+	if _, ok := rejectedDecision.CompilableRuling(); ok {
+		t.Fatal("REJECT_ALL DecisionRecord was cast to a compilable ruling")
+	}
+	reparsedRejected, err := choice.ParseDecisionRecord(rejectedDecision.CanonicalBytes(), reopenedReady.Record())
+	if err != nil || len(reparsedRejected.Receipts()) != 2 ||
+		reparsedRejected.Receipts()[0].GradeVerbatim() == reparsedRejected.Receipts()[1].GradeVerbatim() {
+		t.Fatalf("opaque DecisionRecord receipts did not remain distinct and verbatim: %v", err)
+	}
+
+	refineSession, err := choice.NewSession(reopenedReady.Record())
+	if err != nil {
+		t.Fatal(err)
+	}
+	refineSession, _, err = refineSession.Reveal()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, surface := range []choice.ReviewSurface{
+		choice.SurfaceOriginalWitness, choice.SurfaceMinimizedWitness, choice.SurfaceReductionDerivation,
+		choice.SurfaceProjectionOperations, choice.SurfaceNonassertedFields, choice.SurfaceProvenance,
+	} {
+		refineSession, err = refineSession.Visit(surface)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	refineSession, err = refineSession.Revise(choice.RulingDraftInput{
+		Action: choice.ActionRefine, SelectedFields: []string{}, AllowedAliases: []string{},
+	}, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, refineDecision, err := refineSession.Finalize(
+		"local-test-operator", "A successor study is required.", []domain.ReceiptReference{},
+	)
+	if err != nil || refineDecision.Action() != choice.ActionRefine {
+		t.Fatalf("semantic REFINE DecisionRecord was invalid: %v", err)
+	}
+	if _, ok := refineDecision.CompilableRuling(); ok {
+		t.Fatal("REFINE DecisionRecord was cast to a compilable ruling")
+	}
+	_, err = promotion.Finalize(context.Background(), restartedStore, reopenedReady, refineDecision)
+	var promotionErr *promotion.Error
+	if !errors.As(err, &promotionErr) || promotionErr.Code != promotion.CodeRefineRequiresSuccessorStudy {
+		t.Fatalf("durable REFINE did not fail with %s: %v", promotion.CodeRefineRequiresSuccessorStudy, err)
+	}
+	if _, _, err := restartedStore.Read(context.Background(), "DecisionRecord", refineDecision.Digest()); err == nil {
+		t.Fatal("refused REFINE DecisionRecord was published without a successor study")
+	}
+	stillReady, err := promotion.OpenReady(context.Background(), restartedStore, studyID)
+	if err != nil || stillReady.Record().Digest() != reopenedReady.Record().Digest() {
+		t.Fatalf("refused REFINE mutated the current CHOICEPOINT_READY head: %v", err)
+	}
+
+	finalizedRuling, err := promotion.Finalize(context.Background(), restartedStore, reopenedReady, decision)
+	if err != nil || finalizedRuling.Record().Digest() != decision.Digest() {
+		t.Fatalf("current Choicepoint did not promote its exact DecisionRecord: %v", err)
+	}
+	rulingRestart, err := store.OpenObjectStore(promotionRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reopenedRuling, err := promotion.OpenRuling(context.Background(), rulingRestart, studyID)
+	if err != nil || reopenedRuling.Record().Digest() != decision.Digest() {
+		t.Fatalf("durable RULING did not survive strict restart reconstruction: %v", err)
+	}
+	if _, err := promotion.Finalize(context.Background(), restartedStore, reopenedReady, rejectedDecision); err == nil {
+		t.Fatal("stale CHOICEPOINT_READY authority published a second DecisionRecord")
+	}
+	if _, _, err := restartedStore.Read(context.Background(), "DecisionRecord", rejectedDecision.Digest()); err == nil {
+		t.Fatal("losing stale DecisionRecord was published before the head compare-and-swap")
 	}
 }
 

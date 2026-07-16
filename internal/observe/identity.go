@@ -8,6 +8,7 @@ import (
 type scheduleIdentity struct {
 	Phase          string `json:"phase"`
 	Rotation       string `json:"rotation"`
+	StartOffset    int    `json:"start_offset"`
 	ScheduleDigest string `json:"schedule_digest"`
 	Ordinals       []int  `json:"ordinals"`
 }

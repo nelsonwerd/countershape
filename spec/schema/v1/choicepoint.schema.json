@@ -2,145 +2,104 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://countershape.dev/spec/schema/v1/choicepoint.schema.json",
   "title": "Countershape Choicepoint v1",
-  "description": "An immutable provenance-bound revision. It is a Countershape record format, not a semantic primitive or proof of complete intent.",
+  "description": "The exact 27-member U6 Choicepoint archive body. Its domain-separated digest is external to these bytes. JSON Schema checks inert wire shape only; Countershape's strict Go reconstruction is the authority for nested bytes, digests, roster equality, fresh confirmation, and readiness.",
   "type": "object",
   "additionalProperties": false,
   "required": [
-    "schema_version", "kind", "artifact_digest", "lineage_id", "revision", "parent_choicepoint_digest",
-    "state", "semantic_ancestors", "candidates", "original_stimulus_digest", "minimized_stimulus_digest",
-    "baseline_outcome_map_digest", "confirmed_outcome_map_digest", "discovery_batch_digests",
-    "confirmation_batch_digests", "confirmation", "reduction", "excluded_candidates", "evidence_digests",
-    "staleness", "decision_ready"
+    "schema_version",
+    "kind",
+    "scenario",
+    "world_plan_base64",
+    "world_plan_digest",
+    "comparison_envelope_base64",
+    "comparison_envelope_digest",
+    "projection_binding_base64",
+    "projection_definition_digest",
+    "candidate_bindings_base64",
+    "candidate_execution_keys",
+    "candidate_reveals",
+    "original_stimulus_kind",
+    "original_stimulus_base64",
+    "original_stimulus_digest",
+    "minimized_stimulus_kind",
+    "minimized_stimulus_base64",
+    "minimized_stimulus_digest",
+    "fresh_confirmation_base64",
+    "fresh_confirmation_digest",
+    "confirmed_outcome_map_digest",
+    "confirmed_preservation_map_digest",
+    "choice_projection_mode",
+    "evidence_receipts",
+    "evidence_status_when_empty",
+    "readiness_scope",
+    "presentation_provenance_nonclaim"
   ],
   "properties": {
     "schema_version": { "const": "countershape/v1" },
     "kind": { "const": "Choicepoint" },
-    "artifact_digest": { "$ref": "common.schema.json#/$defs/Digest" },
-    "lineage_id": { "type": "string", "pattern": "^choicepoint:[a-z0-9][a-z0-9._-]{0,127}$" },
-    "revision": { "type": "integer", "minimum": 1 },
-    "parent_choicepoint_digest": {
-      "oneOf": [
-        { "$ref": "common.schema.json#/$defs/Digest" },
-        { "type": "null" }
-      ]
-    },
-    "state": { "enum": ["DISCOVERED", "DECISION_READY", "RESOLVED", "DEFERRED", "STALE", "INVALIDATED"] },
-    "semantic_ancestors": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "candidate_set_digest", "world_plan_digest", "comparison_envelope_digest",
-        "capture_policy_digest", "projection_definition_digest"
-      ],
-      "properties": {
-        "candidate_set_digest": { "$ref": "common.schema.json#/$defs/Digest" },
-        "world_plan_digest": { "$ref": "common.schema.json#/$defs/Digest" },
-        "comparison_envelope_digest": { "$ref": "common.schema.json#/$defs/Digest" },
-        "capture_policy_digest": { "$ref": "common.schema.json#/$defs/Digest" },
-        "projection_definition_digest": { "$ref": "common.schema.json#/$defs/Digest" }
-      }
-    },
-    "candidates": {
+    "scenario": { "type": "string", "minLength": 1, "maxLength": 8192 },
+    "world_plan_base64": { "$ref": "#/$defs/NonemptyBase64" },
+    "world_plan_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "comparison_envelope_base64": { "$ref": "#/$defs/NonemptyBase64" },
+    "comparison_envelope_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "projection_binding_base64": { "$ref": "#/$defs/NonemptyBase64" },
+    "projection_definition_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "candidate_bindings_base64": {
       "type": "array",
       "minItems": 2,
       "maxItems": 4,
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["candidate_execution_key", "tree_identity_digest"],
-        "properties": {
-          "candidate_execution_key": { "$ref": "common.schema.json#/$defs/CandidateExecutionKey" },
-          "tree_identity_digest": { "$ref": "common.schema.json#/$defs/Digest" }
-        }
-      }
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/NonemptyBase64" }
     },
+    "candidate_execution_keys": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 4,
+      "uniqueItems": true,
+      "items": { "$ref": "common.schema.json#/$defs/CandidateExecutionKey" }
+    },
+    "candidate_reveals": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 4,
+      "items": { "$ref": "#/$defs/CandidateReveal" }
+    },
+    "original_stimulus_kind": { "enum": ["CLIStimulus", "HTTPStimulus"] },
+    "original_stimulus_base64": { "$ref": "#/$defs/NonemptyBase64" },
     "original_stimulus_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "minimized_stimulus_kind": { "enum": ["CLIStimulus", "HTTPStimulus"] },
+    "minimized_stimulus_base64": { "$ref": "#/$defs/NonemptyBase64" },
     "minimized_stimulus_digest": { "$ref": "common.schema.json#/$defs/Digest" },
-    "baseline_outcome_map_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "fresh_confirmation_base64": { "$ref": "#/$defs/NonemptyBase64" },
+    "fresh_confirmation_digest": { "$ref": "common.schema.json#/$defs/Digest" },
     "confirmed_outcome_map_digest": { "$ref": "common.schema.json#/$defs/Digest" },
-    "discovery_batch_digests": {
+    "confirmed_preservation_map_digest": { "$ref": "common.schema.json#/$defs/Digest" },
+    "choice_projection_mode": { "const": "WHOLE_EXACT_CANONICAL_PROJECTION_V1" },
+    "evidence_receipts": {
       "type": "array",
-      "minItems": 2,
-      "items": { "$ref": "common.schema.json#/$defs/Digest" }
+      "items": { "$ref": "common.schema.json#/$defs/ReceiptReference" }
     },
-    "confirmation_batch_digests": {
-      "type": "array",
-      "minItems": 2,
-      "items": { "$ref": "common.schema.json#/$defs/Digest" }
+    "evidence_status_when_empty": { "const": "UNRECEIPTED" },
+    "readiness_scope": { "const": "EXACT_FRESH_CONFIRMED_WITNESS_V1" },
+    "presentation_provenance_nonclaim": {
+      "const": "DISPLAY_REFS_AND_PRODUCER_METADATA_ARE_REVEAL_ONLY_NONEXECUTION_PROVENANCE"
+    }
+  },
+  "$defs": {
+    "NonemptyBase64": {
+      "type": "string",
+      "minLength": 4,
+      "pattern": "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$"
     },
-    "confirmation": {
+    "CandidateReveal": {
       "type": "object",
       "additionalProperties": false,
-      "required": [
-        "status", "attempt_artifact_digests", "world_instance_digests", "invocation_evidence_digests",
-        "schedule_rotated_from_discovery", "execution_evidence_reused"
-      ],
+      "required": ["candidate_execution_key", "display_ref", "producer_metadata"],
       "properties": {
-        "status": { "const": "FRESH_CONFIRMED" },
-        "attempt_artifact_digests": {
-          "type": "array",
-          "minItems": 2,
-          "items": { "$ref": "common.schema.json#/$defs/Digest" }
-        },
-        "world_instance_digests": {
-          "type": "array",
-          "minItems": 2,
-          "items": { "$ref": "common.schema.json#/$defs/Digest" }
-        },
-        "invocation_evidence_digests": {
-          "type": "array",
-          "minItems": 2,
-          "items": { "$ref": "common.schema.json#/$defs/Digest" }
-        },
-        "schedule_rotated_from_discovery": { "const": true },
-        "execution_evidence_reused": { "const": false }
+        "candidate_execution_key": { "$ref": "common.schema.json#/$defs/CandidateExecutionKey" },
+        "display_ref": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "producer_metadata": { "type": "string", "maxLength": 2048 }
       }
-    },
-    "reduction": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["reduction_run_digest", "grade"],
-      "properties": {
-        "reduction_run_digest": { "$ref": "common.schema.json#/$defs/Digest" },
-        "grade": { "enum": ["UNCHANGED", "BEST_KNOWN", "ONE_MINIMAL_UNDER"] }
-      }
-    },
-    "excluded_candidates": {
-      "type": "array",
-      "items": {
-        "type": "object",
-        "additionalProperties": false,
-        "required": ["candidate_execution_key", "classification", "batch_digest"],
-        "properties": {
-          "candidate_execution_key": { "$ref": "common.schema.json#/$defs/CandidateExecutionKey" },
-          "classification": { "enum": ["UNSTABLE", "UNCOMPARABLE", "INCOMPLETE"] },
-          "batch_digest": { "$ref": "common.schema.json#/$defs/Digest" }
-        }
-      }
-    },
-    "evidence_digests": {
-      "type": "array",
-      "minItems": 1,
-      "items": { "$ref": "common.schema.json#/$defs/Digest" }
-    },
-    "staleness": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": ["status", "reason_codes", "replacement_digest"],
-      "properties": {
-        "status": { "enum": ["CURRENT", "STALE", "INVALIDATED"] },
-        "reason_codes": {
-          "type": "array",
-          "items": { "type": "string", "minLength": 1 }
-        },
-        "replacement_digest": {
-          "oneOf": [
-            { "$ref": "common.schema.json#/$defs/Digest" },
-            { "type": "null" }
-          ]
-        }
-      }
-    },
-    "decision_ready": { "type": "boolean" }
+    }
   }
 }

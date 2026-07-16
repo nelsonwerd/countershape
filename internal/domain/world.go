@@ -1,6 +1,8 @@
 package domain
 
 import (
+	"bytes"
+	"encoding/json"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -634,6 +636,40 @@ func validateBudgets(b Budgets) error {
 func (p WorldPlan) Digest() Digest { return p.digest }
 
 func (p WorldPlan) CanonicalBytes() []byte { return append([]byte(nil), p.canonicalBytes...) }
+
+// ParseWorldPlan strictly reconstructs a plan using the complete projection
+// binding carried beside it. The plan wire intentionally contains only that
+// binding's digest, so the additional typed capability is required.
+func ParseWorldPlan(exact []byte, projection ProjectionDefinitionBinding) (WorldPlan, error) {
+	if !projection.Valid() {
+		return WorldPlan{}, refuse(ErrInvalidWorldPlan, "plan parser requires a complete projection binding")
+	}
+	var identity worldPlanIdentity
+	if err := json.Unmarshal(exact, &identity); err != nil {
+		return WorldPlan{}, refuse(ErrInvalidWorldPlan, "world plan wire")
+	}
+	if identity.SchemaVersion != SchemaVersion || identity.Kind != "WorldPlan" ||
+		identity.CWDPolicy != "MATERIALIZED_ROOT" || identity.NetworkMode != "HOST_ALLOWED" ||
+		identity.EvidenceReuse != "FORBIDDEN" || identity.TrustBoundary != "TRUSTED_LOCAL_FULL_USER_PERMISSIONS" ||
+		identity.ProjectionDefinitionDigest != projection.Digest() {
+		return WorldPlan{}, refuse(ErrInvalidWorldPlan, "world plan closed facts disagree")
+	}
+	rebuilt, err := NewWorldPlan(WorldPlanConfig{
+		CandidateSetDigest: identity.CandidateSetDigest, MaterializationPolicyDigest: identity.MaterializationPolicyDigest,
+		ComparisonEnvelopeDigest: identity.ComparisonEnvelopeDigest, Adapter: identity.Adapter,
+		ExecutionShape: identity.ExecutionShape, StartArgv: identity.StartArgv, SetupArgv: identity.SetupArgv,
+		Environment: identity.Environment, SecretSlots: identity.SecretSlots, FixtureRecipeDigest: identity.FixtureRecipeDigest,
+		Readiness: identity.Readiness, CapturePolicyDigest: identity.CapturePolicyDigest, ProjectionDefinition: projection,
+		RepeatSchedule: RepeatSchedule{DiscoveryRepeats: identity.RepeatSchedule.DiscoveryRepeats,
+			ConfirmationRepeats: identity.RepeatSchedule.ConfirmationRepeats,
+			Concurrency:         ScheduleConcurrency(identity.RepeatSchedule.Concurrency), Rotation: ScheduleRotation(identity.RepeatSchedule.Rotation)},
+		RequiredTools: identity.RequiredTools, Budgets: identity.Budgets,
+	})
+	if err != nil || !bytes.Equal(rebuilt.canonicalBytes, exact) {
+		return WorldPlan{}, refuse(ErrInvalidWorldPlan, "world plan wire is nonexact")
+	}
+	return rebuilt, nil
+}
 
 // CandidateSetDigest exposes the exact pre-plan candidate-set declaration that
 // this immutable plan consumed. It is a reference, not executable authority;

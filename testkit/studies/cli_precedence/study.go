@@ -15,9 +15,12 @@ import (
 	"github.com/nelsonwerd/countershape/internal/adapters/cli"
 	"github.com/nelsonwerd/countershape/internal/canon"
 	"github.com/nelsonwerd/countershape/internal/compare"
+	"github.com/nelsonwerd/countershape/internal/confirmation"
 	"github.com/nelsonwerd/countershape/internal/domain"
 	"github.com/nelsonwerd/countershape/internal/gitobj"
 	"github.com/nelsonwerd/countershape/internal/observe"
+	"github.com/nelsonwerd/countershape/internal/reduce"
+	"github.com/nelsonwerd/countershape/internal/reduction"
 	"github.com/nelsonwerd/countershape/internal/spec"
 	"github.com/nelsonwerd/countershape/internal/world"
 	"github.com/nelsonwerd/countershape/testkit/clifixture"
@@ -80,6 +83,15 @@ type Config struct {
 	ReductionProposalLimit        int
 	ReductionTotalCandidateTrials int
 	ReductionWallMS               int64
+	// Confirmation asks the live U6 orchestrator to own scheduling, entropy,
+	// nonce issuance, physical-result binding, and exact-map validation.
+	Confirmation *ConfirmationInput
+}
+
+type ConfirmationInput struct {
+	ReducedBaseline compare.DivergentBaseline
+	ReductionRun    reduce.ReductionRun
+	ReductionResult reduction.Result
 }
 
 type TrialEvidence struct {
@@ -107,10 +119,13 @@ type StudyResult struct {
 	Observation          observe.ObservationRun
 	OutcomeMap           compare.CandidateOutcomeMap
 	HasOutcomeMap        bool
+	CandidateBindings    []domain.CandidateExecutionBinding
 	CandidateRoles       map[domain.CandidateExecutionKey]clifixture.CandidateRole
 	Trials               []TrialEvidence
 	DisplayLabels        map[clifixture.CandidateRole]string
 	ProducerMetadata     string
+	Confirmation         confirmation.Completed
+	HasConfirmation      bool
 }
 
 func DefaultConfig(root, gitExecutable, nodeExecutable string) Config {
@@ -137,6 +152,7 @@ func Run(ctx context.Context, config Config) (study StudyResult, returnErr error
 		(!config.StdinPresent && len(config.StdinBytes) != 0) ||
 		config.Repetitions < 1 || config.Repetitions > 5 ||
 		config.MaxTotalTrials < 1 || config.WallBudget <= 0 ||
+		(config.Confirmation != nil && config.Purpose != domain.AttemptConfirmation) ||
 		hasReductionBudget && (config.ReductionProposalLimit <= 0 || config.ReductionTotalCandidateTrials <= 0 || config.ReductionWallMS <= 0) {
 		return StudyResult{}, fmt.Errorf("invalid CLI precedence study configuration")
 	}
@@ -286,10 +302,10 @@ func Run(ctx context.Context, config Config) (study StudyResult, returnErr error
 		CandidateSetDigest: declaration.Digest(), MaterializationPolicyDigest: materializationPolicy.Digest(),
 		ComparisonEnvelopeDigest: envelope.Digest(), RunnerDigest: runnerDigest,
 		StartArgv: stimulus.BaseLogicalArgv(), FixtureRecipeDigest: fixtureRecipe.Digest(),
-			CapturePolicy: capturePolicy, ProjectionDefinition: projection.Binding(),
-			Repetitions: config.Repetitions, CandidateCount: len(roles), ProbeMS: probeMS,
-			ReductionProposalLimit: config.ReductionProposalLimit,
-			ReductionTotalCandidateTrials: config.ReductionTotalCandidateTrials, ReductionWallMS: config.ReductionWallMS,
+		CapturePolicy: capturePolicy, ProjectionDefinition: projection.Binding(),
+		Repetitions: config.Repetitions, CandidateCount: len(roles), ProbeMS: probeMS,
+		ReductionProposalLimit:        config.ReductionProposalLimit,
+		ReductionTotalCandidateTrials: config.ReductionTotalCandidateTrials, ReductionWallMS: config.ReductionWallMS,
 	})
 	if err != nil {
 		return StudyResult{}, err
@@ -331,21 +347,20 @@ func Run(ctx context.Context, config Config) (study StudyResult, returnErr error
 		}
 	}
 	roster := make([]domain.CandidateExecutionKey, 0, len(boundCandidates))
+	candidateBindings := make([]domain.CandidateExecutionBinding, 0, len(boundCandidates))
 	for _, candidate := range boundCandidates {
 		roster = append(roster, candidate.Binding().Key())
+		candidateBindings = append(candidateBindings, candidate.Binding())
 	}
 	trialEvidence := make([]TrialEvidence, 0, config.Repetitions*len(roster))
-	observationRun, err := observe.RunObservation(ctx, observe.ObservationConfig{
-		Plan:            plan,
-		Purpose:         config.Purpose,
-		Envelope:        envelope,
-		CandidateRoster: roster,
-		Repetitions:     config.Repetitions,
-		Budget:          observe.TrialBudget{MaxTotalTrials: config.MaxTotalTrials, WallBudget: config.WallBudget},
-	}, func(trialContext context.Context, slot observe.ScheduledTrial) (observe.PreparedTrial, error) {
+	executeTrial := func(
+		trialContext context.Context,
+		slot observe.ScheduledTrial,
+		instanceNonce string,
+	) (world.Result, observe.PreparedTrial, error) {
 		candidate, present := candidateByKey[slot.CandidateKey()]
 		if !present {
-			return observe.PreparedTrial{}, fmt.Errorf("scheduled candidate is outside the opaque roster")
+			return world.Result{}, observe.PreparedTrial{}, fmt.Errorf("scheduled candidate is outside the opaque roster")
 		}
 		worldResult, executeErr := world.ExecuteCLI(trialContext, world.CLIRequest{
 			Binding:         executionBinding,
@@ -353,19 +368,19 @@ func Run(ctx context.Context, config Config) (study StudyResult, returnErr error
 			Tools:           toolRegistry,
 			AllocationRoot:  allocationRoot,
 			Purpose:         config.Purpose,
-			InstanceNonce:   fmt.Sprintf("u3-%s-%d-%d", studyPurposeToken(config.Purpose), slot.Repetition(), slot.Ordinal()),
+			InstanceNonce:   instanceNonce,
 			ScheduleOrdinal: slot.Ordinal(),
 		})
 		if executeErr != nil {
-			return observe.PreparedTrial{}, executeErr
+			return world.Result{}, observe.PreparedTrial{}, executeErr
 		}
 		measurements, measurementErr := studyMeasurements(envelope, worldResult)
 		if measurementErr != nil {
-			return observe.PreparedTrial{}, measurementErr
+			return world.Result{}, observe.PreparedTrial{}, measurementErr
 		}
 		observation, captureErr := cli.AdaptWorldResult(worldResult, executionBinding, slot.Ordinal())
 		if captureErr != nil {
-			return observe.PreparedTrial{}, captureErr
+			return world.Result{}, observe.PreparedTrial{}, captureErr
 		}
 		evidence := TrialEvidence{
 			Role:         roleByKey[slot.CandidateKey()],
@@ -381,17 +396,17 @@ func Run(ctx context.Context, config Config) (study StudyResult, returnErr error
 			if prepareErr == nil {
 				trialEvidence = append(trialEvidence, evidence)
 			}
-			return prepared, prepareErr
+			return worldResult, prepared, prepareErr
 		}
 		projected, projectErr := projection.Project(observation)
 		if projectErr != nil {
 			var rejection *cli.ProjectionRejection
 			if !errors.As(projectErr, &rejection) {
-				return observe.PreparedTrial{}, projectErr
+				return world.Result{}, observe.PreparedTrial{}, projectErr
 			}
 			rejectionEvidence, bridgeErr := cli.PrepareProjectionRejectionEvidence(observation, rejection)
 			if bridgeErr != nil {
-				return observe.PreparedTrial{}, bridgeErr
+				return world.Result{}, observe.PreparedTrial{}, bridgeErr
 			}
 			prepared, prepareErr := observe.NewPreparedProjectionRejectedTrial(
 				slot, worldResult.World(), worldResult.FinalizedAttempt(), measurements, rejectionEvidence,
@@ -400,13 +415,13 @@ func Run(ctx context.Context, config Config) (study StudyResult, returnErr error
 				evidence.ProjectionRejection = rejection
 				trialEvidence = append(trialEvidence, evidence)
 			}
-			return prepared, prepareErr
+			return worldResult, prepared, prepareErr
 		}
 		structural, bridgeErr := cli.PrepareStructuralCapture(
 			worldResult.World(), worldResult.FinalizedAttempt(), observation, projected,
 		)
 		if bridgeErr != nil {
-			return observe.PreparedTrial{}, bridgeErr
+			return world.Result{}, observe.PreparedTrial{}, bridgeErr
 		}
 		prepared, prepareErr := observe.NewPreparedCapturedTrial(
 			slot, worldResult.World(), worldResult.FinalizedAttempt(), measurements, structural,
@@ -416,15 +431,49 @@ func Run(ctx context.Context, config Config) (study StudyResult, returnErr error
 			evidence.Projected = true
 			trialEvidence = append(trialEvidence, evidence)
 		}
-		return prepared, prepareErr
-	})
-	if err != nil {
-		return StudyResult{}, err
+		return worldResult, prepared, prepareErr
+	}
+
+	var observationRun observe.ObservationRun
+	var completed confirmation.Completed
+	if config.Confirmation != nil {
+		completed, err = confirmation.Run(ctx, confirmation.Request{
+			Plan: plan, Envelope: envelope, ReducedBaseline: config.Confirmation.ReducedBaseline,
+			ReductionRun: config.Confirmation.ReductionRun, ReductionResult: config.Confirmation.ReductionResult,
+			WallBudget: config.WallBudget,
+			Execute: func(trialContext context.Context, request confirmation.TrialRequest) (world.Result, observe.PreparedTrial, error) {
+				return executeTrial(trialContext, request.Slot(), request.InstanceNonce())
+			},
+		})
+		if err != nil {
+			return StudyResult{}, err
+		}
+	} else {
+		observationRun, err = observe.RunObservation(ctx, observe.ObservationConfig{
+			Plan: plan, Purpose: config.Purpose, Envelope: envelope, CandidateRoster: roster,
+			Repetitions: config.Repetitions,
+			Budget:      observe.TrialBudget{MaxTotalTrials: config.MaxTotalTrials, WallBudget: config.WallBudget},
+		}, func(trialContext context.Context, slot observe.ScheduledTrial) (observe.PreparedTrial, error) {
+			_, prepared, executeErr := executeTrial(
+				trialContext, slot,
+				fmt.Sprintf("u3-%s-%d-%d", studyPurposeToken(config.Purpose), slot.Repetition(), slot.Ordinal()),
+			)
+			return prepared, executeErr
+		})
+		if err != nil {
+			return StudyResult{}, err
+		}
 	}
 	admittedAttempts := make(map[domain.Digest]struct{})
-	for _, batch := range observationRun.Batches() {
-		for _, digest := range batch.AttemptDigests() {
+	if config.Confirmation != nil {
+		for _, digest := range completed.ConfirmedOutcomeMap().OutcomeMap().EvidenceAttemptDigests() {
 			admittedAttempts[digest] = struct{}{}
+		}
+	} else {
+		for _, batch := range observationRun.Batches() {
+			for _, digest := range batch.AttemptDigests() {
+				admittedAttempts[digest] = struct{}{}
+			}
 		}
 	}
 	for index := range trialEvidence {
@@ -442,12 +491,18 @@ func Run(ctx context.Context, config Config) (study StudyResult, returnErr error
 		CapturePolicy:        capturePolicy,
 		ProjectionDefinition: projection,
 		Observation:          observationRun,
+		CandidateBindings:    append([]domain.CandidateExecutionBinding(nil), candidateBindings...),
 		CandidateRoles:       cloneRoleMap(roleByKey),
 		Trials:               append([]TrialEvidence(nil), trialEvidence...),
 		DisplayLabels:        cloneLabels(config.DisplayLabels),
 		ProducerMetadata:     config.ProducerMetadata,
+		Confirmation:         completed,
+		HasConfirmation:      config.Confirmation != nil && completed.Valid(),
 	}
-	if mapInput, present := observationRun.OutcomeMapInput(); present {
+	if config.Confirmation != nil {
+		study.OutcomeMap = completed.ConfirmedOutcomeMap().OutcomeMap()
+		study.HasOutcomeMap = true
+	} else if mapInput, present := observationRun.OutcomeMapInput(); present {
 		outcome, outcomeErr := compare.NewCandidateOutcomeMap(
 			mapInput.StimulusDigest(), mapInput.EnvelopeDigest(), mapInput.Roster(), mapInput.Batches(),
 		)
@@ -478,17 +533,17 @@ func studyPurposeToken(purpose domain.AttemptPurpose) string {
 }
 
 type studyPlanInput struct {
-	CandidateSetDigest          domain.Digest
-	MaterializationPolicyDigest domain.Digest
-	ComparisonEnvelopeDigest    domain.Digest
-	RunnerDigest                domain.Digest
-	StartArgv                   []string
-	FixtureRecipeDigest         domain.Digest
-	CapturePolicy               cli.CLICapturePolicy
-	ProjectionDefinition        domain.ProjectionDefinitionBinding
-	Repetitions                 int
-	CandidateCount              int
-	ProbeMS                     int64
+	CandidateSetDigest            domain.Digest
+	MaterializationPolicyDigest   domain.Digest
+	ComparisonEnvelopeDigest      domain.Digest
+	RunnerDigest                  domain.Digest
+	StartArgv                     []string
+	FixtureRecipeDigest           domain.Digest
+	CapturePolicy                 cli.CLICapturePolicy
+	ProjectionDefinition          domain.ProjectionDefinitionBinding
+	Repetitions                   int
+	CandidateCount                int
+	ProbeMS                       int64
 	ReductionProposalLimit        int
 	ReductionTotalCandidateTrials int
 	ReductionWallMS               int64

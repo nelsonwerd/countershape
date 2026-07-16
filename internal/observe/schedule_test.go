@@ -39,6 +39,32 @@ func TestRotatedScheduleIsCanonicalSequentialAndEvidenceOrdinaled(t *testing.T) 
 	}
 }
 
+func TestConfirmationScheduleIsPhaseBoundAndRotatedFromDiscovery(t *testing.T) {
+	fixture := newExecutionFixture(t, 3, 3)
+	roster := []domain.CandidateExecutionKey{
+		fixture.binding(t, 1).Key(), fixture.binding(t, 2).Key(), fixture.binding(t, 3).Key(),
+	}
+	discovery, err := NewPhaseRotatedSchedule(roster, 3, domain.AttemptDiscovery)
+	if err != nil {
+		t.Fatal(err)
+	}
+	confirmation, err := NewPhaseRotatedSchedule(roster, 3, domain.AttemptConfirmation)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if discovery.StartOffset() != 0 || confirmation.StartOffset() != 1 ||
+		discovery.Digest() == confirmation.Digest() ||
+		discovery.Trials()[0].CandidateKey() == confirmation.Trials()[0].CandidateKey() {
+		t.Fatal("confirmation schedule did not retain a distinct phase-bound rotation")
+	}
+	if discovery.Phase() != domain.AttemptDiscovery || confirmation.Phase() != domain.AttemptConfirmation {
+		t.Fatal("schedule lost its exact attempt phase")
+	}
+	if _, err := NewPhaseRotatedSchedule(roster, 3, domain.AttemptPurpose("FORGED")); err == nil {
+		t.Fatal("unknown schedule phase was accepted")
+	}
+}
+
 func TestRotatedScheduleRefusesDuplicateOrUnboundedInputs(t *testing.T) {
 	fixture := newExecutionFixture(t, 3, 3)
 	key := fixture.binding(t, 1).Key()

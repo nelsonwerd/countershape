@@ -10,8 +10,11 @@ import (
 	"time"
 
 	counterhttp "github.com/nelsonwerd/countershape/internal/adapters/http"
+	"github.com/nelsonwerd/countershape/internal/choice"
 	"github.com/nelsonwerd/countershape/internal/compare"
+	"github.com/nelsonwerd/countershape/internal/confirmation"
 	"github.com/nelsonwerd/countershape/internal/domain"
+	"github.com/nelsonwerd/countershape/internal/observe"
 	reducer "github.com/nelsonwerd/countershape/internal/reduce"
 	grade "github.com/nelsonwerd/countershape/internal/reduction"
 	"github.com/nelsonwerd/countershape/internal/store"
@@ -117,6 +120,7 @@ func TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence(t *testing.T)
 		t.Fatalf("compiled HTTP reduction budget = %d/%d/%s", budget.ProposalLimit(), budget.CandidateTrialLimit(), budget.WallLimit())
 	}
 	var evaluatorErr error
+	var minimizedStudy StudyResult
 	run, err := reducer.Run(context.Background(), reducer.RunInput[counterhttp.HTTPStimulus]{
 		Original: noisy,
 		Reference: func(stimulus counterhttp.HTTPStimulus) (domain.Digest, reducer.Measure, bool) {
@@ -156,6 +160,9 @@ func TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence(t *testing.T)
 				return reducer.EvaluationObservation{}, evaluatorErr
 			}
 			outcome := result.OutcomeMap
+			if compare.AssessPreservation(baseline.OutcomeMap(), outcome).Relation() == compare.PreservationEqual {
+				minimizedStudy = result
+			}
 			return reducer.EvaluationObservation{OutcomeMap: &outcome, CandidateTrials: uint64(len(result.Trials))}, nil
 		},
 		Baseline: baseline, ReducerSet: policy.ReducerSet(), Budget: budget,
@@ -198,6 +205,133 @@ func TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence(t *testing.T)
 	if err != nil || !finalized.Valid() || finalized.Grade().Status() != grade.StatusOneMinimalUnder {
 		t.Fatalf("physical HTTP durable grade was not quantified: status=%s err=%v",
 			finalized.Grade().Status(), err)
+	}
+	if !minimizedStudy.HasOutcomeMap || minimizedStudy.Stimulus.Digest() != run.MinimizedStimulusDigest() {
+		t.Fatal("physical HTTP reducer did not retain the exact minimized preserving study")
+	}
+	reducedBaseline, err := compare.RequireDivergence(minimizedStudy.OutcomeMap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	confirmationConfig := httpPhysicalReductionConfig(t)
+	confirmationConfig.Purpose = domain.AttemptConfirmation
+	confirmationConfig.StimulusOverride = &minimizedStudy.Stimulus
+	confirmationConfig.Confirmation = &ConfirmationInput{
+		ReducedBaseline: reducedBaseline, ReductionRun: run, ReductionResult: finalized,
+	}
+	confirmedStudy, err := Run(context.Background(), confirmationConfig)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !confirmedStudy.HasConfirmation || !confirmedStudy.Confirmation.Valid() || !confirmedStudy.HasOutcomeMap ||
+		confirmedStudy.OutcomeMap.Phase() != domain.AttemptConfirmation ||
+		confirmedStudy.OutcomeMap.ScheduleStartOffset() != 1 || len(confirmedStudy.OutcomeMap.Exclusions()) != 1 ||
+		confirmedStudy.OutcomeMap.Exclusions()[0].Classification != observe.Unstable ||
+		len(confirmedStudy.Confirmation.Draft().PhysicalFacts()) != 12 {
+		t.Fatal("physical HTTP confirmation did not reproduce the complete A/B/C plus unstable-D disposition")
+	}
+	confirmationDraft := confirmedStudy.Confirmation.Draft()
+	if parsed, parseErr := confirmation.ParseRecord(confirmationDraft.CanonicalBytes()); parseErr != nil || parsed.Digest() != confirmationDraft.Digest() {
+		t.Fatalf("physical HTTP confirmation did not round trip strictly: %v", parseErr)
+	}
+	confirmationStore, err := store.OpenObjectStore(filepath.Join(t.TempDir(), "confirmation-store"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	object, err := store.NewSemanticObject("FreshConfirmation", confirmationDraft.Digest(), confirmationDraft.CanonicalBytes())
+	if err != nil {
+		t.Fatal(err)
+	}
+	confirmationAuthority, err := confirmationStore.Publish(context.Background(), object)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := confirmationStore.Validate(context.Background(), object, confirmationAuthority); err != nil {
+		t.Fatal(err)
+	}
+	originalArtifact, err := choice.NewCanonicalArtifact(
+		"HTTPStimulus", baselineResult.Stimulus.Digest(), baselineResult.Stimulus.CanonicalBytes(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	minimizedArtifact, err := choice.NewCanonicalArtifact(
+		"HTTPStimulus", confirmedStudy.Stimulus.Digest(), confirmedStudy.Stimulus.CanonicalBytes(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reveals := make([]choice.CandidateReveal, len(confirmedStudy.CandidateBindings))
+	for index, binding := range confirmedStudy.CandidateBindings {
+		reveals[index] = choice.CandidateReveal{
+			CandidateExecutionKey: binding.Key(), DisplayRef: string(confirmedStudy.CandidateRoles[binding.Key()]),
+			ProducerMetadata: "local deterministic HTTP fixture",
+		}
+	}
+	choicepoint, err := choice.NewChoicepointRecord(choice.ChoicepointInput{
+		Scenario: "Which exact invoice response behavior should become the accepted contract?",
+		Plan:     confirmedStudy.Plan, Envelope: confirmedStudy.Envelope,
+		CandidateBindings: confirmedStudy.CandidateBindings, OriginalStimulus: originalArtifact,
+		MinimizedStimulus: minimizedArtifact, Confirmation: confirmationDraft.Record(), CandidateReveals: reveals,
+		EvidenceReceipts: []domain.ReceiptReference{},
+	})
+	if err != nil || !choicepoint.Valid() {
+		t.Fatalf("physical HTTP Choicepoint construction failed: %v", err)
+	}
+	parsedChoicepoint, err := choice.ParseChoicepointRecord(choicepoint.CanonicalBytes())
+	if err != nil || parsedChoicepoint.Digest() != choicepoint.Digest() {
+		t.Fatalf("physical HTTP Choicepoint did not round trip strictly: %v", err)
+	}
+	blind, err := choice.NewBlindView(parsedChoicepoint)
+	if err != nil || len(blind.DTO().Cards()) != confirmedStudy.OutcomeMap.DistinctProjectionCount() {
+		t.Fatalf("physical HTTP blind DTO did not group exact eligible outcomes: %v", err)
+	}
+	excluded := confirmedStudy.OutcomeMap.Exclusions()[0]
+	var excludedBinding domain.CandidateExecutionBinding
+	var excludedReveal choice.CandidateReveal
+	for index, binding := range confirmedStudy.CandidateBindings {
+		if binding.Key() == excluded.CandidateKey {
+			excludedBinding = binding
+			excludedReveal = reveals[index]
+			break
+		}
+	}
+	if !excludedBinding.Valid() {
+		t.Fatal("physical HTTP excluded candidate lacks its exact binding")
+	}
+	blindBytes := blind.DTO().CanonicalBytes()
+	for _, forbidden := range []string{
+		excluded.CandidateKey.String(), excludedBinding.Identity().TreeIdentityDigest.String(),
+		excludedReveal.DisplayRef, excludedReveal.ProducerMetadata,
+	} {
+		if forbidden != "" && bytes.Contains(blindBytes, []byte(forbidden)) {
+			t.Fatalf("physical HTTP blind DTO leaked excluded-candidate provenance %q", forbidden)
+		}
+	}
+	decisionSession, err := choice.NewSession(parsedChoicepoint)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, reveal, err := decisionSession.Reveal()
+	if err != nil {
+		t.Fatalf("physical HTTP early reveal failed: %v", err)
+	}
+	revealedExclusions := reveal.Exclusions()
+	if len(revealedExclusions) != 1 ||
+		revealedExclusions[0].Candidate.CandidateExecutionKey != excluded.CandidateKey.String() ||
+		revealedExclusions[0].Candidate.TreeIdentityDigest != excludedBinding.Identity().TreeIdentityDigest.String() ||
+		revealedExclusions[0].Candidate.DisplayRef != excludedReveal.DisplayRef ||
+		revealedExclusions[0].Candidate.ProducerMetadata != excludedReveal.ProducerMetadata ||
+		revealedExclusions[0].Classification != string(observe.Unstable) {
+		t.Fatalf("physical HTTP reveal did not restore exactly one unstable exclusion with provenance: %#v", revealedExclusions)
+	}
+	choiceObject, err := store.NewSemanticObject("Choicepoint", choicepoint.Digest(), choicepoint.CanonicalBytes())
+	if err != nil {
+		t.Fatal(err)
+	}
+	choiceAuthority, err := confirmationStore.Publish(context.Background(), choiceObject)
+	if err != nil || confirmationStore.Validate(context.Background(), choiceObject, choiceAuthority) != nil {
+		t.Fatalf("physical HTTP Choicepoint did not persist immutably: %v", err)
 	}
 }
 

@@ -2,6 +2,7 @@ package domain
 
 import (
 	"bytes"
+	"encoding/json"
 	"sort"
 	"unicode/utf8"
 )
@@ -162,4 +163,45 @@ func (b ProjectionDefinitionBinding) Comparator() string { return b.comparator }
 
 func (b ProjectionDefinitionBinding) CanonicalBytes() []byte {
 	return append([]byte(nil), b.canonicalBytes...)
+}
+
+// ParseProjectionDefinitionBinding strictly reconstructs the complete typed
+// binding. A digest string alone remains an inert reference.
+func ParseProjectionDefinitionBinding(exact []byte) (ProjectionDefinitionBinding, error) {
+	var identity projectionDefinitionIdentity
+	if err := json.Unmarshal(exact, &identity); err != nil {
+		return ProjectionDefinitionBinding{}, refuse(ErrInvalidWorldPlan, "projection binding wire")
+	}
+	if identity.SchemaVersion != SchemaVersion || identity.Kind != "ProjectionDefinition" {
+		return ProjectionDefinitionBinding{}, refuse(ErrInvalidWorldPlan, "projection binding type")
+	}
+	implementation, err := ParseDigest(identity.ImplementationDigest)
+	if err != nil {
+		return ProjectionDefinitionBinding{}, err
+	}
+	configuration, err := ParseDigest(identity.ConfigurationDigest)
+	if err != nil {
+		return ProjectionDefinitionBinding{}, err
+	}
+	registry, err := ParseDigest(identity.FieldRegistryDigest)
+	if err != nil {
+		return ProjectionDefinitionBinding{}, err
+	}
+	operations := make([]ProjectionOperationBinding, len(identity.Operations))
+	for index, operation := range identity.Operations {
+		digest, parseErr := ParseDigest(operation.RuleDigest)
+		if parseErr != nil {
+			return ProjectionDefinitionBinding{}, parseErr
+		}
+		operations[index] = ProjectionOperationBinding{Name: operation.Name, RuleDigest: digest}
+	}
+	rebuilt, err := NewProjectionDefinitionBinding(ProjectionDefinitionBindingConfig{
+		AdapterDomain: AdapterDomain(identity.AdapterDomain), ImplementationDigest: implementation,
+		ConfigurationDigest: configuration, AcceptedChannels: identity.AcceptedChannels,
+		Operations: operations, Comparator: identity.Comparator, FieldRegistryDigest: registry,
+	})
+	if err != nil || !bytes.Equal(rebuilt.canonicalBytes, exact) {
+		return ProjectionDefinitionBinding{}, refuse(ErrInvalidWorldPlan, "projection binding wire is nonexact")
+	}
+	return rebuilt, nil
 }
