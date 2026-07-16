@@ -1177,10 +1177,10 @@ function p07TypedDigest(kind, value) {
 function isP07ReceiptNonclaim(pointer, key, value) {
   const fullPointer = `${pointer}/${key}`;
   return (
-    fullPointer === "$/properties/determinism_profile/properties/contains_execution_receipt"
+    fullPointer === "$/properties/determinism_profile/properties/emitter_introduces_execution_receipt"
     && value?.const === false
   ) || (
-    fullPointer === "$/determinism_profile/contains_execution_receipt"
+    fullPointer === "$/determinism_profile/emitter_introduces_execution_receipt"
     && value === false
   );
 }
@@ -1397,15 +1397,59 @@ function validateP07Contracts(root, problems, schemasByFile) {
     "allowed_tuples",
   ];
   const expectedBundleFileRequired = ["path", "mode", "byte_count", "byte_sha256", "content_base64"];
-  const expectedDeterminismRequired = [
-    "contains_time",
-    "contains_random_id",
-    "contains_absolute_path",
-    "contains_candidate_identity",
-    "contains_declared_secret_value",
-    "contains_host_runtime_fact",
-    "contains_execution_receipt",
+  const expectedBundleFileContains = P07_FILE_ROSTER.map((filePath) => ({
+    contains: {
+      properties: { path: { const: filePath } },
+      required: ["path"],
+    },
+  }));
+  const expectedBundleScalarConstants = Object.freeze({
+    schema_version: "countershape/v1",
+    kind: "ContractBundle",
+    bundle_version: "node-core-contract-bundle/v1",
+    emitter_version: "node-exact-emitter/v1",
+    manifest_policy: "COVERS_OTHER_FIVE_EXCLUDES_SELF_V1",
+    runtime_dependency_profile: "NODE_CORE_ONLY_V1",
+    countershape_runtime_binding: "ABSENT_BY_CONSTRUCTION",
+    package_registry_binding: "NONE",
+    environment_profile: "EXPLICIT_SPARSE_ALLOWLIST_V1",
+    external_service_binding: "NONE",
+  });
+  const expectedDecisionActions = ["ALLOW_OBSERVED", "CUSTOM_EXPECTATION"];
+  const expectedBase64Pattern = "^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$";
+  const expectedRootDigestFields = [
+    "decision_record_digest",
+    "choicepoint_digest",
+    "portable_source_digest",
+    "portable_profile_digest",
   ];
+  const expectedDeterminismRequired = [
+    "scope",
+    "emitter_introduces_time",
+    "emitter_introduces_random_id",
+    "emitter_introduces_absolute_path",
+    "emitter_introduces_concrete_candidate_identity",
+    "emitter_introduces_declared_secret_value",
+    "emitter_introduces_host_runtime_fact",
+    "emitter_introduces_execution_receipt",
+  ];
+  const expectedDeterminismScope = "EMITTER_INVENTED_STRUCTURAL_FACTS_EXCLUDING_AUTHORIZED_INPUT_CONTENT";
+  const expectedDeterminismFalseFlags = expectedDeterminismRequired.slice(1);
+  const expectedCustomExpectationConditional = {
+    if: {
+      properties: { decision_action: { const: "CUSTOM_EXPECTATION" } },
+      required: ["decision_action"],
+    },
+    then: {
+      properties: {
+        predicate: {
+          properties: {
+            allowed_tuples: { minItems: 1, maxItems: 1 },
+          },
+        },
+      },
+    },
+  };
   if (
     bundleSchema?.type !== "object"
     || bundleSchema?.additionalProperties !== false
@@ -1417,15 +1461,69 @@ function validateP07Contracts(root, problems, schemasByFile) {
     || bundleFileItemSchema?.additionalProperties !== false
     || !jsonEqual(bundleFileItemSchema?.required, expectedBundleFileRequired)
     || !jsonEqual(Object.keys(bundleFileItemSchema?.properties ?? {}), expectedBundleFileRequired)
+    || Object.entries(expectedBundleScalarConstants).some(
+      ([property, constant]) => bundleSchema?.properties?.[property]?.const !== constant || bundle?.[property] !== constant,
+    )
+    || !jsonEqual(bundleSchema?.properties?.decision_action?.enum, expectedDecisionActions)
+    || !expectedDecisionActions.includes(bundle?.decision_action)
+    || expectedRootDigestFields.some(
+      (property) => bundleSchema?.properties?.[property]?.$ref !== "common.schema.json#/$defs/Digest",
+    )
+    || bundlePredicateSchema?.type !== "object"
+    || bundlePredicateSchema?.properties?.kind?.const !== "one-of-exact/v1"
+    || bundlePredicateSchema?.properties?.scope?.const !== "EXACT_WITNESSED_STIMULUS"
+    || bundlePredicateSchema?.properties?.stimulus_digest?.$ref !== "common.schema.json#/$defs/Digest"
+    || bundlePredicateSchema?.properties?.portable_profile_digest?.$ref !== "common.schema.json#/$defs/Digest"
+    || bundle?.predicate?.kind !== "one-of-exact/v1"
+    || bundle?.predicate?.scope !== "EXACT_WITNESSED_STIMULUS"
+    || bundlePredicateSchema?.properties?.selected_fields?.type !== "array"
+    || bundlePredicateSchema?.properties?.selected_fields?.minItems !== 1
+    || bundlePredicateSchema?.properties?.selected_fields?.maxItems !== 64
+    || bundlePredicateSchema?.properties?.selected_fields?.uniqueItems !== true
+    || bundlePredicateSchema?.properties?.selected_fields?.items?.$ref !== "common.schema.json#/$defs/FieldId"
+    || bundlePredicateSchema?.properties?.allowed_tuples?.type !== "array"
+    || bundlePredicateSchema?.properties?.allowed_tuples?.minItems !== 1
+    || bundlePredicateSchema?.properties?.allowed_tuples?.maxItems !== 4
+    || bundlePredicateSchema?.properties?.allowed_tuples?.uniqueItems !== true
+    || bundlePredicateSchema?.properties?.allowed_tuples?.items?.$ref !== "common.schema.json#/$defs/ExactTuple"
+    || bundleSchema?.properties?.files?.type !== "array"
+    || bundleSchema?.properties?.files?.minItems !== 6
+    || bundleSchema?.properties?.files?.maxItems !== 6
+    || bundleSchema?.properties?.files?.uniqueItems !== true
+    || !jsonEqual(bundleSchema?.properties?.files?.allOf, expectedBundleFileContains)
+    || !jsonEqual(bundleFileItemSchema?.properties?.path?.enum, P07_FILE_ROSTER)
+    || bundleFileItemSchema?.type !== "object"
+    || bundleFileItemSchema?.properties?.mode?.const !== "100644"
+    || bundleFileItemSchema?.properties?.byte_count?.type !== "integer"
+    || bundleFileItemSchema?.properties?.byte_count?.minimum !== 1
+    || bundleFileItemSchema?.properties?.byte_count?.maximum !== 655360
+    || bundleFileItemSchema?.properties?.byte_sha256?.$ref !== "common.schema.json#/$defs/Digest"
+    || bundleFileItemSchema?.properties?.content_base64?.type !== "string"
+    || bundleFileItemSchema?.properties?.content_base64?.minLength !== 4
+    || bundleFileItemSchema?.properties?.content_base64?.pattern !== expectedBase64Pattern
+    || bundleSchema?.properties?.confidentiality_established?.const !== false
+    || bundle?.confidentiality_established !== false
+    || !jsonEqual(bundle?.files?.map((entry) => entry?.path), P07_FILE_ROSTER)
+    || bundle?.files?.some((entry) => entry?.mode !== "100644")
+    || bundleDeterminismSchema?.type !== "object"
     || bundleDeterminismSchema?.additionalProperties !== false
     || !jsonEqual(bundleDeterminismSchema?.required, expectedDeterminismRequired)
     || !jsonEqual(Object.keys(bundleDeterminismSchema?.properties ?? {}), expectedDeterminismRequired)
+    || bundleDeterminismSchema?.properties?.scope?.const !== expectedDeterminismScope
+    || expectedDeterminismFalseFlags.some(
+      (property) => bundleDeterminismSchema?.properties?.[property]?.const !== false,
+    )
+    || bundle?.determinism_profile?.scope !== expectedDeterminismScope
+    || expectedDeterminismFalseFlags.some(
+      (property) => bundle?.determinism_profile?.[property] !== false,
+    )
+    || !jsonEqual(bundleSchema?.allOf, [expectedCustomExpectationConditional])
   ) {
     add(
       problems,
       "P07_BUNDLE_AUTHORITY",
       relative(root, bundleSchemaFile),
-      "ContractBundle root, predicate, file member, and determinism authority must keep their exact closed property rosters",
+      "ContractBundle root constants, predicate profile, file profile, determinism constants, and CUSTOM_EXPECTATION cardinality must keep their exact closed authority",
     );
   }
   const expectedSourceProfileRequired = [
@@ -1436,6 +1534,26 @@ function validateP07Contracts(root, problems, schemasByFile) {
     "subject_entrypoint",
     "start_profile",
     "scope",
+  ];
+  const expectedSourceProfileConditionals = [
+    {
+      if: {
+        properties: { adapter_domain: { const: "CLI" } },
+        required: ["adapter_domain"],
+      },
+      then: { properties: { start_profile: { const: "DIRECT_CHILD_V1" } } },
+    },
+    {
+      if: {
+        properties: { adapter_domain: { const: "HTTP" } },
+        required: ["adapter_domain"],
+      },
+      then: {
+        properties: {
+          start_profile: { const: "NODE_LOOPBACK_CHILD_BIND_PIPE_READY_V1" },
+        },
+      },
+    },
   ];
   if (
     bundleSourceProfileSchema?.type !== "object"
@@ -1450,14 +1568,11 @@ function validateP07Contracts(root, problems, schemasByFile) {
       bundleSourceProfileSchema?.properties?.start_profile?.enum,
       ["DIRECT_CHILD_V1", "NODE_LOOPBACK_CHILD_BIND_PIPE_READY_V1"],
     )
+    || bundleSourceProfileSchema?.properties?.subject_entrypoint?.type !== "string"
     || bundleSourceProfileSchema?.properties?.subject_entrypoint?.pattern
-      !== "^(?:[A-Za-z0-9_-][A-Za-z0-9._-]*/)*[A-Za-z0-9_-][A-Za-z0-9._-]*\\.(?:js|mjs|cjs)$"
-    || bundleSourceProfileSchema?.allOf?.length !== 2
-    || bundleSourceProfileSchema.allOf[0]?.if?.properties?.adapter_domain?.const !== "CLI"
-    || bundleSourceProfileSchema.allOf[0]?.then?.properties?.start_profile?.const !== "DIRECT_CHILD_V1"
-    || bundleSourceProfileSchema.allOf[1]?.if?.properties?.adapter_domain?.const !== "HTTP"
-    || bundleSourceProfileSchema.allOf[1]?.then?.properties?.start_profile?.const
-      !== "NODE_LOOPBACK_CHILD_BIND_PIPE_READY_V1"
+      !== "^[A-Za-z0-9_][A-Za-z0-9._-]*(?:/[A-Za-z0-9_-][A-Za-z0-9._-]*)*\\.(?:js|mjs|cjs)$"
+    || bundleSourceProfileSchema?.properties?.subject_entrypoint?.maxLength !== 4096
+    || !jsonEqual(bundleSourceProfileSchema?.allOf, expectedSourceProfileConditionals)
     || bundleSourceProfileSchema?.properties?.scope?.const !== "DECLARED_SOURCE_PROFILE_NOT_EXECUTION_EVIDENCE"
     || JSON.stringify(bundleSourceProfileSchema).includes("REPO_EXECUTABLE_V1")
   ) {
@@ -1779,34 +1894,45 @@ function validateP07Contracts(root, problems, schemasByFile) {
       "ContractExecutionTarget, FinalizedContractRun, and ContractExecution must retain exact closed authority and typed target-to-run-to-classification references",
     );
   }
-  const exactTupleSchema = commonSchema?.$defs?.ExactTuple;
-  if (
-    exactTupleSchema?.type !== "object"
-    || exactTupleSchema?.additionalProperties !== false
-    || !jsonEqual(exactTupleSchema?.required, ["fields"])
-    || !jsonEqual(Object.keys(exactTupleSchema?.properties ?? {}), ["fields"])
-    || exactTupleSchema?.properties?.fields?.items?.$ref !== "#/$defs/ExactField"
-    || Object.hasOwn(exactTupleSchema?.properties ?? {}, "tuple_digest")
-  ) {
-    add(
-      problems,
-      "P07_TUPLE_AUTHORITY",
-      relative(root, commonSchemaFile),
-      "ExactTuple must carry only its complete fields body; no caller-supplied tuple digest is authority",
-    );
+  const exactTupleAuthorities = [
+    { schema: commonSchema?.$defs?.ExactTuple, file: commonSchemaFile },
+    { schema: decisionSchema?.$defs?.ExactTuple, file: decisionSchemaFile },
+  ];
+  for (const { schema: exactTupleSchema, file } of exactTupleAuthorities) {
+    if (
+      exactTupleSchema?.type !== "object"
+      || exactTupleSchema?.additionalProperties !== false
+      || !jsonEqual(exactTupleSchema?.required, ["fields"])
+      || !jsonEqual(Object.keys(exactTupleSchema?.properties ?? {}), ["fields"])
+      || exactTupleSchema?.properties?.fields?.type !== "array"
+      || exactTupleSchema?.properties?.fields?.minItems !== 1
+      || exactTupleSchema?.properties?.fields?.items?.$ref !== "#/$defs/ExactField"
+      || Object.hasOwn(exactTupleSchema?.properties ?? {}, "tuple_digest")
+    ) {
+      add(
+        problems,
+        "P07_TUPLE_AUTHORITY",
+        relative(root, file),
+        "shared and DecisionRecord ExactTuple definitions must carry only one nonempty fields array; no caller-supplied tuple digest is authority",
+      );
+    }
   }
 
   const receiptNonclaimSchema = bundleSchema?.properties?.determinism_profile;
   if (
-    !receiptNonclaimSchema?.required?.includes("contains_execution_receipt")
-    || receiptNonclaimSchema?.properties?.contains_execution_receipt?.const !== false
-    || bundle?.determinism_profile?.contains_execution_receipt !== false
+    receiptNonclaimSchema?.properties?.scope?.const
+      !== "EMITTER_INVENTED_STRUCTURAL_FACTS_EXCLUDING_AUTHORIZED_INPUT_CONTENT"
+    || bundle?.determinism_profile?.scope
+      !== "EMITTER_INVENTED_STRUCTURAL_FACTS_EXCLUDING_AUTHORIZED_INPUT_CONTENT"
+    || !receiptNonclaimSchema?.required?.includes("emitter_introduces_execution_receipt")
+    || receiptNonclaimSchema?.properties?.emitter_introduces_execution_receipt?.const !== false
+    || bundle?.determinism_profile?.emitter_introduces_execution_receipt !== false
   ) {
     add(
       problems,
       "P07_RECEIPT_CYCLE",
       relative(root, bundleSchemaFile),
-      "bundle determinism profile must retain the exact false contains_execution_receipt nonclaim",
+      "bundle determinism profile must scope emitter-invented structural facts outside authorized input content and retain the exact false emitter_introduces_execution_receipt nonclaim",
     );
   }
 
@@ -2799,6 +2925,62 @@ const SELF_TESTS = [
     },
   },
   {
+    id: "p07-tuple-fields-minimum-removal",
+    expectedCode: "P07_TUPLE_AUTHORITY",
+    mutate(root) {
+      const schemaFile = path.join(root, "spec/schema/v1/common.schema.json");
+      rewriteJsonObject(schemaFile, (schema) => {
+        const fields = schema.$defs?.ExactTuple?.properties?.fields;
+        if (fields?.type !== "array" || fields?.minItems !== 1) {
+          throw new Error("self-test mutation anchor is absent: nonempty ExactTuple fields array");
+        }
+        delete fields.minItems;
+      });
+    },
+  },
+  {
+    id: "p07-tuple-fields-type-widening",
+    expectedCode: "P07_TUPLE_AUTHORITY",
+    mutate(root) {
+      const schemaFile = path.join(root, "spec/schema/v1/common.schema.json");
+      rewriteJsonObject(schemaFile, (schema) => {
+        const fields = schema.$defs?.ExactTuple?.properties?.fields;
+        if (fields?.type !== "array") {
+          throw new Error("self-test mutation anchor is absent: ExactTuple fields array type");
+        }
+        fields.type = ["array", "object"];
+      });
+    },
+  },
+  {
+    id: "p07-decision-tuple-digest-authority-regression",
+    expectedCode: "P07_TUPLE_AUTHORITY",
+    mutate(root) {
+      const schemaFile = path.join(root, "spec/schema/v1/decision-record.schema.json");
+      rewriteJsonObject(schemaFile, (schema) => {
+        const tuple = schema.$defs?.ExactTuple;
+        if (!jsonEqual(tuple?.required, ["fields"]) || Object.hasOwn(tuple.properties ?? {}, "tuple_digest")) {
+          throw new Error("self-test mutation anchor is absent: DecisionRecord fields-only ExactTuple");
+        }
+        tuple.required.push("tuple_digest");
+        tuple.properties.tuple_digest = { $ref: "common.schema.json#/$defs/Digest" };
+      });
+      const exampleFile = path.join(root, "spec/examples/v1/decision-record.valid.json");
+      rewriteJsonObject(exampleFile, (decision) => {
+        const tuples = [
+          ...(decision.allowed_complete_tuples ?? []),
+          ...(decision.disallowed_complete_tuples ?? []),
+        ];
+        if (tuples.length === 0 || tuples.some((tuple) => Object.hasOwn(tuple, "tuple_digest"))) {
+          throw new Error("self-test mutation anchor is absent: DecisionRecord tuple examples");
+        }
+        for (const tuple of tuples) {
+          tuple.tuple_digest = "sha256:4141414141414141414141414141414141414141414141414141414141414141";
+        }
+      });
+    },
+  },
+  {
     id: "p07-recoverable-content-removal",
     expectedCode: "P07_BUNDLE_RECOVERY",
     mutate(root) {
@@ -2968,6 +3150,50 @@ const SELF_TESTS = [
     },
   },
   {
+    id: "p07-target-source-profile-wrong-domain",
+    expectedCode: "P07_TARGET_SOURCE_BINDING",
+    mutate(root) {
+      const bundleFile = path.join(root, "spec/examples/v1/contract-bundle.valid.json");
+      const bundle = strictJsonParse(fs.readFileSync(bundleFile, "utf8"), bundleFile).value;
+      const file = path.join(root, "spec/examples/v1/contract-execution-target.valid.json");
+      rewriteJsonObject(file, (target) => {
+        if (typeof target.source_binding?.source_profile_digest !== "string") {
+          throw new Error("self-test mutation anchor is absent: source-profile digest domain");
+        }
+        target.source_binding.source_profile_digest = p07TypedDigest("SourceProfile", bundle.source_profile);
+      });
+    },
+  },
+  {
+    id: "p07-subject-entrypoint-ceiling-widening",
+    expectedCode: "P07_LAUNCH_AUTHORITY",
+    mutate(root) {
+      const schemaFile = path.join(root, "spec/schema/v1/contract-bundle.schema.json");
+      rewriteJsonObject(schemaFile, (schema) => {
+        const entrypoint = schema.properties?.source_profile?.properties?.subject_entrypoint;
+        if (entrypoint?.maxLength !== 4096) {
+          throw new Error("self-test mutation anchor is absent: subject entrypoint ceiling");
+        }
+        entrypoint.maxLength = 8192;
+      });
+    },
+  },
+  {
+    id: "p07-subject-entrypoint-root-hyphen-widening",
+    expectedCode: "P07_LAUNCH_AUTHORITY",
+    mutate(root) {
+      const schemaFile = path.join(root, "spec/schema/v1/contract-bundle.schema.json");
+      rewriteJsonObject(schemaFile, (schema) => {
+        const entrypoint = schema.properties?.source_profile?.properties?.subject_entrypoint;
+        const exact = "^[A-Za-z0-9_][A-Za-z0-9._-]*(?:/[A-Za-z0-9_-][A-Za-z0-9._-]*)*\\.(?:js|mjs|cjs)$";
+        if (entrypoint?.pattern !== exact) {
+          throw new Error("self-test mutation anchor is absent: subject entrypoint root-hyphen refusal");
+        }
+        entrypoint.pattern = "^(?:[A-Za-z0-9_-][A-Za-z0-9._-]*/)*[A-Za-z0-9_-][A-Za-z0-9._-]*\\.(?:js|mjs|cjs)$";
+      });
+    },
+  },
+  {
     id: "p07-repo-executable-launch-resurrection",
     expectedCode: "P07_LAUNCH_AUTHORITY",
     mutate(root) {
@@ -2979,6 +3205,20 @@ const SELF_TESTS = [
         }
         delete launch.const;
         launch.enum = ["NODE_REPO_SCRIPT_V1", "REPO_EXECUTABLE_V1"];
+      });
+    },
+  },
+  {
+    id: "p07-source-profile-conditional-disabled",
+    expectedCode: "P07_LAUNCH_AUTHORITY",
+    mutate(root) {
+      const schemaFile = path.join(root, "spec/schema/v1/contract-bundle.schema.json");
+      rewriteJsonObject(schemaFile, (schema) => {
+        const conditional = schema.properties?.source_profile?.allOf?.[0]?.if;
+        if (!jsonEqual(conditional?.required, ["adapter_domain"])) {
+          throw new Error("self-test mutation anchor is absent: CLI source-profile conditional");
+        }
+        conditional.required = ["validator_never"];
       });
     },
   },
@@ -3172,12 +3412,98 @@ const SELF_TESTS = [
     },
   },
   {
+    id: "p07-determinism-flag-rebinding",
+    expectedCode: "P07_BUNDLE_AUTHORITY",
+    mutate(root) {
+      const schemaFile = path.join(root, "spec/schema/v1/contract-bundle.schema.json");
+      rewriteJsonObject(schemaFile, (schema) => {
+        const property = schema.properties?.determinism_profile?.properties?.emitter_introduces_time;
+        if (property?.const !== false) {
+          throw new Error("self-test mutation anchor is absent: false emitter time nonclaim");
+        }
+        property.const = true;
+      });
+      const exampleFile = path.join(root, "spec/examples/v1/contract-bundle.valid.json");
+      rewriteJsonObject(exampleFile, (bundle) => {
+        if (bundle.determinism_profile?.emitter_introduces_time !== false) {
+          throw new Error("self-test mutation anchor is absent: false example emitter time nonclaim");
+        }
+        bundle.determinism_profile.emitter_introduces_time = true;
+      });
+    },
+  },
+  {
+    id: "p07-bundle-constant-coordinated-drift",
+    expectedCode: "P07_BUNDLE_AUTHORITY",
+    mutate(root) {
+      const schemaFile = path.join(root, "spec/schema/v1/contract-bundle.schema.json");
+      rewriteJsonObject(schemaFile, (schema) => {
+        const property = schema.properties?.runtime_dependency_profile;
+        if (property?.const !== "NODE_CORE_ONLY_V1") {
+          throw new Error("self-test mutation anchor is absent: bundle runtime dependency constant");
+        }
+        property.const = "NODE_WITH_PACKAGES_V1";
+      });
+      const exampleFile = path.join(root, "spec/examples/v1/contract-bundle.valid.json");
+      rewriteJsonObject(exampleFile, (bundle) => {
+        if (bundle.runtime_dependency_profile !== "NODE_CORE_ONLY_V1") {
+          throw new Error("self-test mutation anchor is absent: example runtime dependency constant");
+        }
+        bundle.runtime_dependency_profile = "NODE_WITH_PACKAGES_V1";
+      });
+    },
+  },
+  {
+    id: "p07-bundle-tuple-item-type-widening",
+    expectedCode: "P07_BUNDLE_AUTHORITY",
+    mutate(root) {
+      const schemaFile = path.join(root, "spec/schema/v1/contract-bundle.schema.json");
+      rewriteJsonObject(schemaFile, (schema) => {
+        const items = schema.properties?.predicate?.properties?.allowed_tuples?.items;
+        if (items?.$ref !== "common.schema.json#/$defs/ExactTuple") {
+          throw new Error("self-test mutation anchor is absent: allowed tuple exact type");
+        }
+        delete items.$ref;
+        items.type = "object";
+      });
+    },
+  },
+  {
+    id: "p07-bundle-file-contains-shrinkage",
+    expectedCode: "P07_BUNDLE_AUTHORITY",
+    mutate(root) {
+      const schemaFile = path.join(root, "spec/schema/v1/contract-bundle.schema.json");
+      rewriteJsonObject(schemaFile, (schema) => {
+        const allOf = schema.properties?.files?.allOf;
+        if (!Array.isArray(allOf) || allOf.length !== P07_FILE_ROSTER.length) {
+          throw new Error("self-test mutation anchor is absent: exact file contains roster");
+        }
+        allOf.pop();
+      });
+    },
+  },
+  {
+    id: "p07-custom-expectation-cardinality-drift",
+    expectedCode: "P07_BUNDLE_AUTHORITY",
+    mutate(root) {
+      const schemaFile = path.join(root, "spec/schema/v1/contract-bundle.schema.json");
+      rewriteJsonObject(schemaFile, (schema) => {
+        const cardinality = schema.allOf?.[0]?.then?.properties?.predicate
+          ?.properties?.allowed_tuples;
+        if (cardinality?.minItems !== 1 || cardinality?.maxItems !== 1) {
+          throw new Error("self-test mutation anchor is absent: custom expectation exact-one tuple");
+        }
+        cardinality.maxItems = 4;
+      });
+    },
+  },
+  {
     id: "p07-false-receipt-nonclaim-rebinding",
     expectedCode: "P07_RECEIPT_CYCLE",
     mutate(root) {
       const schemaFile = path.join(root, "spec/schema/v1/contract-bundle.schema.json");
       rewriteJsonObject(schemaFile, (schema) => {
-        const property = schema.properties?.determinism_profile?.properties?.contains_execution_receipt;
+        const property = schema.properties?.determinism_profile?.properties?.emitter_introduces_execution_receipt;
         if (property?.const !== false) {
           throw new Error("self-test mutation anchor is absent: false execution-receipt nonclaim");
         }
@@ -3185,10 +3511,10 @@ const SELF_TESTS = [
       });
       const exampleFile = path.join(root, "spec/examples/v1/contract-bundle.valid.json");
       rewriteJsonObject(exampleFile, (bundle) => {
-        if (bundle.determinism_profile?.contains_execution_receipt !== false) {
+        if (bundle.determinism_profile?.emitter_introduces_execution_receipt !== false) {
           throw new Error("self-test mutation anchor is absent: false example execution-receipt nonclaim");
         }
-        bundle.determinism_profile.contains_execution_receipt = true;
+        bundle.determinism_profile.emitter_introduces_execution_receipt = true;
       });
     },
   },

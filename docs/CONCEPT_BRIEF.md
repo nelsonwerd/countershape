@@ -2,7 +2,7 @@
 
 - **Working name:** Countershape (package, domain, trademark, and legal clearance not performed)
 - **Mode:** open-source-first experimental infrastructure
-- **State:** deep dive and adversarial red team complete; U1–U6 and P07A portable selected-field ruling authority sealed and strict-clean; P07B standalone residue is next
+- **State:** deep dive and adversarial red team complete; U1–U6, P07A, and P07B-A1 source/child-bind substrate sealed and strict-clean; P07B-A2 compilation authority is next
 - **Last updated:** 2026-07-16
 - **Founder persona:** Soren Vale
 - **Confidence:** 8/10 in the truth kernel; 6/10 in the bounded reference instrument; 3/10 in review compression; 3/10 in adoption
@@ -134,7 +134,7 @@ This study proves the second typed adapter while reusing only identity, eligibil
 - Linux or Windows runtime claims without their own native receipts. Cross-compilation is compilation evidence only.
 - Arbitrary workflows, database cloning, browser adapters, GUI exploration, custom plugins, executable configuration, arbitrary normalizer code, or external APIs.
 - Fuzzy/tolerant/similarity equality; regex/wildcard predicates; inferred invariants; generalized scopes; semantic equivalence; root-cause/global-minimum/safety claims.
-- Model-generated probes, labels, explanations, rulings, or tests in product runtime. A human-gated real external-model visual critic may inspect build screenshots only.
+- Model-generated probes, labels, explanations, rulings, or tests in product runtime. A human-gated real external-model critic may inspect only captured human-facing build artifacts: generated README/CLI renderings in A2.2, U8 screenshots, and the P12 live-agent audit. The call is never automatic or simulated, and its opinion has no semantic authority.
 - A safely shareable-report claim. Default exports carry `CONFIDENTIALITY NOT ESTABLISHED`.
 
 ## Truth jurisdictions and object model
@@ -177,7 +177,7 @@ The normative objects are:
 12. `ReductionRun`: U5's inert bounded-run body with a separate `ReductionTranscript`; it carries only `UNCHANGED` or `BEST_KNOWN`. Transcript bytes reconstruct intent but cannot execute replay without the exact compare-owned divergent baseline, and replay receipts establish only bounded same-domain digest noncollision. `CompletedSweepDraft` is separately persisted, and only the outward store-backed `ReductionGrade` may carry `ONE_MINIMAL_UNDER`.
 13. `Choicepoint`: immutable fresh-confirmed decision-ready revision with original/minimized stimuli, exact maps, evidence, exclusions, and a U5 reduction grade. Historical U6 records retain the legacy whole-projection ruling mode; sealed P07A fresh construction uses the adapter-bound portable mode while retaining the same 27-member body.
 14. `DecisionRecord`: blind/reveal facts, local-caller-attributed action, selected and nonasserted fields, exact scope, rationale, the explicit `AUTHENTICITY_NOT_ESTABLISHED_IN_U6` nonclaim, and verbatim receipt references. Derived wire booleans such as `compilable` are reconstructed, never emitter inputs. A legacy whole-projection record remains historical but cannot authorize standalone emission.
-15. `PortableSource`: a future P07B live exact reconstruction witness, not a ruling or self-authenticating serialized claim. Its closed adapter constructor retains bounded runnable bytes and must reproduce the Choicepoint's exact plan, projection binding, and minimized stimulus before compilation.
+15. `PortableSource`: an implemented P07B-A1 live exact reconstruction witness, not a ruling or self-authenticating serialized claim. Its closed adapter constructor retains bounded runnable bytes and reproduces its supplied exact plan, projection binding/definition, minimized stimulus, profile, runner/start/readiness/capture authorities, and execution binding. Equality to the current Choicepoint/FreshConfirmation remains an A2 application-service obligation.
 16. `ContractBundle`: deterministic recoverable six-file Node-core source, typed exact predicate, and every exact file byte. Its domain-separated digest is external to its canonical body.
 17. `ContractExecutionTarget`: immutable nonhead pre-spawn authority over the reopened bundle/source profile, one explicit Git-pinned inspected and verified private materialization, one fresh durable conformance attempt, and one admitted/revalidated Node runtime. Its external typed digest is absent from its body; parsed bytes are inert.
 18. `FinalizedContractRun`: immutable nonhead physical-run authority bound to one exact target and the same exact fresh attempt, with closed lifecycle, a constructor-derived clean/ineligible disposition, the exact projected tuple when present, and scoped target-inventory/child-binding evidence. Its external typed digest is absent from its body.
@@ -254,26 +254,28 @@ Fresh Choicepoints retain the existing 27-member body but use `ADAPTER_BOUND_POR
 
 The portable value profile is closed to tagged missing, null, Boolean, safe canonical integer, exact string, exact bytes, ordered string list, and strict canonical JSON. The HTTP ordered list preserves duplicates and order. The CLI/HTTP historical wire formats remain different and unchanged; the translator freezes both exact compatibility codecs instead of normalizing fingerprints.
 
-## P07B/U6c future standalone contract boundary
+## P07B/U6c standalone contract boundary (A1 substrate sealed; A2/B/C future)
 
 `DecisionRecord`, `ContractBundle`, `ContractExecutionTarget`, `FinalizedContractRun`, and `ContractExecution` are separate truth objects.
 
-The compiler requires a current store-bound P07A portable ruling plus one byte-complete live `PortableSource`. Closed adapter constructors must reconstruct and exact-match the Choicepoint's plan, projection binding, adapter, minimized-stimulus canonical bytes/digest, portable profile, and every verified FreshConfirmation execution-binding digest before any file byte exists. HTTP additionally requires exact child-bind/pipe-readiness start authority. The application service independently retranslates reopened confirmation projection proofs and requires exact equality with the ruling tuples; source contains no proof or tuple bytes. A ruling alone cannot manufacture stdin, body, fixture, or seed bytes retained historically only by digest. Missing source returns `PORTABLE_SOURCE_REQUIRED` with zero artifacts.
+Sealed P07B-A1 now provides one byte-complete live `PortableSource`. Closed adapter constructors reparse and exact-match their supplied WorldPlan, projection binding/definition, adapter, minimized-stimulus canonical bytes/digest, portable profile, logical-Node runner, start/readiness/capture authorities, and reconstructed execution binding. They retain exact bounded stdin/body/fixture/seed bytes where the supported profile requires them. Missing source returns `PORTABLE_SOURCE_REQUIRED` with no stronger authority.
 
-The existing inherited-listener HTTP profile remains nonemittable. P07B adds `NODE_LOOPBACK_CHILD_BIND_PIPE_READY_V1`, creates a new physical HTTP observation/confirmation/ruling under that exact profile, and generates raw HTTP/1.1 with `node:net`. It never treats Node's normalizing high-level HTTP API as equivalent to the sealed Go wire parser.
+A1 does not compare that self-consistent source with the current store-bound P07A ruling, Choicepoint, or FreshConfirmation. P07B-A2 must open and revalidate those current objects, require the source execution binding to equal every retained confirmation binding, independently retranslate reopened confirmation proofs under the source-matched profile, and require exact equality with the ruling tuple partition before any file byte exists. Source contains no proof or ruling tuple bytes. A ruling alone cannot manufacture stdin, body, fixture, or seed bytes retained historically only by digest.
+
+The existing inherited-listener HTTP profile remains nonemittable. A1 adds `NODE_LOOPBACK_CHILD_BIND_PIPE_READY_V1` and physically exercises a child-reported FD3 readiness frame through an HTTP `Observation`. It has not yet created the required FreshConfirmation, portable Choicepoint, or selected-field ruling under that lineage. The future compiler emits raw HTTP/1.1 with `node:net`; it never treats Node's normalizing high-level HTTP API as equivalent to the sealed Go wire parser. `child_reported_port` is a process-tree report subsequently used by the request, not kernel listener-ownership evidence; arbitrary trusted code could report a decoy loopback service.
 
 The reference emitter produces a deterministic directory containing:
 
 ```text
+README.md
+contract.test.mjs
 decision.json
 fixture.json
-contract.test.mjs
 harness.mjs
-README.md
 manifest.json
 ```
 
-The bundle uses a closed `one-of-exact/v1` predicate AST and only the HTTP/CLI fields exercised by the proof studies. It embeds path, mode, count, raw-byte digest, and exact base64 content for all six files, so a reopened terminal residue can rematerialize itself. `manifest.json` covers the other five files and never itself; the outer ContractBundle covers all six. The bundle's typed digest is external, no generated file embeds it, and no execution/didrun receipt enters deterministic source. It contains no time, randomness, absolute path, candidate/branch name, secret binding, formatter drift, Countershape import, package install, shell, or external service. The generic Node-core source profile receipts no runtime; exact Node version/major/native OS/architecture are claimed only after their standalone matrix entries run.
+The bundle uses a closed `one-of-exact/v1` predicate AST and only the HTTP/CLI fields exercised by the proof studies. It embeds path, mode, count, raw-byte digest, and exact base64 content for all six files, so a reopened terminal residue can rematerialize itself. `manifest.json` covers the other five files and never itself; the outer ContractBundle covers all six. The bundle's typed digest is external and no generated file embeds it. Scoped emitter metadata introduces no time, randomness, absolute path, concrete candidate/branch identity, declared secret value, host-runtime fact, execution/didrun receipt, or formatter drift as a new typed structural fact; generated harness code adds no Countershape dependency, package install, shell, or configured external-service dependency. This is not a content scan, redaction, secret-free claim, or network-containment claim: authorized PortableSource bytes, predicate values, and source-derived human text may contain sensitive, host-looking, or candidate-looking data, and trusted subject code retains host-network authority. The exact declared semantic profile is `countershape-node-core-exact/v1`; it receipts no runtime tuple. Exact Node version/major/native OS/architecture are claimed only after their standalone matrix entries run.
 
 Standalone means an isolated target inventory can invoke the test with Countershape absent from that inventory's `PATH`, source, dependencies, import graph, and service-call closure. It is not a host-wide filesystem, network, registry, or containment claim. Local loopback remains available only for the HTTP target. `ELIGIBLE_OBSERVATION` yields `CONFORMS` or `CONTRADICTS`; harness, capture, projection, and teardown failures are typed `INELIGIBLE_EXECUTION`, even though both contradiction and ineligibility produce a nonzero ordinary test.
 
@@ -313,7 +315,7 @@ Original/derivation, Captured-to-Projection operations, nonasserted fields, and 
 
 ## Reference architecture
 
-The Go core owns identity and behavior state. The emitter, server, report, and web paths shown below are future P07/U8/U9 targets until their own sealed receipts exist:
+The Go core owns identity and behavior state. `contractsource` and `runnerprofile` are implemented A1 substrate; the emitter, server, report, and web paths remain future P07/U8/U9 targets until their own sealed receipts exist:
 
 ```text
 cmd/countershape/
@@ -332,7 +334,8 @@ internal/portablevalue/ closed exact selected-field algebra
 internal/projectionprofile/ derived adapter-bound portable profile identity
 internal/projectiontranslate/ strict unchanged CLI/HTTP projection-wire translators
 internal/choice/        immutable lineage and ruling validation
-internal/contractsource/ future byte-complete runnable-source reconstruction
+internal/contractsource/ implemented byte-complete runnable-source reconstruction
+internal/runnerprofile/  implemented closed logical-Node runner profile
 internal/emit/node/     deterministic standalone source
 internal/contractexec/  future immutable nonhead current execution evidence
 internal/store/         content-addressed artifacts and atomic heads
@@ -423,10 +426,11 @@ Each unit is separately verified, claimed, committed, sealed, and gated on `NO_C
 6. **U5 — bounded reducer:** typed neighbors, tri-valued evaluations, map-digest preservation, budgets/transcript, shape trap, and a minimal content-addressed durable-sweep authority required for the local grade.
 7. **U6a/P06 — Choicepoint and ruling source boundary:** immutable store/CAS, physical confirmation, strict Choicepoint/Decision codecs, blind semantic DTO/session, separation obligation, and typed ruling promotion through `RULING`; no public residue transition.
 8. **U6b/P07A — portable ruling authority (sealed):** unchanged historical projection bytes, strict adapter-bound translators, portable exact tuples, real selectable/differing fields, selected-only custom expectations, and legacy nonemittable preservation.
-9. **U6c/P07B — standalone residue (next):** byte-complete source reconstruction, portable HTTP child-bind lineage, Go/Node raw-wire corpus, deterministic recoverable six-file bundle, stale-safe terminal publication, retryable materialization, target-inventory absence checks, and immutable nonhead current execution.
-10. **U7 — complete CLI and reference studies:** safe next actions, both end-to-end proofs, allow-many, custom none-conforms, reject/defer, three clean reproductions, named-machine timings.
-11. **U8 — secure decision bench:** authenticated loopback API, complete state renderer, 1440/375 flows, at least three full visual passes, Playwright/axe/manual checks, and a real different-model screenshot critic.
-12. **U9 — local export, packaging, and hardening:** minimized evidence export, embedded assets/single binary, docs/license/contributor path, adversarial suite, performance/limitations ledger, final strict verify, didrun HTML evidence, receipts handoff.
+9. **U6c/P07B-A1 — source/process substrate (sealed):** byte-complete self-consistent source reconstruction, closed logical-Node runner profile, portable HTTP child-bind/readiness grammar, and physical Observation; no current-ruling join or compiler.
+10. **U6c/P07B-A2/B/C — standalone residue (next):** current-ruling/source/proof compilation authority, Go/Node raw-wire corpus, deterministic recoverable six-file bundle, stale-safe terminal publication, retryable materialization, target-inventory absence checks, and immutable nonhead current execution.
+11. **U7 — complete CLI and reference studies:** safe next actions, both end-to-end proofs, allow-many, custom none-conforms, reject/defer, three clean reproductions, named-machine timings.
+12. **U8 — secure decision bench:** authenticated loopback API, complete state renderer, 1440/375 flows, at least three full visual passes, Playwright/axe/manual checks, and a real different-model screenshot critic.
+13. **U9 — local export, packaging, and hardening:** minimized evidence export, embedded assets/single binary, docs/license/contributor path, adversarial suite, performance/limitations ledger, final strict verify, didrun HTML evidence, receipts handoff.
 
 Honest fallback milestones are allowed: truth-kernel prototype, observation-only instrument, one-domain instrument, DecisionRecord-only residue, or CLI-only surface. None inherits the full-system claim.
 
@@ -507,4 +511,4 @@ didrun references remain opaque verbatim receipt grades associated with their ex
 
 ## Handoff state
 
-**U0–U6 and P07A portable selected-field ruling authority are sealed and strict-clean. P07B standalone residue is the next source boundary.** P07A-B source commit `65005e498b05`, tree `18f52daa4f7b`, makes fresh production Choicepoints consume sealed adapter-bound translations and issue selected-field rulings while preserving legacy whole-projection bytes as valid, addressable nonportable history. Exact events, permanent failures, verbatim grades, physical-study bounds, and explicit nonclaims live in `docs/status/P07A-RULING.md`. The implementation-time P07 red team still prohibits direct emission: P07B additionally requires an exact source-reconstruction witness before deterministic recoverable emission, terminal residue, and immutable nonhead execution evidence. `REFINE` remains a valid semantic noncompilable DecisionRecord but durable promotion refuses it without object publication or head mutation.
+**U0–U6, P07A portable selected-field ruling authority, and the P07B-A1 source/process substrate are sealed and strict-clean. P07B-A2.1 compilation authority is next.** A1 source commit `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`, tree `da0e13f37aacd0e7fb2b52b3aeac628f5558c11e`, supplies bounded self-consistent CLI/HTTP `PortableSource`, the closed runner profile, and child-bind Observation substrate. Its 15 final claims are verbatim `TREE-EXACT`; exact events, permanent failures, physical bounds, seal disclosure, and nonclaims live in `docs/status/P07B-A1-SOURCE.md`. A1 does not establish equality to the current store-bound ruling/confirmation, compiler output, residue, execution, security, or portability. A2.1 must establish the current source/ruling/proof join; A2.2 may then build the pure recoverable compiler. `REFINE` remains a valid semantic noncompilable DecisionRecord but durable promotion refuses it without object publication or head mutation.

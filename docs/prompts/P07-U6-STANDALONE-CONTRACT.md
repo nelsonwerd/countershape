@@ -1,6 +1,8 @@
 # P07B — U6 recoverable standalone contract residue
 
-Implement the standalone residue only after P07A is committed, sealed, and `NO_COLOR=1 didrun verify --strict` exits 0. Read `docs/CONCEPT_BRIEF.md`, `docs/SEMANTICS.md`, `docs/PROJECTION_ALGEBRA.md`, `research/deep-dive/11-p07-implementation-red-team.md`, the prior portability/acceptance research, P07A's status, and the Mode C handoff. Inspect installed Node versions before naming support. Source intent is not a runtime receipt: every unexecuted Node/OS/architecture tuple remains `UNRECEIPTED`.
+This is the controlling umbrella prompt. Do not execute it as one monolithic unit. P07B-A1 is sealed at source commit `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`; its exact boundary and nonclaims live in `../status/P07B-A1-SOURCE.md`. Execute the locked decomposition in `P07B-A2-COMPILATION-PLAN.md`: A2.1 current-ruling compilation authority, A2.2 pure recoverable compiler, then independently gated B publication/materialization and C target/run/execution units. Every unit must be committed, sealed, and `NO_COLOR=1 didrun verify --strict` exit `0` before the next begins.
+
+Read `docs/CONCEPT_BRIEF.md`, `docs/SEMANTICS.md`, `docs/PROJECTION_ALGEBRA.md`, `research/deep-dive/11-p07-implementation-red-team.md`, the prior portability/acceptance research, the A1/A2 status and prompt files, and the Mode C handoff. Inspect installed Node versions before naming support. Source intent is not a runtime receipt: every unexecuted Node/OS/architecture tuple remains `UNRECEIPTED`.
 
 ## Objective
 
@@ -38,7 +40,7 @@ The predicate remains `one-of-exact/v1` over the P07A closed portable value alge
 
 ## Byte-complete PortableSource
 
-Own a strict package such as `internal/contractsource/**`. A `PortableSource` is not an arbitrary byte slice plus claimed digests. Closed adapter-specific constructors must retain bounded exact inputs, reconstruct the adapter stimulus/execution binding themselves, and return an opaque source whose strict parser repeats the reconstruction.
+Sealed A1 owns `internal/contractsource/**`. Preserve its exact canonical bytes and strict boundary. A `PortableSource` is not an arbitrary byte slice plus claimed digests. Its closed adapter-specific constructors retain bounded exact inputs, reconstruct the adapter stimulus/execution binding themselves, and return an opaque source whose strict parser repeats the reconstruction. A2 must consume that authority rather than add an alternate source constructor.
 
 It retains only what the standalone harness needs, including:
 
@@ -59,11 +61,11 @@ source.projection_binding_digest == choicepoint.projection_binding.digest
 source.portable_profile_digest == ruling.portable_profile.digest
 source.reconstructed_stimulus_bytes == choicepoint.minimized_stimulus_bytes
 source.reconstructed_stimulus_digest == choicepoint.minimized_stimulus_digest
-source.reconstructed_execution_binding_digest == every verified FreshConfirmation proof.execution_binding_digest
-retranslate(reopened FreshConfirmation projection proofs, resolved source-matched profile) == ruling.confirmed portable tuples
+source.reconstructed_execution_binding_digest == every schedule-ordered strictly parsed FreshExecutionFact execution_binding_digest
+project_selected(retranslate(full reopened FreshConfirmation projection roster, resolved source-matched profile)) == exact ruling allowed/disallowed selected-tuple partition
 ```
 
-The application service owns the last equality: it reopens the Choicepoint and FreshConfirmation, verifies the complete proof roster, retranslates those exact projection bytes under the source-matched resolved profile, and compares the result with the sealed P07A ruling tuples. `PortableSource` contains no confirmation projection, tuple, or proof bytes and cannot author that equality.
+The application service owns the last equality: it reopens the Choicepoint and FreshConfirmation, verifies the complete proof roster, retranslates those exact projection bytes under the source-matched resolved profile, projects the full roster onto the ruling's selected fields, and exact-set compares the reconstructed allowed/disallowed partition. `PortableSource` contains no confirmation projection, tuple, or proof bytes and cannot author that equality.
 
 Use exact canonical bytes and typed digests, not names or digest-only pairing. If raw bytes are unavailable, return `PORTABLE_SOURCE_REQUIRED`; do not guess, fetch, hardcode, or reverse a digest.
 
@@ -73,15 +75,15 @@ No ambient executable lookup, absolute executable, shell, login profile, package
 
 ## Portable HTTP lineage
 
-Do not translate the sealed inherited-listener HTTP world into a different standalone start mechanism. Add a second explicit adapter start profile:
+Do not translate the sealed inherited-listener HTTP world into a different standalone start mechanism. Preserve A1's sealed second explicit adapter start profile and its canonical bytes:
 
 ```text
 NODE_LOOPBACK_CHILD_BIND_PIPE_READY_V1
 ```
 
-The fixture child binds literal `127.0.0.1:0`, writes one closed bounded readiness frame containing the chosen port to a dedicated inherited pipe, closes the readiness pipe, serves exactly the declared request budget, and completes teardown. The Go runner owns deadlines, process group, readiness validation, probe, response caps, and post-exit orphan checks. Keep the historical inherited-listener profile valid but nonemittable.
+The sealed A1 fixture child binds literal `127.0.0.1:0`, writes one closed bounded readiness frame containing the chosen port to a dedicated inherited pipe, closes the readiness pipe, serves exactly the declared request budget, and completes teardown. The Go runner owns deadlines, process group, readiness validation, probe, response caps, and post-exit orphan checks. Keep the historical inherited-listener profile valid but nonemittable. Do not rewrite the A1 fixture, profile, source, or receipt history.
 
-Create a new physical HTTP plan, observation, confirmation, portable Choicepoint, and selected-field ruling under this exact profile. Only that lineage may emit HTTP source. Projection bytes may remain identical when behavior is identical; plan, world, attempt, map, Choicepoint, and Decision identities correctly differ.
+In A2.1, use the sealed A1 profile/fixture to create the still-missing physical confirmation, portable Choicepoint, and selected-field ruling lineage; a fresh study necessarily creates its own plan and observations without altering A1 history. Only a current ruling joined to exact source under that lineage may authorize HTTP compilation. Projection bytes may remain identical when behavior is identical; plan, world, attempt, map, Choicepoint, and Decision identities correctly differ.
 
 For HTTP, the source-reconstructed binding must expose exact start/readiness authority `NODE_LOOPBACK_CHILD_BIND_PIPE_READY_V1`, and its typed binding digest must equal every verified execution-binding digest in the reopened FreshConfirmation. Matching only the WorldPlan, argv, projection, or stimulus is insufficient. This equality makes an inherited-listener binding structurally nonemittable even when its observed projection bytes happen to match.
 
@@ -137,9 +139,9 @@ The manifest never lists itself. No generated file contains the bundle digest. T
 
 Each allowed tuple carries its complete ordered field/value body and no unconstrained `tuple_digest` member. If an implementation needs tuple identity, derive it with one locked domain-separated codec from that canonical body and verify it rather than accepting caller-supplied authority.
 
-Use a runtime-generic declared source profile such as `COUNTERSHAPE_NODE_CORE_EXACT_V1`; do not infer or embed the compiler host's current Node version as execution proof. The profile commits the adapter domain, `NODE_REPO_SCRIPT_V1`, exact repository-relative entrypoint, and adapter-specific start profile. Exact Node version, major, OS, architecture, executable-byte digest, and owned-probe digest belong only to a physically admitted `ContractExecutionTarget`. A generic source profile does not receipt any runtime tuple.
+Use exactly the runtime-generic declared semantic profile `countershape-node-core-exact/v1`; do not infer or embed the compiler host's current Node version as execution proof. The closed seven-member profile commits the adapter domain, `NODE_REPO_SCRIPT_V1`, exact repository-relative entrypoint, and adapter-specific start profile. Its typed digest is exactly `sha256("countershape/v1/ContractSourceProfile\x00" || exact_canonical_seven_member_body_bytes)` with no LF and is always recomputed rather than caller-paired. Exact Node version, major, OS, architecture, executable-byte digest, and owned-probe digest belong only to a physically admitted `ContractExecutionTarget`. The declared source profile does not receipt any runtime tuple.
 
-Bundle source contains no current time, random value, absolute path, user name, temp port, candidate/ref/branch name, secret value, host formatter drift, Countershape import, Wake artifact, didrun interpretation, package install, shell command, or external service. Record exact construction facts such as sparse environment and absent ambient lookup; retain `confidentiality_established = false`. Do not claim source is secret-free or secure.
+The emitter invents no current time, random value, absolute path, user name, temporary port, concrete candidate/ref/branch identity, declared secret value, host formatter drift, host-runtime fact, execution receipt, Wake artifact, or didrun interpretation as a new typed structural fact. Generated harness code adds no Countershape import/service binding, package install, shell command, registry dependency, or configured external-service dependency. Authorized PortableSource bytes, predicate values, and source-derived human text are retained as data and may contain sensitive, host-looking, or candidate-looking content; do not content-scan them into a redaction, secret-free, or security claim. Record exact construction facts such as sparse environment and absent ambient lookup; retain `confidentiality_established = false`. `external_service_binding = NONE` applies only to the generated harness; trusted subject code retains host-network authority, and HTTP may use loopback to that subject.
 
 Keep the canonical body below the store's 1 MiB ceiling after base64. Lock explicit file, per-payload, list, tuple, allowed-tuple, aggregate raw-byte, and canonical-body ceilings. Refuse overflow before publication.
 
@@ -175,7 +177,7 @@ Top-level runtime categories are disjoint:
 - `ELIGIBLE_OBSERVATION` contains a projected exact tuple and becomes `CONFORMS` or `CONTRADICTS`;
 - start, readiness, transport, timeout, output, parse/projection, orphan, and teardown failures become typed `INELIGIBLE_EXECUTION`.
 
-HTTP `500`, CLI exit `2`, an absent optional field, or empty complete stdout may be eligible behavior. A harness failure and a contradiction may both make `node --test` nonzero, but TAP diagnostics and closed machine codes must distinguish them.
+HTTP `500`, CLI exit `2`, an absent optional field, or empty complete stdout may be eligible behavior. A harness failure and a contradiction may both make `node --test --test-reporter=tap` nonzero, but TAP diagnostics and closed machine codes must distinguish them. The A2.2 contract freezes one stderr record, `COUNTERSHAPE_RESULT_V1\t<outcome>\t<reason>\n`, with closed outcomes `CONFORMS`, `CONTRADICTS`, `INELIGIBLE_EXECUTION`, `MALFORMED_CONTRACT`, `TAMPER_DETECTED`, and `HARNESS_FAILURE`; only conformance exits zero, while stdout remains explicitly selected TAP. Do not substitute free-form error text for that result channel. This direct channel is inert operator UX, never target/run/execution evidence.
 
 Never reuse the comparison-only `WorldInstance` chain here. Its authority begins with a 2–4-member historical `SelectedTreeSet`, exact `WorldPlan`, and opaque `CandidateExecutionBinding`; an arbitrary later target cannot enter that chain without copied-digest theater.
 
@@ -199,24 +201,24 @@ choicepoint_freshened = false
 study_head_advanced = false
 ```
 
-The outer Go runtime service constructs the finalized run only from the reopened target capability and its exact finalized attempt/process/capture/projection authority, then constructs the classification only from the reopened matching target and finalized-run capabilities. Process and observation evidence bind the target digest, never `world_instance_digest`. Git pinning, inspection, verified materialization, runtime admission, target publication, run finalization, or target/run matching failure refuses classification publication. Repeated runs allocate distinct target, finalized-run, and execution digests while the same study remains at the exact ContractBundle residue. Direct `node --test contract.test.mjs` remains ordinary and requires no Countershape process or target object.
+The outer Go runtime service constructs the finalized run only from the reopened target capability and its own exact finalized attempt/process/capture/projection authority, then constructs the classification only from the reopened matching target and finalized-run capabilities. It independently executes the recovered PortableSource through the owner-controlled Go target path; it never parses the direct Node TAP/stderr ABI into authority. Process and observation evidence bind the target digest, never `world_instance_digest`. Git pinning, inspection, verified materialization, runtime admission, target publication, run finalization, or target/run matching failure refuses classification publication. Repeated runs allocate distinct target, finalized-run, and execution digests while the same study remains at the exact ContractBundle residue. Direct `<explicit-node> --test --test-reporter=tap <absolute-bundle-root>/contract.test.mjs` from the target-source cwd remains ordinary and requires no Countershape process or target object.
 
 ## Normative Go/Node parity corpus
 
 Create one checked-in byte/result corpus consumed by Go and the generated Node implementation. Cover strict parsing, portable profile, selected-field extraction, tuple canonicalization, missing/empty distinctions, CLI completion, raw HTTP status/header/body projection, eligible/ineligible taxonomy, and expected errors.
 
-Include duplicate JSON names, unsafe integers, `-0`, exponent/decimal forms, lone surrogates, invalid UTF-8, NUL/truncation, JSON key and array reordering, duplicate headers, absent and present-empty fields, empty bytes/list, exit `2`, natural signal termination, HTTP `500`, refused connection, hung readiness, output cap, malformed response separators/OWS, and teardown/orphan risk. Natural subject signal completion is eligible and distinct from exit; owner-induced timeout/cap/cancel termination is ineligible. If signal names are target-specific, keep that field outside portable support or bind it to an exact target-specific codec.
+Include duplicate JSON names, unsafe integers, `-0`, exponent/decimal forms, lone surrogates, invalid UTF-8, NUL/truncation, JSON key and array reordering, duplicate headers, absent and present-empty fields, empty bytes/list, exit `2`, natural signal termination, HTTP `500`, refused connection, hung readiness, output cap, malformed response separators/OWS, and teardown/orphan risk. A strict driver alone reads expected results; it passes only closed semantic input to oracle-blind Go/Node evaluators, with poisoned-expected and duplicate-input metamorphic tests killing any expected-echo path. Natural subject signal completion is eligible and distinct from exit; owner-induced timeout/cap/cancel termination is ineligible. If signal names are target-specific, keep that field outside portable support or bind it to an exact target-specific codec.
 
 Kill mutations for last-key-wins JSON, numeric coercion, UTF-16 rather than UTF-8 key ordering, missing equals empty, signal equals exit, header trim/join/sort/deduplication, majority/name/first tuple choice, substring/regex/tolerance instead of exact membership, allow-many cross-product, assertion of an unselected field, high-level HTTP normalization, shell execution, Countershape import/service call, package-manager/external-host use, manifest bypass, bundle self-digest, digest-only file recovery, receipt-grade interpretation, and ineligibility flattened to contradiction. Any Go/Node disagreement blocks the P07B seal and capability claim; it does not authorize or refuse residue construction or publication.
 
 ## Physical standalone acceptance
 
-For both CLI and portable-start HTTP bundles, create a separate target inventory containing only the subject fixture code plus the six materialized files. Countershape source, binary, package, dependency, import, service-call path, and `PATH` entry must be absent from that inventory. Use private HOME/TMP/state roots and an explicit sparse child environment. Pass named fake AWS/npm/SSH/Git/cloud sentinel values to the parent and prove they do not reach the child.
+For both CLI and portable-start HTTP bundles, use two distinct, non-nested roots: one exact six-file materialized bundle root and one prepared target-source inventory containing only the subject fixture code. The target inventory must not contain the exact generated contract subtree, but ordinary source files may share common names such as `README.md`. Countershape source, binary, package, dependency, import, and service-call path must be absent from both exercised closures, and the explicit Node executable must not be resolved through `PATH`. Use private HOME/TMP/state roots and an explicit sparse child environment. Pass named fake AWS/npm/SSH/Git/cloud sentinel values to the parent and prove they do not reach the child.
 
-Run directly as:
+From the target-source inventory as cwd, run directly as:
 
 ```text
-node --test <contract.test.mjs>
+<explicit-node> --test --test-reporter=tap <absolute-bundle-root>/contract.test.mjs
 ```
 
 Loopback remains available only for the HTTP subject. Do not claim host-wide Countershape absence, hostile containment, package-registry denial, network denial, confidentiality, or sandboxing unless an independent mechanism was actually run and receipted. The outer materializer verifies all six exact bundle members before publishing the directory. An intact `contract.test.mjs` entrypoint can verify the protected companion files before subject spawn, but cannot authenticate itself or the manifest; coordinated post-materialization replacement is explicitly outside the claim.

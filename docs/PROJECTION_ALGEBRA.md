@@ -117,16 +117,16 @@ for every allowed a and disallowed d:
 
 `CUSTOM_EXPECTATION` contains exactly `F`, no unselected fields, and must differ from every confirmed `select_F(tuple)`. Whole-projection U6 records remain parseable history but do not satisfy this adapter-bound portability relation.
 
-A later `PortableSource` is a separate preimage condition, not part of tuple equality:
+Sealed P07B-A1 implements `PortableSource` as a separate reconstruction object, not part of tuple equality. The following equations are the future A2 application-service join; A1 construction alone does not establish them against current store objects:
 
 ```text
 Reconstruct(source).plan == Choicepoint.plan
 Reconstruct(source).projection_binding == profile.binding
 Reconstruct(source).stimulus.canonical_bytes == Choicepoint.minimized_stimulus.canonical_bytes
-Reconstruct(source).execution_binding.digest == every reopened FreshConfirmation proof.execution_binding_digest
+Reconstruct(source).execution_binding.digest == every schedule-ordered strictly parsed FreshExecutionFact execution_binding_digest retained by reopened FreshConfirmation
 ```
 
-For HTTP, the reconstructed binding must additionally expose exact child-bind/pipe-readiness start authority `NODE_LOOPBACK_CHILD_BIND_PIPE_READY_V1`; inherited-listener authority is not equivalent. Separately, the application service retranslates the reopened confirmation projection proofs under the resolved source-matched profile and requires exact equality with the sealed ruling tuples. Source retains none of those proof or tuple bytes. Only after all preimage, binding-lineage, and independent tuple relations hold may the portable predicate enter standalone compilation. A later capability-only `ContractExecutionTarget` binds the exact pinned target/source/runtime before spawn; its exact target-bound `FinalizedContractRun` owns the newly projected portable tuple and physical lifecycle; the matching `ContractExecution` compares that tuple with the compiled complete-tuple set and does not change historical preservation, confirmation, or Choicepoint identity.
+For HTTP, A1 reconstructs exact child-bind/pipe-readiness start authority `NODE_LOOPBACK_CHILD_BIND_PIPE_READY_V1`; inherited-listener authority is not equivalent. A1 also receipts the child-ready frame through a physical Observation, but not the FreshConfirmation/portable-Choicepoint/ruling lineage required by the equations above. Separately, A2 must retranslate the reopened confirmation projection proofs under the resolved source-matched profile and require exact equality with the sealed ruling tuples. Source retains none of those proof or tuple bytes. Only after all current-store, preimage, binding-lineage, and independent tuple relations hold may the portable predicate enter standalone compilation. A later capability-only `ContractExecutionTarget` binds the exact pinned target/source/runtime before spawn; its exact target-bound `FinalizedContractRun` owns the newly projected portable tuple and physical lifecycle; the matching `ContractExecution` compares that tuple with the compiled complete-tuple set and does not change historical preservation, confirmation, or Choicepoint identity.
 
 ## Reduction evidence and grades
 

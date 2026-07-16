@@ -1,7 +1,7 @@
 # Countershape semantic authority contract
 
 - **Contract version:** `semantics-v1`
-- **Status:** controlling model; runtime authority is implemented and receipted through the P07A portable selected-field ruling boundary, while P07B standalone publication remains future
+- **Status:** controlling model; runtime authority is receipted through P07A plus the P07B-A1 source/child-bind Observation substrate; current-ruling compilation authority, compiler, and standalone publication remain future
 - **Purpose:** separate structural identity, measured facts, comparison assessment, observed behavior, and storage/wire projection
 
 Countershape does not treat a digest-shaped string, a status enum, or a JSON object as evidence merely because it has the right fields. Each stronger state is available only through the operation that can establish it. Some schemas describe exact canonical artifact bodies; others describe external storage or wire envelopes. Production constructors must rebuild the corresponding opaque authority from stricter inputs.
@@ -45,7 +45,15 @@ These semantics do not imply that the historical CLI and HTTP wire codecs are id
 
 The sealed expectation domain validates existential model shape only: the selected values must be the restriction of at least one complete tuple admitted by the exact adapter projection model. It does not prove that a current source, candidate, fixture, or runtime can emit the values. That stronger source authority belongs to P07B.
 
-A P07A portable ruling is selected-field semantic authority, not runnable-source authority. Historical stimuli intentionally retain some source content only by length and digest. P07B therefore requires a separate opaque `PortableSource` preimage witness. Its closed adapter constructor retains exact bounded bytes, rebuilds the adapter stimulus and execution binding, and must exact-match the Choicepoint plan, projection binding, minimized-stimulus canonical bytes/digest, portable profile, and every verified FreshConfirmation execution-binding digest before compilation. HTTP additionally requires the exact child-bind/pipe-readiness start authority. The application service independently retranslates reopened confirmation projection proofs and compares them with the ruling tuples; source carries no proof or tuple bytes. The source cannot change the ruling; the ruling cannot recover missing source.
+A P07A portable ruling is selected-field semantic authority, not runnable-source authority. Historical stimuli intentionally retain some source content only by length and digest. Sealed P07B-A1 therefore adds a separate opaque `PortableSource` preimage witness. Its closed adapter constructor retains exact bounded bytes and rebuilds and exact-matches its supplied adapter stimulus, WorldPlan, projection binding/definition, portable profile, logical-Node runner/start/readiness/capture authorities, and execution binding. HTTP additionally requires the exact child-bind/pipe-readiness start authority.
+
+### P07B-A1 authority ceiling
+
+`PortableSource.Valid()` proves closed reconstruction integrity over the supplied A1 authorities only. It does not prove equality to a current store-bound `Ruling`, `Choicepoint`, or `FreshConfirmation`; it does not retain reopened projection proofs or ruling tuples; and it does not authorize compilation. Its `closed_facts` are construction declarations, not static analysis, dependency inspection, secret scanning, network denial, confidentiality, or containment.
+
+The A1 child-bind lineage accepts exactly `COUNTERSHAPE_READY_V1 <port>\n` on inherited FD 3 followed by EOF, then uses the reported literal-loopback endpoint for the request. This yields a physical `Observation`, not a FreshConfirmation, portable Choicepoint, or ruling. `child_reported_port` is not kernel evidence that the reporting PID owns the listener; an arbitrary trusted script could report a decoy local service.
+
+P07B-A2 must open and revalidate the current ruling/Choicepoint/FreshConfirmation, compare the source execution binding with every retained schedule-ordered confirmation binding, independently retranslate the reopened confirmation projection proofs under the source-matched profile, and compare the result with the exact selected-tuple ruling partition. The source cannot change the ruling; the ruling cannot recover missing source. That application authority produces a sealed wrapper that privately retains the original preparation for later publication revalidation and separately owns a sanitized internal compiler input with no concrete candidate keys, refs, aliases, producer metadata, or support counts. The exact PortableSource still transitively contains opaque source/lineage identity digests, including candidate-set, plan, envelope, materialization, fixture/capture, and projection identities.
 
 ## Candidate reference and binding
 

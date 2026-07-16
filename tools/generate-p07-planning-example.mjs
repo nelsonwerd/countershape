@@ -182,13 +182,14 @@ function buildExamples() {
     environment_profile: "EXPLICIT_SPARSE_ALLOWLIST_V1",
     external_service_binding: "NONE",
     determinism_profile: {
-      contains_time: false,
-      contains_random_id: false,
-      contains_absolute_path: false,
-      contains_candidate_identity: false,
-      contains_declared_secret_value: false,
-      contains_host_runtime_fact: false,
-      contains_execution_receipt: false,
+      scope: "EMITTER_INVENTED_STRUCTURAL_FACTS_EXCLUDING_AUTHORIZED_INPUT_CONTENT",
+      emitter_introduces_time: false,
+      emitter_introduces_random_id: false,
+      emitter_introduces_absolute_path: false,
+      emitter_introduces_concrete_candidate_identity: false,
+      emitter_introduces_declared_secret_value: false,
+      emitter_introduces_host_runtime_fact: false,
+      emitter_introduces_execution_receipt: false,
     },
     confidentiality_established: false,
   };
@@ -339,7 +340,7 @@ function materialize(root, bundle) {
 }
 
 function runFixture(root) {
-  return spawnSync(process.execPath, ["--test", "contract.test.mjs"], {
+  return spawnSync(process.execPath, ["--test", "--test-reporter=tap", "contract.test.mjs"], {
     cwd: root,
     encoding: "utf8",
     env: {

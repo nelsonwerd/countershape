@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://countershape.dev/spec/schema/v1/contract-bundle.schema.json",
   "title": "Countershape ContractBundle v1",
-  "description": "A deterministic recoverable six-file Node-core source bundle for one exact selected-field predicate. Its domain-separated artifact digest is external to this canonical body. It contains neither current execution nor receipt evidence.",
+  "description": "A deterministic recoverable six-file Node-core source bundle for one exact selected-field predicate. Its domain-separated artifact digest is external to this canonical body. The emitter invents neither current execution nor receipt authority; exact authorized input content is retained as data and is not content-scanned into a confidentiality claim.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -56,7 +56,8 @@
         "launch_profile": { "const": "NODE_REPO_SCRIPT_V1" },
         "subject_entrypoint": {
           "type": "string",
-          "pattern": "^(?:[A-Za-z0-9_-][A-Za-z0-9._-]*/)*[A-Za-z0-9_-][A-Za-z0-9._-]*\\.(?:js|mjs|cjs)$"
+          "maxLength": 4096,
+          "pattern": "^[A-Za-z0-9_][A-Za-z0-9._-]*(?:/[A-Za-z0-9_-][A-Za-z0-9._-]*)*\\.(?:js|mjs|cjs)$"
         },
         "start_profile": { "enum": ["DIRECT_CHILD_V1", "NODE_LOOPBACK_CHILD_BIND_PIPE_READY_V1"] },
         "scope": { "const": "DECLARED_SOURCE_PROFILE_NOT_EXECUTION_EVIDENCE" }
@@ -147,24 +148,43 @@
       "type": "object",
       "additionalProperties": false,
       "required": [
-        "contains_time",
-        "contains_random_id",
-        "contains_absolute_path",
-        "contains_candidate_identity",
-        "contains_declared_secret_value",
-        "contains_host_runtime_fact",
-        "contains_execution_receipt"
+        "scope",
+        "emitter_introduces_time",
+        "emitter_introduces_random_id",
+        "emitter_introduces_absolute_path",
+        "emitter_introduces_concrete_candidate_identity",
+        "emitter_introduces_declared_secret_value",
+        "emitter_introduces_host_runtime_fact",
+        "emitter_introduces_execution_receipt"
       ],
       "properties": {
-        "contains_time": { "const": false },
-        "contains_random_id": { "const": false },
-        "contains_absolute_path": { "const": false },
-        "contains_candidate_identity": { "const": false },
-        "contains_declared_secret_value": { "const": false },
-        "contains_host_runtime_fact": { "const": false },
-        "contains_execution_receipt": { "const": false }
+        "scope": { "const": "EMITTER_INVENTED_STRUCTURAL_FACTS_EXCLUDING_AUTHORIZED_INPUT_CONTENT" },
+        "emitter_introduces_time": { "const": false },
+        "emitter_introduces_random_id": { "const": false },
+        "emitter_introduces_absolute_path": { "const": false },
+        "emitter_introduces_concrete_candidate_identity": { "const": false },
+        "emitter_introduces_declared_secret_value": { "const": false },
+        "emitter_introduces_host_runtime_fact": { "const": false },
+        "emitter_introduces_execution_receipt": { "const": false }
       }
     },
     "confidentiality_established": { "const": false }
-  }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": { "decision_action": { "const": "CUSTOM_EXPECTATION" } },
+        "required": ["decision_action"]
+      },
+      "then": {
+        "properties": {
+          "predicate": {
+            "properties": {
+              "allowed_tuples": { "minItems": 1, "maxItems": 1 }
+            }
+          }
+        }
+      }
+    }
+  ]
 }
