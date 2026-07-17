@@ -13,6 +13,7 @@ import (
 	"github.com/nelsonwerd/countershape/internal/compare"
 	"github.com/nelsonwerd/countershape/internal/confirmation"
 	"github.com/nelsonwerd/countershape/internal/domain"
+	"github.com/nelsonwerd/countershape/internal/projectionprofile"
 	"github.com/nelsonwerd/countershape/internal/projectiontranslate"
 )
 
@@ -512,6 +513,23 @@ func (r ChoicepointRecord) Digest() domain.Digest             { return r.digest 
 func (r ChoicepointRecord) CanonicalBytes() []byte            { return append([]byte(nil), r.canonicalBytes...) }
 func (r ChoicepointRecord) Scenario() string                  { return r.scenario }
 func (r ChoicepointRecord) ConfirmationDigest() domain.Digest { return r.confirmation.Digest() }
+func (r ChoicepointRecord) WorldPlan() domain.WorldPlan {
+	parsed, _ := domain.ParseWorldPlan(r.plan.CanonicalBytes(), r.plan.ProjectionDefinitionBinding())
+	return parsed
+}
+func (r ChoicepointRecord) MinimizedStimulus() CanonicalArtifact {
+	rebuilt, _ := NewCanonicalArtifact(r.minimized.Kind(), r.minimized.Digest(), r.minimized.CanonicalBytes())
+	return rebuilt
+}
+func (r ChoicepointRecord) PortableProfile() projectionprofile.Profile {
+	if r.mode != choicepointPortable || !r.confirmed.registry.expectationDomain.Valid() {
+		return projectionprofile.Profile{}
+	}
+	profile, _ := projectionprofile.Parse(
+		r.confirmed.registry.expectationDomain.ProfileBytes(), r.plan.ProjectionDefinitionBinding(),
+	)
+	return profile
+}
 func (r ChoicepointRecord) ConfirmationRecord() confirmation.Record {
 	parsed, _ := confirmation.ParseRecord(r.confirmation.CanonicalBytes())
 	return parsed

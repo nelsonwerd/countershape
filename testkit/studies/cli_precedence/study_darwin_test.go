@@ -545,19 +545,31 @@ func referenceConfig(t *testing.T) Config {
 	if err != nil {
 		t.Fatal(err)
 	}
-	git, err := filepath.EvalSymlinks("/usr/bin/git")
-	if err != nil {
-		t.Fatal(err)
-	}
-	nodePath, err := exec.LookPath("node")
-	if err != nil {
-		t.Skip("Node is not installed")
-	}
-	node, err := filepath.EvalSymlinks(nodePath)
-	if err != nil {
-		t.Fatal(err)
-	}
+	git := cliStudyTestExecutable(t, "git", "/usr/bin/git")
+	node := cliStudyTestExecutable(t, "node", "")
 	return DefaultConfig(root, git, node)
+}
+
+func cliStudyTestExecutable(t *testing.T, name, fallback string) string {
+	t.Helper()
+	path := os.Getenv("COUNTERSHAPE_" + strings.ToUpper(name))
+	if path == "" {
+		path = fallback
+	}
+	if path == "" {
+		var err error
+		path, err = exec.LookPath(name)
+		if err != nil {
+			t.Skipf("%s is not installed", name)
+		}
+	} else if !filepath.IsAbs(path) {
+		t.Fatalf("explicit %s test executable is not absolute", name)
+	}
+	resolved, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return resolved
 }
 
 func behaviorConfig(t *testing.T, behavior Behavior, repetitions int) Config {

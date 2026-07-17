@@ -414,7 +414,7 @@ const exactInternalImports = Object.freeze(new Map([
   ["internal/projectionprofile", ["internal/canon", "internal/domain", "internal/portablevalue"]],
   ["internal/projectiontranslate", ["internal/adapters/cli", "internal/adapters/http", "internal/canon", "internal/compare", "internal/domain", "internal/portablevalue", "internal/projectionprofile"]],
   ["internal/choice", ["internal/canon", "internal/compare", "internal/confirmation", "internal/domain", "internal/portablevalue", "internal/projectionprofile", "internal/projectiontranslate", "internal/reduce"]],
-  ["internal/choice/promotion", ["internal/choice", "internal/choice/promotion/internal/publication", "internal/confirmation", "internal/domain", "internal/store"]],
+  ["internal/choice/promotion", ["internal/choice", "internal/choice/promotion/internal/publication", "internal/confirmation", "internal/domain", "internal/projectionprofile", "internal/store"]],
   ["internal/choice/promotion/authority", ["internal/choice/promotion/internal/publication"]],
   ["internal/choice/promotion/internal/publication", ["internal/canon", "internal/domain"]],
   ["internal/world", ["internal/adapters/cli/model", "internal/adapters/http/model", "internal/canon", "internal/domain", "internal/gitobj", "internal/runnerprofile"]],
@@ -1070,7 +1070,7 @@ function inspectPortableRulingBoundaries(manifest, violations) {
   }
   const inspectionReferences = productionEntries(manifest).filter((entry) => /\bInspectPortableRuling\b/u.test(entry.lexical.code));
   const inspectionCount = inspectionReferences.reduce((total, entry) => total + (entry.lexical.code.match(/\bInspectPortableRuling\b/gu) ?? []).length, 0);
-  if (inspectionCount !== 3 || !exactSet(inspectionReferences.map((entry) => entry.path), ["internal/choice/portable.go", "internal/choice/promotion/service.go"])) {
+	if (inspectionCount !== 4 || !exactSet(inspectionReferences.map((entry) => entry.path), ["internal/choice/portable.go", "internal/choice/promotion/service.go"])) {
     violations.push(["U6_PORTABLE_INSPECTION_REFERENCE_SURFACE_NOT_EXACT", inspectionReferences.map((entry) => entry.path).join(",")]);
   }
   const preparationBodies = topLevelStructBodies(promotion, "PortableRulingPreparation");

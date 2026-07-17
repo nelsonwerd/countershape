@@ -331,6 +331,7 @@ func TestWorldPlanRejectsInformationLossAndPolicyBypasses(t *testing.T) {
 		{"secret", func(c *WorldPlanConfig) { c.Environment = []EnvironmentEntry{{Name: "API_TOKEN", Value: "value"}} }, ErrInvalidWorldPlan},
 		{"split-output", func(c *WorldPlanConfig) { c.StartArgv = []string{"node", "x.mjs", "--output", "/tmp/out"} }, ErrInvalidWorldPlan},
 		{"joined-output", func(c *WorldPlanConfig) { c.StartArgv = []string{"node", "x.mjs", "--out=/tmp/out"} }, ErrInvalidWorldPlan},
+		{"windows-volume", func(c *WorldPlanConfig) { c.StartArgv = []string{"node", "C:/temp/out.mjs"} }, ErrInvalidWorldPlan},
 		{"invalid-utf8", func(c *WorldPlanConfig) { c.Adapter.AdapterVersion = string([]byte{0xff}) }, ErrInvalidWorldPlan},
 		{"tool-name-space", func(c *WorldPlanConfig) { c.RequiredTools[0].Name = "node cli" }, ErrInvalidWorldPlan},
 		{"tool-name-unicode", func(c *WorldPlanConfig) { c.RequiredTools[0].Name = "nodé" }, ErrInvalidWorldPlan},

@@ -1,7 +1,7 @@
 # Countershape semantic authority contract
 
 - **Contract version:** `semantics-v1`
-- **Status:** controlling model; runtime authority is receipted through P07A plus the P07B-A1 source/child-bind Observation substrate; current-ruling compilation authority, compiler, and standalone publication remain future
+- **Status:** controlling model; runtime authority is receipted through P07A, P07B-A1 source/child-bind Observation, and P07B-A2.1 current-ruling compilation preparation; compiler output and standalone publication remain future
 - **Purpose:** separate structural identity, measured facts, comparison assessment, observed behavior, and storage/wire projection
 
 Countershape does not treat a digest-shaped string, a status enum, or a JSON object as evidence merely because it has the right fields. Each stronger state is available only through the operation that can establish it. Some schemas describe exact canonical artifact bodies; others describe external storage or wire envelopes. Production constructors must rebuild the corresponding opaque authority from stricter inputs.
@@ -53,7 +53,11 @@ A P07A portable ruling is selected-field semantic authority, not runnable-source
 
 The A1 child-bind lineage accepts exactly `COUNTERSHAPE_READY_V1 <port>\n` on inherited FD 3 followed by EOF, then uses the reported literal-loopback endpoint for the request. This yields a physical `Observation`, not a FreshConfirmation, portable Choicepoint, or ruling. `child_reported_port` is not kernel evidence that the reporting PID owns the listener; an arbitrary trusted script could report a decoy local service.
 
-P07B-A2 must open and revalidate the current ruling/Choicepoint/FreshConfirmation, compare the source execution binding with every retained schedule-ordered confirmation binding, independently retranslate the reopened confirmation projection proofs under the source-matched profile, and compare the result with the exact selected-tuple ruling partition. The source cannot change the ruling; the ruling cannot recover missing source. That application authority produces a sealed wrapper that privately retains the original preparation for later publication revalidation and separately owns a sanitized internal compiler input with no concrete candidate keys, refs, aliases, producer metadata, or support counts. The exact PortableSource still transitively contains opaque source/lineage identity digests, including candidate-set, plan, envelope, materialization, fixture/capture, and projection identities.
+### P07B-A2.1 compilation-authority ceiling
+
+Sealed A2.1 opens and revalidates the current ruling/Choicepoint/FreshConfirmation, freshly reinspects the strictly reparsed DecisionRecord, joins the exact retained portable-profile bytes rather than only its digest, compares the source execution binding with every retained schedule-ordered confirmation binding, independently retranslates the reopened confirmation projection proofs under the source-matched profile, and compares the result with the exact selected-tuple ruling partition. The source cannot change the ruling; the ruling cannot recover missing source. That application authority produces a sealed wrapper that privately retains the original preparation for later publication revalidation and separately owns a sanitized internal compiler input with no concrete candidate keys, refs, aliases, producer metadata, or support counts. The exact PortableSource still transitively contains opaque source/lineage identity digests, including candidate-set, plan, envelope, materialization, fixture/capture, and projection identities.
+
+`PreparedCompilation.Valid()` proves construction integrity, not continued currentness. “Sanitized” means authority-narrowed rather than content-redacted. A2.1 produces no compiler output, generated file, bundle, residue, publication, materialization, target, run, or execution classification; those remain independently gated downstream units.
 
 ## Candidate reference and binding
 

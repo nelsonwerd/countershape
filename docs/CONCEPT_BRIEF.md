@@ -2,7 +2,7 @@
 
 - **Working name:** Countershape (package, domain, trademark, and legal clearance not performed)
 - **Mode:** open-source-first experimental infrastructure
-- **State:** deep dive and adversarial red team complete; U1–U6, P07A, and P07B-A1 source/child-bind substrate sealed and strict-clean; P07B-A2 compilation authority is next
+- **State:** deep dive and adversarial red team complete; U1–U6, P07A, P07B-A1, and P07B-A2.1 current-ruling compilation authority are sealed and strict-clean; the pure recoverable A2.2 compiler is next
 - **Last updated:** 2026-07-16
 - **Founder persona:** Soren Vale
 - **Confidence:** 8/10 in the truth kernel; 6/10 in the bounded reference instrument; 3/10 in review compression; 3/10 in adoption
@@ -427,10 +427,11 @@ Each unit is separately verified, claimed, committed, sealed, and gated on `NO_C
 7. **U6a/P06 — Choicepoint and ruling source boundary:** immutable store/CAS, physical confirmation, strict Choicepoint/Decision codecs, blind semantic DTO/session, separation obligation, and typed ruling promotion through `RULING`; no public residue transition.
 8. **U6b/P07A — portable ruling authority (sealed):** unchanged historical projection bytes, strict adapter-bound translators, portable exact tuples, real selectable/differing fields, selected-only custom expectations, and legacy nonemittable preservation.
 9. **U6c/P07B-A1 — source/process substrate (sealed):** byte-complete self-consistent source reconstruction, closed logical-Node runner profile, portable HTTP child-bind/readiness grammar, and physical Observation; no current-ruling join or compiler.
-10. **U6c/P07B-A2/B/C — standalone residue (next):** current-ruling/source/proof compilation authority, Go/Node raw-wire corpus, deterministic recoverable six-file bundle, stale-safe terminal publication, retryable materialization, target-inventory absence checks, and immutable nonhead current execution.
-11. **U7 — complete CLI and reference studies:** safe next actions, both end-to-end proofs, allow-many, custom none-conforms, reject/defer, three clean reproductions, named-machine timings.
-12. **U8 — secure decision bench:** authenticated loopback API, complete state renderer, 1440/375 flows, at least three full visual passes, Playwright/axe/manual checks, and a real different-model screenshot critic.
-13. **U9 — local export, packaging, and hardening:** minimized evidence export, embedded assets/single binary, docs/license/contributor path, adversarial suite, performance/limitations ledger, final strict verify, didrun HTML evidence, receipts handoff.
+10. **U6c/P07B-A2.1 — compilation authority (sealed):** current-revalidated ruling snapshot, exact source/Choicepoint/confirmation/proof joins, selected-tuple partition revalidation, and one sealed preparation with a private authority-narrowed input; no generated files or store writes.
+11. **U6c/P07B-A2.2/B/C — standalone residue (next):** Go/Node raw-wire corpus, deterministic recoverable six-file bundle, stale-safe terminal publication, retryable materialization, target-inventory absence checks, and immutable nonhead current execution.
+12. **U7 — complete CLI and reference studies:** safe next actions, both end-to-end proofs, allow-many, custom none-conforms, reject/defer, three clean reproductions, named-machine timings.
+13. **U8 — secure decision bench:** authenticated loopback API, complete state renderer, 1440/375 flows, at least three full visual passes, Playwright/axe/manual checks, and a real different-model screenshot critic.
+14. **U9 — local export, packaging, and hardening:** minimized evidence export, embedded assets/single binary, docs/license/contributor path, adversarial suite, performance/limitations ledger, final strict verify, didrun HTML evidence, receipts handoff.
 
 Honest fallback milestones are allowed: truth-kernel prototype, observation-only instrument, one-domain instrument, DecisionRecord-only residue, or CLI-only surface. None inherits the full-system claim.
 
@@ -511,4 +512,4 @@ didrun references remain opaque verbatim receipt grades associated with their ex
 
 ## Handoff state
 
-**U0–U6, P07A portable selected-field ruling authority, and the P07B-A1 source/process substrate are sealed and strict-clean. P07B-A2.1 compilation authority is next.** A1 source commit `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`, tree `da0e13f37aacd0e7fb2b52b3aeac628f5558c11e`, supplies bounded self-consistent CLI/HTTP `PortableSource`, the closed runner profile, and child-bind Observation substrate. Its 15 final claims are verbatim `TREE-EXACT`; exact events, permanent failures, physical bounds, seal disclosure, and nonclaims live in `docs/status/P07B-A1-SOURCE.md`. A1 does not establish equality to the current store-bound ruling/confirmation, compiler output, residue, execution, security, or portability. A2.1 must establish the current source/ruling/proof join; A2.2 may then build the pure recoverable compiler. `REFINE` remains a valid semantic noncompilable DecisionRecord but durable promotion refuses it without object publication or head mutation.
+**U0–U6, P07A portable selected-field ruling authority, P07B-A1 source/process reconstruction, and P07B-A2.1 current-ruling compilation authority are sealed and strict-clean. P07B-A2.2's pure recoverable compiler is next.** A1 source commit `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`, tree `da0e13f37aacd0e7fb2b52b3aeac628f5558c11e`, remains the source/process prerequisite. A2.1 reopens current ruling authority, exact-joins the source/Choicepoint/confirmation bindings, independently retranslates proof records, revalidates the selected-tuple partition, and returns a sealed wrapper with privately retained original authority plus a separate authority-narrowed input. Its exact receipt boundary and nonclaims live in `docs/status/P07B-A2-1-AUTHORITY.md`. A2.1 emits no program, file, bundle, residue, or store transition. A2.2 may now build only the pure recoverable compiler. `REFINE` remains a valid semantic noncompilable DecisionRecord but durable promotion refuses it without object publication or head mutation.

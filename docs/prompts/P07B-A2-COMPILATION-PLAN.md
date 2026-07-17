@@ -155,7 +155,7 @@ Positive cases:
 - CLI allow-many with correlated tuples;
 - portable child-bind HTTP `ALLOW_OBSERVED`;
 - HTTP `CUSTOM_EXPECTATION`, such as selected status `401`, with no confirmed candidate conforming;
-- restart/reopen yields the same sanitized input; and
+- restart/reopen preserves the compilation-input digest plus every exposed deterministic identity, selected field, and exact tuple byte; the private sanitized input body remains unexposed, so direct cross-process body-byte equality is `UNRECEIPTED`; and
 - defensive getter mutation cannot alter authority.
 
 Negative cases:

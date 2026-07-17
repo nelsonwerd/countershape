@@ -1,6 +1,7 @@
 package confirmation
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -152,6 +153,54 @@ func checkedFreshConfirmationExample(t testing.TB) []byte {
 		t.Fatalf("checked-in confirmation precondition failed: %v", err)
 	}
 	return recordBytes
+}
+
+func TestFreshConfirmationRetainsExactScheduleOrderedExecutionBindingsWithoutWireChange(t *testing.T) {
+	exact := checkedFreshConfirmationExample(t)
+	record, err := ParseRecord(exact)
+	if err != nil || !record.Valid() {
+		t.Fatalf("ParseRecord() valid=%t err=%v", record.Valid(), err)
+	}
+	digest := record.Digest()
+	bindings := record.ExecutionBindingDigests()
+	if len(bindings) != len(record.PhysicalFactDigests()) || len(bindings) < 2 {
+		t.Fatalf("execution binding roster=%d physical facts=%d", len(bindings), len(record.PhysicalFactDigests()))
+	}
+	for index, binding := range bindings {
+		if !binding.Valid() || binding != bindings[0] {
+			t.Fatalf("schedule binding %d = %s; want repeated exact binding %s", index, binding, bindings[0])
+		}
+	}
+	bindings[0] = confirmationTestDigest(9)
+	if record.ExecutionBindingDigests()[0] != record.ExecutionBindingDigests()[1] {
+		t.Fatal("execution binding getter was not defensive")
+	}
+	if record.Digest() != digest || !bytes.Equal(record.CanonicalBytes(), exact) {
+		t.Fatal("retained in-memory roster changed sealed FreshConfirmation bytes or digest")
+	}
+
+	missing := record
+	missing.executionBindings = nil
+	if missing.Valid() {
+		t.Fatal("record with missing in-memory execution bindings remained valid")
+	}
+	foreign := record
+	foreign.executionBindings = append([]domain.Digest(nil), record.executionBindings...)
+	foreign.executionBindings[len(foreign.executionBindings)-1] = confirmationTestDigest(8)
+	if foreign.Valid() {
+		t.Fatal("record with a same-length foreign execution binding remained valid")
+	}
+	zero := record
+	zero.executionBindings = append([]domain.Digest(nil), record.executionBindings...)
+	zero.executionBindings[0] = ""
+	if zero.Valid() {
+		t.Fatal("record with a zero execution binding remained valid")
+	}
+	extra := record
+	extra.executionBindings = append(append([]domain.Digest(nil), record.executionBindings...), record.executionBindings[0])
+	if extra.Valid() {
+		t.Fatal("record with an extra execution binding remained valid")
+	}
 }
 
 func canonicalConfirmationTestJSON(t testing.TB, value any) []byte {

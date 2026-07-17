@@ -187,6 +187,9 @@ func (r FreshExecutionRecord) InvocationReceiptDigest() domain.Digest {
 func (r FreshExecutionRecord) InvocationFileDigest() domain.Digest {
 	return r.fact.InvocationFileDigest()
 }
+func (r FreshExecutionRecord) ExecutionBindingDigest() domain.Digest {
+	return r.fact.executionBindingDigest
+}
 func (r FreshExecutionRecord) RootLayoutDigest() domain.Digest { return r.fact.RootLayoutDigest() }
 func (r FreshExecutionRecord) Purpose() domain.AttemptPurpose  { return r.fact.Purpose() }
 func (r FreshExecutionRecord) InstanceNonce() string           { return r.fact.InstanceNonce() }

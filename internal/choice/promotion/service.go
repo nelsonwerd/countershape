@@ -5,12 +5,14 @@ package promotion
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/nelsonwerd/countershape/internal/choice"
 	choicepublication "github.com/nelsonwerd/countershape/internal/choice/promotion/internal/publication"
 	"github.com/nelsonwerd/countershape/internal/confirmation"
 	"github.com/nelsonwerd/countershape/internal/domain"
+	"github.com/nelsonwerd/countershape/internal/projectionprofile"
 	"github.com/nelsonwerd/countershape/internal/store"
 )
 
@@ -305,6 +307,9 @@ func (r Ready) StudyID() store.StudyID { return r.head.StudyID() }
 type rulingSeal struct{ marker byte }
 
 type portableRulingPreparationSeal struct{ marker byte }
+type portableCompilationSnapshotSeal struct{ marker byte }
+
+const CodeStaleChoicepoint = "STALE_CHOICEPOINT"
 
 // Ruling is current durable authority for one strict DecisionRecord and its
 // exact Choicepoint predecessor. The DecisionRecord bytes remain inert without
@@ -517,6 +522,155 @@ func (p PortableRulingPreparation) ProfileDigest() domain.Digest {
 
 func (p PortableRulingPreparation) SelectedFields() []string {
 	return p.inspection.SelectedFields()
+}
+
+// PortableCompilationSnapshot is an inert, defensive snapshot of the three
+// strict semantic records behind one current portable ruling. It carries no
+// HeadToken and makes no claim that the ruling remains current after opening.
+type PortableCompilationSnapshot struct {
+	decision     choice.DecisionRecord
+	choicepoint  choice.ChoicepointRecord
+	confirmation confirmation.Record
+	profile      projectionprofile.Profile
+	inspection   choice.PortableRulingInspection
+	seal         *portableCompilationSnapshotSeal
+}
+
+// OpenPortableCompilationSnapshot revalidates current store authority, then
+// independently reparses the exact DecisionRecord, Choicepoint, and
+// FreshConfirmation bytes retained by that authority. Only a genuinely
+// superseded ruling is normalized to STALE_CHOICEPOINT; wrong-store,
+// corruption, and lineage failures retain their owning typed errors.
+func OpenPortableCompilationSnapshot(
+	ctx context.Context,
+	objectStore *store.ObjectStore,
+	preparation PortableRulingPreparation,
+) (PortableCompilationSnapshot, error) {
+	if ctx == nil || objectStore == nil || !preparation.Valid() {
+		return PortableCompilationSnapshot{}, refuse(
+			"INVALID_PORTABLE_RULING_PREPARATION", "sealed portable preparation is required", nil,
+		)
+	}
+	if err := ValidatePortableRulingPreparation(ctx, objectStore, preparation); err != nil {
+		return PortableCompilationSnapshot{}, mapSnapshotCurrentness(err)
+	}
+	reopened, err := openRulingAtHead(ctx, objectStore, preparation.ruling.head)
+	if err != nil {
+		return PortableCompilationSnapshot{}, mapSnapshotCurrentness(err)
+	}
+	if reopened.record.Digest() != preparation.ruling.record.Digest() ||
+		reopened.choicepoint.Digest() != preparation.ruling.choicepoint.Digest() ||
+		!bytes.Equal(reopened.record.CanonicalBytes(), preparation.ruling.record.CanonicalBytes()) ||
+		!bytes.Equal(reopened.choicepoint.CanonicalBytes(), preparation.ruling.choicepoint.CanonicalBytes()) {
+		return PortableCompilationSnapshot{}, refuse(
+			"INVALID_STORED_RULING", "reopened ruling differs from the retained portable preparation", nil,
+		)
+	}
+	choicepoint, err := choice.ParseChoicepointRecord(reopened.choicepoint.CanonicalBytes())
+	if err != nil {
+		return PortableCompilationSnapshot{}, refuse("INVALID_STORED_RULING", "Choicepoint strict reparse failed", err)
+	}
+	decision, err := choice.ParseDecisionRecord(reopened.record.CanonicalBytes(), choicepoint)
+	if err != nil {
+		return PortableCompilationSnapshot{}, refuse("INVALID_STORED_RULING", "DecisionRecord strict reparse failed", err)
+	}
+	confirmationRecord, err := confirmation.ParseRecord(choicepoint.ConfirmationRecord().CanonicalBytes())
+	if err != nil {
+		return PortableCompilationSnapshot{}, refuse("INVALID_STORED_RULING", "FreshConfirmation strict reparse failed", err)
+	}
+	if decision.Digest() != preparation.DecisionDigest() || decision.ChoicepointDigest() != choicepoint.Digest() ||
+		choicepoint.ConfirmationDigest() != confirmationRecord.Digest() ||
+		!bytes.Equal(confirmationRecord.CanonicalBytes(), reopened.confirmationObject.CanonicalBytes()) {
+		return PortableCompilationSnapshot{}, refuse(
+			"INVALID_STORED_RULING", "strict ruling record joins disagree after reopen", nil,
+		)
+	}
+	freshInspection, err := choice.InspectPortableRuling(decision)
+	if err != nil || !freshInspection.Valid() ||
+		freshInspection.DecisionDigest() != preparation.inspection.DecisionDigest() ||
+		freshInspection.ProfileDigest() != preparation.inspection.ProfileDigest() ||
+		!equalStrings(freshInspection.SelectedFields(), preparation.inspection.SelectedFields()) {
+		return PortableCompilationSnapshot{}, refuse(
+			"INVALID_STORED_RULING", "strict ruling inspection differs from the retained portable preparation", err,
+		)
+	}
+	profile := choicepoint.PortableProfile()
+	if !profile.Valid() || profile.Digest() != freshInspection.ProfileDigest() {
+		return PortableCompilationSnapshot{}, refuse(
+			"INVALID_STORED_RULING", "strict ruling portable profile differs from the retained preparation", nil,
+		)
+	}
+	if freshInspection.DecisionDigest() != decision.Digest() ||
+		!equalStrings(freshInspection.SelectedFields(), decision.SelectedFields()) {
+		return PortableCompilationSnapshot{}, refuse(
+			"INVALID_STORED_RULING", "strict ruling profile differs from the retained portable preparation", nil,
+		)
+	}
+	return PortableCompilationSnapshot{
+		decision: decision, choicepoint: choicepoint, confirmation: confirmationRecord,
+		profile: profile, inspection: freshInspection, seal: &portableCompilationSnapshotSeal{marker: 1},
+	}, nil
+}
+
+func mapSnapshotCurrentness(err error) error {
+	var promotionErr *Error
+	if errors.As(err, &promotionErr) && promotionErr.Code == "RULING_NOT_CURRENT" {
+		return refuse(CodeStaleChoicepoint, "portable ruling was superseded before compilation preparation", err)
+	}
+	return err
+}
+
+func (s PortableCompilationSnapshot) Valid() bool {
+	if s.seal == nil || s.seal.marker != 1 || !s.inspection.Valid() ||
+		!s.decision.Valid() || !s.choicepoint.Valid() || !s.confirmation.Valid() ||
+		!s.profile.Valid() || s.profile.Digest() != s.inspection.ProfileDigest() ||
+		s.decision.ChoicepointDigest() != s.choicepoint.Digest() ||
+		s.choicepoint.ConfirmationDigest() != s.confirmation.Digest() ||
+		s.inspection.DecisionDigest() != s.decision.Digest() ||
+		!equalStrings(s.inspection.SelectedFields(), s.decision.SelectedFields()) {
+		return false
+	}
+	reparsedChoicepoint, err := choice.ParseChoicepointRecord(s.choicepoint.CanonicalBytes())
+	if err != nil {
+		return false
+	}
+	reparsedDecision, err := choice.ParseDecisionRecord(s.decision.CanonicalBytes(), reparsedChoicepoint)
+	if err != nil {
+		return false
+	}
+	reparsedProfile := reparsedChoicepoint.PortableProfile()
+	if !reparsedProfile.Valid() || reparsedProfile.Digest() != s.profile.Digest() ||
+		!bytes.Equal(reparsedProfile.CanonicalBytes(), s.profile.CanonicalBytes()) {
+		return false
+	}
+	reparsedConfirmation, err := confirmation.ParseRecord(s.confirmation.CanonicalBytes())
+	return err == nil && reparsedDecision.Digest() == s.decision.Digest() &&
+		reparsedChoicepoint.Digest() == s.choicepoint.Digest() && reparsedConfirmation.Digest() == s.confirmation.Digest()
+}
+
+func (s PortableCompilationSnapshot) DecisionRecord() choice.DecisionRecord {
+	choicepoint, _ := choice.ParseChoicepointRecord(s.choicepoint.CanonicalBytes())
+	decision, _ := choice.ParseDecisionRecord(s.decision.CanonicalBytes(), choicepoint)
+	return decision
+}
+
+func (s PortableCompilationSnapshot) ChoicepointRecord() choice.ChoicepointRecord {
+	choicepoint, _ := choice.ParseChoicepointRecord(s.choicepoint.CanonicalBytes())
+	return choicepoint
+}
+
+func (s PortableCompilationSnapshot) ConfirmationRecord() confirmation.Record {
+	record, _ := confirmation.ParseRecord(s.confirmation.CanonicalBytes())
+	return record
+}
+
+func (s PortableCompilationSnapshot) PortableProfile() projectionprofile.Profile {
+	profile, _ := projectionprofile.Parse(s.profile.CanonicalBytes(), s.profile.Binding())
+	return profile
+}
+
+func (s PortableCompilationSnapshot) ProfileDigest() domain.Digest {
+	return s.inspection.ProfileDigest()
 }
 
 // ValidatePortableRulingPreparation proves currentness only at this instant.

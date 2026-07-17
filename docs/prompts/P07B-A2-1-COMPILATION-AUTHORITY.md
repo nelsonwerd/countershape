@@ -263,7 +263,7 @@ At minimum prove:
 2. CLI allow-many with correlated tuples that would fail under a Cartesian product;
 3. portable child-bind HTTP `ALLOW_OBSERVED` after building the required fresh confirmation/Choicepoint/ruling lineage in test fixtures;
 4. HTTP `CUSTOM_EXPECTATION`, such as selected status `401`, with no confirmed candidate conforming;
-5. process restart/reopen returns byte-identical sanitized input;
+5. process restart/reopen preserves the compilation-input digest plus every exposed deterministic identity, selected field, and exact tuple byte; the private sanitized input body remains unexposed, so direct cross-process body-byte equality is `UNRECEIPTED`;
 6. defensive getter mutation cannot change the preparation;
 7. absent and present-empty values remain different; and
 8. legacy P07A fixture bytes and digests remain byte-identical.
@@ -291,6 +291,8 @@ At minimum refuse:
 
 Cross-pair fixtures must combine individually valid source, preparation, Choicepoint, confirmation, profile, and proof objects from different studies. Shape-invalid-only cases are insufficient.
 
+The public graph makes exactly two independent source cross-pairs behaviorally constructible for this unit and both are required: (1) the same plan/projection/profile with different minimized-stimulus and execution-binding bytes, and (2) the same adapter/required-runner/projection/profile/stimulus/capture with a different valid WorldPlan schedule/budget and consequent execution binding. A same-adapter different-runner source is not constructible because the closed source constructor admits only that adapter's required runner. Profile, entrypoint/start, HTTP readiness/capture, proof, selected-field, and partition drift remain required downstream checks, but their independent behavioral branches are `UNRECEIPTED` where the upstream sealed constructors cannot produce the object. Own those redundancies with upstream refusal tests plus exact architecture anchors rather than a backdoor constructor.
+
 Some defenses are intentionally redundant behind sealed upstream constructors. A legally superseded A2.1 preparation is not currently constructible because `RULING` has no successor transition; its stale-loser receipt belongs in P07B-B. If proof/profile drift, selected-field reorder, partition tampering, or a noncompilable action cannot be constructed through the current public capability graph, do not add a backdoor test constructor or fake a behavioral mutant. Prove the upstream refusal in its owning package, retain the downstream check, and use an architecture anchor/hostile-copy self-test to prevent deletion. Record the constructibility limit explicitly in the status ledger.
 
 ## Physical integration map
@@ -298,7 +300,7 @@ Some defenses are intentionally redundant behind sealed upstream constructors. A
 Use existing study infrastructure rather than adding a second runner:
 
 - In the HTTP invoices physical reduction path, enable its existing `PortableStart` configuration so baseline, reduction, confirmation, portable Choicepoint, and ruling use the real A1 child-bind lineage. Build the exact minimized source from that confirmed study and profile. Exercise custom `401`, wrong-store, original/noisy-stimulus mismatch, retained binding equality, and restart-equivalent preparation. A separate allow-observed ruling may use a second store study because one current head finalizes only once.
-- In the CLI precedence physical reduction path, make the strongest current ruling an allow-many correlated predicate over `cli.stdout.json.mode` and `cli.stdout.json.source`, for example `(config,config)` and `(argv,argv)`. This must kill cross-product and keep-first-tuple faults while leaving `cli.stdout.bytes` unasserted. Exercise exact minimized source, wrong-store, foreign/original-stimulus mismatch, restart equivalence, and defensive getters.
+- In the CLI precedence physical reduction path, make the strongest current ruling an allow-many correlated predicate over `cli.stdout.json.mode` and `cli.stdout.json.source`, for example `(config,config)` and `(argv,argv)`. This must kill cross-product and keep-first-tuple faults while leaving `cli.stdout.bytes` unasserted. Exercise exact minimized source, wrong-store, a valid same-plan foreign/original-stimulus mismatch, a valid same-shape different-WorldPlan mismatch, restart equivalence, and defensive getters.
 - In confirmation wire tests, parse an existing sealed fixture and assert roster cardinality/order/repeated values/defensive copying without changing its bytes or digest.
 - In Choicepoint/session round-trip tests, assert both legacy and fresh records expose byte-identical WorldPlan/minimized-stimulus values and returned-byte mutation cannot alter the record.
 
@@ -308,7 +310,7 @@ Before claiming this unit:
 
 - compare all sealed legacy Choicepoint/DecisionRecord/confirmation fixtures byte-for-byte and digest-for-digest;
 - prove strict parsing reconstructs the new in-memory binding roster without changing canonical bodies;
-- reopen the store in a fresh process and obtain the same sanitized body;
+- reopen the store in a fresh process and obtain the same compilation-input digest plus every exposed deterministic identity, selected field, and exact tuple byte; the private sanitized body remains unexposed and direct cross-process body-byte equality is `UNRECEIPTED`;
 - prove public APIs do not expose a constructor that can mint `PreparedCompilation` or sanitized input from copied wire values; and
 - keep A1 source canonical bytes/digests unchanged.
 
@@ -329,7 +331,7 @@ Require:
 - no generated file roster or bundle type in A2.1; and
 - no store write or head-transition call.
 
-The hostile-copy self-test must demonstrate that the checker catches transitive forbidden dependencies, constructor exposure, comment/string spoofing, candidate field insertion, store-write insertion, and removal of the explicit retranslation anchor.
+The defensive-copy self-test must demonstrate that the checker catches transitive forbidden dependencies, constructor/alias exposure, comment/string spoofing, candidate or canonical-wire insertion, direct and helper-mediated store writes, retained-inspection reuse, portable-profile byte-join deletion, fresh-process weakening, and removal of the explicit retranslation anchor.
 
 ## Mutation gate
 
@@ -354,7 +356,7 @@ Freeze only non-equivalent mutants with named killers and fresh A/B/A restoratio
 
 Do not pad the roster with noncompiling, equivalent, or architecture-only mutants. Architecture requirements belong in the architecture gate unless a constructible behavioral test distinguishes them.
 
-The mutation tool must self-test its own mutation application, named killer mapping, fresh-copy containment, digest restoration, and tamper detection. Retained copies are not hostile-code containment; trusted tests retain host authority.
+The mutation tool must self-test its own mutation application, named killer mapping, fresh-copy containment, digest restoration, tamper detection, complete declared local ESM closure, side-effect-import binding, dynamic-import refusal, and unsupported local-extension refusal. Retained copies are not hostile-code containment; trusted tests retain host authority.
 
 ## didrun and commit discipline
 
@@ -373,7 +375,8 @@ Required final gates include:
 - source/ruling cross-pair negative matrix;
 - restart/reopen compatibility;
 - bounded active fuzzing for the new parser/construction seams; and
-- scoped staged structured credential-pattern scan.
+- scoped staged structured credential-pattern scan; and
+- an explicit serialized didrun-chain integrity check and claim before commit/seal.
 
 Immediately after each final successful command, declare the exact truthful claim before recording another event. Do not address an older event explicitly. Development failures remain permanent history and support no capability.
 

@@ -3,7 +3,7 @@ package domain
 import (
 	"bytes"
 	"encoding/json"
-	"path/filepath"
+	"path"
 	"sort"
 	"strings"
 	"unicode"
@@ -434,7 +434,7 @@ func ValidateWorldPlanDeclaration(config WorldPlanDeclarationConfig) error {
 			continue
 		}
 		command := argv[0]
-		if filepath.Base(command) == command && !strings.Contains(command, "/") {
+		if path.Base(command) == command && !strings.Contains(command, "/") {
 			if _, declared := seenTools[command]; !declared {
 				return refuse(ErrInvalidWorldPlan, "bare host command is absent from required_tools: "+command)
 			}
@@ -495,17 +495,17 @@ func ValidateDirectArgv(argv []string) error {
 	if len(argv) == 0 || argv[0] == "" {
 		return refuse(ErrInvalidWorldPlan, "direct command is empty")
 	}
-	if filepath.Base(argv[0]) == "env" {
+	if path.Base(argv[0]) == "env" {
 		return refuse(ErrShellString, "env wrappers are outside the closed direct-exec profile")
 	}
 	for _, argument := range argv {
-		base := filepath.Base(argument)
+		base := path.Base(argument)
 		if base == "sh" || base == "bash" || base == "zsh" || base == "fish" || base == "dash" ||
 			base == "csh" || base == "tcsh" || base == "ksh" || base == "pwsh" || base == "powershell" {
 			return refuse(ErrShellString, argument)
 		}
 	}
-	if filepath.Base(argv[0]) != argv[0] || strings.ContainsAny(argv[0], `/\\`) || strings.HasPrefix(argv[0], "-") {
+	if path.Base(argv[0]) != argv[0] || strings.ContainsAny(argv[0], `/\\`) || strings.HasPrefix(argv[0], "-") {
 		return refuse(ErrInvalidWorldPlan, "argv[0] must be one bare required-tool name")
 	}
 	if len(argv) > 64 {
@@ -520,10 +520,10 @@ func ValidateDirectArgv(argv []string) error {
 		if len(argument) > 4096 || totalBytes > 65536 {
 			return refuse(ErrInvalidWorldPlan, "argv exceeds v1 byte bound")
 		}
-		if filepath.IsAbs(argument) {
+		if path.IsAbs(argument) {
 			return refuse(ErrInvalidWorldPlan, "absolute argv element")
 		}
-		if strings.HasPrefix(argument, "~") || strings.Contains(argument, "\\") || filepath.VolumeName(argument) != "" {
+		if strings.HasPrefix(argument, "~") || strings.Contains(argument, "\\") || hasWindowsVolumePrefix(argument) {
 			return refuse(ErrInvalidWorldPlan, "argv token uses unsupported path syntax")
 		}
 		for _, character := range argument {
@@ -543,7 +543,7 @@ func ValidateDirectArgv(argv []string) error {
 			}
 		}
 		if index > 0 && strings.Contains(argument, "/") {
-			if strings.HasPrefix(argument, "/") || filepath.Clean(argument) != argument || argument == "." ||
+			if strings.HasPrefix(argument, "/") || path.Clean(argument) != argument || argument == "." ||
 				strings.HasPrefix(argument, "../") || strings.Contains(argument, "/../") {
 				return refuse(ErrInvalidWorldPlan, "repo-relative argv path is not clean")
 			}
@@ -552,23 +552,35 @@ func ValidateDirectArgv(argv []string) error {
 			return refuse(ErrAmbientInterpolation, "argv")
 		}
 		for _, prefix := range []string{"--output=", "--out=", "-o="} {
-			if strings.HasPrefix(argument, prefix) && filepath.IsAbs(strings.TrimPrefix(argument, prefix)) {
+			if strings.HasPrefix(argument, prefix) && path.IsAbs(strings.TrimPrefix(argument, prefix)) {
 				return refuse(ErrInvalidWorldPlan, "absolute output path")
 			}
 		}
-		if equals := strings.IndexByte(argument, '='); equals >= 0 && filepath.IsAbs(argument[equals+1:]) {
+		if equals := strings.IndexByte(argument, '='); equals >= 0 && path.IsAbs(argument[equals+1:]) {
 			return refuse(ErrInvalidWorldPlan, "absolute embedded option value")
 		}
 		if argument == "--output" || argument == "--out" || argument == "-o" {
 			if index+1 >= len(argv) || argv[index+1] == "" {
 				return refuse(ErrInvalidWorldPlan, "output flag is missing a path")
 			}
-			if filepath.IsAbs(argv[index+1]) {
+			if path.IsAbs(argv[index+1]) {
 				return refuse(ErrInvalidWorldPlan, "absolute output path")
 			}
 		}
 	}
 	return nil
+}
+
+// hasWindowsVolumePrefix closes the drive-relative spelling that filepath's
+// host-specific VolumeName recognized only when Countershape itself ran on
+// Windows. The direct argv grammar is now identical on every host without
+// pulling OS path semantics into the pure domain dependency closure.
+func hasWindowsVolumePrefix(value string) bool {
+	if len(value) < 2 || value[1] != ':' {
+		return false
+	}
+	first := value[0]
+	return first >= 'a' && first <= 'z' || first >= 'A' && first <= 'Z'
 }
 
 func hasAmbientInterpolation(value string) bool {

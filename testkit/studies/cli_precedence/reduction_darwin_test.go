@@ -5,23 +5,402 @@ package cli_precedence
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
+	"encoding/json"
 	"errors"
+	"fmt"
+	"io"
+	"os"
+	"os/exec"
 	"path/filepath"
+	"reflect"
 	"slices"
+	"sort"
+	"syscall"
 	"testing"
 	"time"
 
 	countercli "github.com/nelsonwerd/countershape/internal/adapters/cli"
+	climodel "github.com/nelsonwerd/countershape/internal/adapters/cli/model"
+	"github.com/nelsonwerd/countershape/internal/canon"
 	"github.com/nelsonwerd/countershape/internal/choice"
 	"github.com/nelsonwerd/countershape/internal/choice/promotion"
 	"github.com/nelsonwerd/countershape/internal/compare"
 	"github.com/nelsonwerd/countershape/internal/confirmation"
+	"github.com/nelsonwerd/countershape/internal/contractsource"
 	"github.com/nelsonwerd/countershape/internal/domain"
+	nodeemit "github.com/nelsonwerd/countershape/internal/emit/node"
+	"github.com/nelsonwerd/countershape/internal/projectiontranslate"
 	reducer "github.com/nelsonwerd/countershape/internal/reduce"
 	grade "github.com/nelsonwerd/countershape/internal/reduction"
 	"github.com/nelsonwerd/countershape/internal/store"
 	"github.com/nelsonwerd/countershape/testkit/clifixture"
 )
+
+const (
+	cliA21StudyLabel    = "physical CLI choicepoint promotion"
+	cliA21RestartEnv    = "COUNTERSHAPE_A21_CLI_RESTART_REQUEST"
+	cliA21RestartSchema = "countershape/a2.1/restart/v1"
+	cliA21RequestLimit  = 8 << 10
+	cliA21ResultLimit   = 2 << 20
+)
+
+type cliA21RestartRequest struct {
+	Schema     string `json:"schema"`
+	StoreRoot  string `json:"store_root"`
+	SourcePath string `json:"source_path"`
+	ResultPath string `json:"result_path"`
+}
+
+type cliA21RestartResult struct {
+	Schema                  string   `json:"schema"`
+	CompilationDigest       string   `json:"compilation_digest"`
+	DecisionRecordDigest    string   `json:"decision_record_digest"`
+	ChoicepointDigest       string   `json:"choicepoint_digest"`
+	SourceDigest            string   `json:"source_digest"`
+	SourceProfileDigest     string   `json:"source_profile_digest"`
+	Action                  string   `json:"action"`
+	SelectedFields          []string `json:"selected_fields"`
+	AllowedTupleCanonical64 []string `json:"allowed_tuple_canonical_base64"`
+}
+
+type cliA21PreparedDiagnostic struct {
+	Valid               bool
+	Digest              string
+	DecisionRecord      string
+	Choicepoint         string
+	Source              string
+	SourceProfile       string
+	Action              string
+	SelectedCount       int
+	SelectedPreview     []string
+	AllowedTupleCount   int
+	AllowedTupleSHA256s []string
+}
+
+func cliA21DescribePrepared(prepared nodeemit.PreparedCompilation) cliA21PreparedDiagnostic {
+	selected := prepared.SelectedFields()
+	selectedLimit := len(selected)
+	if selectedLimit > 8 {
+		selectedLimit = 8
+	}
+	tuples := prepared.AllowedTupleCanonicalBytes()
+	tupleLimit := len(tuples)
+	if tupleLimit > 8 {
+		tupleLimit = 8
+	}
+	tupleDigests := make([]string, tupleLimit)
+	for index, tuple := range tuples[:tupleLimit] {
+		digest := sha256.Sum256(tuple)
+		tupleDigests[index] = fmt.Sprintf("sha256:%x", digest)
+	}
+	return cliA21PreparedDiagnostic{
+		Valid: prepared.Valid(), Digest: prepared.Digest().String(),
+		DecisionRecord: prepared.DecisionRecordDigest().String(), Choicepoint: prepared.ChoicepointDigest().String(),
+		Source: prepared.SourceDigest().String(), SourceProfile: prepared.SourceProfileDigest().String(), Action: prepared.Action(),
+		SelectedCount: len(selected), SelectedPreview: append([]string(nil), selected[:selectedLimit]...),
+		AllowedTupleCount: len(tuples), AllowedTupleSHA256s: tupleDigests,
+	}
+}
+
+type cliA21BoundedOutput struct {
+	data      []byte
+	truncated bool
+}
+
+func (w *cliA21BoundedOutput) Write(input []byte) (int, error) {
+	const limit = 64 << 10
+	if remaining := limit - len(w.data); remaining > 0 {
+		if len(input) < remaining {
+			remaining = len(input)
+		}
+		w.data = append(w.data, input[:remaining]...)
+	}
+	if len(w.data) == limit {
+		w.truncated = true
+	}
+	return len(input), nil
+}
+
+func (w cliA21BoundedOutput) String() string {
+	if w.truncated {
+		return string(w.data) + "\n[child output truncated]"
+	}
+	return string(w.data)
+}
+
+func cliA21WriteExclusive(path string, body []byte, limit int) error {
+	if len(body) == 0 || len(body) > limit {
+		return fmt.Errorf("body size %d is outside 1..%d", len(body), limit)
+	}
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+	if err != nil {
+		return err
+	}
+	n, writeErr := file.Write(body)
+	if writeErr == nil && n != len(body) {
+		writeErr = io.ErrShortWrite
+	}
+	if writeErr == nil {
+		writeErr = file.Sync()
+	}
+	closeErr := file.Close()
+	if writeErr != nil {
+		return writeErr
+	}
+	return closeErr
+}
+
+func cliA21ReadPrivateRegular(path string, limit int) ([]byte, error) {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return nil, err
+	}
+	if !info.Mode().IsRegular() || info.Mode().Perm()&0o077 != 0 || info.Size() <= 0 || info.Size() > int64(limit) {
+		return nil, fmt.Errorf("%s is not a bounded private regular file", path)
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	body, readErr := io.ReadAll(io.LimitReader(file, int64(limit)+1))
+	closeErr := file.Close()
+	if readErr != nil {
+		return nil, readErr
+	}
+	if closeErr != nil {
+		return nil, closeErr
+	}
+	if len(body) == 0 || len(body) > limit || int64(len(body)) != info.Size() {
+		return nil, fmt.Errorf("%s changed size while being read", path)
+	}
+	return body, nil
+}
+
+func cliA21DecodeStrict(body []byte, output any) error {
+	decoder := json.NewDecoder(bytes.NewReader(body))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(output); err != nil {
+		return err
+	}
+	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+		return fmt.Errorf("trailing JSON value: %v", err)
+	}
+	return nil
+}
+
+func cliA21CleanAbsolute(path string) bool {
+	return filepath.IsAbs(path) && filepath.Clean(path) == path
+}
+
+func cliA21StoreAuthorityRefused(err error) bool {
+	var typed *store.Error
+	return errors.As(err, &typed) && typed.Code == "OBJECT_AUTHORITY_REFUSED"
+}
+
+func cliA21StoreInventory(t *testing.T, root string) []string {
+	t.Helper()
+	entries := make([]string, 0, 32)
+	err := filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		relative, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		info, err := entry.Info()
+		if err != nil {
+			return err
+		}
+		stat, ok := info.Sys().(*syscall.Stat_t)
+		if !ok {
+			return fmt.Errorf("store inventory has no Darwin stat identity for %s", relative)
+		}
+		identity := fmt.Sprintf("%d\x00%d\x00%d", stat.Dev, stat.Ino, info.ModTime().UnixNano())
+		if entry.IsDir() {
+			entries = append(entries, fmt.Sprintf("D\x00%s\x00%#o\x00%s", relative, info.Mode().Perm(), identity))
+			return nil
+		}
+		if !entry.Type().IsRegular() {
+			return fmt.Errorf("store inventory contains non-regular entry %s (%s)", relative, entry.Type())
+		}
+		body, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		digest := sha256.Sum256(body)
+		entries = append(entries, fmt.Sprintf("F\x00%s\x00%#o\x00%d\x00%x\x00%s", relative, info.Mode().Perm(), len(body), digest, identity))
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("inventory CLI ruling store: %v", err)
+	}
+	sort.Strings(entries)
+	return entries
+}
+
+func assertCLICompilationFreshProcessRestart(
+	t *testing.T,
+	storeRoot string,
+	source contractsource.PortableSource,
+	prepared nodeemit.PreparedCompilation,
+) {
+	t.Helper()
+	protocolRoot := t.TempDir()
+	if err := os.Chmod(protocolRoot, 0o700); err != nil {
+		t.Fatalf("make CLI restart protocol directory private: %v", err)
+	}
+	sourcePath := filepath.Join(protocolRoot, "portable-source.json")
+	requestPath := filepath.Join(protocolRoot, "request.json")
+	resultPath := filepath.Join(protocolRoot, "result.json")
+	childCWD := filepath.Join(protocolRoot, "child-cwd")
+	if err := os.Mkdir(childCWD, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := cliA21WriteExclusive(sourcePath, source.CanonicalBytes(), contractsource.MaxSourceCanonicalBytes); err != nil {
+		t.Fatalf("write private CLI restart source: %v", err)
+	}
+	requestBody, err := json.Marshal(cliA21RestartRequest{
+		Schema: cliA21RestartSchema, StoreRoot: storeRoot, SourcePath: sourcePath, ResultPath: resultPath,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := cliA21WriteExclusive(requestPath, requestBody, cliA21RequestLimit); err != nil {
+		t.Fatalf("write private CLI restart request: %v", err)
+	}
+	executable, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	command := exec.CommandContext(
+		ctx,
+		executable,
+		"-test.run=^TestCLICompilationFreshProcessRestartHelper$",
+		"-test.count=1",
+		"-test.timeout=90s",
+	)
+	command.Dir = childCWD
+	command.Env = []string{cliA21RestartEnv + "=" + requestPath}
+	var output cliA21BoundedOutput
+	command.Stdout = &output
+	command.Stderr = &output
+	if err := command.Run(); err != nil {
+		if ctx.Err() != nil {
+			t.Fatalf("fresh-process CLI compilation restart timed out: %v; %s", ctx.Err(), output.String())
+		}
+		t.Fatalf("fresh-process CLI compilation restart failed: %v; %s", err, output.String())
+	}
+	resultBody, err := cliA21ReadPrivateRegular(resultPath, cliA21ResultLimit)
+	if err != nil {
+		t.Fatalf("read private CLI restart result: %v", err)
+	}
+	var result cliA21RestartResult
+	if err := cliA21DecodeStrict(resultBody, &result); err != nil {
+		t.Fatalf("decode strict CLI restart result: %v", err)
+	}
+	if result.Schema != cliA21RestartSchema ||
+		result.CompilationDigest != prepared.Digest().String() ||
+		result.DecisionRecordDigest != prepared.DecisionRecordDigest().String() ||
+		result.ChoicepointDigest != prepared.ChoicepointDigest().String() ||
+		result.SourceDigest != prepared.SourceDigest().String() ||
+		result.SourceProfileDigest != prepared.SourceProfileDigest().String() ||
+		result.Action != prepared.Action() || !slices.Equal(result.SelectedFields, prepared.SelectedFields()) {
+		t.Fatalf("fresh-process CLI compilation summaries changed: %#v", result)
+	}
+	wantTuples := prepared.AllowedTupleCanonicalBytes()
+	if len(result.AllowedTupleCanonical64) != len(wantTuples) {
+		t.Fatalf("fresh-process CLI tuple count = %d, want %d", len(result.AllowedTupleCanonical64), len(wantTuples))
+	}
+	for index, encoded := range result.AllowedTupleCanonical64 {
+		decoded, err := base64.StdEncoding.Strict().DecodeString(encoded)
+		if err != nil || !bytes.Equal(decoded, wantTuples[index]) {
+			t.Fatalf("fresh-process CLI tuple %d changed: %v", index, err)
+		}
+	}
+}
+
+func TestCLICompilationFreshProcessRestartHelper(t *testing.T) {
+	requestPath := os.Getenv(cliA21RestartEnv)
+	if requestPath == "" {
+		return
+	}
+	if !cliA21CleanAbsolute(requestPath) {
+		t.Fatal("CLI restart request path is not clean and absolute")
+	}
+	requestRoot := filepath.Dir(requestPath)
+	rootInfo, err := os.Lstat(requestRoot)
+	if err != nil || !rootInfo.IsDir() || rootInfo.Mode().Perm()&0o077 != 0 {
+		t.Fatalf("CLI restart request directory is not private: %v", err)
+	}
+	requestBody, err := cliA21ReadPrivateRegular(requestPath, cliA21RequestLimit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var request cliA21RestartRequest
+	if err := cliA21DecodeStrict(requestBody, &request); err != nil {
+		t.Fatal(err)
+	}
+	if request.Schema != cliA21RestartSchema || !cliA21CleanAbsolute(request.StoreRoot) ||
+		!cliA21CleanAbsolute(request.SourcePath) || !cliA21CleanAbsolute(request.ResultPath) ||
+		filepath.Dir(request.SourcePath) != requestRoot || filepath.Dir(request.ResultPath) != requestRoot ||
+		request.SourcePath == request.ResultPath || request.SourcePath == requestPath || request.ResultPath == requestPath {
+		t.Fatal("CLI restart request is outside the closed path protocol")
+	}
+	if _, err := os.Lstat(request.ResultPath); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("CLI restart result path already exists or is inaccessible: %v", err)
+	}
+	sourceBody, err := cliA21ReadPrivateRegular(request.SourcePath, contractsource.MaxSourceCanonicalBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source, err := contractsource.Parse(sourceBody)
+	if err != nil {
+		t.Fatalf("strict CLI restart source parse: %v", err)
+	}
+	studyID, err := store.NewStudyID(cliA21StudyLabel)
+	if err != nil {
+		t.Fatal(err)
+	}
+	objectStore, err := store.OpenObjectStore(request.StoreRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ruling, err := promotion.OpenRuling(context.Background(), objectStore, studyID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	preparation, err := promotion.PreparePortableRuling(context.Background(), objectStore, ruling)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prepared, err := nodeemit.PrepareCompilation(context.Background(), objectStore, preparation, source)
+	if err != nil || !prepared.Valid() {
+		t.Fatalf("fresh-process CLI preparation is invalid: %#v, %v", cliA21DescribePrepared(prepared), err)
+	}
+	tuples := prepared.AllowedTupleCanonicalBytes()
+	encodedTuples := make([]string, len(tuples))
+	for index, tuple := range tuples {
+		encodedTuples[index] = base64.StdEncoding.EncodeToString(tuple)
+	}
+	resultBody, err := json.Marshal(cliA21RestartResult{
+		Schema: cliA21RestartSchema, CompilationDigest: prepared.Digest().String(),
+		DecisionRecordDigest: prepared.DecisionRecordDigest().String(),
+		ChoicepointDigest:    prepared.ChoicepointDigest().String(), SourceDigest: prepared.SourceDigest().String(),
+		SourceProfileDigest: prepared.SourceProfileDigest().String(), Action: prepared.Action(),
+		SelectedFields: prepared.SelectedFields(), AllowedTupleCanonical64: encodedTuples,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := cliA21WriteExclusive(request.ResultPath, resultBody, cliA21ResultLimit); err != nil {
+		t.Fatal(err)
+	}
+}
 
 func TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence(t *testing.T) {
 	appMode, err := countercli.PresentEnvironment("APP_MODE", "env")
@@ -300,7 +679,7 @@ func TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence(t *test
 	if err != nil {
 		t.Fatal(err)
 	}
-	studyID, err := store.NewStudyID("physical CLI choicepoint promotion")
+	studyID, err := store.NewStudyID(cliA21StudyLabel)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -450,12 +829,33 @@ func TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence(t *test
 		t.Fatal(err)
 	}
 	cards := decisionSession.BlindDTO().Cards()
-	if len(cards) < 2 {
-		t.Fatal("divergent CLI Choicepoint did not expose at least two blind outcome cards")
+	if len(cards) < 3 {
+		t.Fatal("divergent CLI Choicepoint did not expose its three correlated outcome cards")
+	}
+	allowedAliases := make([]string, 0, 2)
+	for _, card := range cards {
+		mode := ""
+		source := ""
+		for _, field := range card.Fields {
+			switch field.FieldID {
+			case string(countercli.CLIFieldStdoutJSONMode):
+				mode = field.Text
+			case string(countercli.CLIFieldStdoutJSONSource):
+				source = field.Text
+			}
+		}
+		if mode == source && (mode == "config" || mode == "argv") {
+			allowedAliases = append(allowedAliases, card.Alias)
+		}
+	}
+	if len(allowedAliases) != 2 {
+		t.Fatalf("could not select exact correlated config/argv cards: %#v", cards)
 	}
 	standardInput := choice.RulingDraftInput{
-		Action: choice.ActionAllowObserved, SelectedFields: []string{string(countercli.CLIFieldStdoutJSONMode)},
-		AllowedAliases: []string{cards[0].Alias},
+		Action: choice.ActionAllowObserved, SelectedFields: []string{
+			string(countercli.CLIFieldStdoutJSONMode), string(countercli.CLIFieldStdoutJSONSource),
+		},
+		AllowedAliases: allowedAliases,
 	}
 	if _, err := decisionSession.Propose(standardInput); !choice.IsRefusal(err, choice.CodeRequiredSurfaceNotVisited) {
 		t.Fatalf("standard blind proposal bypassed evidence presentation: %v", err)
@@ -494,7 +894,7 @@ func TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence(t *test
 		t.Fatalf("semantic no-op post-reveal ruling accepted a rationale: %v", err)
 	}
 	changedInput := standardInput
-	changedInput.AllowedAliases = []string{cards[1].Alias}
+	changedInput.AllowedAliases = []string{cards[0].Alias}
 	if _, err := decisionSession.Revise(changedInput, ""); !choice.IsRefusal(err, choice.CodeChangeRationaleRequired) {
 		t.Fatalf("changed post-reveal ruling omitted its rationale: %v", err)
 	}
@@ -530,12 +930,25 @@ func TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence(t *test
 	if err != nil || parsedDecision.Digest() != decision.Digest() {
 		t.Fatalf("DecisionRecord did not round trip strictly: %v", err)
 	}
-	if !slices.Equal(parsedDecision.SelectedFields(), []string{string(countercli.CLIFieldStdoutJSONMode)}) ||
-		!slices.Equal(parsedDecision.NonassertedFields(), []string{
-			string(countercli.CLIFieldStdoutBytes), string(countercli.CLIFieldStdoutJSONSource),
-		}) {
+	if !slices.Equal(parsedDecision.SelectedFields(), []string{
+		string(countercli.CLIFieldStdoutJSONMode), string(countercli.CLIFieldStdoutJSONSource),
+	}) || !slices.Equal(parsedDecision.NonassertedFields(), []string{string(countercli.CLIFieldStdoutBytes)}) {
 		t.Fatalf("portable CLI DecisionRecord selected/nonasserted fields differ: selected=%#v context=%#v",
 			parsedDecision.SelectedFields(), parsedDecision.NonassertedFields())
+	}
+	correlated, ok := parsedDecision.CompilableRuling()
+	if !ok || len(correlated.AllowedTuples()) != 2 {
+		t.Fatalf("portable CLI allow-many predicate lost its two complete tuples: %#v", correlated)
+	}
+	seenCorrelated := map[string]bool{}
+	for _, tuple := range correlated.AllowedTuples() {
+		if len(tuple.Fields) != 2 || tuple.Fields[0].Value.Text() != tuple.Fields[1].Value.Text() {
+			t.Fatalf("allow-many predicate synthesized or retained a cross-product tuple: %#v", tuple)
+		}
+		seenCorrelated[tuple.Fields[0].Value.Text()] = true
+	}
+	if !seenCorrelated["config"] || !seenCorrelated["argv"] || seenCorrelated["env"] {
+		t.Fatalf("allow-many predicate tuple roster = %#v", seenCorrelated)
 	}
 	tamperedCompilable := bytes.Replace(decision.CanonicalBytes(), []byte(`"compilable":true`), []byte(`"compilable":false`), 1)
 	if bytes.Equal(tamperedCompilable, decision.CanonicalBytes()) {
@@ -663,6 +1076,157 @@ func TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence(t *test
 		promotion.ValidatePortableRulingPreparation(context.Background(), rulingRestart, preparation) != nil {
 		t.Fatalf("current portable CLI ruling preparation failed: %#v, %v", preparation, err)
 	}
+	resolvedProfile, err := projectiontranslate.Resolve(confirmedStudy.ProjectionDefinition.Binding())
+	if err != nil {
+		t.Fatal(err)
+	}
+	projectionAuthority, err := climodel.ResolveCLIProjectionAuthority(
+		confirmedStudy.ProjectionDefinition.Digest(), confirmedStudy.ProjectionDefinition.CanonicalBytes(),
+		confirmedStudy.ProjectionDefinition.Binding(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	portableSource, err := contractsource.NewCLISource(contractsource.CLIInput{
+		Plan: confirmedStudy.Plan, Stimulus: confirmedStudy.Stimulus, Capture: confirmedStudy.CapturePolicy,
+		Profile: resolvedProfile.Profile(), Projection: projectionAuthority,
+	})
+	if err != nil {
+		t.Fatalf("exact minimized CLI source construction failed: %v", err)
+	}
+	const cliSourceProfileCanonical = `{"adapter_domain":"CLI","launch_profile":"NODE_REPO_SCRIPT_V1","runtime_family":"NODE","scope":"DECLARED_SOURCE_PROFILE_NOT_EXECUTION_EVIDENCE","semantic_profile":"countershape-node-core-exact/v1","start_profile":"DIRECT_CHILD_V1","subject_entrypoint":"fixture.mjs"}`
+	cliSourceProfileDigest, err := canon.DigestBytes("ContractSourceProfile", []byte(cliSourceProfileCanonical))
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantPreparedTuples := [][]byte{
+		[]byte(`{"fields":[{"field_id":"cli.stdout.json.mode","value":{"tag":"STRING","value":"argv"}},{"field_id":"cli.stdout.json.source","value":{"tag":"STRING","value":"argv"}}]}`),
+		[]byte(`{"fields":[{"field_id":"cli.stdout.json.mode","value":{"tag":"STRING","value":"config"}},{"field_id":"cli.stdout.json.source","value":{"tag":"STRING","value":"config"}}]}`),
+	}
+	headBeforeCompilation, err := rulingRestart.OpenHead(context.Background(), studyID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inventoryBeforeCompilation := cliA21StoreInventory(t, promotionRoot)
+	prepared, err := nodeemit.PrepareCompilation(context.Background(), rulingRestart, preparation, portableSource)
+	if err != nil || !prepared.Valid() || prepared.DecisionRecordDigest() != decision.Digest() ||
+		prepared.ChoicepointDigest() != choicepoint.Digest() || prepared.SourceDigest() != portableSource.Digest() ||
+		prepared.SourceProfileDigest().String() != cliSourceProfileDigest.String() ||
+		prepared.Action() != string(choice.ActionAllowObserved) ||
+		!slices.Equal(prepared.SelectedFields(), []string{
+			string(countercli.CLIFieldStdoutJSONMode), string(countercli.CLIFieldStdoutJSONSource),
+		}) || !reflect.DeepEqual(prepared.AllowedTupleCanonicalBytes(), wantPreparedTuples) {
+		t.Fatalf("current CLI compilation preparation = %#v, %v", cliA21DescribePrepared(prepared), err)
+	}
+	headAfterCompilation, err := rulingRestart.OpenHead(context.Background(), studyID)
+	if err != nil || headAfterCompilation.HeadDigest() != headBeforeCompilation.HeadDigest() ||
+		headAfterCompilation.Stage() != store.StageRuling || headAfterCompilation.CurrentDigest() != decision.Digest() {
+		t.Fatalf("compilation preparation changed the durable head: %v", err)
+	}
+	if !reflect.DeepEqual(cliA21StoreInventory(t, promotionRoot), inventoryBeforeCompilation) {
+		t.Fatal("successful CLI compilation preparation changed the durable store inventory")
+	}
+	defensiveSelected := prepared.SelectedFields()
+	defensiveTuples := prepared.AllowedTupleCanonicalBytes()
+	defensiveSelected[0] = "cli.stdout.bytes"
+	defensiveTuples[0][0] ^= 0xff
+	if !prepared.Valid() || prepared.SelectedFields()[0] != string(countercli.CLIFieldStdoutJSONMode) {
+		t.Fatal("PreparedCompilation getters were not defensive")
+	}
+	parsedSource, err := contractsource.Parse(portableSource.CanonicalBytes())
+	if err != nil {
+		t.Fatal(err)
+	}
+	reconstructed, err := nodeemit.PrepareCompilation(context.Background(), rulingRestart, preparation, parsedSource)
+	if err != nil || reconstructed.Digest() != prepared.Digest() {
+		t.Fatalf("byte-identical independently reconstructed source changed preparation: %v", err)
+	}
+	noisySource, err := contractsource.NewCLISource(contractsource.CLIInput{
+		Plan: baselineResult.Plan, Stimulus: baselineResult.Stimulus, Capture: baselineResult.CapturePolicy,
+		Profile: resolvedProfile.Profile(), Projection: projectionAuthority,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	parsedNoisySource, err := contractsource.Parse(noisySource.CanonicalBytes())
+	if err != nil || !parsedNoisySource.Valid() || parsedNoisySource.Digest() != noisySource.Digest() ||
+		!bytes.Equal(parsedNoisySource.CanonicalBytes(), noisySource.CanonicalBytes()) {
+		t.Fatalf("noisy CLI source is not an independently valid exact authority: %v", err)
+	}
+	if noisySource.Adapter() != portableSource.Adapter() || noisySource.Plan().Digest() != portableSource.Plan().Digest() ||
+		!bytes.Equal(noisySource.Plan().CanonicalBytes(), portableSource.Plan().CanonicalBytes()) ||
+		noisySource.ProjectionBinding().Digest() != portableSource.ProjectionBinding().Digest() ||
+		!bytes.Equal(noisySource.ProjectionBinding().CanonicalBytes(), portableSource.ProjectionBinding().CanonicalBytes()) ||
+		noisySource.Profile().Digest() != portableSource.Profile().Digest() ||
+		!bytes.Equal(noisySource.Profile().CanonicalBytes(), portableSource.Profile().CanonicalBytes()) ||
+		noisySource.StimulusDigest() == portableSource.StimulusDigest() ||
+		bytes.Equal(noisySource.StimulusCanonicalBytes(), portableSource.StimulusCanonicalBytes()) ||
+		noisySource.ExecutionBindingDigest() == portableSource.ExecutionBindingDigest() ||
+		bytes.Equal(noisySource.ExecutionBindingCanonicalBytes(), portableSource.ExecutionBindingCanonicalBytes()) {
+		t.Fatal("CLI cross-study source matrix did not isolate stimulus/execution authority under one valid shape")
+	}
+	if refused, prepareErr := nodeemit.PrepareCompilation(
+		context.Background(), rulingRestart, preparation, noisySource,
+	); !nodeemit.IsCode(prepareErr, nodeemit.CodeSourceRulingMismatch) || refused.Valid() ||
+		refused.Digest().Valid() || refused.DecisionRecordDigest().Valid() || refused.ChoicepointDigest().Valid() ||
+		refused.SourceDigest().Valid() || refused.SourceProfileDigest().Valid() || refused.Action() != "" ||
+		len(refused.SelectedFields()) != 0 || len(refused.AllowedTupleCanonicalBytes()) != 0 {
+		t.Fatalf("noisy/original source cross-pair = valid %t, err %v", refused.Valid(), prepareErr)
+	}
+	planMismatchConfig := cliPhysicalReductionConfig(t)
+	planMismatchConfig.Repetitions = 2
+	planMismatchConfig.MaxTotalTrials = 6
+	planMismatchConfig.StimulusOverride = &confirmedStudy.Stimulus
+	planMismatchStudy, err := Run(context.Background(), planMismatchConfig)
+	if err != nil || !planMismatchStudy.HasOutcomeMap {
+		t.Fatalf("independently valid different-plan CLI study failed: %v", err)
+	}
+	planMismatchSource, err := contractsource.NewCLISource(contractsource.CLIInput{
+		Plan: planMismatchStudy.Plan, Stimulus: confirmedStudy.Stimulus, Capture: planMismatchStudy.CapturePolicy,
+		Profile: resolvedProfile.Profile(), Projection: projectionAuthority,
+	})
+	if err != nil {
+		t.Fatalf("different-plan CLI source construction failed: %v", err)
+	}
+	parsedPlanMismatchSource, err := contractsource.Parse(planMismatchSource.CanonicalBytes())
+	if err != nil || !parsedPlanMismatchSource.Valid() || parsedPlanMismatchSource.Digest() != planMismatchSource.Digest() ||
+		!bytes.Equal(parsedPlanMismatchSource.CanonicalBytes(), planMismatchSource.CanonicalBytes()) {
+		t.Fatalf("different-plan CLI source is not independently strict and valid: %v", err)
+	}
+	originalCLIView, originalViewOK := portableSource.CLIView()
+	mismatchCLIView, mismatchViewOK := parsedPlanMismatchSource.CLIView()
+	if !originalViewOK || !mismatchViewOK || parsedPlanMismatchSource.Adapter() != portableSource.Adapter() ||
+		parsedPlanMismatchSource.Plan().Adapter().RunnerDigest != portableSource.Plan().Adapter().RunnerDigest ||
+		parsedPlanMismatchSource.Entrypoint() != portableSource.Entrypoint() ||
+		parsedPlanMismatchSource.StartProfile() != portableSource.StartProfile() ||
+		parsedPlanMismatchSource.ProjectionBinding().Digest() != portableSource.ProjectionBinding().Digest() ||
+		!bytes.Equal(parsedPlanMismatchSource.ProjectionBinding().CanonicalBytes(), portableSource.ProjectionBinding().CanonicalBytes()) ||
+		parsedPlanMismatchSource.Profile().Digest() != portableSource.Profile().Digest() ||
+		!bytes.Equal(parsedPlanMismatchSource.Profile().CanonicalBytes(), portableSource.Profile().CanonicalBytes()) ||
+		parsedPlanMismatchSource.StimulusDigest() != portableSource.StimulusDigest() ||
+		!bytes.Equal(parsedPlanMismatchSource.StimulusCanonicalBytes(), portableSource.StimulusCanonicalBytes()) ||
+		mismatchCLIView.Capture().Digest() != originalCLIView.Capture().Digest() ||
+		!bytes.Equal(mismatchCLIView.Capture().CanonicalBytes(), originalCLIView.Capture().CanonicalBytes()) ||
+		parsedPlanMismatchSource.Plan().Digest() == portableSource.Plan().Digest() ||
+		bytes.Equal(parsedPlanMismatchSource.Plan().CanonicalBytes(), portableSource.Plan().CanonicalBytes()) ||
+		parsedPlanMismatchSource.ExecutionBindingDigest() == portableSource.ExecutionBindingDigest() ||
+		bytes.Equal(parsedPlanMismatchSource.ExecutionBindingCanonicalBytes(), portableSource.ExecutionBindingCanonicalBytes()) {
+		t.Fatal("CLI different-plan cross-study source did not isolate plan authority under the same valid source shape")
+	}
+	if refused, prepareErr := nodeemit.PrepareCompilation(
+		context.Background(), rulingRestart, preparation, parsedPlanMismatchSource,
+	); !nodeemit.IsCode(prepareErr, nodeemit.CodeSourceRulingMismatch) || refused.Valid() ||
+		refused.Digest().Valid() || refused.DecisionRecordDigest().Valid() || refused.ChoicepointDigest().Valid() ||
+		refused.SourceDigest().Valid() || refused.SourceProfileDigest().Valid() || refused.Action() != "" ||
+		len(refused.SelectedFields()) != 0 || len(refused.AllowedTupleCanonicalBytes()) != 0 {
+		t.Fatalf("different-plan/original source cross-pair = valid %t, err %v", refused.Valid(), prepareErr)
+	}
+	currentAfterPlanMismatch, err := rulingRestart.OpenHead(context.Background(), studyID)
+	if err != nil || currentAfterPlanMismatch.HeadDigest() != headAfterCompilation.HeadDigest() ||
+		currentAfterPlanMismatch.Stage() != store.StageRuling || currentAfterPlanMismatch.CurrentDigest() != decision.Digest() ||
+		!reflect.DeepEqual(cliA21StoreInventory(t, promotionRoot), inventoryBeforeCompilation) {
+		t.Fatalf("different-plan CLI source refusal changed durable store state: %v", err)
+	}
 	currentBeforeForeign, err := rulingRestart.OpenHead(context.Background(), studyID)
 	if err != nil {
 		t.Fatal(err)
@@ -678,6 +1242,13 @@ func TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence(t *test
 	var foreignStoreErr *store.Error
 	if !errors.As(foreignErr, &foreignStoreErr) || foreignStoreErr.Code != "OBJECT_AUTHORITY_REFUSED" {
 		t.Fatalf("portable preparation crossed store authority: %v", foreignErr)
+	}
+	if refused, prepareErr := nodeemit.PrepareCompilation(
+		context.Background(), foreignStore, preparation, portableSource,
+	); !cliA21StoreAuthorityRefused(prepareErr) || refused.Valid() || refused.Digest().Valid() || refused.DecisionRecordDigest().Valid() ||
+		refused.ChoicepointDigest().Valid() || refused.SourceDigest().Valid() || refused.SourceProfileDigest().Valid() ||
+		refused.Action() != "" || len(refused.SelectedFields()) != 0 || len(refused.AllowedTupleCanonicalBytes()) != 0 {
+		t.Fatalf("wrong-store compilation preparation = valid %t, err %v", refused.Valid(), prepareErr)
 	}
 	currentAfterForeign, err := foreignStore.OpenHead(context.Background(), studyID)
 	if err != nil || currentAfterForeign.HeadDigest() != currentBeforeForeign.HeadDigest() ||
@@ -696,8 +1267,32 @@ func TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence(t *test
 		!slices.Equal(foreignPreparation.SelectedFields(), preparation.SelectedFields()) {
 		t.Fatalf("reopened store could not reissue matching portable preparation: %#v, %v", foreignPreparation, err)
 	}
-	if err := promotion.ValidatePortableRulingPreparation(context.Background(), rulingRestart, foreignPreparation); err == nil {
-		t.Fatal("foreign-store portable preparation validated against its predecessor store instance")
+	restartedPreparation, err := nodeemit.PrepareCompilation(
+		context.Background(), foreignStore, foreignPreparation, parsedSource,
+	)
+	if err != nil || !restartedPreparation.Valid() || restartedPreparation.Digest() != prepared.Digest() ||
+		!reflect.DeepEqual(restartedPreparation.AllowedTupleCanonicalBytes(), prepared.AllowedTupleCanonicalBytes()) {
+		t.Fatalf("restart/reopen changed sanitized compilation input: %#v, %v", cliA21DescribePrepared(restartedPreparation), err)
+	}
+	assertCLICompilationFreshProcessRestart(t, promotionRoot, portableSource, prepared)
+	if predecessorErr := promotion.ValidatePortableRulingPreparation(
+		context.Background(), rulingRestart, foreignPreparation,
+	); !cliA21StoreAuthorityRefused(predecessorErr) {
+		t.Fatalf("foreign-store portable preparation crossed predecessor authority: %v", predecessorErr)
+	}
+	if refused, prepareErr := nodeemit.PrepareCompilation(
+		context.Background(), rulingRestart, foreignPreparation, portableSource,
+	); !cliA21StoreAuthorityRefused(prepareErr) || refused.Valid() || refused.Digest().Valid() || refused.DecisionRecordDigest().Valid() ||
+		refused.ChoicepointDigest().Valid() || refused.SourceDigest().Valid() || refused.SourceProfileDigest().Valid() ||
+		refused.Action() != "" || len(refused.SelectedFields()) != 0 || len(refused.AllowedTupleCanonicalBytes()) != 0 {
+		t.Fatalf("reissued preparation crossed predecessor compilation authority: %#v, %v", cliA21DescribePrepared(refused), prepareErr)
+	}
+	currentAfterRestartMatrix, err := foreignStore.OpenHead(context.Background(), studyID)
+	if err != nil || currentAfterRestartMatrix.HeadDigest() != currentBeforeForeign.HeadDigest() ||
+		currentAfterRestartMatrix.Stage() != currentBeforeForeign.Stage() ||
+		currentAfterRestartMatrix.CurrentDigest() != currentBeforeForeign.CurrentDigest() ||
+		!reflect.DeepEqual(cliA21StoreInventory(t, promotionRoot), inventoryBeforeCompilation) {
+		t.Fatalf("CLI A2.1 restart/refusal matrix changed durable store state: %v", err)
 	}
 	if _, err := promotion.Finalize(context.Background(), restartedStore, reopenedReady, rejectedDecision); err == nil {
 		t.Fatal("stale CHOICEPOINT_READY authority published a second DecisionRecord")

@@ -2,7 +2,7 @@
 
 - **Contract version:** U0 / `state-machines-v1`
 - **Target:** narrowed Darwin reference instrument
-- **Status:** normative separation of implemented and future transitions. U6a is sealed through `RULING`; P07A changes authority inside that transition; P07B-A1 source reconstruction and child-bind Observation are sealed nontransition substrate in `status/P07B-A1-SOURCE.md`; compilation, terminal publication, materialization, and execution transitions remain future.
+- **Status:** normative separation of implemented and future transitions. U6a is sealed through `RULING`; P07A changes authority inside that transition; P07B-A1 source reconstruction/child-bind Observation and P07B-A2.1 nontransitioning compilation preparation are sealed substrate in their status files; compiler output, terminal publication, materialization, and execution transitions remain future.
 
 Countershape state is a set of immutable semantic artifacts connected by validated transitions. State names are not presentation copy. The Go domain model, JSON schemas, API DTOs, CLI, studio, generated residue, examples, and tests must agree on these names and preconditions.
 
@@ -538,7 +538,8 @@ Additional prohibited transitions include promoting an unqualified `STABLE` labe
 | U6a / P06 | CAS heads, physical confirmation, Choicepoint, blind semantic session, DecisionRecords, ruling promotion through `RULING` | stale/forged/reused-evidence/noncompilable/weak-field/blind-leak negatives pass; no public residue edge |
 | U6b / P07A | adapter-bound portable tuple interpretation and selected-field rulings; no new head stage | unchanged historical bytes, exact profile/wire translation, selected-only custom expectation, legacy refusal, and physical CLI/HTTP studies pass |
 | U6c / P07B-A1 | nontransition PortableSource reconstruction and portable child-bind HTTP Observation substrate | sealed source/process gates pass; no current-ruling join, compiler, residue, or execution state is inferred |
-| U6c / P07B-A2/B/C | current-ruling compilation authority, recoverable bundle, retryable publication/materialization, and immutable nonhead current execution | source/ruling/proof equality, raw-wire Go/Node parity, stale-before-publication, recovery, target-inventory absence, and contradiction/ineligibility negatives pass |
+| U6c / P07B-A2.1 | nontransitioning current-ruling compilation preparation | source/ruling/Choicepoint/confirmation/proof equality and selected-tuple partition gates pass; no head advance or durable currentness after return |
+| U6c / P07B-A2.2/B/C | recoverable bundle, retryable publication/materialization, and immutable nonhead current execution | raw-wire Go/Node parity, stale-before-publication, recovery, target-inventory absence, and contradiction/ineligibility negatives pass |
 | U7 | complete study lifecycle and both decisive reference lineages | three clean runs preserve semantic bytes while all attempts are new |
 | U8 | authenticated transport and full renderer state matrix | blind leakage, request forgery, presentation obligations, visual/accessibility gates pass |
 | U9 | export/packaging/final claim mapping | exact environment receipts, final strict verify, HTML evidence, honest handoff |

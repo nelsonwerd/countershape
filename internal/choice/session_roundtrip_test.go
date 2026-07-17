@@ -195,6 +195,45 @@ func TestFreshConstructionFromLegacyEvidenceUsesPortableMode(t *testing.T) {
 	}
 }
 
+func TestChoicepointAuthorityGettersAreExactAndDefensiveForLegacyAndPortableRecords(t *testing.T) {
+	legacy := checkedChoicepointExample(t)
+	portable := freshPortableChoicepointExample(t)
+	for name, record := range map[string]ChoicepointRecord{"legacy": legacy, "portable": portable} {
+		t.Run(name, func(t *testing.T) {
+			plan := record.WorldPlan()
+			stimulus := record.MinimizedStimulus()
+			profile := record.PortableProfile()
+			if plan.Digest() != record.plan.Digest() || !bytes.Equal(plan.CanonicalBytes(), record.plan.CanonicalBytes()) ||
+				stimulus.Kind() != record.minimized.Kind() || stimulus.Digest() != record.minimized.Digest() ||
+				!bytes.Equal(stimulus.CanonicalBytes(), record.minimized.CanonicalBytes()) {
+				t.Fatal("authority getter changed exact plan or minimized stimulus")
+			}
+			if name == "legacy" && profile.Valid() {
+				t.Fatal("legacy Choicepoint unexpectedly exposed a portable profile")
+			}
+			if name == "portable" && (!profile.Valid() ||
+				profile.Digest() != record.confirmed.registry.profileDigest ||
+				!bytes.Equal(profile.CanonicalBytes(), record.confirmed.registry.expectationDomain.ProfileBytes())) {
+				t.Fatal("portable profile getter changed exact prepared-ruling profile authority")
+			}
+			planCopy := plan.CanonicalBytes()
+			stimulusCopy := stimulus.CanonicalBytes()
+			planCopy[0] ^= 0xff
+			stimulusCopy[0] ^= 0xff
+			profileCopy := profile.CanonicalBytes()
+			if len(profileCopy) > 0 {
+				profileCopy[0] ^= 0xff
+			}
+			if !bytes.Equal(record.WorldPlan().CanonicalBytes(), record.plan.CanonicalBytes()) ||
+				!bytes.Equal(record.MinimizedStimulus().CanonicalBytes(), record.minimized.CanonicalBytes()) ||
+				(name == "portable" && !bytes.Equal(record.PortableProfile().CanonicalBytes(), record.confirmed.registry.expectationDomain.ProfileBytes())) ||
+				!record.Valid() {
+				t.Fatal("caller mutation changed Choicepoint authority")
+			}
+		})
+	}
+}
+
 func TestPortableDraftBudgetNeverDefersStructuralOverflowToFinalize(t *testing.T) {
 	record := freshPortableChoicepointExample(t)
 	definitions := record.confirmed.registry.Definitions()

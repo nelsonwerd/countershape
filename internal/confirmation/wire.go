@@ -40,6 +40,7 @@ type Record struct {
 	rootLayoutDigests     []domain.Digest
 	invocationDigests     []domain.Digest
 	invocationFileDigests []domain.Digest
+	executionBindings     []domain.Digest
 }
 
 func ParseRecord(exact []byte) (Record, error) {
@@ -181,8 +182,7 @@ func parseRecordIdentity(identity freshConfirmationIdentity, exact []byte, expec
 		return Record{}, err
 	}
 
-	factDigests, processDigests, rootDigests, invocationDigests, invocationFileDigests, err :=
-		validatePhysicalWire(identity, challenge, plan, confirmed)
+	physical, err := validatePhysicalWire(identity, challenge, plan, confirmed)
 	if err != nil {
 		return Record{}, err
 	}
@@ -211,9 +211,9 @@ func parseRecordIdentity(identity freshConfirmationIdentity, exact []byte, expec
 		reductionGradeBytes: append([]byte(nil), gradeBytes...), reductionGradeDigest: gradeDigest,
 		reductionGradeStatus: identity.ReductionGradeStatus,
 		reducedArtifact:      reducedArtifact, confirmedArtifact: confirmedArtifact, challengeDigest: challenge,
-		priorLedgerDigest: priorLedger, physicalFactDigests: factDigests, processDigests: processDigests,
-		rootLayoutDigests: rootDigests, invocationDigests: invocationDigests,
-		invocationFileDigests: invocationFileDigests,
+		priorLedgerDigest: priorLedger, physicalFactDigests: physical.factDigests, processDigests: physical.processDigests,
+		rootLayoutDigests: physical.rootDigests, invocationDigests: physical.invocationDigests,
+		invocationFileDigests: physical.invocationFileDigests, executionBindings: physical.executionBindings,
 	}, nil
 }
 
@@ -303,11 +303,20 @@ const (
 	reductionStatusOneMinimal reductionStatus = "ONE_MINIMAL_UNDER"
 )
 
+type physicalWireSummary struct {
+	factDigests           []domain.Digest
+	processDigests        []domain.Digest
+	rootDigests           []domain.Digest
+	invocationDigests     []domain.Digest
+	invocationFileDigests []domain.Digest
+	executionBindings     []domain.Digest
+}
+
 func validatePhysicalWire(
 	identity freshConfirmationIdentity,
 	challenge, plan domain.Digest,
 	confirmed compare.CandidateOutcomeMap,
-) ([]domain.Digest, []domain.Digest, []domain.Digest, []domain.Digest, []domain.Digest, error) {
+) (physicalWireSummary, error) {
 	count := identity.ConfirmationTrialCount
 	lists := [][]string{
 		identity.PhysicalFactBytesBase64, identity.PhysicalFactDigests, identity.ProcessDigests,
@@ -315,43 +324,43 @@ func validatePhysicalWire(
 	}
 	for _, list := range lists {
 		if len(list) != count {
-			return nil, nil, nil, nil, nil, refuse("INVALID_FRESH_CONFIRMATION_RECORD", "physical fact list cardinality differs", nil)
+			return physicalWireSummary{}, refuse("INVALID_FRESH_CONFIRMATION_RECORD", "physical fact list cardinality differs", nil)
 		}
 	}
-	factDigests := make([]domain.Digest, count)
-	processDigests := make([]domain.Digest, count)
-	rootDigests := make([]domain.Digest, count)
-	invocationDigests := make([]domain.Digest, count)
-	invocationFileDigests := make([]domain.Digest, count)
+	summary := physicalWireSummary{
+		factDigests: make([]domain.Digest, count), processDigests: make([]domain.Digest, count),
+		rootDigests: make([]domain.Digest, count), invocationDigests: make([]domain.Digest, count),
+		invocationFileDigests: make([]domain.Digest, count), executionBindings: make([]domain.Digest, count),
+	}
 	attempts := make([]domain.Digest, count)
 	worlds := make([]domain.Digest, count)
 	candidateCounts := map[domain.CandidateExecutionKey]int{}
 	roster := confirmed.CandidateRoster()
 	if len(roster) == 0 || count%len(roster) != 0 {
-		return nil, nil, nil, nil, nil, refuse("INVALID_FRESH_CONFIRMATION_RECORD", "physical candidate matrix cardinality is invalid", nil)
+		return physicalWireSummary{}, refuse("INVALID_FRESH_CONFIRMATION_RECORD", "physical candidate matrix cardinality is invalid", nil)
 	}
 	schedule, err := observe.NewPhaseRotatedSchedule(roster, count/len(roster), domain.AttemptConfirmation)
 	if err != nil || !schedule.Valid() || schedule.TotalTrials() != count ||
 		schedule.Digest().String() != identity.ConfirmationScheduleDigest ||
 		schedule.StartOffset() != identity.ConfirmationScheduleOffset {
-		return nil, nil, nil, nil, nil, refuse("INVALID_FRESH_CONFIRMATION_RECORD", "physical schedule identity differs", err)
+		return physicalWireSummary{}, refuse("INVALID_FRESH_CONFIRMATION_RECORD", "physical schedule identity differs", err)
 	}
 	scheduledTrials := schedule.Trials()
 	for index := 0; index < count; index++ {
 		factBytes, err := decodeBase64(identity.PhysicalFactBytesBase64[index], "physical fact")
 		if err != nil {
-			return nil, nil, nil, nil, nil, err
+			return physicalWireSummary{}, err
 		}
 		fact, err := world.InspectFreshExecutionFactWire(factBytes)
 		if err != nil {
-			return nil, nil, nil, nil, nil, refuse("INVALID_FRESH_CONFIRMATION_RECORD", "physical fact failed its world-owned strict parser", err)
+			return physicalWireSummary{}, refuse("INVALID_FRESH_CONFIRMATION_RECORD", "physical fact failed its world-owned strict parser", err)
 		}
 		factDigest, err := parseDigest(identity.PhysicalFactDigests[index], "physical fact")
 		if err != nil {
-			return nil, nil, nil, nil, nil, err
+			return physicalWireSummary{}, err
 		}
 		if fact.Digest() != factDigest {
-			return nil, nil, nil, nil, nil, refuse("INVALID_FRESH_CONFIRMATION_RECORD", "physical fact digest differs", err)
+			return physicalWireSummary{}, refuse("INVALID_FRESH_CONFIRMATION_RECORD", "physical fact digest differs", err)
 		}
 		wantNonce, nonceErr := confirmationNonce(challenge, index)
 		candidate := fact.CandidateKey()
@@ -359,38 +368,40 @@ func validatePhysicalWire(
 			fact.Purpose() != domain.AttemptConfirmation || fact.ScheduleOrdinal() != index || nonceErr != nil ||
 			fact.InstanceNonce() != wantNonce || !candidateInRoster(roster, candidate) ||
 			candidate != scheduledTrials[index].CandidateKey() {
-			return nil, nil, nil, nil, nil, refuse("INVALID_FRESH_CONFIRMATION_RECORD", "physical fact lineage differs", nil)
+			return physicalWireSummary{}, refuse("INVALID_FRESH_CONFIRMATION_RECORD", "physical fact lineage differs", nil)
 		}
 		attempts[index] = fact.AttemptArtifactDigest()
 		worlds[index] = fact.WorldDigest()
-		processDigests[index] = fact.ProcessDigest()
-		rootDigests[index] = fact.RootLayoutDigest()
-		invocationDigests[index] = fact.InvocationReceiptDigest()
-		invocationFileDigests[index] = fact.InvocationFileDigest()
-		if processDigests[index].String() != identity.ProcessDigests[index] ||
-			rootDigests[index].String() != identity.RootLayoutDigests[index] ||
-			invocationDigests[index].String() != identity.InvocationReceiptDigests[index] ||
-			invocationFileDigests[index].String() != identity.InvocationFileDigests[index] {
-			return nil, nil, nil, nil, nil, refuse("INVALID_FRESH_CONFIRMATION_RECORD", "physical summary lists differ", nil)
+		summary.processDigests[index] = fact.ProcessDigest()
+		summary.rootDigests[index] = fact.RootLayoutDigest()
+		summary.invocationDigests[index] = fact.InvocationReceiptDigest()
+		summary.invocationFileDigests[index] = fact.InvocationFileDigest()
+		summary.executionBindings[index] = fact.ExecutionBindingDigest()
+		if summary.processDigests[index].String() != identity.ProcessDigests[index] ||
+			summary.rootDigests[index].String() != identity.RootLayoutDigests[index] ||
+			summary.invocationDigests[index].String() != identity.InvocationReceiptDigests[index] ||
+			summary.invocationFileDigests[index].String() != identity.InvocationFileDigests[index] ||
+			!summary.executionBindings[index].Valid() {
+			return physicalWireSummary{}, refuse("INVALID_FRESH_CONFIRMATION_RECORD", "physical summary lists differ", nil)
 		}
-		factDigests[index] = factDigest
+		summary.factDigests[index] = factDigest
 		candidateCounts[candidate]++
 	}
 	for _, candidate := range roster {
 		if candidateCounts[candidate] != count/len(roster) {
-			return nil, nil, nil, nil, nil, refuse("INVALID_FRESH_CONFIRMATION_RECORD", "physical candidate matrix is incomplete", nil)
+			return physicalWireSummary{}, refuse("INVALID_FRESH_CONFIRMATION_RECORD", "physical candidate matrix is incomplete", nil)
 		}
 	}
-	if duplicateDigest(factDigests) || duplicateDigest(processDigests) || duplicateDigest(rootDigests) ||
-		duplicateDigest(invocationDigests) || duplicateDigest(invocationFileDigests) {
-		return nil, nil, nil, nil, nil, refuse("INVALID_FRESH_CONFIRMATION_RECORD", "physical evidence was reused", nil)
+	if duplicateDigest(summary.factDigests) || duplicateDigest(summary.processDigests) || duplicateDigest(summary.rootDigests) ||
+		duplicateDigest(summary.invocationDigests) || duplicateDigest(summary.invocationFileDigests) {
+		return physicalWireSummary{}, refuse("INVALID_FRESH_CONFIRMATION_RECORD", "physical evidence was reused", nil)
 	}
 	sortDigests(attempts)
 	sortDigests(worlds)
 	if !sameDigests(attempts, confirmed.EvidenceAttemptDigests()) || !sameDigests(worlds, confirmed.EvidenceWorldDigests()) {
-		return nil, nil, nil, nil, nil, refuse("INVALID_FRESH_CONFIRMATION_RECORD", "physical fact coverage differs from map", nil)
+		return physicalWireSummary{}, refuse("INVALID_FRESH_CONFIRMATION_RECORD", "physical fact coverage differs from map", nil)
 	}
-	return factDigests, processDigests, rootDigests, invocationDigests, invocationFileDigests, nil
+	return summary, nil
 }
 
 func buildPriorEvidenceLedgerRecord(
@@ -499,15 +510,21 @@ func cloneRecord(input Record) Record {
 	input.rootLayoutDigests = append([]domain.Digest(nil), input.rootLayoutDigests...)
 	input.invocationDigests = append([]domain.Digest(nil), input.invocationDigests...)
 	input.invocationFileDigests = append([]domain.Digest(nil), input.invocationFileDigests...)
+	input.executionBindings = append([]domain.Digest(nil), input.executionBindings...)
 	return input
 }
 
 func (r Record) Valid() bool {
-	return r.digest.Valid() && len(r.canonicalBytes) > 0 && r.planDigest.Valid() &&
-		r.originalBaseline.ArtifactDigest().Valid() && r.reducedArtifact.Valid() && r.confirmedArtifact.Valid() &&
-		r.challengeDigest.Valid() && r.priorLedgerDigest.Valid() && r.reductionRun.Digest().Valid() &&
-		r.reductionGradeDigest.Valid() && len(r.reductionGradeBytes) > 0 && len(r.projectionProofs) >= 2 &&
-		len(r.physicalFactDigests) >= 2
+	if !r.digest.Valid() || len(r.canonicalBytes) == 0 || !r.planDigest.Valid() ||
+		!r.originalBaseline.ArtifactDigest().Valid() || !r.reducedArtifact.Valid() || !r.confirmedArtifact.Valid() ||
+		!r.challengeDigest.Valid() || !r.priorLedgerDigest.Valid() || !r.reductionRun.Digest().Valid() ||
+		!r.reductionGradeDigest.Valid() || len(r.reductionGradeBytes) == 0 || len(r.projectionProofs) < 2 ||
+		len(r.physicalFactDigests) < 2 || len(r.executionBindings) != len(r.physicalFactDigests) {
+		return false
+	}
+	parsed, err := ParseRecord(r.canonicalBytes)
+	return err == nil && parsed.digest == r.digest && bytes.Equal(parsed.canonicalBytes, r.canonicalBytes) &&
+		sameDigestsInOrder(parsed.executionBindings, r.executionBindings)
 }
 
 func (r Record) Digest() domain.Digest                                  { return r.digest }
@@ -531,6 +548,21 @@ func (r Record) ProjectionProofs() []ProjectionProof {
 }
 func (r Record) PhysicalFactDigests() []domain.Digest {
 	return append([]domain.Digest(nil), r.physicalFactDigests...)
+}
+func (r Record) ExecutionBindingDigests() []domain.Digest {
+	return append([]domain.Digest(nil), r.executionBindings...)
+}
+
+func sameDigestsInOrder(left, right []domain.Digest) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for index := range left {
+		if left[index] != right[index] {
+			return false
+		}
+	}
+	return true
 }
 
 func cloneProjectionProofs(input []ProjectionProof) []ProjectionProof {

@@ -12,10 +12,10 @@
 
 ## Current state
 
-- **Pipeline phase:** U0–U6, P07A/U6b, and P07B-A1 source/process substrate are sealed and strict-clean. P07B-A1 source commit `1e56da3bfafc` passed 15/15 exact claims. The documentation receipt carrying this handoff is acceptable only when its fresh serialized ledger is chain-intact and strict-clean. P07B-A2.1 compilation authority is next.
-- **Git:** repository is on `codex/countershape-autopilot`. The current complete source-unit boundary is P07B-A1 commit `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`, tree `da0e13f37aacd0e7fb2b52b3aeac628f5558c11e`. Earlier U6a, planning, translator, and P07A-B boundaries remain history. Resolve the follow-up documentation receipt commit carrying this handoff locally rather than copying a self-referential hash from prose.
-- **didrun:** installed globally. Two ledgers broke under concurrent writers and remain preserved under `.didrun-history/`; the P07A-A mixed-generation ledger also remains as strict-red negative history. Every didrun operation is serialized by the primary agent, and final claims are made immediately after their successful command. S6-09 now records the P07B-A1 105-finding entropy-scanner behavior and strict-clean serialized result; S6-08 records claim-generation friction; S6-07 remains the reason agents never write didrun concurrently. See `docs/status/DIDRUN_BUGS.md` before recording evidence.
-- **Build:** U5 adds the sealed bounded tri-valued reducer. U6 adds the immutable store, physical fresh confirmation, strict Choicepoint/DecisionRecord codecs, blind semantic session, compile eligibility, and opaque store publication capabilities. P07A adds the closed portable algebra, proof-first exact translators, and selected-field ruling authority. P07B-A1 adds bounded self-consistent CLI/HTTP `PortableSource`, a closed logical-Node runner profile, `NODE_LOOPBACK_CHILD_BIND_PIPE_READY_V1`, exact FD3 ready-frame parsing, readiness-only refusal behavior, and a Darwin child-bind Observation. It does not join source to the current ruling/confirmation or implement a compiler, bundle, residue, materializer, execution target/run/classification, product CLI, server, dashboard, visual renderer, or report.
+- **Pipeline phase:** U0–U6, P07A/U6b, P07B-A1 source/process, and P07B-A2.1 current-ruling compilation authority are sealed and strict-clean. A2.1's exact receipt map and nonclaims live in `docs/status/P07B-A2-1-AUTHORITY.md`. The operator-supplied cumulative-verification maintenance unit is mandatory next; P07B-A2.2 cannot begin until that separate maintenance commit is sealed and strict-clean.
+- **Git:** repository is on `codex/countershape-autopilot`. P07B-A1 remains sealed at source commit `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`, tree `da0e13f37aacd0e7fb2b52b3aeac628f5558c11e`. Resolve the A2.1 implementation commit and tree locally from the commit containing its status file rather than copying a self-referential hash from prose. Earlier U6a, planning, translator, and P07A-B boundaries remain history.
+- **didrun:** installed globally. Two ledgers broke under concurrent writers and remain preserved under `.didrun-history/`; the P07A-A mixed-generation ledger also remains as strict-red negative history. A2.1's chain-intact pre-seal development ledger is preserved whole at `.didrun-history/2026-07-16-p07b-a2-1-preseal-mixed/.didrun/` because it had no seal watermark and spanned superseded trees; it supports no sealed capability. Every didrun operation is serialized by the primary agent, and final claims are made immediately after their successful command. S6-09 now records the P07B-A1 105-finding entropy-scanner behavior and strict-clean serialized result; S6-08 records claim-generation friction; S6-07 remains the reason agents never write didrun concurrently. See `docs/status/DIDRUN_BUGS.md` before recording evidence.
+- **Build:** U5 adds the sealed bounded tri-valued reducer. U6 adds the immutable store, physical fresh confirmation, strict Choicepoint/DecisionRecord codecs, blind semantic session, compile eligibility, and opaque store publication capabilities. P07A adds the closed portable algebra, proof-first exact translators, and selected-field ruling authority. P07B-A1 adds bounded self-consistent CLI/HTTP `PortableSource`, a closed logical-Node runner profile, `NODE_LOOPBACK_CHILD_BIND_PIPE_READY_V1`, exact FD3 ready-frame parsing, readiness-only refusal behavior, and a Darwin child-bind Observation. P07B-A2.1 reopens current ruling authority, retains the schedule-ordered confirmation binding roster, exact-joins source/Choicepoint/confirmation/proofs, revalidates complete correlated selected tuples, and returns a sealed preparation with a private authority-narrowed input. It does not implement compiler output, a bundle, residue, materializer, execution target/run/classification, product CLI, server, dashboard, visual renderer, or report.
 - **External APIs:** none used in the product. Current web research is read-only. Real model integrations remain human-gated and must never be faked.
 
 ## Read first, in order
@@ -25,19 +25,20 @@
 3. `docs/SEMANTICS.md`
 4. `docs/PROJECTION_ALGEBRA.md`
 5. `research/deep-dive/11-p07-implementation-red-team.md`
-6. `docs/status/P07B-A1-SOURCE.md`
-7. `docs/prompts/P07B-A2-COMPILATION-PLAN.md`
-8. `docs/prompts/P07B-A2-1-COMPILATION-AUTHORITY.md`
-9. `docs/status/P07A-RULING.md`
-10. `docs/status/P07-PLANNING.md`
-11. `docs/status/P07A-TRANSLATOR.md`
-12. `research/ideation/07-divergence-and-selection.md`
-13. `research/ideation/06-founder-falsification.md`
-14. `research/ideation/05-counterfactual-prior-art.md`
-15. `research/ideation/04-finalist-duel.md`
-16. `research/ideation/02-wake-overlap-audit.md`
-17. `research/grounding/00-last30days-synthesis.md`
-18. this handoff
+6. `docs/status/P07B-A2-1-AUTHORITY.md`
+7. `docs/prompts/P07B-A2-2-RECOVERABLE-COMPILER.md`
+8. `docs/prompts/P07B-A2-COMPILATION-PLAN.md`
+9. `docs/status/P07B-A1-SOURCE.md`
+10. `docs/status/P07A-RULING.md`
+11. `docs/status/P07-PLANNING.md`
+12. `docs/status/P07A-TRANSLATOR.md`
+13. `research/ideation/07-divergence-and-selection.md`
+14. `research/ideation/06-founder-falsification.md`
+15. `research/ideation/05-counterfactual-prior-art.md`
+16. `research/ideation/04-finalist-duel.md`
+17. `research/ideation/02-wake-overlap-audit.md`
+18. `research/grounding/00-last30days-synthesis.md`
+19. this handoff
 
 Read `research/deep-dive/07-SYNTHESIS.md`, `08-RED_TEAM.md`, and the later P07 implementation-time correction immediately after the semantic contracts and before the ideation files.
 
@@ -279,6 +280,32 @@ The plain seal stopped on `105 likely secret(s) found (high-entropy)`. After the
 
 A1 establishes only self-consistent source reconstruction and portable child-bind Observation substrate. It does not establish equality to a current store-bound ruling/Choicepoint/FreshConfirmation, independent proof retranslation, a child-bind FreshConfirmation/portable ruling, listener PID ownership, dependency or secret absence, network denial, hostile containment, compiler output, residue, materialization, execution, product surfaces, portability, production readiness, or security review.
 
+## P07B-A2.1 current-ruling compilation-authority receipt boundary
+
+The A2.1 implementation commit is the commit containing `docs/status/P07B-A2-1-AUTHORITY.md`; resolve its hash and tree locally. It is accepted only when its serialized didrun chain is intact, the commit is sealed, and strict exits `0`. The sealed manifest is authoritative; each row below copies the verbatim grade and implies nothing stronger.
+
+| Claimed capability | didrun claim label | Verbatim grade |
+| --- | --- | --- |
+| Go source formatting | `P07B A2.1 Go formatting` | `TREE-EXACT` |
+| Node verification-tool syntax | `P07B A2.1 verification tool syntax` | `TREE-EXACT` |
+| Focused authority/model/roster/compatibility suites | `P07B A2.1 focused authority compatibility suites` | `TREE-EXACT` |
+| Physical cross-pair, no-side-effect, and fresh-process restart matrix | `P07B A2.1 physical source ruling cross-pair and fresh-process restart matrix` | `TREE-EXACT` |
+| Complete repository Go suite | `P07B A2.1 complete Go repository suite` | `TREE-EXACT` |
+| Complete Go vet | `P07B A2.1 complete Go vet` | `TREE-EXACT` |
+| Complete race-enabled repository suite | `P07B A2.1 complete Go race suite` | `TREE-EXACT` |
+| Exact layered architecture boundary | `P07B A2.1 exact architecture boundary` | `TREE-EXACT` |
+| Fifty-seven-case defensive architecture self-test | `P07B A2.1 architecture 57-case defensive self-test` | `TREE-EXACT` |
+| Mutation harness/receipt/tamper self-test | `P07B A2.1 mutation harness receipt and tamper self-test` | `TREE-EXACT` |
+| Fourteen-fault fresh A/B/A closure | `P07B A2.1 fourteen-fault fresh A/B/A closure` | `TREE-EXACT` |
+| Bounded one-worker exact construction fuzz | `P07B A2.1 bounded exact construction fuzz` | `TREE-EXACT` |
+| Exact staged inventory and diff check | `P07B A2.1 exact staged inventory and diff check` | `TREE-EXACT` |
+| Scoped staged structured credential-pattern scan | `P07B A2.1 scoped staged structured credential-pattern scan` | `TREE-EXACT` |
+| Serialized didrun ledger chain integrity | `P07B A2.1 didrun chain intact` | `TREE-EXACT` |
+
+The archived development ledger remains intentionally honest: an early zero-exit command selected private restart helpers without their protocol environment and therefore supports no mapped capability. The first full race event exposed only an undersized child-process test timeout under race instrumentation, and the first 14-fault command reached its sole listener-dependent baseline without loopback escalation. Neither failure was relabeled as a catch. After shutdown, one focused-suite event also exited before tests because the reboot had removed its named private scratch directories; recreating only those ignored directories let the unchanged command pass. A pre-seal audit then found that the chain-intact ledger had no seal watermark and spanned superseded trees, so the entire ledger was archived unchanged instead of sealing a manifest with stale claims. The fresh final ledger reran the owner test, bounded timeout repair, complete race pass, approved-loopback 14-fault closure, and every other mapped gate; only its exact mapped final-tree claims above count toward the sealed unit.
+
+A2.1 establishes only construction-time current-ruling/source/Choicepoint/confirmation/proof agreement and an opaque prepared input. Its behavioral cross-study matrix covers one valid same-plan/projection/profile source with different stimulus/execution binding and one valid same-adapter/runner/projection/profile/stimulus/capture source with a different WorldPlan/execution binding. Same-adapter runner drift is unconstructible under the closed source API; profile, entrypoint/start, HTTP readiness/capture, proof, selected-field, and partition drift remain upstream-plus-architecture obligations rather than independently behaviorally receipted branches. It does not establish continued currentness, private input-body exposure, compiler output, bundle recovery, publication, materialization, execution, secret absence, containment, portability, production readiness, security review, or adoption. The full limits, failed-receipt history, and sole next boundary are in `docs/status/P07B-A2-1-AUTHORITY.md`.
+
 ### Pre-A2 planning-wire correction
 
 Before any runtime bundle codec or compiler existed, the follow-up prompt-pack
@@ -311,10 +338,10 @@ separate reviewed boundary.
 
 ## Exact next actions if this task resumes elsewhere
 
-1. Run `git status --short --branch`; confirm source commit `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3` and the later commit carrying this handoff are sealed, the fresh ledger reports an intact chain, `NO_COLOR=1 didrun verify --strict` exits `0`, and no `.didrun` path is staged or tracked. Keep old failed commits and archived ledgers as negative history; never reseal or rewrite them.
-2. Read `docs/status/P07B-A1-SOURCE.md`, `docs/prompts/P07B-A2-COMPILATION-PLAN.md`, `docs/prompts/P07B-A2-1-COMPILATION-AUTHORITY.md`, `research/deep-dive/11-p07-implementation-red-team.md`, `docs/SEMANTICS.md`, `docs/PROJECTION_ALGEBRA.md`, and the relevant source seams.
-3. Implement only P07B-A2.1: retain the schedule-ordered FreshConfirmation execution-binding roster, expose a current-revalidated inert promotion snapshot, join the exact `PortableSource` to the ruling/Choicepoint/confirmation, independently retranslate reopened proofs, revalidate tuple partition/separation, and return one sealed wrapper that privately retains original authority for later publication and owns a separate authority-narrowed internal compiler input with no added concrete candidate keys, refs, aliases, producer metadata, or support counts. This is not content redaction: the source and predicate values may contain sensitive, host-looking, or candidate-looking behavior bytes, and the source still carries opaque source/lineage identity digests including candidate-set, plan, envelope, materialization, fixture/capture, and projection identities. Keep its P07A portable projection profile distinct from the seven-member declared emitter `SourceProfile`. Beyond the owning store's current-object reopen, generate no files and perform no store write, direct filesystem operation, process execution, Git operation, clock read, randomness, or network access in this unit.
-4. Only after A2.1 is committed, sealed, and strict-clean, execute `docs/prompts/P07B-A2-2-RECOVERABLE-COMPILER.md`. That unit may build the pure deterministic six-file recoverable bundle and Go/Node corpus, but it still may not publish residue or materialize a product directory.
+1. Run `git status --short --branch`; resolve the A2.1 implementation commit containing `docs/status/P07B-A2-1-AUTHORITY.md`, confirm it and P07B-A1 source commit `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3` are sealed, require an intact serialized chain plus `NO_COLOR=1 didrun verify --strict` exit `0`, and confirm no `.didrun` path is staged or tracked. Keep old failed commits and archived ledgers as negative history; never reseal or rewrite them.
+2. Execute only the cumulative-verification maintenance request at `/Users/drewnelson/.codex/attachments/fac7f825-1946-4bcc-880a-1feb4d1b7a40/pasted-text.txt`. Intent-audit its four findings, keep the authority packages and truth kernel unchanged, commit it separately, seal it, and require strict exit `0`.
+3. Only after that maintenance boundary is strict-clean, read `docs/status/P07B-A2-1-AUTHORITY.md`, `docs/prompts/P07B-A2-2-RECOVERABLE-COMPILER.md`, `docs/prompts/P07B-A2-COMPILATION-PLAN.md`, `research/deep-dive/11-p07-implementation-red-team.md`, `docs/SEMANTICS.md`, `docs/PROJECTION_ALGEBRA.md`, and the new node emitter source seams.
+4. Implement only P07B-A2.2: consume the private A2.1 authority-narrowed input through the owning node package and build the pure deterministic recoverable six-file compiler, strict parser/recovery surface, fixed Node-core second implementation, and shared Go/Node semantic corpus. Preserve every A2.1 authority and nonclaim. A2.2 still performs no residue publication or product materialization.
 5. Continue through P07B-B terminal publication/materialization and P07B-C target/run/execution only as separately committed, sealed, strict-clean units. Do not start the product CLI/server/studio until all P07B authority units are sealed and strict-clean.
 6. Wrap every load-bearing verification command in `didrun run --` and claim each final success immediately before another event is recorded. Any nonzero command or mutant survivor is a real unfinished result: repair, rerun, preserve failed history, and never weaken or relabel the gate.
 7. At each shippable boundary, declare only successful final-tree claims, stage exact intended paths, commit, run `didrun seal --commit HEAD`, and loop `NO_COLOR=1 didrun verify --strict` until exit `0`.
@@ -329,7 +356,7 @@ Before editing, reply in your working notes with:
 1. the one product verb;
 2. the three distinct truth authorities (Git, Choicepoint observations/ruling, didrun receipts);
 3. two things the system must never claim;
-4. the current last sealed source commit (`1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`, verify locally), its `15/15 TREE-EXACT` strict didrun verdict, and P07B-A1's explicit nonclaims; and
-5. the current bounded shippable unit (P07B-A2.1 current-ruling compilation authority only; no generated files, residue, execution, or product UI).
+4. the current A2.1 implementation commit (resolve locally from its status file), its strict-clean receipt map and explicit nonclaims, plus P07B-A1 source prerequisite `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`; and
+5. the current bounded shippable unit (cumulative-verification maintenance only until its separate strict-clean seal; then P07B-A2.2 pure recoverable compiler, with no residue publication, product materialization, execution, or UI).
 
 If any answer is missing, read the files above again. Do not infer a didrun grade from this handoff; run strict verification locally.

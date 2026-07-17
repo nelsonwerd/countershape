@@ -5,24 +5,423 @@ package http_invoices
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"os/exec"
 	"path/filepath"
+	"reflect"
 	"slices"
+	"sort"
+	"syscall"
 	"testing"
 	"time"
 
 	counterhttp "github.com/nelsonwerd/countershape/internal/adapters/http"
+	httpmodel "github.com/nelsonwerd/countershape/internal/adapters/http/model"
+	"github.com/nelsonwerd/countershape/internal/canon"
 	"github.com/nelsonwerd/countershape/internal/choice"
 	"github.com/nelsonwerd/countershape/internal/choice/promotion"
 	"github.com/nelsonwerd/countershape/internal/compare"
 	"github.com/nelsonwerd/countershape/internal/confirmation"
+	"github.com/nelsonwerd/countershape/internal/contractsource"
 	"github.com/nelsonwerd/countershape/internal/domain"
+	nodeemit "github.com/nelsonwerd/countershape/internal/emit/node"
 	"github.com/nelsonwerd/countershape/internal/observe"
+	"github.com/nelsonwerd/countershape/internal/projectiontranslate"
 	reducer "github.com/nelsonwerd/countershape/internal/reduce"
 	grade "github.com/nelsonwerd/countershape/internal/reduction"
 	"github.com/nelsonwerd/countershape/internal/store"
 	"github.com/nelsonwerd/countershape/testkit/httpfixture"
 )
+
+const (
+	httpA21StudyLabel    = "physical HTTP choicepoint promotion"
+	httpA21RestartEnv    = "COUNTERSHAPE_A21_HTTP_RESTART_REQUEST"
+	httpA21RestartSchema = "countershape/a2.1/restart/v1"
+	httpA21RequestLimit  = 8 << 10
+	httpA21ResultLimit   = 2 << 20
+)
+
+type httpA21RestartRequest struct {
+	Schema     string `json:"schema"`
+	StoreRoot  string `json:"store_root"`
+	SourcePath string `json:"source_path"`
+	ResultPath string `json:"result_path"`
+}
+
+type httpA21RestartResult struct {
+	Schema                  string   `json:"schema"`
+	CompilationDigest       string   `json:"compilation_digest"`
+	DecisionRecordDigest    string   `json:"decision_record_digest"`
+	ChoicepointDigest       string   `json:"choicepoint_digest"`
+	SourceDigest            string   `json:"source_digest"`
+	SourceProfileDigest     string   `json:"source_profile_digest"`
+	Action                  string   `json:"action"`
+	SelectedFields          []string `json:"selected_fields"`
+	AllowedTupleCanonical64 []string `json:"allowed_tuple_canonical_base64"`
+}
+
+type httpA21PreparedDiagnostic struct {
+	Valid               bool
+	Digest              string
+	DecisionRecord      string
+	Choicepoint         string
+	Source              string
+	SourceProfile       string
+	Action              string
+	SelectedCount       int
+	SelectedPreview     []string
+	AllowedTupleCount   int
+	AllowedTupleSHA256s []string
+}
+
+func httpA21DescribePrepared(prepared nodeemit.PreparedCompilation) httpA21PreparedDiagnostic {
+	selected := prepared.SelectedFields()
+	selectedLimit := len(selected)
+	if selectedLimit > 8 {
+		selectedLimit = 8
+	}
+	tuples := prepared.AllowedTupleCanonicalBytes()
+	tupleLimit := len(tuples)
+	if tupleLimit > 8 {
+		tupleLimit = 8
+	}
+	tupleDigests := make([]string, tupleLimit)
+	for index, tuple := range tuples[:tupleLimit] {
+		digest := sha256.Sum256(tuple)
+		tupleDigests[index] = fmt.Sprintf("sha256:%x", digest)
+	}
+	return httpA21PreparedDiagnostic{
+		Valid: prepared.Valid(), Digest: prepared.Digest().String(),
+		DecisionRecord: prepared.DecisionRecordDigest().String(), Choicepoint: prepared.ChoicepointDigest().String(),
+		Source: prepared.SourceDigest().String(), SourceProfile: prepared.SourceProfileDigest().String(), Action: prepared.Action(),
+		SelectedCount: len(selected), SelectedPreview: append([]string(nil), selected[:selectedLimit]...),
+		AllowedTupleCount: len(tuples), AllowedTupleSHA256s: tupleDigests,
+	}
+}
+
+func httpA21TrialControlSummaries(result StudyResult) []string {
+	summaries := []string{}
+	for _, trial := range result.Trials {
+		process := trial.Result.Process()
+		primary, hasPrimary := process.PrimaryControl()
+		if !hasPrimary && trial.Projected && trial.ProjectionRejection == nil {
+			continue
+		}
+		stderr := process.Stderr()
+		stderrDigest := sha256.Sum256([]byte(stderr))
+		summaries = append(summaries, fmt.Sprintf(
+			"%s#%d repetition=%d projected=%t projection-rejected=%t primary=%s/%t diagnostic=%s exit=%d signal=%s stderr-bytes=%d stderr-sha256=%x",
+			trial.Role, trial.Slot.Ordinal(), trial.Slot.Repetition(), trial.Projected,
+			trial.ProjectionRejection != nil, primary, hasPrimary, process.DiagnosticCode(),
+			process.ExitCode(), process.ExitSignal(), len(stderr), stderrDigest,
+		))
+	}
+	return summaries
+}
+
+type httpA21BoundedOutput struct {
+	data      []byte
+	truncated bool
+}
+
+func (w *httpA21BoundedOutput) Write(input []byte) (int, error) {
+	const limit = 64 << 10
+	if remaining := limit - len(w.data); remaining > 0 {
+		if len(input) < remaining {
+			remaining = len(input)
+		}
+		w.data = append(w.data, input[:remaining]...)
+	}
+	if len(w.data) == limit {
+		w.truncated = true
+	}
+	return len(input), nil
+}
+
+func (w httpA21BoundedOutput) String() string {
+	if w.truncated {
+		return string(w.data) + "\n[child output truncated]"
+	}
+	return string(w.data)
+}
+
+func httpA21WriteExclusive(path string, body []byte, limit int) error {
+	if len(body) == 0 || len(body) > limit {
+		return fmt.Errorf("body size %d is outside 1..%d", len(body), limit)
+	}
+	file, err := os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+	if err != nil {
+		return err
+	}
+	n, writeErr := file.Write(body)
+	if writeErr == nil && n != len(body) {
+		writeErr = io.ErrShortWrite
+	}
+	if writeErr == nil {
+		writeErr = file.Sync()
+	}
+	closeErr := file.Close()
+	if writeErr != nil {
+		return writeErr
+	}
+	return closeErr
+}
+
+func httpA21ReadPrivateRegular(path string, limit int) ([]byte, error) {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return nil, err
+	}
+	if !info.Mode().IsRegular() || info.Mode().Perm()&0o077 != 0 || info.Size() <= 0 || info.Size() > int64(limit) {
+		return nil, fmt.Errorf("%s is not a bounded private regular file", path)
+	}
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	body, readErr := io.ReadAll(io.LimitReader(file, int64(limit)+1))
+	closeErr := file.Close()
+	if readErr != nil {
+		return nil, readErr
+	}
+	if closeErr != nil {
+		return nil, closeErr
+	}
+	if len(body) == 0 || len(body) > limit || int64(len(body)) != info.Size() {
+		return nil, fmt.Errorf("%s changed size while being read", path)
+	}
+	return body, nil
+}
+
+func httpA21DecodeStrict(body []byte, output any) error {
+	decoder := json.NewDecoder(bytes.NewReader(body))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(output); err != nil {
+		return err
+	}
+	if err := decoder.Decode(&struct{}{}); !errors.Is(err, io.EOF) {
+		return fmt.Errorf("trailing JSON value: %v", err)
+	}
+	return nil
+}
+
+func httpA21CleanAbsolute(path string) bool {
+	return filepath.IsAbs(path) && filepath.Clean(path) == path
+}
+
+func httpA21StoreAuthorityRefused(err error) bool {
+	var typed *store.Error
+	return errors.As(err, &typed) && typed.Code == "OBJECT_AUTHORITY_REFUSED"
+}
+
+func httpA21StoreInventory(t *testing.T, root string) []string {
+	t.Helper()
+	entries := make([]string, 0, 32)
+	err := filepath.WalkDir(root, func(path string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		relative, err := filepath.Rel(root, path)
+		if err != nil {
+			return err
+		}
+		info, err := entry.Info()
+		if err != nil {
+			return err
+		}
+		stat, ok := info.Sys().(*syscall.Stat_t)
+		if !ok {
+			return fmt.Errorf("store inventory has no Darwin stat identity for %s", relative)
+		}
+		identity := fmt.Sprintf("%d\x00%d\x00%d", stat.Dev, stat.Ino, info.ModTime().UnixNano())
+		if entry.IsDir() {
+			entries = append(entries, fmt.Sprintf("D\x00%s\x00%#o\x00%s", relative, info.Mode().Perm(), identity))
+			return nil
+		}
+		if !entry.Type().IsRegular() {
+			return fmt.Errorf("store inventory contains non-regular entry %s (%s)", relative, entry.Type())
+		}
+		body, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		digest := sha256.Sum256(body)
+		entries = append(entries, fmt.Sprintf("F\x00%s\x00%#o\x00%d\x00%x\x00%s", relative, info.Mode().Perm(), len(body), digest, identity))
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("inventory HTTP ruling store: %v", err)
+	}
+	sort.Strings(entries)
+	return entries
+}
+
+func assertHTTPCompilationFreshProcessRestart(
+	t *testing.T,
+	storeRoot string,
+	source contractsource.PortableSource,
+	prepared nodeemit.PreparedCompilation,
+) {
+	t.Helper()
+	protocolRoot := t.TempDir()
+	if err := os.Chmod(protocolRoot, 0o700); err != nil {
+		t.Fatalf("make HTTP restart protocol directory private: %v", err)
+	}
+	sourcePath := filepath.Join(protocolRoot, "portable-source.json")
+	requestPath := filepath.Join(protocolRoot, "request.json")
+	resultPath := filepath.Join(protocolRoot, "result.json")
+	childCWD := filepath.Join(protocolRoot, "child-cwd")
+	if err := os.Mkdir(childCWD, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := httpA21WriteExclusive(sourcePath, source.CanonicalBytes(), contractsource.MaxSourceCanonicalBytes); err != nil {
+		t.Fatalf("write private HTTP restart source: %v", err)
+	}
+	requestBody, err := json.Marshal(httpA21RestartRequest{
+		Schema: httpA21RestartSchema, StoreRoot: storeRoot, SourcePath: sourcePath, ResultPath: resultPath,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := httpA21WriteExclusive(requestPath, requestBody, httpA21RequestLimit); err != nil {
+		t.Fatalf("write private HTTP restart request: %v", err)
+	}
+	executable, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	command := exec.CommandContext(
+		ctx,
+		executable,
+		"-test.run=^TestHTTPCompilationFreshProcessRestartHelper$",
+		"-test.count=1",
+		"-test.timeout=90s",
+	)
+	command.Dir = childCWD
+	command.Env = []string{httpA21RestartEnv + "=" + requestPath}
+	var output httpA21BoundedOutput
+	command.Stdout = &output
+	command.Stderr = &output
+	if err := command.Run(); err != nil {
+		if ctx.Err() != nil {
+			t.Fatalf("fresh-process HTTP compilation restart timed out: %v; %s", ctx.Err(), output.String())
+		}
+		t.Fatalf("fresh-process HTTP compilation restart failed: %v; %s", err, output.String())
+	}
+	resultBody, err := httpA21ReadPrivateRegular(resultPath, httpA21ResultLimit)
+	if err != nil {
+		t.Fatalf("read private HTTP restart result: %v", err)
+	}
+	var result httpA21RestartResult
+	if err := httpA21DecodeStrict(resultBody, &result); err != nil {
+		t.Fatalf("decode strict HTTP restart result: %v", err)
+	}
+	if result.Schema != httpA21RestartSchema ||
+		result.CompilationDigest != prepared.Digest().String() ||
+		result.DecisionRecordDigest != prepared.DecisionRecordDigest().String() ||
+		result.ChoicepointDigest != prepared.ChoicepointDigest().String() ||
+		result.SourceDigest != prepared.SourceDigest().String() ||
+		result.SourceProfileDigest != prepared.SourceProfileDigest().String() ||
+		result.Action != prepared.Action() || !slices.Equal(result.SelectedFields, prepared.SelectedFields()) {
+		t.Fatalf("fresh-process HTTP compilation summaries changed: %#v", result)
+	}
+	wantTuples := prepared.AllowedTupleCanonicalBytes()
+	if len(result.AllowedTupleCanonical64) != len(wantTuples) {
+		t.Fatalf("fresh-process HTTP tuple count = %d, want %d", len(result.AllowedTupleCanonical64), len(wantTuples))
+	}
+	for index, encoded := range result.AllowedTupleCanonical64 {
+		decoded, err := base64.StdEncoding.Strict().DecodeString(encoded)
+		if err != nil || !bytes.Equal(decoded, wantTuples[index]) {
+			t.Fatalf("fresh-process HTTP tuple %d changed: %v", index, err)
+		}
+	}
+}
+
+func TestHTTPCompilationFreshProcessRestartHelper(t *testing.T) {
+	requestPath := os.Getenv(httpA21RestartEnv)
+	if requestPath == "" {
+		return
+	}
+	if !httpA21CleanAbsolute(requestPath) {
+		t.Fatal("HTTP restart request path is not clean and absolute")
+	}
+	requestRoot := filepath.Dir(requestPath)
+	rootInfo, err := os.Lstat(requestRoot)
+	if err != nil || !rootInfo.IsDir() || rootInfo.Mode().Perm()&0o077 != 0 {
+		t.Fatalf("HTTP restart request directory is not private: %v", err)
+	}
+	requestBody, err := httpA21ReadPrivateRegular(requestPath, httpA21RequestLimit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var request httpA21RestartRequest
+	if err := httpA21DecodeStrict(requestBody, &request); err != nil {
+		t.Fatal(err)
+	}
+	if request.Schema != httpA21RestartSchema || !httpA21CleanAbsolute(request.StoreRoot) ||
+		!httpA21CleanAbsolute(request.SourcePath) || !httpA21CleanAbsolute(request.ResultPath) ||
+		filepath.Dir(request.SourcePath) != requestRoot || filepath.Dir(request.ResultPath) != requestRoot ||
+		request.SourcePath == request.ResultPath || request.SourcePath == requestPath || request.ResultPath == requestPath {
+		t.Fatal("HTTP restart request is outside the closed path protocol")
+	}
+	if _, err := os.Lstat(request.ResultPath); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("HTTP restart result path already exists or is inaccessible: %v", err)
+	}
+	sourceBody, err := httpA21ReadPrivateRegular(request.SourcePath, contractsource.MaxSourceCanonicalBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	source, err := contractsource.Parse(sourceBody)
+	if err != nil {
+		t.Fatalf("strict HTTP restart source parse: %v", err)
+	}
+	studyID, err := store.NewStudyID(httpA21StudyLabel)
+	if err != nil {
+		t.Fatal(err)
+	}
+	objectStore, err := store.OpenObjectStore(request.StoreRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ruling, err := promotion.OpenRuling(context.Background(), objectStore, studyID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	preparation, err := promotion.PreparePortableRuling(context.Background(), objectStore, ruling)
+	if err != nil {
+		t.Fatal(err)
+	}
+	prepared, err := nodeemit.PrepareCompilation(context.Background(), objectStore, preparation, source)
+	if err != nil || !prepared.Valid() {
+		t.Fatalf("fresh-process HTTP preparation is invalid: %#v, %v", httpA21DescribePrepared(prepared), err)
+	}
+	tuples := prepared.AllowedTupleCanonicalBytes()
+	encodedTuples := make([]string, len(tuples))
+	for index, tuple := range tuples {
+		encodedTuples[index] = base64.StdEncoding.EncodeToString(tuple)
+	}
+	resultBody, err := json.Marshal(httpA21RestartResult{
+		Schema: httpA21RestartSchema, CompilationDigest: prepared.Digest().String(),
+		DecisionRecordDigest: prepared.DecisionRecordDigest().String(),
+		ChoicepointDigest:    prepared.ChoicepointDigest().String(), SourceDigest: prepared.SourceDigest().String(),
+		SourceProfileDigest: prepared.SourceProfileDigest().String(), Action: prepared.Action(),
+		SelectedFields: prepared.SelectedFields(), AllowedTupleCanonical64: encodedTuples,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := httpA21WriteExclusive(request.ResultPath, resultBody, httpA21ResultLimit); err != nil {
+		t.Fatal(err)
+	}
+}
 
 func TestHTTPPhysicalTenantSeedNeighborChangesExactLabeledMapWithStableRoster(t *testing.T) {
 	referenceStimulus, err := newInvoiceStimulus()
@@ -106,7 +505,12 @@ func TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence(t *testing.T)
 	}
 	if !baselineResult.HasOutcomeMap || baselineResult.OutcomeMap.Phase() != domain.AttemptDiscovery ||
 		len(baselineResult.OutcomeMap.Entries()) != 3 || len(baselineResult.OutcomeMap.Exclusions()) != 1 {
-		t.Fatal("physical HTTP baseline did not retain the stable A/B/C map plus excluded D")
+		t.Fatalf(
+			"physical HTTP baseline did not retain the stable A/B/C map plus excluded D: has-map=%t phase=%s entries=%d exclusions=%d batches=%v trial-controls=%v",
+			baselineResult.HasOutcomeMap, baselineResult.OutcomeMap.Phase(), len(baselineResult.OutcomeMap.Entries()),
+			len(baselineResult.OutcomeMap.Exclusions()), studyBatchSummaries(baselineResult),
+			httpA21TrialControlSummaries(baselineResult),
+		)
 	}
 	if !baselineCheckpoint.HasOutcomeMap || baselineCheckpoint.Plan.Digest() != baselineResult.Plan.Digest() ||
 		compare.AssessPreservation(baselineCheckpoint.OutcomeMap, baselineResult.OutcomeMap).Relation() != compare.PreservationEqual ||
@@ -239,7 +643,9 @@ func TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence(t *testing.T)
 		confirmedStudy.OutcomeMap.Phase() != domain.AttemptConfirmation ||
 		confirmedStudy.OutcomeMap.ScheduleStartOffset() != 1 || len(confirmedStudy.OutcomeMap.Exclusions()) != 1 ||
 		confirmedStudy.OutcomeMap.Exclusions()[0].Classification != observe.Unstable ||
-		len(confirmedStudy.Confirmation.Draft().PhysicalFacts()) != 12 {
+		len(confirmedStudy.Confirmation.Draft().PhysicalFacts()) != 12 ||
+		confirmedStudy.StartSpec.Authority() != counterhttp.HTTPPortableStartAuthorityV1 ||
+		confirmedStudy.Readiness.Protocol() != counterhttp.PortableReadinessProtocolV1 {
 		t.Fatal("physical HTTP confirmation did not reproduce the complete A/B/C plus unstable-D disposition")
 	}
 	confirmationDraft := confirmedStudy.Confirmation.Draft()
@@ -382,7 +788,7 @@ func TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	studyID, err := store.NewStudyID("physical HTTP choicepoint promotion")
+	studyID, err := store.NewStudyID(httpA21StudyLabel)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -603,11 +1009,273 @@ func TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence(t *testing.T)
 		promotion.ValidatePortableRulingPreparation(context.Background(), rulingRestart, preparation) != nil {
 		t.Fatalf("current portable HTTP ruling preparation failed: %#v, %v", preparation, err)
 	}
+	resolvedProfile, err := projectiontranslate.Resolve(confirmedStudy.ProjectionDefinition.Binding())
+	if err != nil {
+		t.Fatal(err)
+	}
+	projectionAuthority, err := httpmodel.ResolveHTTPProjectionAuthority(
+		confirmedStudy.ProjectionDefinition.Digest(), confirmedStudy.ProjectionDefinition.CanonicalBytes(),
+		confirmedStudy.ProjectionDefinition.Binding(),
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	portableSource, err := contractsource.NewHTTPSource(contractsource.HTTPInput{
+		Plan: confirmedStudy.Plan, Stimulus: confirmedStudy.Stimulus, Start: confirmedStudy.StartSpec,
+		Capture: confirmedStudy.CapturePolicy, Readiness: confirmedStudy.Readiness,
+		Profile: resolvedProfile.Profile(), Projection: projectionAuthority,
+	})
+	if err != nil {
+		t.Fatalf("exact minimized child-bind HTTP source construction failed: %v", err)
+	}
+	const httpSourceProfileCanonical = `{"adapter_domain":"HTTP","launch_profile":"NODE_REPO_SCRIPT_V1","runtime_family":"NODE","scope":"DECLARED_SOURCE_PROFILE_NOT_EXECUTION_EVIDENCE","semantic_profile":"countershape-node-core-exact/v1","start_profile":"NODE_LOOPBACK_CHILD_BIND_PIPE_READY_V1","subject_entrypoint":"fixture/server_child_bind.mjs"}`
+	httpSourceProfileDigest, err := canon.DigestBytes("ContractSourceProfile", []byte(httpSourceProfileCanonical))
+	if err != nil {
+		t.Fatal(err)
+	}
+	wantCustomTuple := []byte(`{"fields":[{"field_id":"http.status","value":{"canonical":"401","tag":"INTEGER"}}]}`)
+	parsedConfirmation, err := confirmation.ParseRecord(confirmationDraft.CanonicalBytes())
+	if err != nil || len(parsedConfirmation.ExecutionBindingDigests()) != 12 {
+		t.Fatalf("child-bind confirmation binding roster = %d, %v", len(parsedConfirmation.ExecutionBindingDigests()), err)
+	}
+	for index, binding := range parsedConfirmation.ExecutionBindingDigests() {
+		if binding != portableSource.ExecutionBindingDigest() {
+			t.Fatalf("child-bind confirmation binding %d differs from PortableSource", index)
+		}
+	}
+	headBeforeCompilation, err := rulingRestart.OpenHead(context.Background(), studyID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	inventoryBeforeCompilation := httpA21StoreInventory(t, promotionRoot)
+	prepared, err := nodeemit.PrepareCompilation(context.Background(), rulingRestart, preparation, portableSource)
+	if err != nil || !prepared.Valid() || !prepared.Digest().Valid() || prepared.Action() != string(choice.ActionCustomExpectation) ||
+		prepared.DecisionRecordDigest() != customDecision.Digest() || prepared.SourceDigest() != portableSource.Digest() ||
+		prepared.ChoicepointDigest() != choicepoint.Digest() ||
+		prepared.SourceProfileDigest().String() != httpSourceProfileDigest.String() ||
+		!slices.Equal(prepared.SelectedFields(), httpFields[:1]) ||
+		!reflect.DeepEqual(prepared.AllowedTupleCanonicalBytes(), [][]byte{wantCustomTuple}) {
+		t.Fatalf("current HTTP custom compilation preparation = %#v, %v", httpA21DescribePrepared(prepared), err)
+	}
+	headAfterCompilation, err := rulingRestart.OpenHead(context.Background(), studyID)
+	if err != nil || headAfterCompilation.HeadDigest() != headBeforeCompilation.HeadDigest() ||
+		headAfterCompilation.Stage() != store.StageRuling || headAfterCompilation.CurrentDigest() != customDecision.Digest() ||
+		!reflect.DeepEqual(httpA21StoreInventory(t, promotionRoot), inventoryBeforeCompilation) {
+		t.Fatalf("successful HTTP compilation preparation changed durable store state: %v", err)
+	}
+	preparedTuple := prepared.AllowedTupleCanonicalBytes()[0]
+	preparedTuple[0] ^= 0xff
+	if !prepared.Valid() {
+		t.Fatal("HTTP PreparedCompilation tuple getter was not defensive")
+	}
+	noisySource, err := contractsource.NewHTTPSource(contractsource.HTTPInput{
+		Plan: baselineResult.Plan, Stimulus: baselineResult.Stimulus, Start: baselineResult.StartSpec,
+		Capture: baselineResult.CapturePolicy, Readiness: baselineResult.Readiness,
+		Profile: resolvedProfile.Profile(), Projection: projectionAuthority,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	parsedNoisySource, err := contractsource.Parse(noisySource.CanonicalBytes())
+	if err != nil || !parsedNoisySource.Valid() || parsedNoisySource.Digest() != noisySource.Digest() ||
+		!bytes.Equal(parsedNoisySource.CanonicalBytes(), noisySource.CanonicalBytes()) {
+		t.Fatalf("noisy HTTP source is not an independently valid exact authority: %v", err)
+	}
+	if noisySource.Adapter() != portableSource.Adapter() || noisySource.Plan().Digest() != portableSource.Plan().Digest() ||
+		!bytes.Equal(noisySource.Plan().CanonicalBytes(), portableSource.Plan().CanonicalBytes()) ||
+		noisySource.ProjectionBinding().Digest() != portableSource.ProjectionBinding().Digest() ||
+		!bytes.Equal(noisySource.ProjectionBinding().CanonicalBytes(), portableSource.ProjectionBinding().CanonicalBytes()) ||
+		noisySource.Profile().Digest() != portableSource.Profile().Digest() ||
+		!bytes.Equal(noisySource.Profile().CanonicalBytes(), portableSource.Profile().CanonicalBytes()) ||
+		noisySource.StimulusDigest() == portableSource.StimulusDigest() ||
+		bytes.Equal(noisySource.StimulusCanonicalBytes(), portableSource.StimulusCanonicalBytes()) ||
+		noisySource.ExecutionBindingDigest() == portableSource.ExecutionBindingDigest() ||
+		bytes.Equal(noisySource.ExecutionBindingCanonicalBytes(), portableSource.ExecutionBindingCanonicalBytes()) {
+		t.Fatal("HTTP cross-study source matrix did not isolate stimulus/execution authority under one valid shape")
+	}
+	if refused, prepareErr := nodeemit.PrepareCompilation(
+		context.Background(), rulingRestart, preparation, noisySource,
+	); !nodeemit.IsCode(prepareErr, nodeemit.CodeSourceRulingMismatch) || refused.Valid() ||
+		refused.Digest().Valid() || refused.DecisionRecordDigest().Valid() || refused.ChoicepointDigest().Valid() ||
+		refused.SourceDigest().Valid() || refused.SourceProfileDigest().Valid() || refused.Action() != "" ||
+		len(refused.SelectedFields()) != 0 || len(refused.AllowedTupleCanonicalBytes()) != 0 {
+		t.Fatalf("HTTP noisy/original source cross-pair = valid %t, err %v", refused.Valid(), prepareErr)
+	}
+	reopenedStore, err := store.OpenObjectStore(promotionRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if refused, prepareErr := nodeemit.PrepareCompilation(
+		context.Background(), reopenedStore, preparation, portableSource,
+	); !httpA21StoreAuthorityRefused(prepareErr) || refused.Valid() || refused.Digest().Valid() ||
+		refused.DecisionRecordDigest().Valid() || refused.ChoicepointDigest().Valid() || refused.SourceDigest().Valid() ||
+		refused.SourceProfileDigest().Valid() || refused.Action() != "" || len(refused.SelectedFields()) != 0 ||
+		len(refused.AllowedTupleCanonicalBytes()) != 0 {
+		t.Fatalf("HTTP wrong-store preparation = valid %t, err %v", refused.Valid(), prepareErr)
+	}
+	reissuedRuling, err := promotion.OpenRuling(context.Background(), reopenedStore, studyID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reissued, err := promotion.PreparePortableRuling(context.Background(), reopenedStore, reissuedRuling)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reparsedSource, err := contractsource.Parse(portableSource.CanonicalBytes())
+	if err != nil {
+		t.Fatal(err)
+	}
+	restartedPrepared, err := nodeemit.PrepareCompilation(
+		context.Background(), reopenedStore, reissued, reparsedSource,
+	)
+	if err != nil || restartedPrepared.Digest() != prepared.Digest() ||
+		!reflect.DeepEqual(restartedPrepared.AllowedTupleCanonicalBytes(), prepared.AllowedTupleCanonicalBytes()) {
+		t.Fatalf("HTTP restart/reopen changed sanitized input: %#v, %v", httpA21DescribePrepared(restartedPrepared), err)
+	}
+	assertHTTPCompilationFreshProcessRestart(t, promotionRoot, portableSource, prepared)
+	if predecessorErr := promotion.ValidatePortableRulingPreparation(
+		context.Background(), rulingRestart, reissued,
+	); !httpA21StoreAuthorityRefused(predecessorErr) {
+		t.Fatalf("HTTP reissued preparation crossed predecessor authority: %v", predecessorErr)
+	}
+	if refused, prepareErr := nodeemit.PrepareCompilation(
+		context.Background(), rulingRestart, reissued, portableSource,
+	); !httpA21StoreAuthorityRefused(prepareErr) || refused.Valid() || refused.Digest().Valid() ||
+		refused.DecisionRecordDigest().Valid() || refused.ChoicepointDigest().Valid() || refused.SourceDigest().Valid() ||
+		refused.SourceProfileDigest().Valid() || refused.Action() != "" || len(refused.SelectedFields()) != 0 ||
+		len(refused.AllowedTupleCanonicalBytes()) != 0 {
+		t.Fatalf("HTTP reissued preparation crossed predecessor compilation authority: %#v, %v", httpA21DescribePrepared(refused), prepareErr)
+	}
+	currentAfterRestartMatrix, err := reopenedStore.OpenHead(context.Background(), studyID)
+	if err != nil || currentAfterRestartMatrix.HeadDigest() != headBeforeCompilation.HeadDigest() ||
+		currentAfterRestartMatrix.Stage() != store.StageRuling || currentAfterRestartMatrix.CurrentDigest() != customDecision.Digest() ||
+		!reflect.DeepEqual(httpA21StoreInventory(t, promotionRoot), inventoryBeforeCompilation) {
+		t.Fatalf("HTTP A2.1 restart/refusal matrix changed durable store state: %v", err)
+	}
+
+	// A second durable lineage proves the same child-bind confirmation can
+	// authorize an observed HTTP predicate without reusing the custom ruling.
+	allowRoot := filepath.Join(t.TempDir(), "allow-observed-store")
+	allowStore, err := store.OpenObjectStore(allowRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	allowStudyID, err := store.NewStudyID("physical HTTP observed compilation authority")
+	if err != nil {
+		t.Fatal(err)
+	}
+	allowHead, err := allowStore.CreateStudy(context.Background(), allowStudyID, confirmedStudy.Plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	allowHead, err = allowStore.AdvanceBaseline(context.Background(), allowHead, baselineCheckpoint.OutcomeMap)
+	if err != nil {
+		t.Fatal(err)
+	}
+	allowHead, err = allowStore.AdvanceDivergence(context.Background(), allowHead, baseline)
+	if err != nil {
+		t.Fatal(err)
+	}
+	allowHead, err = allowStore.AdvanceReduction(context.Background(), allowHead, run)
+	if err != nil {
+		t.Fatal(err)
+	}
+	allowConfirmation, err := promotion.PersistConfirmation(context.Background(), allowStore, allowHead, confirmationDraft)
+	if err != nil {
+		t.Fatal(err)
+	}
+	allowReady, err := promotion.Promote(context.Background(), allowStore, allowConfirmation, promotion.ChoicepointRequest{
+		Scenario: "Which exact invoice response behavior should become the accepted contract?",
+		Plan:     confirmedStudy.Plan, Envelope: confirmedStudy.Envelope,
+		CandidateBindings: confirmedStudy.CandidateBindings, OriginalStimulus: originalArtifact,
+		MinimizedStimulus: minimizedArtifact, CandidateReveals: reveals,
+		EvidenceReceipts: []domain.ReceiptReference{},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	allowSession, err := choice.NewSession(allowReady.Record())
+	if err != nil {
+		t.Fatal(err)
+	}
+	allowCards := allowSession.BlindDTO().Cards()
+	if len(allowCards) == 0 {
+		t.Fatal("HTTP allow-observed Choicepoint has no cards")
+	}
+	allowInput := choice.RulingDraftInput{
+		Action: choice.ActionAllowObserved, SelectedFields: []string{
+			string(counterhttp.HTTPFieldStatus), string(counterhttp.HTTPFieldBodyKind),
+		},
+		AllowedAliases: []string{allowCards[0].Alias},
+	}
+	for _, surface := range []choice.ReviewSurface{
+		choice.SurfaceOriginalWitness, choice.SurfaceMinimizedWitness, choice.SurfaceReductionDerivation,
+		choice.SurfaceProjectionOperations, choice.SurfaceNonassertedFields,
+	} {
+		allowSession, err = allowSession.Visit(surface)
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	allowSession, err = allowSession.Propose(allowInput)
+	if err != nil {
+		t.Fatal(err)
+	}
+	allowSession, _, err = allowSession.Reveal()
+	if err != nil {
+		t.Fatal(err)
+	}
+	allowSession, err = allowSession.Visit(choice.SurfaceProvenance)
+	if err != nil {
+		t.Fatal(err)
+	}
+	allowSession, err = allowSession.Revise(allowInput, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, allowDecision, err := allowSession.Finalize(
+		"local-test-operator", "Accept one exact correlated HTTP status/body-kind tuple.", []domain.ReceiptReference{},
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	allowRuling, err := promotion.Finalize(context.Background(), allowStore, allowReady, allowDecision)
+	if err != nil {
+		t.Fatal(err)
+	}
+	allowPreparation, err := promotion.PreparePortableRuling(context.Background(), allowStore, allowRuling)
+	if err != nil {
+		t.Fatal(err)
+	}
+	allowPrepared, err := nodeemit.PrepareCompilation(
+		context.Background(), allowStore, allowPreparation, portableSource,
+	)
+	selectedCard := allowCards[0]
+	if len(selectedCard.Fields) != len(httpFields) || selectedCard.Fields[0].Tag != string(choice.ValueInteger) ||
+		selectedCard.Fields[2].Tag != string(choice.ValueString) {
+		t.Fatalf("selected HTTP observed card lacks exact status/body-kind values: %#v", selectedCard)
+	}
+	wantAllowTuple := []byte(fmt.Sprintf(
+		`{"fields":[{"field_id":"http.status","value":{"canonical":%q,"tag":"INTEGER"}},{"field_id":"http.body.kind","value":{"tag":"STRING","value":%q}}]}`,
+		selectedCard.Fields[0].Text, selectedCard.Fields[2].Text,
+	))
+	if err != nil || !allowPrepared.Valid() || !allowPrepared.Digest().Valid() ||
+		allowPrepared.DecisionRecordDigest() != allowDecision.Digest() ||
+		allowPrepared.ChoicepointDigest() != allowReady.Record().Digest() ||
+		allowPrepared.SourceDigest() != portableSource.Digest() ||
+		allowPrepared.SourceProfileDigest().String() != httpSourceProfileDigest.String() ||
+		allowPrepared.Action() != string(choice.ActionAllowObserved) ||
+		!slices.Equal(allowPrepared.SelectedFields(), []string{
+			string(counterhttp.HTTPFieldStatus), string(counterhttp.HTTPFieldBodyKind),
+		}) || !reflect.DeepEqual(allowPrepared.AllowedTupleCanonicalBytes(), [][]byte{wantAllowTuple}) {
+		t.Fatalf("child-bind HTTP allow-observed compilation preparation = %#v, %v", httpA21DescribePrepared(allowPrepared), err)
+	}
 }
 
 func httpPhysicalReductionConfig(t *testing.T) Config {
 	t.Helper()
 	config := referenceConfig(t)
+	config.PortableStart = true
 	config.ReductionProposalLimit = 2
 	// The plan reserves 24 trials for discovery+confirmation and 12 for U5.
 	config.ReductionTotalCandidateTrials = 36
