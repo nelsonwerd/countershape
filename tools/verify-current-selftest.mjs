@@ -13,10 +13,14 @@ import {
 	admitTools,
 	assertNoDSStore,
 	buildChildEnvironment,
+	childArguments,
+	childResult,
+	childToolNames,
 	currentSteps,
 	executeCurrentPlan,
 	historicalOnly,
 	repositoryRoot,
+	revalidateStepTools,
 	revalidateTool,
 	rosterDigest,
 	toolSpecifications,
@@ -25,7 +29,7 @@ import {
 
 const selftestPath = fileURLToPath(import.meta.url);
 const verifierPath = resolve(dirname(selftestPath), "verify-current.mjs");
-const expectedRosterDigest = "19e4a044f5e5619d82b94a7be0ec84161dd98e0969a932f5da65e2ea85ae49e3";
+const expectedRosterDigest = "24e5a82e7f391581a90cccb1329b30fd659501f43d301050da520afbd4995f59";
 
 function fail(code, detail) {
 	throw new Error(`${code}: ${detail}`);
@@ -59,6 +63,13 @@ async function inspectRosters() {
 	expect(new Set(currentIDs).size === currentIDs.length, "VERIFY_SELFTEST_DUPLICATE_CURRENT", currentIDs.join(","));
 	const historicalIDs = historicalOnly.map((row) => row.id);
 	expect(new Set(historicalIDs).size === historicalIDs.length, "VERIFY_SELFTEST_DUPLICATE_HISTORICAL", historicalIDs.join(","));
+	const knownTools = new Set(toolSpecifications.map((tool) => tool.name));
+	for (const step of currentSteps.filter((candidate) => candidate.tool)) {
+		const names = childToolNames(step);
+		expect(names[0] === step.tool, "VERIFY_SELFTEST_PRIMARY_TOOL_MISMATCH", step.id);
+		expect(new Set(names).size === names.length, "VERIFY_SELFTEST_DUPLICATE_STEP_TOOL", `${step.id}: ${names.join(",")}`);
+		expect(names.every((name) => knownTools.has(name)), "VERIFY_SELFTEST_UNKNOWN_STEP_TOOL", `${step.id}: ${names.join(",")}`);
+	}
 
 	const toolEntries = (await readdir(resolve(repositoryRoot, "tools"))).sort();
 	const mutationFiles = toolEntries.filter((name) => /^(?:mutate|test-mutate)-.+\.mjs$/u.test(name)).map((name) => `tools/${name}`);
@@ -94,9 +105,114 @@ function inspectEnvironment() {
 		GOSUMDB: "off", GOVCS: "*:off", GOFLAGS: "-mod=readonly -buildvcs=false", CGO_ENABLED: "1",
 		CC: admitted.cc.path, CXX: admitted.cxx.path, GOMAXPROCS: "2", LANG: "C", LC_ALL: "C", TZ: "UTC",
 		NO_COLOR: "1", PATH: `${roots.authorityBin}:/usr/bin:/bin`, COUNTERSHAPE_GO: admitted.go.path,
-		COUNTERSHAPE_NODE: admitted.node.path, COUNTERSHAPE_GIT: admitted.git.path, COUNTERSHAPE_CC: admitted.cc.path,
+		COUNTERSHAPE_NODE: admitted.node.path, COUNTERSHAPE_GIT: admitted.git.path, COUNTERSHAPE_SH: admitted.sh.path,
+		COUNTERSHAPE_CC: admitted.cc.path,
 	};
 	expect(JSON.stringify(environment) === JSON.stringify(expected), "VERIFY_SELFTEST_CHILD_ENVIRONMENT_DRIFT", JSON.stringify(environment));
+}
+
+async function inspectChildArguments() {
+	expect(
+		JSON.stringify(childArguments({ path: "tools/example.mjs", args: ["--check"] })) ===
+			JSON.stringify([resolve(repositoryRoot, "tools/example.mjs"), "--check"]),
+		"VERIFY_SELFTEST_PATH_ARGUMENTS_DROPPED",
+		"path-backed step did not retain its explicit mode",
+	);
+	expect(
+		JSON.stringify(childArguments({ args: ["test", "./..."] })) === JSON.stringify(["test", "./..."]),
+		"VERIFY_SELFTEST_TOOL_ARGUMENTS_DRIFT",
+		"tool-only arguments changed",
+	);
+	expect(
+		JSON.stringify(childToolNames({ id: "nested", tool: "node", tools: ["node", "go"] })) === JSON.stringify(["node", "go"]),
+		"VERIFY_SELFTEST_NESTED_TOOL_ROSTER",
+		"nested admitted tool roster changed",
+	);
+	const authorities = fakeAuthorities();
+	const visited = [];
+	await revalidateStepTools(
+		{ id: "nested", tool: "node", tools: ["node", "go"] },
+		authorities,
+		async (authority) => { visited.push(authority.name); },
+	);
+	expect(JSON.stringify(visited) === JSON.stringify(["node", "go"]), "VERIFY_SELFTEST_NESTED_TOOL_REVALIDATION", visited.join(","));
+	for (const scenario of [
+		{
+			name: "nonzero",
+			spawnResult: { status: 23, signal: null, error: null, stdout: "", stderr: "injected nonzero" },
+		},
+		{
+			name: "spawn-error",
+			spawnResult: { status: null, signal: null, error: new Error("injected spawn error"), stdout: "", stderr: "" },
+		},
+	]) {
+		const events = [];
+		const result = await childResult(
+			{ id: scenario.name, tool: "node", tools: ["node", "go"], path: "tools/fixture.mjs" },
+			authorities,
+			{},
+			{
+				revalidate: async (step, admitted) => revalidateStepTools(
+					step,
+					admitted,
+					async (authority) => { events.push(authority.name); },
+				),
+				spawn: () => { events.push("spawn"); return scenario.spawnResult; },
+			},
+		);
+		expect(
+			result.status === scenario.spawnResult.status && result.signal === scenario.spawnResult.signal &&
+				result.error === scenario.spawnResult.error && result.stdout === scenario.spawnResult.stdout &&
+				result.stderr === scenario.spawnResult.stderr,
+			"VERIFY_SELFTEST_CHILD_RESULT_IDENTITY",
+			scenario.name,
+		);
+		expect(
+			JSON.stringify(events) === JSON.stringify(["node", "go", "spawn", "node", "go"]),
+			"VERIFY_SELFTEST_CHILD_REVALIDATION_ORDER",
+			`${scenario.name}: ${events.join(",")}`,
+		);
+	}
+	const thrownEvents = [];
+	try {
+		await childResult(
+			{ id: "spawn-throw", tool: "node", tools: ["node", "go"], path: "tools/fixture.mjs" },
+			authorities,
+			{},
+			{
+				revalidate: async (step, admitted) => revalidateStepTools(
+					step,
+					admitted,
+					async (authority) => { thrownEvents.push(authority.name); },
+				),
+				spawn: () => { thrownEvents.push("spawn"); throw new Error("injected spawn throw"); },
+			},
+		);
+		fail("VERIFY_SELFTEST_FALSE_NEGATIVE", "spawn throw");
+	} catch (error) {
+		expect(error.message === "injected spawn throw", "VERIFY_SELFTEST_WRONG_SPAWN_THROW", error.stack ?? error);
+	}
+	expect(
+		JSON.stringify(thrownEvents) === JSON.stringify(["node", "go", "spawn", "node", "go"]),
+		"VERIFY_SELFTEST_CHILD_THROW_REVALIDATION_ORDER",
+		thrownEvents.join(","),
+	);
+	await expectCode(
+		Promise.resolve().then(() => childToolNames({ id: "missing-roster", tool: "node" })),
+		"VERIFY_PLAN_TOOL_ROSTER_REQUIRED",
+	);
+	await expectCode(
+		Promise.resolve().then(() => childToolNames({ id: "wrong-primary", tool: "node", tools: ["go", "node"] })),
+		"VERIFY_PLAN_PRIMARY_TOOL_MISMATCH",
+	);
+	await expectCode(
+		Promise.resolve().then(() => childToolNames({ id: "duplicate", tool: "node", tools: ["node", "node"] })),
+		"VERIFY_PLAN_TOOL_DUPLICATE",
+	);
+	await expectCode(
+		Promise.resolve().then(() => childToolNames({ id: "unknown", tool: "node", tools: ["node", "python"] })),
+		"VERIFY_PLAN_TOOL_UNKNOWN",
+	);
 }
 
 async function inspectFailClosedExecution() {
@@ -173,7 +289,7 @@ async function inspectFilesystemGuards() {
 		await mkdir(join(fixture, "tools"), { mode: 0o700 });
 		await writeFile(join(fixture, "tools/verify-current.mjs"), "// fixture verifier\n", { mode: 0o600 });
 		try {
-			await validateRepositoryPlan(fixture, [{ id: "missing", tool: "node", path: "tools/missing.mjs" }], []);
+			await validateRepositoryPlan(fixture, [{ id: "missing", tool: "node", tools: ["node"], path: "tools/missing.mjs" }], []);
 			fail("VERIFY_SELFTEST_FALSE_NEGATIVE", "tools/missing.mjs");
 		} catch (error) {
 			expect(error instanceof VerificationError && error.code === "VERIFY_PLAN_FILE_MISSING" && error.message.includes("tools/missing.mjs"), "VERIFY_SELFTEST_WRONG_MISSING_PLAN_ERROR", error.stack ?? error);
@@ -183,7 +299,7 @@ async function inspectFilesystemGuards() {
 		await writeFile(join(outside, "escaped.mjs"), "// outside\n", { mode: 0o600 });
 		await symlink(outside, join(fixture, "tools/link"));
 		await expectCode(
-			validateRepositoryPlan(fixture, [{ id: "escaped", tool: "node", path: "tools/link/escaped.mjs" }], []),
+			validateRepositoryPlan(fixture, [{ id: "escaped", tool: "node", tools: ["node"], path: "tools/link/escaped.mjs" }], []),
 			"VERIFY_PLAN_SYMLINK",
 		);
 
@@ -225,6 +341,7 @@ async function main() {
 	if (process.argv.length !== 2) fail("VERIFY_SELFTEST_ARGUMENTS", "no arguments are accepted");
 	await inspectRosters();
 	inspectEnvironment();
+	await inspectChildArguments();
 	await inspectFailClosedExecution();
 	await inspectFilesystemGuards();
 	await inspectSourceAndArguments();

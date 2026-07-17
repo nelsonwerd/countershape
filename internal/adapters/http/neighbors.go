@@ -175,9 +175,9 @@ func httpReductionMeasureDefinition() (domain.Digest, error) {
 		Dimensions    []string `json:"dimensions"`
 		Fixed         []string `json:"fixed_fields"`
 	}{
-			domain.SchemaVersion, "HTTPReductionMeasureDefinition", "http-reduction-measure/v1", "LEXICOGRAPHIC",
-			[]string{"structural_and_presence_atoms", "mutable_payload_bytes"},
-			[]string{"method", "path", "one_request_profile", "pinned_seed_paths_modes_contents"},
+		domain.SchemaVersion, "HTTPReductionMeasureDefinition", "http-reduction-measure/v1", "LEXICOGRAPHIC",
+		[]string{"structural_and_presence_atoms", "mutable_payload_bytes"},
+		[]string{"method", "path", "one_request_profile", "pinned_seed_paths_modes_contents"},
 	})
 	return digest, err
 }

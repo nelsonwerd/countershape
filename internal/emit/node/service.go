@@ -13,6 +13,7 @@ import (
 	"github.com/nelsonwerd/countershape/internal/compare"
 	"github.com/nelsonwerd/countershape/internal/contractsource"
 	"github.com/nelsonwerd/countershape/internal/domain"
+	"github.com/nelsonwerd/countershape/internal/emit/node/compiler"
 	"github.com/nelsonwerd/countershape/internal/emit/node/internal/compilation"
 	"github.com/nelsonwerd/countershape/internal/emit/node/model"
 	"github.com/nelsonwerd/countershape/internal/portablevalue"
@@ -65,6 +66,38 @@ type PreparedCompilation struct {
 	preparation promotion.PortableRulingPreparation
 	input       compilation.Input
 	seal        *preparedCompilationSeal
+}
+
+type preparedBundleSeal struct{}
+
+var bundledAuthority = &preparedBundleSeal{}
+
+// PreparedBundle joins one inert compiled bundle to the exact A2.1
+// preparation that authorized compilation. The retained preparation remains
+// private for the later publication boundary; neither Bundle nor any parser
+// can recreate current-ruling or publication authority.
+type PreparedBundle struct {
+	prepared PreparedCompilation
+	bundle   model.ContractBundle
+	seal     *preparedBundleSeal
+}
+
+// CompilePrepared invokes only the pure in-memory compiler. It neither
+// reopens currentness nor writes, materializes, executes, or publishes the
+// returned bundle. Any compiler refusal returns the zero PreparedBundle.
+func CompilePrepared(prepared PreparedCompilation) (PreparedBundle, error) {
+	if !prepared.Valid() {
+		return PreparedBundle{}, refuse(CodeInvalidPreparation, "prepared compilation is invalid", nil)
+	}
+	bundle, err := compiler.Compile(prepared.input)
+	if err != nil {
+		return PreparedBundle{}, err
+	}
+	result := PreparedBundle{prepared: prepared, bundle: bundle, seal: bundledAuthority}
+	if !result.Valid() {
+		return PreparedBundle{}, refuse(CodeSanitizedInputInvalid, "compiled bundle did not rejoin its prepared authority", nil)
+	}
+	return result, nil
 }
 
 func PrepareCompilation(
@@ -475,4 +508,40 @@ func (p PreparedCompilation) AllowedTupleCanonicalBytes() [][]byte {
 		result[index] = tuple.CanonicalBytes()
 	}
 	return result
+}
+
+func (p PreparedBundle) Valid() bool {
+	if p.seal != bundledAuthority || !p.prepared.Valid() || !p.bundle.Valid() {
+		return false
+	}
+	input := p.prepared.input
+	bundleSource := p.bundle.PortableSource()
+	return p.bundle.DecisionRecordDigest() == input.DecisionRecordDigest() &&
+		p.bundle.ChoicepointDigest() == input.ChoicepointDigest() &&
+		p.bundle.DecisionAction() == string(input.Action()) &&
+		bundleSource.Digest() == input.Source().Digest() &&
+		bytes.Equal(bundleSource.CanonicalBytes(), input.Source().CanonicalBytes()) &&
+		p.bundle.SourceProfile().Digest() == input.SourceProfile().Digest() &&
+		bytes.Equal(p.bundle.SourceProfile().CanonicalBytes(), input.SourceProfile().CanonicalBytes()) &&
+		bytes.Equal(p.bundle.Predicate().CanonicalBytes(), input.Predicate().CanonicalBytes())
+}
+
+// Bundle returns a strictly reparsed inert value. A caller can inspect or copy
+// it, but receives no retained PreparedCompilation or ruling preparation.
+func (p PreparedBundle) Bundle() model.ContractBundle {
+	if !p.Valid() {
+		return model.ContractBundle{}
+	}
+	reparsed, err := model.ParseContractBundle(p.bundle.CanonicalBytes(), p.bundle.Digest())
+	if err != nil {
+		return model.ContractBundle{}
+	}
+	return reparsed
+}
+
+func (p PreparedBundle) BundleDigest() domain.Digest {
+	if !p.Valid() {
+		return domain.Digest("")
+	}
+	return p.bundle.Digest()
 }

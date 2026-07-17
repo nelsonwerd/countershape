@@ -2,29 +2,38 @@
 
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { copyFile, cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const checker = resolve(root, "tools/check-p07b-a2-architecture.mjs");
-const files = Object.freeze([
+const copyPaths = Object.freeze([
+	"internal/adapters/cli/model",
+	"internal/adapters/cli/projection.go",
+	"internal/adapters/http/model",
+	"internal/canon",
 	"internal/choice/choicepoint.go",
 	"internal/choice/promotion/service.go",
 	"internal/choice/session_roundtrip_test.go",
 	"internal/confirmation/service_test.go",
 	"internal/confirmation/wire.go",
+	"internal/contractsource",
 	"internal/world/fresh_confirmation.go",
-	"internal/domain/world.go",
-	"internal/domain/domain_test.go",
-	"internal/emit/node/model/predicate.go",
-	"internal/emit/node/model/predicate_test.go",
-	"internal/emit/node/model/source_profile.go",
-	"internal/emit/node/internal/compilation/input.go",
-	"internal/emit/node/service.go",
+	"internal/domain",
+	"internal/emit/node",
+	"internal/observe/eligibility.go",
+	"internal/observe/eligibilitycore",
+	"internal/portablevalue",
+	"internal/projectionprofile",
+	"internal/runnerprofile",
+	"testkit/contracts",
 	"testkit/studies/cli_precedence/study_darwin_test.go",
 	"testkit/studies/cli_precedence/reduction_darwin_test.go",
 	"testkit/studies/http_invoices/reduction_darwin_test.go",
+	"tools/generate-p07b-a2-runtime-example.mjs",
+	"tools/verify-p07b-a2-recovery-process.mjs",
+	"tools/capture-p07b-a2-human-surface.mjs",
 ]);
 
 const roster = Object.freeze([
@@ -85,8 +94,68 @@ const roster = Object.freeze([
 	["add-build-tag-to-required-test", "P07B_A2_TEST_AST_DRIFT"],
 	["change-physical-build-tag", "P07B_A2_TEST_AST_DRIFT"],
 	["add-build-tag-to-production", "P07B_A2_CHOICE_AST_DRIFT"],
+	["compiler-os-import", "P07B_A2_PURE_TRANSITIVE_FORBIDDEN_DEPENDENCY"],
+	["compiler-store-import", "P07B_A2_PURE_TRANSITIVE_INTERNAL_DEPENDENCY"],
+	["prepared-bundle-authority-getter", "P07B_A2_PREPARED_BUNDLE_API_DRIFT"],
+	["bundle-self-digest", "P07B_A2_BUNDLE_SELF_DIGEST"],
+	["manifest-parse-includes-self", "P07B_A2_BUNDLE_RECOVERY_DATAFLOW"],
+	["manifest-self-coverage-bypass", "P07B_A2_MANIFEST_SELF_COVERAGE"],
+	["asset-byte-drift", "P07B_A2_FIXED_ASSET_DIGEST"],
+	["asset-pin-drift", "P07B_A2_FIXED_ASSET_GO_PIN"],
+	["asset-validation-bypass", "P07B_A2_FIXED_ASSET_VALIDATION_DATAFLOW"],
+	["asset-self-derived-raw-digest", "P07B_A2_FIXED_ASSET_SELF_DERIVED"],
+	["asset-extra-embed", "P07B_A2_FIXED_ASSET_EMBED_ROSTER"],
+	["js-static-import-drift", "P07B_A2_JS_IMPORT_ROSTER"],
+	["js-second-dynamic-edge", "P07B_A2_JS_DYNAMIC_EDGE"],
+	["js-import-before-verification", "P07B_A2_ENTRYPOINT_VERIFY_BEFORE_IMPORT"],
+	["js-high-level-http-import", "P07B_A2_JS_IMPORT_ROSTER"],
+	["js-fetch-capability", "P07B_A2_JS_CAPABILITY_OPENING"],
+	["js-shell-execution", "P07B_A2_JS_SPAWN_PROFILE"],
+	["js-ambient-environment", "P07B_A2_JS_CAPABILITY_OPENING"],
+	["js-direct-target-root", "P07B_A2_DIRECT_TARGET_EXECUTION"],
+	["js-production-fault-hook", "P07B_A2_PRODUCTION_FAULT_HOOK"],
+	["go-request-expected-field", "P07B_A2_PARITY_REQUEST_ROSTER"],
+	["go-evaluator-corpus-authority-reference", "P07B_A2_PARITY_CORPUS_ACCESS"],
+	["runner-expected-access", "P07B_A2_PARITY_RUNNER_CAPABILITY"],
+	["node-evaluator-expected-read", "P07B_A2_PARITY_ORACLE_ACCESS"],
+	["node-evaluator-case-id-switch", "P07B_A2_PARITY_ORACLE_ACCESS"],
+	["node-evaluator-corpus-authority-reference", "P07B_A2_PARITY_CORPUS_ACCESS"],
+	["js-extra-export", "P07B_A2_JS_EXPORT_ROSTER"],
+	["shared-cli-owner-bypass", "P07B_A2_SHARED_CLI_PROJECTION_OWNER"],
+	["shared-eligibility-owner-bypass", "P07B_A2_SHARED_ELIGIBILITY_OWNER"],
+	["direct-cancellation-insertion", "P07B_A2_CANCELLATION_JURISDICTION"],
+	["runner-ambient-environment", "P07B_A2_PARITY_RUNNER_CAPABILITY"],
+	["package-map-sibling", "P07B_A2_PACKAGE_MAP_DRIFT"],
+	["pure-unlisted-stdlib-import", "P07B_A2_PURE_IMPORT_EDGE_ROSTER"],
+	["manifest-remove-self-exclusion", "P07B_A2_MANIFEST_SELF_COVERAGE"],
+	["asset-early-reviewed-return", "P07B_A2_FIXED_ASSET_VALIDATION_DATAFLOW"],
+	["asset-wrong-reviewed-return", "P07B_A2_FIXED_ASSET_SELF_DERIVED"],
+	["asset-embed-fs", "P07B_A2_FIXED_ASSET_EMBED_ROSTER"],
+	["js-existing-module-capability-import", "P07B_A2_JS_IMPORT_ROSTER"],
+	["runner-powerful-harness-import", "P07B_A2_PARITY_RUNNER_CAPABILITY"],
+	["node-evaluator-arrow-oracle-read", "P07B_A2_PARITY_ORACLE_ACCESS"],
+	["node-evaluator-destructured-oracle-read", "P07B_A2_PARITY_ORACLE_ACCESS"],
+	["js-indirect-import-before-verification", "P07B_A2_ENTRYPOINT_VERIFY_BEFORE_IMPORT"],
+	["js-spawn-options-spread", "P07B_A2_JS_SPAWN_PROFILE"],
+	["js-spawn-alias", "P07B_A2_JS_SPAWN_PROFILE"],
+	["js-global-fetch-capability", "P07B_A2_JS_CAPABILITY_OPENING"],
+	["probe-package-map-sibling", "P07B_A2_PACKAGE_MAP_DRIFT"],
+	["compiler-probe-import-drift", "P07B_A2_PROBE_IMPORT_ROSTER"],
+	["compiler-probe-dataflow-drift", "P07B_A2_COMPILER_PROBE_AST_DRIFT"],
+	["parser-probe-compiler-import", "P07B_A2_PROBE_IMPORT_ROSTER"],
+	["parser-probe-schema-drift", "P07B_A2_PARSER_PROBE_AST_DRIFT"],
+	["readme-warning-drift", "P07B_A2_BUNDLE_AST_DRIFT"],
+	["readme-test-noop", "P07B_A2_TEST_AST_DRIFT"],
+	["example-generator-byte-drift", "P07B_A2_EXAMPLE_GENERATOR_DIGEST"],
+	["recovery-verifier-byte-drift", "P07B_A2_RECOVERY_VERIFIER_DIGEST"],
+	["human-capture-byte-drift", "P07B_A2_HUMAN_CAPTURE_DIGEST"],
+	["human-capture-watchdog-removal", "P07B_A2_CAPTURE_WATCHDOG"],
+	["human-capture-bundle-binding-removal", "P07B_A2_CAPTURE_BUNDLE_BINDING"],
+	["human-capture-open-tap", "P07B_A2_CAPTURE_CLOSED_TAP"],
+	["human-capture-control-roster-weakening", "P07B_A2_CAPTURE_CONTROL_REJECTION"],
+	["human-capture-scenario-metadata-removal", "P07B_A2_CAPTURE_SCENARIO_METADATA"],
 ]);
-const expectedRosterDigest = "sha256:459e3949ee720d3b7d7b2182445f5543c95f55f09c25ff7d16bdf70ba7036dbb";
+const expectedRosterDigest = "sha256:832d98ce1e73056e3133a9b6cc31d1ef3da4c88a451f85f122d35ab38b05c80e";
 
 function rosterDigest() {
 	const hash = createHash("sha256");
@@ -96,9 +165,9 @@ function rosterDigest() {
 
 async function copyFixture(label) {
 	const directory = await mkdtemp(join(process.env.TMPDIR ?? "/tmp", `countershape-a2-arch-${label}-`));
-	for (const path of files) {
+	for (const path of copyPaths) {
 		await mkdir(dirname(join(directory, path)), { recursive: true });
-		await copyFile(join(root, path), join(directory, path));
+		await cp(join(root, path), join(directory, path), { recursive: true, errorOnExist: true, dereference: false });
 	}
 	return directory;
 }
@@ -133,8 +202,8 @@ async function cleanControl() {
 	const directory = await copyFixture("clean");
 	try {
 		const result = run(directory);
-		if (result.status !== 0 || !result.stdout.includes("P07B A2.1 architecture fixture OK") ||
-			result.stdout.includes("P07B A2.1 architecture boundary OK")) {
+		if (result.status !== 0 || !result.stdout.includes("P07B A2.2 architecture fixture OK") ||
+			result.stdout.includes("P07B A2.2 architecture boundary OK")) {
 			throw new Error(`clean control failed: ${result.stderr || result.stdout}`);
 		}
 	} finally {
@@ -346,6 +415,222 @@ async function mutate(id, expectedCode) {
 			await writeFile(join(directory, path), `//go:build ignore\n\n${source}`);
 			break;
 		}
+		case "compiler-os-import":
+			await replaceRequired(directory, "internal/emit/node/compiler/compiler.go", '"fmt"', '"fmt"\n\t_ "os"');
+			break;
+		case "compiler-store-import":
+			await replaceRequired(directory, "internal/emit/node/compiler/compiler.go", '"fmt"', '"fmt"\n\t_ "github.com/nelsonwerd/countershape/internal/store"');
+			break;
+		case "prepared-bundle-authority-getter":
+			await replaceRequired(directory, "internal/emit/node/service.go", "func (p PreparedBundle) Valid() bool {", "func (p PreparedBundle) Authority() PreparedCompilation { return p.prepared }\n\nfunc (p PreparedBundle) Valid() bool {");
+			break;
+		case "bundle-self-digest":
+			await replaceRequired(directory, "internal/emit/node/model/bundle.go", '"external_service_binding", "determinism_profile",', '"external_service_binding", "bundle_digest", "determinism_profile",');
+			break;
+		case "manifest-parse-includes-self":
+			await replaceRequired(directory, "internal/emit/node/model/bundle.go", 'parseIntegrityManifest(fileByPath["manifest.json"].content, files[:5])', 'parseIntegrityManifest(fileByPath["manifest.json"].content, files)');
+			break;
+		case "manifest-self-coverage-bypass":
+			await replaceRequired(directory, "internal/emit/node/model/bundle.go", "len(protected) != 5", "len(protected) != 6");
+			break;
+		case "asset-byte-drift": {
+			const path = "internal/emit/node/program/v1/contract.test.mjs";
+			const source = await readFile(join(directory, path), "utf8");
+			await writeFile(join(directory, path), `${source}// hostile reviewed-byte drift\n`);
+			break;
+		}
+		case "asset-pin-drift":
+			await replaceRequired(directory, "internal/emit/node/program/v1/assets.go", "sha256:0ded06ad24d9b218fef7776835b26124483d788f2eb49f69d0ffb9806c85e021", "sha256:1ded06ad24d9b218fef7776835b26124483d788f2eb49f69d0ffb9806c85e021");
+			break;
+		case "asset-validation-bypass":
+			await replaceRequired(directory, "internal/emit/node/program/v1/assets.go", "if err := verifyReviewedDigest(source, reviewed); err != nil {", "if err := error(nil); err != nil {");
+			break;
+		case "asset-self-derived-raw-digest":
+			await replaceRequired(directory, "internal/emit/node/program/v1/assets.go", "_, reviewed, err := validatedAsset(path)", "source, _, err := validatedAsset(path)");
+			await replaceRequired(directory, "internal/emit/node/program/v1/assets.go", "\treturn reviewed, nil\n}\n\nfunc validatedAsset", "\tdigest := sha256.Sum256(source)\n\treturn \"sha256:\" + hex.EncodeToString(digest[:]), nil\n}\n\nfunc validatedAsset");
+			break;
+		case "asset-extra-embed":
+			await replaceRequired(directory, "internal/emit/node/program/v1/assets.go", "\t//go:embed harness.mjs\n\tharnessSource []byte", "\t//go:embed harness.mjs\n\tharnessSource []byte\n\n\t//go:embed harness.mjs\n\tduplicateHarnessSource []byte");
+			break;
+		case "js-static-import-drift":
+			await replaceRequired(directory, "internal/emit/node/program/v1/contract.test.mjs", 'from "node:url"', 'from "node:util"');
+			break;
+		case "js-second-dynamic-edge":
+			await replaceRequired(directory, "internal/emit/node/program/v1/contract.test.mjs", 'const harness = await import("./harness.mjs");', 'const harness = await import("./harness.mjs");\n    await import("./harness.mjs");');
+			break;
+		case "js-import-before-verification":
+			await replaceRequired(directory, "internal/emit/node/program/v1/contract.test.mjs", "const verified = new Map();", 'const harness = await import("./harness.mjs");\n    const verified = new Map();');
+			await replaceRequired(directory, "internal/emit/node/program/v1/contract.test.mjs", '    const harness = await import("./harness.mjs");\n    result = await harness.runContract({', "    result = await harness.runContract({");
+			break;
+		case "js-high-level-http-import":
+			await replaceRequired(directory, "internal/emit/node/program/v1/harness.mjs", 'import { spawn } from "node:child_process";', 'import { spawn } from "node:child_process";\nimport { request } from "node:http";');
+			break;
+		case "js-fetch-capability":
+			await replaceRequired(directory, "internal/emit/node/program/v1/harness.mjs", "export async function runContract({ bundleRoot, targetRoot, decisionBytes, fixtureBytes }) {", 'export async function runContract({ bundleRoot, targetRoot, decisionBytes, fixtureBytes }) {\n  fetch("https://example.invalid");');
+			break;
+		case "js-shell-execution":
+			await replaceRequired(directory, "internal/emit/node/program/v1/harness.mjs", "env: environment, shell: false, detached: true,", "env: environment, shell: true, detached: true,");
+			break;
+		case "js-ambient-environment":
+			await replaceRequired(directory, "internal/emit/node/program/v1/harness.mjs", "cwd: roots.candidate, env: environment, shell: false,", "cwd: roots.candidate, env: process.env, shell: false,");
+			break;
+		case "js-direct-target-root":
+			await replaceRequired(directory, "internal/emit/node/program/v1/harness.mjs", "async function runCLI(contract, roots, environment, facts) {", "async function runCLI(contract, roots, environment, facts, targetRoot) {");
+			await replaceRequired(directory, "internal/emit/node/program/v1/harness.mjs", "cwd: roots.candidate, env: environment, shell: false,", "cwd: targetRoot, env: environment, shell: false,");
+			await replaceRequired(directory, "internal/emit/node/program/v1/harness.mjs", "await runCLI(contract, roots, environment, facts);", "await runCLI(contract, roots, environment, facts, targetRoot);");
+			break;
+		case "js-production-fault-hook":
+			await replaceRequired(directory, "internal/emit/node/program/v1/harness.mjs", 'import { spawn } from "node:child_process";', 'import { spawn } from "node:child_process";\nconst faultHook = null;');
+			break;
+		case "go-request-expected-field":
+			await replaceRequired(directory, "internal/emit/node/parity/types.go", "type Request struct {", "type Request struct {\n\texpected canon.Value");
+			break;
+		case "go-evaluator-corpus-authority-reference": {
+			const path = "internal/emit/node/parity/operations.go";
+			const source = await readFile(join(directory, path), "utf8");
+			await writeFile(join(directory, path), `${source}\nvar corpus = "spec/vectors/v1/contract-parity.jsonl"\n`);
+			break;
+		}
+		case "runner-expected-access":
+			await replaceRequired(directory, "internal/emit/node/parity/runner.mjs", "await writeOneFrame(evaluateParityOperation(request));", "request.expected;\n  await writeOneFrame(evaluateParityOperation(request));");
+			break;
+		case "node-evaluator-expected-read":
+			await replaceRequired(directory, "internal/emit/node/program/v1/harness.mjs", "export function evaluateParityOperation(request) {\n  try {", "export function evaluateParityOperation(request) {\n  request.expected;\n  try {");
+			break;
+		case "node-evaluator-case-id-switch":
+			await replaceRequired(directory, "internal/emit/node/program/v1/harness.mjs", "export function evaluateParityOperation(request) {\n  try {", 'export function evaluateParityOperation(request) {\n  if (request.id === "hostile") return null;\n  try {');
+			break;
+		case "node-evaluator-corpus-authority-reference":
+			await replaceRequired(directory, "internal/emit/node/program/v1/harness.mjs", "export function evaluateParityOperation(request) {\n  try {", 'export function evaluateParityOperation(request) {\n  "spec/vectors/v1/contract-parity.jsonl";\n  try {');
+			break;
+		case "js-extra-export": {
+			const path = "internal/emit/node/program/v1/contract.test.mjs";
+			const source = await readFile(join(directory, path), "utf8");
+			await writeFile(join(directory, path), `${source}export const hostileDiagnostic = true;\n`);
+			break;
+		}
+		case "shared-cli-owner-bypass":
+			await replaceRequired(directory, "internal/adapters/cli/projection.go", "behavior, rejection := d.projectEligibleBehavior(\n\t\tinput.Completion.value,\n\t\tappend([]byte(nil), input.Stdout...),\n\t\tappend([]byte(nil), input.Stderr...),\n\t)", "behavior := cliBehaviorProjection{}\n\tvar rejection *ProjectionRejection");
+			break;
+		case "shared-eligibility-owner-bypass": {
+			await replaceRequired(directory, "internal/emit/node/parity/operations.go", "decision, err := eligibilitycore.Select(eligibilitycore.FactKind(kindText), reasons)", "decision, err := selectOwnerEligibilityBypass(eligibilitycore.FactKind(kindText), reasons)");
+			const path = "internal/emit/node/parity/operations.go";
+			const source = await readFile(join(directory, path), "utf8");
+			await writeFile(join(directory, path), `${source}\nfunc selectOwnerEligibilityBypass(kind eligibilitycore.FactKind, reasons []domain.ControlReason) (eligibilitycore.Decision, error) {\n\treturn eligibilitycore.Decision{}, nil\n}\n`);
+			break;
+		}
+		case "direct-cancellation-insertion":
+			await replaceRequired(directory, "internal/emit/node/model/result.go", 'DirectOrphanRisk             DirectReason = "ORPHAN_RISK"', 'DirectCancelled              DirectReason = "CANCELLED"\n\tDirectOrphanRisk             DirectReason = "ORPHAN_RISK"');
+			break;
+		case "runner-ambient-environment":
+			await replaceRequired(directory, "internal/emit/node/parity/runner.mjs", "try {\n  const request", "try {\n  process.env;\n  const request");
+			break;
+		case "package-map-sibling":
+			await writeFile(join(directory, "internal/emit/node/parity/hostile.go"), "package parity\n");
+			break;
+		case "pure-unlisted-stdlib-import":
+			await replaceRequired(directory, "internal/emit/node/compiler/compiler.go", '"fmt"', '"fmt"\n\t_ "database/sql"');
+			break;
+		case "manifest-remove-self-exclusion":
+			await replaceRequired(directory, "internal/emit/node/model/bundle.go", 'path != protected[index].path || path == "manifest.json"', "path != protected[index].path");
+			break;
+		case "asset-early-reviewed-return":
+			await replaceRequired(directory, "internal/emit/node/program/v1/assets.go", "func validatedAsset(path string) ([]byte, string, error) {", "func validatedAsset(path string) ([]byte, string, error) {\n\tif path == ContractTestPath { return contractTestSource, contractTestReviewedRawSHA256, nil }");
+			break;
+		case "asset-wrong-reviewed-return":
+			await replaceRequired(directory, "internal/emit/node/program/v1/assets.go", "\treturn reviewed, nil\n}\n\nfunc validatedAsset", "\treturn contractTestReviewedRawSHA256, nil\n}\n\nfunc validatedAsset");
+			break;
+		case "asset-embed-fs":
+			await replaceRequired(directory, "internal/emit/node/program/v1/assets.go", '_ "embed"', '"embed"');
+			await replaceRequired(directory, "internal/emit/node/program/v1/assets.go", "\t//go:embed harness.mjs\n\tharnessSource []byte", "\t//go:embed harness.mjs\n\tharnessSource []byte\n\n\t//go:embed harness.mjs\n\textraAssets embed.FS");
+			break;
+		case "js-existing-module-capability-import":
+			await replaceRequired(directory, "internal/emit/node/program/v1/harness.mjs", 'import { spawn } from "node:child_process";', 'import { execSync, spawn } from "node:child_process";');
+			break;
+		case "runner-powerful-harness-import":
+			await replaceRequired(directory, "internal/emit/node/parity/runner.mjs", "  parseCanonicalJSON,\n} from", "  parseCanonicalJSON,\n  runContract,\n} from");
+			break;
+		case "node-evaluator-arrow-oracle-read":
+			await replaceRequired(directory, "internal/emit/node/program/v1/harness.mjs", "export function evaluateParityOperation(request) {", "const readOracle = (request) => request.expected;\n\nexport function evaluateParityOperation(request) {\n  readOracle(request);");
+			break;
+		case "node-evaluator-destructured-oracle-read":
+			await replaceRequired(directory, "internal/emit/node/program/v1/harness.mjs", "export function evaluateParityOperation(request) {\n  try {", "export function evaluateParityOperation(request) {\n  const { expected } = request;\n  void expected;\n  try {");
+			break;
+		case "js-indirect-import-before-verification":
+			await replaceRequired(directory, "internal/emit/node/program/v1/contract.test.mjs", 'test("Countershape selected-field contract"', 'const loadHarness = async () => import("./harness.mjs");\n\ntest("Countershape selected-field contract"');
+			await replaceRequired(directory, "internal/emit/node/program/v1/contract.test.mjs", 'const harness = await import("./harness.mjs");', "const harness = await loadHarness();");
+			break;
+		case "js-spawn-options-spread":
+			await replaceRequired(directory, "internal/emit/node/program/v1/harness.mjs", "child = spawn(process.execPath, contract.runtime.argv, {\n      argv0:", "child = spawn(process.execPath, contract.runtime.argv, {\n      ...{},\n      argv0:");
+			break;
+		case "js-spawn-alias":
+			await replaceRequired(directory, "internal/emit/node/program/v1/harness.mjs", 'import { spawn } from "node:child_process";', 'import { spawn } from "node:child_process";\nconst launch = spawn;');
+			await replaceRequired(directory, "internal/emit/node/program/v1/harness.mjs", "child = spawn(process.execPath, contract.runtime.argv,", "child = launch(process.execPath, contract.runtime.argv,");
+			break;
+		case "js-global-fetch-capability":
+			await replaceRequired(directory, "internal/emit/node/program/v1/harness.mjs", "export async function runContract({ bundleRoot, targetRoot, decisionBytes, fixtureBytes }) {", 'export async function runContract({ bundleRoot, targetRoot, decisionBytes, fixtureBytes }) {\n  globalThis.fetch("https://example.invalid");');
+			break;
+		case "probe-package-map-sibling":
+			await writeFile(join(directory, "internal/emit/node/cmd/p07b-a2-compiler-probe/hostile.go"), "package main\n");
+			break;
+		case "compiler-probe-import-drift":
+			await replaceRequired(directory, "internal/emit/node/cmd/p07b-a2-compiler-probe/main.go", '"strings"', '"strings"\n\t_ "time"');
+			break;
+		case "compiler-probe-dataflow-drift":
+			await replaceRequired(directory, "internal/emit/node/cmd/p07b-a2-compiler-probe/main.go", "bundle.CanonicalBytes()", "nil");
+			break;
+		case "parser-probe-compiler-import":
+			await replaceRequired(directory, "internal/emit/node/cmd/p07b-a2-parser-probe/main.go", '"strings"', '"strings"\n\t_ "github.com/nelsonwerd/countershape/internal/emit/node/compiler"');
+			break;
+		case "parser-probe-schema-drift":
+			await replaceRequired(directory, "internal/emit/node/cmd/p07b-a2-parser-probe/main.go", '"countershape.p07b-a2.parser-probe/v1"', '"countershape.p07b-a2.parser-probe/v2"');
+			break;
+		case "readme-warning-drift":
+			await replaceRequired(directory, "internal/emit/node/model/bundle.go", "WARNING: FULL USER AUTHORITY AND NETWORK ACCESS.", "WARNING: CONTAINED AND HARMLESS.");
+			break;
+		case "readme-test-noop":
+			await replaceRequired(directory, "internal/emit/node/compiler/compiler_test.go", "func TestRenderedREADMEStatesInvocationAndTrustCeilings(t *testing.T) {", "func TestRenderedREADMEStatesInvocationAndTrustCeilings(t *testing.T) {\n\treturn");
+			break;
+		case "example-generator-byte-drift": {
+			const path = "tools/generate-p07b-a2-runtime-example.mjs";
+			const source = await readFile(join(directory, path), "utf8");
+			await writeFile(join(directory, path), `${source}// hostile generator drift\n`);
+			break;
+		}
+		case "recovery-verifier-byte-drift": {
+			const path = "tools/verify-p07b-a2-recovery-process.mjs";
+			const source = await readFile(join(directory, path), "utf8");
+			await writeFile(join(directory, path), `${source}// hostile verifier drift\n`);
+			break;
+		}
+		case "human-capture-byte-drift": {
+			const path = "tools/capture-p07b-a2-human-surface.mjs";
+			const source = await readFile(join(directory, path), "utf8");
+			await writeFile(join(directory, path), `${source}// hostile capture drift\n`);
+			break;
+		}
+		case "human-capture-watchdog-removal":
+			await replaceRequired(directory, "tools/capture-p07b-a2-human-surface.mjs",
+				"setTimeout(() => process.exit(70), 15_000).unref();",
+				"setTimeout(() => process.exit(70), 14_999).unref();");
+			break;
+		case "human-capture-bundle-binding-removal":
+			await replaceRequired(directory, "tools/capture-p07b-a2-human-surface.mjs",
+				'const digest = typedDigest("ContractBundle", canonicalBody);',
+				"const digest = rawSHA256(canonicalBody);");
+			break;
+		case "human-capture-open-tap":
+			await replaceRequired(directory, "tools/capture-p07b-a2-human-surface.mjs",
+				"TAP has an unrecognized trailing line", "TAP trailing lines ignored");
+			break;
+		case "human-capture-control-roster-weakening":
+			await replaceRequired(directory, "tools/capture-p07b-a2-human-surface.mjs",
+				String.raw`\u007f-\u009f`, String.raw`\u007f`);
+			break;
+		case "human-capture-scenario-metadata-removal":
+			await replaceRequired(directory, "tools/capture-p07b-a2-human-surface.mjs",
+				"setup_profile: scenario.setupProfile,", 'setup_profile: "REMOVED",');
+			break;
 		default:
 			throw new Error(`unknown mutant ${id}`);
 		}
@@ -371,7 +656,7 @@ async function main() {
 	await cleanControl();
 	await commentLiteralControl();
 	for (const [id, code] of roster) await mutate(id, code);
-	process.stdout.write(`P07B A2.1 architecture defensive self-test OK (${roster.length}/${roster.length}; roster ${expectedRosterDigest})\n`);
+	process.stdout.write(`P07B A2.2 architecture defensive self-test OK (${roster.length}/${roster.length}; roster ${expectedRosterDigest})\n`);
 }
 
 main().catch((error) => {

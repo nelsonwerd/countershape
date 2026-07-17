@@ -1140,13 +1140,13 @@ const P07_FILE_ROSTER = Object.freeze([
 ]);
 
 const P07_JSON_FILE_ROSTER = Object.freeze(["decision.json", "fixture.json", "manifest.json"]);
-const P07_PLANNING_SOURCE_SHA256 = Object.freeze({
-  "README.md": "sha256:b84d616a00d9602144c9d841c5c6e0a141ee7c530762127cd318cfeb548aa1a8",
-  "contract.test.mjs": "sha256:3ba24f6f6db4a0dace8dd0cd3b492dbd4a86f17bf75064c349b768c601f69153",
-  "decision.json": "sha256:f69ce5db26a37ad9b970500ad185b02fbd14bb943ede77ac631f1783ababbd95",
-  "fixture.json": "sha256:6c7c637c59d63a926cc279e54d7eea4edfae03c5d7bb5984778c99694b748aec",
-  "harness.mjs": "sha256:5ad534e07d3fa2207a48056ff6b01791b331134655e344dd691c892a69544dca",
-  "manifest.json": "sha256:6d57ba646aa65c66515bb75bbbc3c6c676a80e637c7581429b4c97a6626d9664",
+const P07_RUNTIME_SOURCE_SHA256 = Object.freeze({
+  "README.md": "sha256:dfbdd892d81f9abf40457ead95bb8221409592b39eaaea8e456bff3349049d17",
+  "contract.test.mjs": "sha256:0ded06ad24d9b218fef7776835b26124483d788f2eb49f69d0ffb9806c85e021",
+  "decision.json": "sha256:8ff677acdf129ff10c862c96542903f5c5b0e1c94884ce75aa8b5bc4d1bb6a53",
+  "fixture.json": "sha256:e4474fa48d41662d2ac7e188f19afa20196de4530ae1edceaed03bdde3801fba",
+  "harness.mjs": "sha256:51eb70171f044cd77776d36dceed8101e45c774c3b5f70327fe144061b08bb34",
+  "manifest.json": "sha256:37914f4acca282906f4966500190c162625de9a1027784044ab3b6b59b7fef41",
 });
 const P07_SAFE_INTEGER_PATTERN = "^(?:0|-?(?:[1-9][0-9]{0,14}|[1-8][0-9]{15}|900[0-6][0-9]{12}|90070[0-9]{11}|90071[0-8][0-9]{10}|900719[0-8][0-9]{9}|9007199[01][0-9]{8}|90071992[0-4][0-9]{7}|900719925[0-3][0-9]{6}|9007199254[0-6][0-9]{5}|90071992547[0-3][0-9]{4}|9007199254740[0-8][0-9]{2}|90071992547409[0-8][0-9]|900719925474099[01]))$";
 const P07_SAFE_INTEGER_LIMIT = 9007199254740991n;
@@ -2042,6 +2042,15 @@ function validateP07Contracts(root, problems, schemasByFile) {
           add(problems, "P07_FILE_JSON", relative(root, bundleExampleFile), `${filePath} contains duplicate JSON member names`);
         }
         parsedJSONByPath.set(filePath, parsed.value);
+        const canonicalEnvelope = Buffer.from(`${p07CanonicalJSON(parsed.value)}\n`, "utf8");
+        if (!bytes.equals(canonicalEnvelope)) {
+          add(
+            problems,
+            "P07_FILE_JSON",
+            relative(root, bundleExampleFile),
+            `${filePath} must be canonical JSON followed by exactly one LF`,
+          );
+        }
         for (const finding of collectP07ReceiptAuthority(parsed.value)) {
           add(
             problems,
@@ -2062,36 +2071,51 @@ function validateP07Contracts(root, problems, schemasByFile) {
     const compiledDecision = parsedJSONByPath.get("decision.json");
     const portableFixture = parsedJSONByPath.get("fixture.json");
     const expectedCompiledPredicate = {
-      allowed_tuples: bundle.predicate?.allowed_tuples,
-      kind: bundle.predicate?.kind,
-      selected_fields: bundle.predicate?.selected_fields,
+      ...bundle.predicate,
     };
     if (
-      compiledDecision?.schema_version !== "countershape-contract/v1"
+      !jsonEqual(Object.keys(compiledDecision ?? {}), ["decision_action", "kind", "predicate", "schema_version"])
+      || compiledDecision?.schema_version !== "countershape-contract/v1"
       || compiledDecision?.kind !== "CompiledDecision"
+      || compiledDecision?.decision_action !== bundle.decision_action
       || !jsonEqual(compiledDecision?.predicate, expectedCompiledPredicate)
     ) {
       add(
         problems,
         "P07_FILE_ROLE",
         relative(root, bundleExampleFile),
-        "decision.json must be the exact compiled predicate represented by the outer bundle",
+        "decision.json must be the exact compiled decision action and predicate represented by the outer bundle",
       );
     }
-    const expectedFixture = {
-      argv: ["--subject"],
-      entrypoint: "harness.mjs",
-      expected_stdout_base64: "b2sK",
-      kind: "PortableFixture",
-      schema_version: "countershape-contract/v1",
-      source_profile: "PLANNING_EXECUTABLE_FIXTURE_V1",
-    };
-    if (!jsonEqual(portableFixture, expectedFixture)) {
+    let portableFixtureValid = false;
+    if (
+      jsonEqual(Object.keys(portableFixture ?? {}), [
+        "fixture_version", "kind", "portable_source_base64", "portable_source_digest", "schema_version",
+      ])
+      && portableFixture?.schema_version === "countershape-contract/v1"
+      && portableFixture?.kind === "PortableFixture"
+      && portableFixture?.fixture_version === "portable-source-fixture/v1"
+      && portableFixture?.portable_source_digest === bundle.portable_source_digest
+      && typeof portableFixture?.portable_source_base64 === "string"
+    ) {
+      const sourceBytes = Buffer.from(portableFixture.portable_source_base64, "base64");
+      if (sourceBytes.toString("base64") === portableFixture.portable_source_base64) {
+        try {
+          const source = strictJsonParse(sourceBytes.toString("utf8"), "embedded PortableSource");
+          portableFixtureValid = source.duplicates.length === 0
+            && sourceBytes.equals(Buffer.from(p07CanonicalJSON(source.value), "utf8"))
+            && p07TypedDigest("PortableSource", source.value) === portableFixture.portable_source_digest;
+        } catch {
+          portableFixtureValid = false;
+        }
+      }
+    }
+    if (!portableFixtureValid) {
       add(
         problems,
         "P07_FILE_ROLE",
         relative(root, bundleExampleFile),
-        "fixture.json must retain the exact bounded executable planning source fixture",
+        "fixture.json must recover the exact canonical typed PortableSource represented by the outer bundle",
       );
     }
     const contractText = decodedByPath.get("contract.test.mjs")?.toString("utf8") ?? "";
@@ -2099,28 +2123,30 @@ function validateP07Contracts(root, problems, schemasByFile) {
     const readmeText = decodedByPath.get("README.md")?.toString("utf8") ?? "";
     const verificationIndex = contractText.indexOf("for (const entry of manifest.files)");
     const dynamicHarnessIndex = contractText.indexOf("await import(\"./harness.mjs\")");
-    const planningSourceBytesExact = P07_FILE_ROSTER.every((filePath) => (
+    const runtimeSourceBytesExact = P07_FILE_ROSTER.every((filePath) => (
       decodedByPath.has(filePath)
-      && rawSha256(decodedByPath.get(filePath)) === P07_PLANNING_SOURCE_SHA256[filePath]
+      && rawSha256(decodedByPath.get(filePath)) === P07_RUNTIME_SOURCE_SHA256[filePath]
     ));
     if (
-      !planningSourceBytesExact
+      !runtimeSourceBytesExact
       || verificationIndex < 0
       || dynamicHarnessIndex <= verificationIndex
       || /from\s+["']\.\/harness\.mjs["']/u.test(contractText)
       || !contractText.includes("node:test")
-      || !contractText.includes("runFixture(fixture)")
-      || !harnessText.includes("spawnSync(process.execPath")
-      || !harnessText.includes("process.argv[2] === \"--subject\"")
-      || !harnessText.includes("export function runFixture")
-      || !harnessText.includes("export function evaluate")
-      || !readmeText.includes("not a shipped emitter or portability receipt")
+      || !contractText.includes("harness.runContract({")
+      || !harnessText.includes("spawn(process.execPath")
+      || !harnessText.includes("contract.source.entrypoint")
+      || !harnessText.includes("export async function runContract")
+      || !readmeText.includes("WARNING: FULL USER AUTHORITY AND NETWORK ACCESS")
+      || !readmeText.includes("this bundle does not provide a safe preparation command")
+      || !readmeText.includes("Who created or approved the bundle")
+      || !readmeText.includes("Authenticity, Git identity, or currentness")
     ) {
       add(
         problems,
         "P07_FILE_ROLE",
         relative(root, bundleExampleFile),
-        "six-file example must verify companions before dynamic harness load and execute one real Node-core predicate fixture",
+        "six-file example must retain the reviewed A2.2 runtime assets and verify companions before dynamic harness load",
       );
     }
     if (totalRaw > 640 * 1024) {
@@ -2358,11 +2384,86 @@ function validateP07Contracts(root, problems, schemasByFile) {
   }
 }
 
+const P07_PARITY_OPERATION_COUNTS = Object.freeze({
+  CANONICALIZE_JSON: 72,
+  PARSE_CANONICAL_JSON: 48,
+  PARSE_MANIFEST_ENVELOPE: 32,
+  PARSE_READY_FRAME: 24,
+  PARSE_HTTP_RESPONSE: 96,
+  PROJECT_CLI_OBSERVATION: 48,
+  PROJECT_HTTP_OBSERVATION: 48,
+  EVALUATE_EXACT_PREDICATE: 64,
+  SELECT_DIRECT_RESULT: 48,
+  SELECT_OWNER_ELIGIBILITY: 32,
+});
+
+function validateP07ParityCorpus(root, file, rows, problems) {
+  const label = relative(root, file);
+  const exact = fs.readFileSync(file);
+  if (exact.length === 0 || exact.at(-1) !== 0x0a || exact.includes(0x0d)) {
+    add(problems, "P07_PARITY_CORPUS_FRAME", label, "parity corpus must be nonempty, LF-only, and final-LF terminated");
+  }
+  if (rows.length !== 512) {
+    add(problems, "P07_PARITY_CORPUS_COUNT", label, `parity corpus must contain exactly 512 vectors; got ${rows.length}`);
+  }
+  const exactLines = exact.toString("utf8").split("\n");
+  const ids = new Set();
+  const counts = new Map(Object.keys(P07_PARITY_OPERATION_COUNTS).map((operation) => [operation, 0]));
+  for (const { value, line } of rows) {
+    if (exactLines[line - 1] !== p07CanonicalJSON(value)) {
+      add(problems, "P07_PARITY_CORPUS_CANONICAL", label, "parity vector must be exact canonical JSON", line);
+    }
+    if (!jsonEqual(Object.keys(value), ["description", "expected", "id", "input", "operation", "tags"])) {
+      add(problems, "P07_PARITY_CORPUS_ROSTER", label, "parity vector must retain its exact six-member root roster", line);
+      continue;
+    }
+    if (typeof value.description !== "string" || value.description.length === 0) {
+      add(problems, "P07_PARITY_CORPUS_DESCRIPTION", label, "parity vector description must be nonempty text", line);
+    }
+    if (typeof value.id !== "string" || !/^[a-z0-9][a-z0-9._-]{0,95}$/u.test(value.id) || ids.has(value.id)) {
+      add(problems, "P07_PARITY_CORPUS_ID", label, "parity vector ID must be unique closed-profile text", line);
+    } else {
+      ids.add(value.id);
+    }
+    if (!counts.has(value.operation)) {
+      add(problems, "P07_PARITY_CORPUS_OPERATION", label, `parity vector operation is outside the closed roster: ${value.operation}`, line);
+    } else {
+      counts.set(value.operation, counts.get(value.operation) + 1);
+    }
+    if (!value.input || typeof value.input !== "object" || Array.isArray(value.input)) {
+      add(problems, "P07_PARITY_CORPUS_INPUT", label, "parity vector input must be an object", line);
+    }
+    const expectedKeys = Object.keys(value.expected ?? {});
+    const expectedStatus = value.expected?.status;
+    if (
+      !value.expected || typeof value.expected !== "object" || Array.isArray(value.expected)
+      || (expectedStatus === "OK" && !jsonEqual(expectedKeys, ["status", "value"]))
+      || (expectedStatus === "REFUSED" && !jsonEqual(expectedKeys, ["code", "status"]))
+      || !["OK", "REFUSED"].includes(expectedStatus)
+    ) {
+      add(problems, "P07_PARITY_CORPUS_EXPECTED", label, "parity expected result must use the exact OK/value or REFUSED/code roster", line);
+    }
+    if (
+      !Array.isArray(value.tags)
+      || value.tags.some((tag) => typeof tag !== "string" || tag.length === 0)
+      || value.tags.some((tag, index) => index > 0 && Buffer.compare(Buffer.from(value.tags[index - 1]), Buffer.from(tag)) >= 0)
+    ) {
+      add(problems, "P07_PARITY_CORPUS_TAGS", label, "parity tags must be nonempty, unique, and unsigned-UTF-8 sorted", line);
+    }
+  }
+  for (const [operation, expected] of Object.entries(P07_PARITY_OPERATION_COUNTS)) {
+    if (counts.get(operation) !== expected) {
+      add(problems, "P07_PARITY_CORPUS_DISTRIBUTION", label, `${operation} must have exactly ${expected} vectors; got ${counts.get(operation)}`);
+    }
+  }
+}
+
 function validateVectors(root, problems) {
   const vectorDirectory = path.join(root, "spec/vectors/v1");
   const files = sortedFiles(vectorDirectory, (file) => file.endsWith(".jsonl"));
   assertNoCaseFoldedFileCollisions(root, files, problems);
   const refusalFile = path.join(vectorDirectory, "refusals.jsonl");
+  const parityFile = path.join(vectorDirectory, "contract-parity.jsonl");
   if (!fs.existsSync(refusalFile)) {
     add(problems, "REQUIRED_FILE_MISSING", "spec/vectors/v1/refusals.jsonl", "required refusal vector corpus is missing");
     return { files, rowCount: 0 };
@@ -2372,10 +2473,13 @@ function validateVectors(root, problems) {
   for (const file of files) {
     for (const row of parseJsonLinesFile(root, file, problems)) rows.push({ ...row, file });
   }
-  const refusalRows = rows.filter((row) => row.file === refusalFile);
+  const parityRows = rows.filter((row) => row.file === parityFile);
+  if (fs.existsSync(parityFile)) validateP07ParityCorpus(root, parityFile, parityRows, problems);
+  const genericRows = rows.filter((row) => row.file !== parityFile);
+  const refusalRows = genericRows.filter((row) => row.file === refusalFile);
 
   const byId = new Map();
-  for (const row of rows) {
+  for (const row of genericRows) {
     const { value, file, line } = row;
     if (value.schema_version !== "countershape-vector/v1") {
       add(problems, "VECTOR_SCHEMA_VERSION", relative(root, file), "vector must use schema_version countershape-vector/v1", line);

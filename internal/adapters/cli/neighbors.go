@@ -180,9 +180,9 @@ func cliReductionMeasureDefinition() (domain.Digest, error) {
 		Dimensions    []string `json:"dimensions"`
 		Fixed         []string `json:"fixed_fields"`
 	}{
-			domain.SchemaVersion, "CLIReductionMeasureDefinition", "cli-reduction-measure/v1", "LEXICOGRAPHIC",
-			[]string{"structural_and_presence_atoms", "mutable_payload_bytes"},
-			[]string{"executable", "base_argv", "cwd_policy", "pinned_fixture_paths_modes_contents"},
+		domain.SchemaVersion, "CLIReductionMeasureDefinition", "cli-reduction-measure/v1", "LEXICOGRAPHIC",
+		[]string{"structural_and_presence_atoms", "mutable_payload_bytes"},
+		[]string{"executable", "base_argv", "cwd_policy", "pinned_fixture_paths_modes_contents"},
 	})
 	return digest, err
 }

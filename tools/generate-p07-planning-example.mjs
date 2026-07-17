@@ -15,96 +15,9 @@ const BUNDLE_FILE = path.join(ROOT, "spec/examples/v1/contract-bundle.valid.json
 const TARGET_FILE = path.join(ROOT, "spec/examples/v1/contract-execution-target.valid.json");
 const RUN_FILE = path.join(ROOT, "spec/examples/v1/finalized-contract-run.valid.json");
 const EXECUTION_FILE = path.join(ROOT, "spec/examples/v1/contract-execution.valid.json");
-const FILE_ORDER = Object.freeze([
-  "README.md",
-  "contract.test.mjs",
-  "decision.json",
-  "fixture.json",
-  "harness.mjs",
-]);
-
-const SOURCES = Object.freeze({
-  "README.md": `# Countershape executable planning fixture
-
-This six-file Node-core bundle is a schema and validator fixture, not a shipped emitter or portability receipt.
-It launches one local child process and checks one exact CLI stdout-byte tuple.
-Integrity checks detect changed declared bytes; they do not establish authorship, authenticity, confidentiality, containment, or coordinated-replacement resistance.
-`,
-  "contract.test.mjs": `import assert from "node:assert/strict";
-import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
-import test from "node:test";
-
-const base = new URL("./", import.meta.url);
-const manifest = JSON.parse(await readFile(new URL("manifest.json", base), "utf8"));
-for (const entry of manifest.files) {
-  const bytes = await readFile(new URL(entry.path, base));
-  assert.equal(bytes.length, entry.byte_count);
-  assert.equal("sha256:" + createHash("sha256").update(bytes).digest("hex"), entry.byte_sha256);
-}
-
-const { evaluate, runFixture } = await import("./harness.mjs");
-const decision = JSON.parse(await readFile(new URL("decision.json", base), "utf8"));
-const fixture = JSON.parse(await readFile(new URL("fixture.json", base), "utf8"));
-
-test("executable planning fixture evaluates one exact tuple", () => {
-  const observed = runFixture(fixture);
-  assert.equal(evaluate(decision, observed), "CONFORMS");
-});
-`,
-  "decision.json": "{\"kind\":\"CompiledDecision\",\"predicate\":{\"allowed_tuples\":[{\"fields\":[{\"field_id\":\"cli.stdout.bytes\",\"value\":{\"base64\":\"b2sK\",\"tag\":\"BYTES\"}}]}],\"kind\":\"one-of-exact/v1\",\"selected_fields\":[\"cli.stdout.bytes\"]},\"schema_version\":\"countershape-contract/v1\"}\n",
-  "fixture.json": "{\"argv\":[\"--subject\"],\"entrypoint\":\"harness.mjs\",\"expected_stdout_base64\":\"b2sK\",\"kind\":\"PortableFixture\",\"schema_version\":\"countershape-contract/v1\",\"source_profile\":\"PLANNING_EXECUTABLE_FIXTURE_V1\"}\n",
-  "harness.mjs": `import { spawnSync } from "node:child_process";
-import { fileURLToPath } from "node:url";
-
-const selfPath = fileURLToPath(import.meta.url);
-if (process.argv[1] === selfPath && process.argv[2] === "--subject") {
-  process.stdout.write(Buffer.from("b2sK", "base64"));
-}
-
-export function runFixture(fixture) {
-  if (fixture.entrypoint !== "harness.mjs" || fixture.expected_stdout_base64 !== "b2sK") {
-    throw new Error("fixture profile mismatch");
-  }
-  const child = spawnSync(process.execPath, [selfPath, ...fixture.argv], {
-    encoding: null,
-    env: { LANG: "C", TZ: "UTC" },
-    maxBuffer: 65536,
-    timeout: 5000,
-    windowsHide: true,
-  });
-  if (child.error) throw child.error;
-  if (child.signal !== null || child.status !== 0) throw new Error("subject did not exit cleanly");
-  return {
-    fields: [{
-      field_id: "cli.stdout.bytes",
-      value: { base64: child.stdout.toString("base64"), tag: "BYTES" },
-    }],
-  };
-}
-
-export function evaluate(decision, observed) {
-  const encoded = JSON.stringify(observed);
-  return decision.predicate.allowed_tuples.some((tuple) => JSON.stringify(tuple) === encoded)
-    ? "CONFORMS"
-    : "CONTRADICTS";
-}
-`,
-});
 
 function rawDigest(bytes) {
   return `sha256:${crypto.createHash("sha256").update(bytes).digest("hex")}`;
-}
-
-function fileEntry(filePath, text) {
-  const bytes = Buffer.from(text, "utf8");
-  return {
-    path: filePath,
-    mode: "100644",
-    byte_count: bytes.length,
-    byte_sha256: rawDigest(bytes),
-    content_base64: bytes.toString("base64"),
-  };
 }
 
 function canonicalJSON(value) {
@@ -126,73 +39,45 @@ function typedDigest(kind, value) {
   return `sha256:${hash.digest("hex")}`;
 }
 
-function buildExamples() {
-  const files = FILE_ORDER.map((filePath) => fileEntry(filePath, SOURCES[filePath]));
-  const manifest = {
-    schema_version: "countershape-contract/v1",
-    kind: "IntegrityManifest",
-    manifest_version: "countershape-manifest/v1",
-    files: files.map(({ path: filePath, mode, byte_count, byte_sha256 }) => ({
-      path: filePath,
-      mode,
-      byte_count,
-      byte_sha256,
-    })),
-  };
-  files.push(fileEntry("manifest.json", `${JSON.stringify(manifest)}\n`));
+function readRuntimeBundle() {
+  const bundleBytes = fs.readFileSync(BUNDLE_FILE);
+  assert.equal(bundleBytes.at(-1), 0x0a, "runtime ContractBundle example must end in one LF");
+  const bundle = JSON.parse(bundleBytes.toString("utf8"));
+  assert.equal(bundle.schema_version, "countershape/v1");
+  assert.equal(bundle.kind, "ContractBundle");
+  assert.equal(bundle.bundle_version, "node-core-contract-bundle/v1");
+  assert.equal(bundle.emitter_version, "node-exact-emitter/v1");
+  assert.deepEqual(bundle.files?.map((entry) => entry.path), [
+    "README.md",
+    "contract.test.mjs",
+    "decision.json",
+    "fixture.json",
+    "harness.mjs",
+    "manifest.json",
+  ], "runtime ContractBundle example must retain the exact six-file roster");
+  assert.equal(bundle.source_profile?.subject_entrypoint, "fixture/subject.mjs");
+  assert.equal(bundle.source_profile?.adapter_domain, "CLI");
+  assert.equal(bundle.decision_action, "ALLOW_OBSERVED");
+  assert.deepEqual(bundle.predicate?.selected_fields, ["cli.stdout.bytes"]);
+  assert.equal(bundle.predicate?.allowed_tuples?.length, 1);
+  assert.deepEqual(bundle.predicate.allowed_tuples[0], {
+    fields: [{ field_id: "cli.stdout.bytes", value: { base64: "b2sK", tag: "BYTES" } }],
+  });
+  assert.equal(bundle.files[1].byte_count > 10_000, true, "contract entrypoint unexpectedly shrank to a planning toy");
+  assert.equal(bundle.files[4].byte_count > 100_000, true, "runtime harness unexpectedly shrank to a planning toy");
+  for (const entry of bundle.files) {
+    const bytes = Buffer.from(entry.content_base64, "base64");
+    assert.equal(bytes.toString("base64"), entry.content_base64, `${entry.path} uses noncanonical base64`);
+    assert.equal(entry.mode, "100644", `${entry.path} mode drifted`);
+    assert.equal(bytes.length, entry.byte_count, `${entry.path} byte_count drifted`);
+    assert.equal(rawDigest(bytes), entry.byte_sha256, `${entry.path} byte digest drifted`);
+  }
+  return bundle;
+}
 
-  const exactTuple = {
-    fields: [{
-      field_id: "cli.stdout.bytes",
-      value: { base64: "b2sK", tag: "BYTES" },
-    }],
-  };
-  const bundle = {
-    schema_version: "countershape/v1",
-    kind: "ContractBundle",
-    bundle_version: "node-core-contract-bundle/v1",
-    decision_record_digest: "sha256:e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1e1",
-    choicepoint_digest: "sha256:c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1c1",
-    portable_source_digest: "sha256:d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1",
-    portable_profile_digest: "sha256:f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1",
-    decision_action: "ALLOW_OBSERVED",
-    emitter_version: "node-exact-emitter/v1",
-    source_profile: {
-      runtime_family: "NODE",
-      semantic_profile: "countershape-node-core-exact/v1",
-      adapter_domain: "CLI",
-      launch_profile: "NODE_REPO_SCRIPT_V1",
-      subject_entrypoint: "harness.mjs",
-      start_profile: "DIRECT_CHILD_V1",
-      scope: "DECLARED_SOURCE_PROFILE_NOT_EXECUTION_EVIDENCE",
-    },
-    predicate: {
-      kind: "one-of-exact/v1",
-      scope: "EXACT_WITNESSED_STIMULUS",
-      stimulus_digest: "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
-      portable_profile_digest: "sha256:f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1",
-      selected_fields: ["cli.stdout.bytes"],
-      allowed_tuples: [exactTuple],
-    },
-    files,
-    manifest_policy: "COVERS_OTHER_FIVE_EXCLUDES_SELF_V1",
-    runtime_dependency_profile: "NODE_CORE_ONLY_V1",
-    countershape_runtime_binding: "ABSENT_BY_CONSTRUCTION",
-    package_registry_binding: "NONE",
-    environment_profile: "EXPLICIT_SPARSE_ALLOWLIST_V1",
-    external_service_binding: "NONE",
-    determinism_profile: {
-      scope: "EMITTER_INVENTED_STRUCTURAL_FACTS_EXCLUDING_AUTHORIZED_INPUT_CONTENT",
-      emitter_introduces_time: false,
-      emitter_introduces_random_id: false,
-      emitter_introduces_absolute_path: false,
-      emitter_introduces_concrete_candidate_identity: false,
-      emitter_introduces_declared_secret_value: false,
-      emitter_introduces_host_runtime_fact: false,
-      emitter_introduces_execution_receipt: false,
-    },
-    confidentiality_established: false,
-  };
+function buildExamples() {
+  const bundle = readRuntimeBundle();
+  const exactTuple = bundle.predicate.allowed_tuples[0];
   const pinnedTreeIdentity = {
     schema_version: "countershape/v1",
     kind: "PinnedTreeIdentity",
@@ -305,7 +190,6 @@ function buildExamples() {
     target,
     finalizedRun,
     execution,
-    bundleBytes: Buffer.from(`${JSON.stringify(bundle, null, 2)}\n`, "utf8"),
     targetBytes: Buffer.from(`${JSON.stringify(target, null, 2)}\n`, "utf8"),
     finalizedRunBytes: Buffer.from(`${JSON.stringify(finalizedRun, null, 2)}\n`, "utf8"),
     executionBytes: Buffer.from(`${JSON.stringify(execution, null, 2)}\n`, "utf8"),
@@ -315,14 +199,12 @@ function buildExamples() {
 function checkOrWrite(mode) {
   const built = buildExamples();
   if (mode === "write") {
-    fs.writeFileSync(BUNDLE_FILE, built.bundleBytes);
     fs.writeFileSync(TARGET_FILE, built.targetBytes);
     fs.writeFileSync(RUN_FILE, built.finalizedRunBytes);
     fs.writeFileSync(EXECUTION_FILE, built.executionBytes);
     process.stdout.write(`P07 planning examples written; target ${built.execution.contract_execution_target_digest}\n`);
     return;
   }
-  assert.deepEqual(fs.readFileSync(BUNDLE_FILE), built.bundleBytes, "ContractBundle example drifted from its deterministic generator");
   assert.deepEqual(fs.readFileSync(TARGET_FILE), built.targetBytes, "ContractExecutionTarget example drifted from its deterministic generator");
   assert.deepEqual(fs.readFileSync(RUN_FILE), built.finalizedRunBytes, "FinalizedContractRun example drifted from its deterministic generator");
   assert.deepEqual(fs.readFileSync(EXECUTION_FILE), built.executionBytes, "ContractExecution example drifted from its deterministic generator");
@@ -339,19 +221,28 @@ function materialize(root, bundle) {
   }
 }
 
-function runFixture(root) {
-  return spawnSync(process.execPath, ["--test", "--test-reporter=tap", "contract.test.mjs"], {
-    cwd: root,
+function runFixture(bundleRoot, targetRoot, runtimeRoot, runnerHome) {
+  return spawnSync(process.execPath, ["--test", "--test-reporter=tap", path.join(bundleRoot, "contract.test.mjs")], {
+    cwd: targetRoot,
     encoding: "utf8",
     env: {
-      HOME: root,
-      TMPDIR: root,
+      COUNTERSHAPE_TEST_SECRET: "must-not-reach-subject",
+      HOME: runnerHome,
+      HTTP_PROXY: "http://127.0.0.1:1",
       LANG: "C",
+      LC_ALL: "C",
+      NODE_OPTIONS: "--no-warnings",
       TZ: "UTC",
       NO_COLOR: "1",
+      PATH: "/ambient/path/must/not/reach/subject",
+      TMPDIR: runtimeRoot,
+      npm_config_registry: "https://ambient.invalid/",
     },
+    argv0: process.execPath,
     timeout: 10_000,
     windowsHide: true,
+    shell: false,
+    maxBuffer: 4 << 20,
   });
 }
 
@@ -359,21 +250,47 @@ function exercise() {
   const { bundle } = buildExamples();
   const parent = fs.mkdtempSync(path.join(os.tmpdir(), "countershape-p07-example-"));
   try {
-    const clean = path.join(parent, "clean");
-    materialize(clean, bundle);
-    const passed = runFixture(clean);
-    assert.equal(passed.status, 0, `executable planning fixture failed:\n${passed.stdout}\n${passed.stderr}`);
-    assert.match(passed.stdout, /executable planning fixture evaluates one exact tuple/u);
+    const target = path.join(parent, "prepared target");
+    const targetFixture = path.join(target, "fixture");
+    fs.mkdirSync(targetFixture, { recursive: true, mode: 0o755 });
+    const subject = `setTimeout(() => process.exit(70), 15_000).unref();\n` +
+      `const chunks = [];\n` +
+      `process.stdin.on("data", (chunk) => chunks.push(Buffer.from(chunk)));\n` +
+      `process.stdin.on("end", () => {\n` +
+      `  if (!Buffer.concat(chunks).equals(Buffer.from("contract-input"))) process.exit(65);\n` +
+      `  process.stdout.write("ok\\n");\n` +
+      `});\n` +
+      `process.stdin.resume();\n`;
+    fs.writeFileSync(path.join(targetFixture, "subject.mjs"), subject, { mode: 0o644, flag: "wx" });
 
-    const tampered = path.join(parent, "tampered");
+    const cleanBundle = path.join(parent, "clean bundle");
+    const cleanRuntime = path.join(parent, "clean runtime");
+    const cleanHome = path.join(parent, "clean home");
+    materialize(cleanBundle, bundle);
+    fs.mkdirSync(cleanRuntime, { mode: 0o700 });
+    fs.mkdirSync(cleanHome, { mode: 0o700 });
+    const passed = runFixture(cleanBundle, target, cleanRuntime, cleanHome);
+    assert.equal(passed.status, 0, `runtime ContractBundle example failed:\n${passed.stdout}\n${passed.stderr}`);
+    assert.equal(passed.stderr, "", "conforming runtime ContractBundle wrote outer stderr");
+    assert.match(passed.stdout, /# COUNTERSHAPE_RESULT_V1\|CONFORMS\|NONE\n/u);
+    assert.equal((passed.stdout.match(/COUNTERSHAPE_RESULT_V1/gu) ?? []).length, 1);
+
+    const tampered = path.join(parent, "tampered bundle");
+    const tamperedRuntime = path.join(parent, "tampered runtime");
+    const tamperedHome = path.join(parent, "tampered home");
     materialize(tampered, bundle);
+    fs.mkdirSync(tamperedRuntime, { mode: 0o700 });
+    fs.mkdirSync(tamperedHome, { mode: 0o700 });
     const marker = path.join(parent, "tampered-harness-loaded");
     const hostileHarness = `import fs from "node:fs";\nfs.writeFileSync(${JSON.stringify(marker)}, "loaded");\n`;
     fs.writeFileSync(path.join(tampered, "harness.mjs"), hostileHarness, { mode: 0o644 });
-    const refused = runFixture(tampered);
+    const refused = runFixture(tampered, target, tamperedRuntime, tamperedHome);
     assert.notEqual(refused.status, 0, "companion tampering unexpectedly passed");
+    assert.equal(refused.stderr, "", "tamper refusal wrote outer stderr");
+    assert.match(refused.stdout, /# COUNTERSHAPE_RESULT_V1\|TAMPER_DETECTED\|COMPANION_INTEGRITY_MISMATCH\n/u);
+    assert.equal((refused.stdout.match(/COUNTERSHAPE_RESULT_V1/gu) ?? []).length, 1);
     assert.equal(fs.existsSync(marker), false, "tampered companion loaded before manifest verification");
-    process.stdout.write("P07 planning example: executable and intact-entrypoint companion tamper refused before harness load\n");
+    process.stdout.write("P07 planning example: real A2.2 bundle conformed and intact entrypoint refused companion tamper before harness load\n");
   } finally {
     fs.rmSync(parent, { recursive: true, force: true });
   }

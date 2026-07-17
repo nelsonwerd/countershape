@@ -8,6 +8,7 @@ import (
 
 	"github.com/nelsonwerd/countershape/internal/canon"
 	"github.com/nelsonwerd/countershape/internal/domain"
+	"github.com/nelsonwerd/countershape/internal/observe/eligibilitycore"
 )
 
 const maxProjectionResultCanonicalBytes = canon.MaxInputBytes - 16*1024
@@ -247,16 +248,21 @@ type Eligibility struct {
 
 func Eligible(fact TrialFact) Eligibility {
 	if fact.kind == trialControlled {
-		if len(fact.controls) == 0 {
+		decision, err := eligibilitycore.Select(eligibilitycore.ControlIneligible, fact.controls)
+		if err != nil {
 			return Eligibility{reasons: []domain.ControlReason{domain.ControlProjectionRejected}}
 		}
-		return Eligibility{reasons: append([]domain.ControlReason(nil), fact.controls...)}
+		return Eligibility{eligible: decision.IsEligible(), reasons: decision.Reasons()}
 	}
 	if !behaviorWasCaptured(fact.kind) || !fact.world.Digest().Valid() ||
 		!fact.attempt.ArtifactDigest().Valid() || fact.attempt.HasControls() ||
 		!fact.admission.Valid() || fact.admission.SubjectDigest() != fact.world.Digest() ||
 		!fact.capture.observationDigest.Valid() ||
 		!fact.capture.projectionDigest.Valid() || !fact.capture.fingerprint.Valid() {
+		return Eligibility{reasons: []domain.ControlReason{domain.ControlProjectionRejected}}
+	}
+	decision, err := eligibilitycore.Select(eligibilitycore.BehaviorCaptured, nil)
+	if err != nil || !decision.IsEligible() {
 		return Eligibility{reasons: []domain.ControlReason{domain.ControlProjectionRejected}}
 	}
 	return Eligibility{eligible: true, fingerprint: fact.capture.fingerprint}

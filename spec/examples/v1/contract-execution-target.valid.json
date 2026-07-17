@@ -3,11 +3,11 @@
   "kind": "ContractExecutionTarget",
   "target_version": "contract-execution-target/v1",
   "publication_scope": "IMMUTABLE_NONHEAD_PRESPAWN_AUTHORITY_V1",
-  "contract_bundle_digest": "sha256:50f8d302860bae88f9fdfa1557b8ea3a535600dccba7434e11652c2d7322438d",
+  "contract_bundle_digest": "sha256:f0886a4689bbf8e5a9fba802bb3595099836304c5342deab7f61f3abfb48ca0e",
   "source_binding": {
-    "portable_source_digest": "sha256:d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1d1",
-    "portable_profile_digest": "sha256:f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1f1",
-    "source_profile_digest": "sha256:95bce5ba9f88599c289c6f95dddb633968da1cdfb9cb49ff80abecb74d33126c"
+    "portable_source_digest": "sha256:44708ca00a256d55eeb228efd04ff762d73b64b2e503e2324e0cc1e19e50b2a5",
+    "portable_profile_digest": "sha256:43e2a5459bdcb880376f3b3e31ffc54ce0e9ead13590b72ee91cd4bb2830609e",
+    "source_profile_digest": "sha256:68de7ca7aa438e978b1f5af0c8cebc5775582eef95e21dc7ccfa9b2392ab480c"
   },
   "tree_binding": {
     "authority": "GIT_PIN_INSPECT_MATERIALIZE_V1",

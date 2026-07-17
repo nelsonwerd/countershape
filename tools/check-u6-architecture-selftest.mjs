@@ -38,6 +38,9 @@ const requiredCaseIDs = Object.freeze([
   "arguments",
   "harmless-comment",
   "harmless-astral-comment",
+	"eligibility-core-capability-import",
+	"eligibility-core-api-opening",
+	"eligibility-owner-bypass",
 	"portablevalue-full-adapter-import",
 	"world-full-adapter-import",
 	"second-profile-derivation-reference",
@@ -158,7 +161,7 @@ const requiredCaseIDs = Object.freeze([
   "manifest-barrier-tamper",
   "manifest-tool-failure",
 ]);
-const requiredRosterDigest = "fde11250e4ccd088a97077af1d6eb4898843609bfe8115561490f6b79e89b833";
+const requiredRosterDigest = "62a6537651298d06b193073c67b0ab38da7fb5fb7b2db912610a060060dd5423";
 
 async function copyFixture() {
   const fixture = await mkdtemp(join(tmpdir(), "countershape-u6-architecture-"));
@@ -241,6 +244,32 @@ async function exercise(name) {
           "package choice\n\n// Astral lexical alignment control: 🧪",
         );
         break;
+		case "eligibility-core-capability-import":
+			await replaceExact(
+				fixture,
+				"internal/observe/eligibilitycore/eligibility.go",
+				'import "github.com/nelsonwerd/countershape/internal/domain"',
+				'import (\n\t_ "os"\n\n\t"github.com/nelsonwerd/countershape/internal/domain"\n)',
+			);
+			expected = "U6_ELIGIBILITY_CORE_IMPORT_ROSTER";
+			break;
+		case "eligibility-core-api-opening":
+			await appendSource(
+				fixture,
+				"internal/observe/eligibilitycore/eligibility.go",
+				"\nfunc OpenCapability() {}\n",
+			);
+			expected = "U6_ELIGIBILITY_CORE_API_ROSTER";
+			break;
+		case "eligibility-owner-bypass":
+			await replaceExact(
+				fixture,
+				"internal/observe/eligibility.go",
+				"eligibilitycore.Select(eligibilitycore.ControlIneligible, fact.controls)",
+				"eligibilitycore.Select(eligibilitycore.BehaviorCaptured, nil)",
+			);
+			expected = "U6_ELIGIBILITY_OWNER_DATAFLOW";
+			break;
 		case "portablevalue-full-adapter-import":
 			await replaceExact(
 				fixture,

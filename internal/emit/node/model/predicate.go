@@ -432,6 +432,30 @@ func (p Predicate) SelectedFields() []string             { return append([]strin
 func (p Predicate) AllowedTuples() []ExactTuple          { return cloneTuples(p.allowed) }
 func (p Predicate) CanonicalBytes() []byte               { return append([]byte(nil), p.canonical...) }
 
+// Matches evaluates one complete selected-field tuple against the correlated
+// allowed set. Compatibility is revalidated against the predicate's real
+// profile before byte equality is considered, so this cannot degrade into
+// independent per-field membership or a Cartesian product.
+func (p Predicate) Matches(observed ExactTuple) (bool, error) {
+	if !p.Valid() || !observed.Valid() {
+		return false, refuse("INVALID_PREDICATE", "predicate or observed tuple is invalid", nil)
+	}
+	descriptors := p.profile.Fields()
+	byID := make(map[string]projectionprofile.Descriptor, len(descriptors))
+	for _, descriptor := range descriptors {
+		byID[descriptor.FieldID] = descriptor
+	}
+	if err := validateTupleForSelection(observed, p.selected, byID); err != nil {
+		return false, refuse("INVALID_PREDICATE", "observed tuple is incompatible with the predicate", err)
+	}
+	for _, allowed := range p.allowed {
+		if bytes.Equal(allowed.canonical, observed.canonical) {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
 func cloneTuples(input []ExactTuple) []ExactTuple {
 	result := make([]ExactTuple, len(input))
 	for index, tuple := range input {

@@ -199,6 +199,16 @@ Collision-only byte-versus-digest mutants and redundant-check deletion mutants d
 
 ## A2.2 — recoverable compiler
 
+The independent preimplementation red team found several A2.2 requirements
+whose original evidence shape was ambiguous or not constructible without
+production fault hooks. The controlling corrections are locked in
+`P07B-A2-2-PREIMPLEMENTATION-RULINGS.md`: expected-digest parsing, explicit
+partial-compiler ceilings, a closed oracle-blind corpus protocol, separate pure
+and physical fault evidence, total result precedence, exact inventory/watcher
+semantics, cumulative-verifier evolution, black-box/property closure,
+bounded fuzzing, and a deterministic Node-core human-surface renderer. A2.2
+must satisfy that file as well as the self-contained prompt below.
+
 ### Proposed layout
 
 ```text
@@ -224,8 +234,9 @@ testkit/contracts/
 tools/
   check-p07b-a2-architecture.mjs
   check-p07b-a2-architecture-selftest.mjs
-  mutate-p07b-a2-authority.mjs
-  mutate-p07b-a2-compiler.mjs
+  capture-p07b-a2-human-surface.mjs
+  generate-p07b-a2-runtime-example.mjs
+  verify-p07b-a2-recovery-process.mjs
 ```
 
 ```go
@@ -275,15 +286,20 @@ No generated file contains the bundle digest.
 
 ### Ceiling proof
 
-Do not infer a sub-1-MiB bundle from a `640 KiB` per-file limit. `fixture.json` base64-wraps PortableSource and the outer bundle base64-wraps `fixture.json` again.
+Do not infer a sub-1-MiB bundle from a `640 KiB` per-file limit. `fixture.json` base64-wraps PortableSource and the outer bundle base64-wraps `fixture.json` again. Freeze six files, `640 KiB` per file, `640 KiB` aggregate raw bytes, and `160 KiB` outer non-content canonical bytes.
 
 For file lengths `nᵢ`, prove:
 
 ```text
-sum(4 * ceil(nᵢ / 3)) + maximum_bounded_metadata <= 1 MiB
+sum(4 * ceil(nᵢ / 3))
+  <= 4 * ceil(640 KiB / 3) + 4 * (6 - 1)
+
+encoded_content_maximum = 4 * ceil(640 KiB / 3) + 4 * (6 - 1)
+
+encoded_content_maximum + 160 KiB < 1 MiB
 ```
 
-Establish a reviewed maximum metadata envelope, choose the aggregate raw ceiling only after that proof, retain the final exact canonical-length check, test the exact accepted boundary and boundary-plus-one, refuse rather than truncate, and keep the A1 PortableSource ceiling independently enforced. Roughly `700 KiB` raw may be a starting estimate; it is not a locked constant until the proof and tests support it.
+The 160 KiB envelope includes all outer structure outside the six content strings. Retain the final exact canonical-length check, test every independently reachable accepted boundary and boundary-plus-one, exercise dominated guards through checked arithmetic and parser/architecture fixtures, refuse rather than truncate, and keep the A1 PortableSource ceiling independently enforced.
 
 ### Strict bundle parser
 
@@ -301,15 +317,15 @@ The bundle directory comes from module URL and the prepared target-source invent
 
 The child environment is an exact name-sorted union, built from empty: source plan literals; the private HOME/TMPDIR/XDG/state/evidence/fixture bindings; one independently fresh runtime-owned `COUNTERSHAPE_ATTEMPT_ID` matching exactly `^attempt:[0-9a-f]{64}$`; `COUNTERSHAPE_SCHEDULE_ORDINAL=0`; and `COUNTERSHAPE_SCHEDULE_REPETITION=0`. The Node attempt value is not equal to or authority for any Go attempt; only the candidate-visible grammar matches. CLI adds only present source-carried stimulus environment values. HTTP instead adds the exact typed `COUNTERSHAPE_HTTP_STIMULUS_DIGEST` and `COUNTERSHAPE_HTTP_READINESS_FD=3`, with no HTTP listener FD/port. Duplicates, reserved-name collisions, inherited variables, wrong attempt grammar, or the old `COUNTERSHAPE_REPETITION` alias are refused and parity-tested.
 
-README invocation is exactly `<explicit-node> --test --test-reporter=tap <absolute-bundle-root>/contract.test.mjs` from the prepared target cwd. The contract emits one stderr record `COUNTERSHAPE_RESULT_V1\t<outcome>\t<reason>\n`; closed outcomes are `CONFORMS`, `CONTRADICTS`, `INELIGIBLE_EXECUTION`, `MALFORMED_CONTRACT`, `TAMPER_DETECTED`, and `HARNESS_FAILURE`, with the exact stage mapping/reason roster/precedence frozen by the A2.2 prompt. The last three are standalone bootstrap/data/runtime diagnostics, not `ContractExecution` classification values or attacker attribution. All contract-controlled work runs inside one registered test and one guarded result emitter. Stdout remains explicitly selected TAP. Only conformance exits zero; every other outcome remains nonzero but machine-distinct. This direct protocol is inert operator UX and never feeds Target/FinalizedRun/Execution; P07B-C independently executes source through its owner-controlled Go target capability and derives exact lifecycle/tuple/evidence/control authority.
+README invocation first changes into the prepared target root, then calls an explicit absolute Node executable with separate `--test`, `--test-reporter=tap`, and absolute bundle-entrypoint arguments. The contract emits one native test diagnostic rendered on selected TAP stdout as `# COUNTERSHAPE_RESULT_V1|<outcome>|<reason>`; controlled sparse-environment runs keep outer stderr empty. Closed outcomes are `CONFORMS`, `CONTRADICTS`, `INELIGIBLE_EXECUTION`, `MALFORMED_CONTRACT`, `TAMPER_DETECTED`, and `HARNESS_FAILURE`, with the exact stage mapping/reason roster/precedence frozen by the A2.2 prompt. The last three are standalone bootstrap/data/runtime diagnostics, not `ContractExecution` classification values or attacker attribution. All contract-controlled work runs inside one registered test and one guarded result emitter. Only conformance exits zero; every other outcome remains nonzero but machine-distinct. This direct protocol is inert operator UX and never feeds Target/FinalizedRun/Execution; P07B-C independently executes source through its owner-controlled Go target capability and derives exact lifecycle/tuple/evidence/control authority.
 
 For HTTP, reproduce A1's exact `NODE_LOOPBACK_CHILD_BIND_PIPE_READY_V1` and `ASCII_COUNTERSHAPE_READY_V1_SPACE_PORT_LF_THEN_EOF_V1` wire: signal `ready-port-frame`, FD 3, `COUNTERSHAPE_READY_V1 ` prefix, canonical decimal port `1..65535`, 32-byte ceiling, exactly one LF then EOF, and literal `127.0.0.1` only. Every alias, extra/missing byte, timeout, early exit, or descriptor-holder case is typed ineligible.
 
-Its byte-oriented JSON authority has two APIs. Canonicalization matches Go `canon.Canonicalize`: it accepts legal whitespace, member reordering, and escape aliases, emits exact canonical bytes, and rejects invalid UTF-8, duplicate decoded names, lone surrogates, raw unescaped controls, unsafe integers, `-0`, decimals/exponents, and truncation. Strict canonical parsing additionally compares input with those canonical bytes, so it rejects whitespace, escape aliases, and noncanonical UTF-8 key order; JSON file parsing strips exactly one required LF first. Escaped `\u0000` remains valid data. Node retains ordered key/value pairs or uses null-prototype objects with explicit own data properties; it never performs setter-bearing assignment, and all duplicate/roster/lookup checks are own-property-only. The parity corpus covers `__proto__`, `constructor`, and `prototype` at root and nested positions, including duplicate decoded escape aliases. Runtime classification preserves natural CLI exit versus signal, missing versus present-empty, exact opaque bytes, ordered duplicate headers/list members, eligible HTTP `500`, contradiction versus typed ineligibility, and owner-induced timeout/cap/cancel as ineligible. Cancellation is shared-corpus and later owner-controlled Go behavior only; direct standalone invocation has no cancellation trigger or machine-record guarantee.
+Its byte-oriented JSON authority has two APIs. Canonicalization matches Go `canon.Canonicalize`: it accepts legal whitespace, member reordering, and escape aliases, emits exact canonical bytes, and rejects invalid UTF-8, duplicate decoded names, lone surrogates, raw unescaped controls, unsafe integers, `-0`, decimals/exponents, and truncation. Strict canonical parsing additionally compares input with those canonical bytes, so it rejects whitespace, escape aliases, and noncanonical UTF-8 key order; JSON file parsing strips exactly one required LF first. Escaped `\u0000` remains valid data. Node retains ordered key/value pairs or uses null-prototype objects with explicit own data properties; it never performs setter-bearing assignment, and all duplicate/roster/lookup checks are own-property-only. The parity corpus covers `__proto__`, `constructor`, and `prototype` at root and nested positions, including duplicate decoded escape aliases. Runtime classification preserves natural CLI exit versus signal, missing versus present-empty, exact opaque bytes, ordered duplicate headers/list members, eligible HTTP `500`, contradiction versus typed ineligibility, and owner-induced timeout/cap/cancel as ineligible. Cancellation is shared-corpus and later owner-controlled Go behavior only; direct standalone invocation has no cancellation trigger or machine-diagnostic guarantee.
 
 ### Shared Go/Node parity corpus
 
-`spec/vectors/v1/contract-parity.jsonl` is consumed by one strict test driver, not directly by either semantic evaluator. The driver parses each closed vector, strips identifiers/descriptions/tags/expected fields, and passes only its closed semantic operation/input payload to each evaluator; evaluator production APIs and subprocess payloads have no corpus path or expected-result field. Only the driver compares independently returned actual results with expected data. Duplicate-input/different-label metamorphic cases, deliberately poisoned expectations, and an expected-echo mutant prove oracle separation. The corpus covers strict JSON/canonicalization; every portable value tag; missing/empty distinctions; tuple order/duplicates/omissions/unselected fields/cross-products; exact membership; CLI exit `2` and signal; HTTP `500`; duplicate headers; separators/OWS; content-length/transfer/content encoding failures; refused connection; hung readiness; output cap; timeout/cancel; teardown/orphan risk; and eligible versus ineligible classification.
+`spec/vectors/v1/contract-parity.jsonl` is consumed by one strict test driver, not directly by either semantic evaluator. The driver parses each closed vector, strips identifiers/descriptions/tags/expected fields, and passes only its closed semantic operation/input payload to each evaluator; evaluator production APIs and subprocess payloads have no corpus path or expected-result field. Only the driver compares independently returned actual results with expected data. Duplicate-input/different-label metamorphic cases, deliberately poisoned expectations, shuffled order, and static evaluator-input boundaries prove oracle separation. The corpus covers strict JSON/canonicalization; every portable value tag; missing/empty distinctions; tuple order/duplicates/omissions/unselected fields/cross-products; exact membership; CLI exit `2` and signal; HTTP `500`; duplicate headers; separators/OWS; content-length/transfer/content encoding failures; refused connection; hung readiness; output cap; timeout/cancel; teardown/orphan risk; and eligible versus ineligible classification.
 
 Any Go/Node disagreement blocks A2.2.
 
@@ -327,14 +343,18 @@ Any Go/Node disagreement blocks A2.2.
 - pairwise non-nested bundle/target/actual-attempt roots while admitting preexisting temp-parent ancestry of an input only when the attempt is its verified sibling, with temp-parent-to-attempt and attempt-to-subroot as the only newly created execution-path containment, bounded no-follow source copy, exact fixture/seed overlay, exact per-adapter sparse environment including `^attempt:[0-9a-f]{64}$`, before/after manifests plus named-platform transient-write watchers, source immutability, and cleanup faults;
 - allow-many tuple preservation and custom none-conforms behavior;
 - selected-field change contradicts while unselected-field change conforms;
-- exact machine-record/TAP/exit separation, total reason stage/precedence faults, exact A1 readiness grammar, and Node syntax checks for both emitted modules; and
+- exact machine-diagnostic/TAP/exit separation, total reason stage/precedence faults, exact A1 readiness grammar, and Node syntax checks for both emitted modules; and
 - architecture proof that compiler production code performs no filesystem or process operation.
 
-### A2.2 mutation direction
+### A2.2 evidence closure
 
-Candidate behavioral/architecture mutants include raw/typed/base64/LF-boundary or wrong-`ContractSourceProfile`-domain hash confusion, digest-only fixture, omitted recovery member, manifest self-coverage/omission, fixed-original-outer manifest-plus-companion replacement, README/fixed-asset drift, early harness import, permissive entrypoint manifest parsing, wrong text envelope/mode, host runtime fact, legacy whole-bundle `contains_*` scanning, last-key-wins or prototype-sensitive JSON construction, conflated canonicalize/strict-parse behavior, unsafe numeric coercion, UTF-16 key or tuple ordering, tuple insertion-order retention, expected-result echo/corpus access by an evaluator, omitted predicate/source stimulus or descriptor/value join, substring membership, custom-expectation multi-tuple acceptance, missing/empty collapse, header normalization, high-level HTTP, malformed readiness acceptance, shell execution, direct/nested user-inventory execution, symlink traversal, ambient/wrong schedule/wrong attempt-ID/omitted HTTP-binding environment, transient input-root write, Countershape/Wake/package-manager/service injection, false egress-denial interpretation, and untyped/wrong-precedence machine-result collapse.
-
-Every mutant has a named killer and fresh A/B/A restoration.
+The proposed recipe-level source-rewrite lane was never implemented, checked
+in, claimed, or sealed and remains `UNRECEIPTED`. A2.2 instead requires
+independently scoped black-box conformance and negative matrices,
+oracle-separation properties, Go/Node differential parity, coherent
+recovery/tamper cases, bounded fuzzing, exact ceiling boundaries,
+deterministic subprocess checks, and the hostile architecture self-test. This
+replacement makes no mutation-completeness claim.
 
 ## Architecture gates
 
@@ -350,7 +370,7 @@ The hostile-copy self-test covers comment/string spoofing, transitive forbidden 
 
 At each unit, run every load-bearing command through `didrun run --`, claim each final successful command immediately without explicit event addressing, stage only the exact unit, and commit. In this managed environment, seal only with Git-note write authority, require `git notes --ref=didrun show HEAD` to succeed, and loop `NO_COLOR=1 didrun verify --strict` until exit `0`.
 
-A2.1 requires formatting, focused/full Go tests, selected race, vet, architecture/self-test, mutation closure, source/ruling negative matrix, and restart/reopen tests. A2.2 requires formatting, focused/full/race/vet, schema/runtime/example/generated-body parity, architecture/self-test, mutation closure, oracle-blind Go/Node corpus plus poisoned-expected/metamorphic/expected-echo gates, Node syntax, generated CLI/HTTP smoke, deterministic subprocess matrix, recovery/tamper, and overflow boundaries.
+A2.1 requires formatting, focused/full Go tests, selected race, vet, architecture/self-test, mutation closure, source/ruling negative matrix, and restart/reopen tests. A2.2 requires formatting, focused/full/race/vet, schema/runtime/example/generated-body parity, architecture/self-test, black-box conformance/negative matrices, oracle-blind Go/Node corpus plus poisoned-expected/metamorphic/static-boundary gates, Node syntax, generated CLI/HTTP smoke, deterministic subprocess matrix, recovery/tamper, bounded fuzzing, and overflow boundaries. The abandoned source-rewrite lane remains `UNRECEIPTED`.
 
 Do not begin A2.2 while A2.1 is nonzero, stale, unknown, or failed. Only after A2.2 is strict-clean may P07B-B begin terminal publication and retryable materialization.
 

@@ -71,6 +71,37 @@ type CLIProjectionDefinitionConfig struct {
 	Fields []CLIFieldID
 }
 
+// CLIProjectionCompletion is the lineage-free disjoint completion sum used by
+// pure behavior projection. Its private representation prevents callers from
+// pairing an exit code with a signal or bypassing the closed constructors.
+type CLIProjectionCompletion struct {
+	value CLICompletion
+}
+
+func NewExitedProjectionCompletion(code int) (CLIProjectionCompletion, error) {
+	value := CLICompletion{kind: CompletionExited, code: code}
+	if !value.valid() {
+		return CLIProjectionCompletion{}, refuse(CodeCaptureEvidenceInvalid, "exit completion is outside the closed profile")
+	}
+	return CLIProjectionCompletion{value: value}, nil
+}
+
+func NewSignaledProjectionCompletion(signal string) (CLIProjectionCompletion, error) {
+	value := CLICompletion{kind: CompletionSignaled, signal: signal}
+	if !value.valid() {
+		return CLIProjectionCompletion{}, refuse(CodeCaptureEvidenceInvalid, "signal completion is outside the closed profile")
+	}
+	return CLIProjectionCompletion{value: value}, nil
+}
+
+// CLIProjectionInput is complete behavior material only. It has no world,
+// attempt, receipt, control, or projection-admission authority.
+type CLIProjectionInput struct {
+	Completion CLIProjectionCompletion
+	Stdout     []byte
+	Stderr     []byte
+}
+
 type CLIProjectionOperation struct {
 	name       string
 	semantics  string
@@ -516,6 +547,75 @@ func (d CLIProjectionDefinition) Project(observation CLICapturedObservation) (CL
 	if observation.adapterProjectionDefinitionDigest != d.digest {
 		return CLIProjectionResult{}, refuse(CodeProjectionInternal, "capture and adapter-owned projection authority differ")
 	}
+	if !observation.projectionEligibilityFactsPresent() {
+		transcript := d.eligibilityTranscript()
+		operation := transcript[0].operation
+		return CLIProjectionResult{}, d.rejection(observation, CodeProjectionControl, operation.name, "", "", transcript, "capture is not eligible behavior")
+	}
+	behavior, rejection := d.projectEligibleBehavior(observation.completion, observation.stdout.bytes, observation.stderr.bytes)
+	if rejection != nil {
+		return CLIProjectionResult{}, d.finishRejection(observation, rejection, behavior.transcript)
+	}
+	projectionByteDigest, _, err := cliDigestBytes("CLIProjectionCanonicalBytes", behavior.projectionBytes)
+	if err != nil {
+		return CLIProjectionResult{}, d.rejection(observation, CodeProjectionInternal, behavior.finalOperation.name, "", "", behavior.transcript, err.Error())
+	}
+	derivationDigest, derivationBytes, err := digestDerivation(observation.digest, d.digest, d.binding.Digest(), projectionByteDigest, behavior.transcript)
+	if err != nil {
+		return CLIProjectionResult{}, d.rejection(observation, CodeProjectionInternal, behavior.finalOperation.name, "", "", behavior.transcript, err.Error())
+	}
+	derivation := CLIProjectionDerivation{
+		digest: derivationDigest, canonicalBytes: derivationBytes, observationDigest: observation.digest,
+		adapterDefinitionDigest: d.digest, definitionDigest: d.binding.Digest(),
+		projectionByteDigest: projectionByteDigest, definitionFields: append([]CLIFieldID(nil), d.fields...),
+		transcript: cloneTranscript(behavior.transcript),
+	}
+	return CLIProjectionResult{
+		projectionBytes: append([]byte(nil), behavior.projectionBytes...), canonicalBytes: append([]byte(nil), derivationBytes...),
+		fields: cloneProjectedFields(behavior.fields), derivation: derivation,
+	}, nil
+}
+
+// ProjectInput applies the exact production behavior projection without
+// constructing capture lineage. It is intentionally narrower than Project:
+// successful bytes are not admitted as observation or comparison evidence.
+func (d CLIProjectionDefinition) ProjectInput(input CLIProjectionInput) ([]byte, error) {
+	if !d.Valid() || !input.Completion.value.valid() {
+		return nil, refuse(CodeProjectionInternal, "definition or projection input is invalid")
+	}
+	behavior, rejection := d.projectEligibleBehavior(
+		input.Completion.value,
+		append([]byte(nil), input.Stdout...),
+		append([]byte(nil), input.Stderr...),
+	)
+	if rejection != nil {
+		return nil, refuse(rejection.Code, rejection.Detail)
+	}
+	return append([]byte(nil), behavior.projectionBytes...), nil
+}
+
+type cliBehaviorProjection struct {
+	projectionBytes []byte
+	fields          []CLIProjectedField
+	transcript      []CLIProjectionTraceEntry
+	finalOperation  CLIProjectionOperation
+}
+
+func (d CLIProjectionDefinition) eligibilityTranscript() []CLIProjectionTraceEntry {
+	return []CLIProjectionTraceEntry{{
+		operation: d.operations[0],
+		sourceLinks: []CLIProjectionSourceLink{
+			sourceLink("", "controls"), sourceLink(CLIChannelExit, "completion"),
+			sourceLink(CLIChannelStdout, "state"), sourceLink(CLIChannelStderr, "state"),
+			sourceLink("", "fixture_overlay_receipt"), sourceLink("", "fixture_invocation_receipt"),
+		},
+	}}
+}
+
+func (d CLIProjectionDefinition) projectEligibleBehavior(
+	completion CLICompletion,
+	stdout, stderr []byte,
+) (cliBehaviorProjection, *ProjectionRejection) {
 	transcript := make([]CLIProjectionTraceEntry, 0, len(d.operations))
 	operationIndex := 0
 	appendOperation := func(links ...CLIProjectionSourceLink) CLIProjectionOperation {
@@ -525,127 +625,97 @@ func (d CLIProjectionDefinition) Project(observation CLICapturedObservation) (CL
 		transcript = append(transcript, CLIProjectionTraceEntry{operation: operation, sourceLinks: cloneSourceLinks(links)})
 		return operation
 	}
-
 	operation := appendOperation(
-		sourceLink("", "controls"),
-		sourceLink(CLIChannelExit, "completion"),
-		sourceLink(CLIChannelStdout, "state"),
-		sourceLink(CLIChannelStderr, "state"),
-		sourceLink("", "fixture_overlay_receipt"),
-		sourceLink("", "fixture_invocation_receipt"),
+		sourceLink("", "controls"), sourceLink(CLIChannelExit, "completion"),
+		sourceLink(CLIChannelStdout, "state"), sourceLink(CLIChannelStderr, "state"),
+		sourceLink("", "fixture_overlay_receipt"), sourceLink("", "fixture_invocation_receipt"),
 	)
-	if !observation.projectionEligibilityFactsPresent() {
-		return CLIProjectionResult{}, d.rejection(observation, CodeProjectionControl, operation.name, "", "", transcript, "capture is not eligible behavior")
+	fail := func(code string, channel CLIChannel, field CLIFieldID, detail string) (cliBehaviorProjection, *ProjectionRejection) {
+		return cliBehaviorProjection{transcript: cloneTranscript(transcript), finalOperation: operation}, &ProjectionRejection{
+			Code: code, Operation: operation.name, Channel: channel, Field: field, Detail: detail,
+		}
 	}
 	if anyExitField(d.fields) {
 		operation = appendOperation(sourceLink(CLIChannelExit, "completion"))
-		if !observation.completionPresent || !observation.completion.valid() {
-			return CLIProjectionResult{}, d.rejection(observation, CodeProjectionChannel, operation.name, CLIChannelExit, "", transcript, "completion is absent")
+		if !completion.valid() {
+			return fail(CodeProjectionChannel, CLIChannelExit, "", "completion is invalid")
 		}
 	}
 	if anyChannelField(d.fields, CLIChannelStdout) {
 		operation = appendOperation(sourceLink(CLIChannelStdout, "state"), sourceLink(CLIChannelStdout, "captured_bytes"))
-		if rejection := requirePresentChannel(observation.stdout, operation.name); rejection != nil {
-			return CLIProjectionResult{}, d.finishRejection(observation, rejection, transcript)
-		}
 	}
 	if anyChannelField(d.fields, CLIChannelStderr) {
 		operation = appendOperation(sourceLink(CLIChannelStderr, "state"), sourceLink(CLIChannelStderr, "captured_bytes"))
-		if rejection := requirePresentChannel(observation.stderr, operation.name); rejection != nil {
-			return CLIProjectionResult{}, d.finishRejection(observation, rejection, transcript)
-		}
 	}
 	if hasField(d.fields, CLIFieldStderrText) {
 		operation = appendOperation(sourceLink(CLIChannelStderr, "captured_bytes"))
-		if !utf8.Valid(observation.stderr.bytes) {
-			return CLIProjectionResult{}, d.rejection(observation, CodeProjectionUTF8, operation.name, CLIChannelStderr, CLIFieldStderrText, transcript, "stderr is not valid UTF-8")
+		if !utf8.Valid(stderr) {
+			return fail(CodeProjectionUTF8, CLIChannelStderr, CLIFieldStderrText, "stderr is not valid UTF-8")
 		}
 	}
 	var stdoutJSON canon.Value
 	if anyJSONField(d.fields) {
 		operation = appendOperation(sourceLink(CLIChannelStdout, "captured_bytes"))
-		if !utf8.Valid(observation.stdout.bytes) {
-			return CLIProjectionResult{}, d.rejection(observation, CodeProjectionUTF8, operation.name, CLIChannelStdout, "", transcript, "stdout is not valid UTF-8")
+		if !utf8.Valid(stdout) {
+			return fail(CodeProjectionUTF8, CLIChannelStdout, "", "stdout is not valid UTF-8")
 		}
 		operation = appendOperation(sourceLink(CLIChannelStdout, "captured_bytes"))
-		parsed, err := canon.Parse(observation.stdout.bytes)
+		parsed, err := canon.Parse(stdout)
 		if err != nil {
-			return CLIProjectionResult{}, d.rejection(observation, CodeProjectionJSON, operation.name, CLIChannelStdout, "", transcript, err.Error())
+			return fail(CodeProjectionJSON, CLIChannelStdout, "", err.Error())
 		}
 		if parsed.Kind() != canon.KindObject {
-			return CLIProjectionResult{}, d.rejection(observation, CodeProjectionJSONRoot, operation.name, CLIChannelStdout, "", transcript, "stdout strict JSON root is not an object")
+			return fail(CodeProjectionJSONRoot, CLIChannelStdout, "", "stdout strict JSON root is not an object")
 		}
 		stdoutJSON = parsed
 	}
-
 	projected := make([]CLIProjectedField, 0, len(d.fields))
 	for _, field := range d.fields {
 		descriptor, _ := descriptorFor(field)
-		links := []CLIProjectionSourceLink{sourceLink(descriptor.channel, descriptor.path...)}
-		operation = appendOperation(links...)
-		value, rejection := projectField(field, observation, stdoutJSON, operation.name)
+		operation = appendOperation(sourceLink(descriptor.channel, descriptor.path...))
+		value, rejection := projectField(field, completion, stdout, stderr, stdoutJSON, operation.name)
 		if rejection != nil {
-			return CLIProjectionResult{}, d.finishRejection(observation, rejection, transcript)
+			return cliBehaviorProjection{transcript: cloneTranscript(transcript), finalOperation: operation}, rejection
 		}
 		projected = append(projected, CLIProjectedField{id: field, value: value})
 	}
 	operation = appendOperation()
 	if !transcriptMatchesDefinition(d, transcript) {
-		return CLIProjectionResult{}, d.rejection(observation, CodeProjectionInternal, operation.name, "", "", transcript, "projection transcript differs from the sealed definition")
+		return fail(CodeProjectionInternal, "", "", "projection transcript differs from the sealed definition")
 	}
 	canonicalProjection, err := encodeProjection(projected)
 	if err != nil {
-		return CLIProjectionResult{}, d.rejection(observation, CodeProjectionResourceLimit, operation.name, "", "", transcript, err.Error())
+		return fail(CodeProjectionResourceLimit, "", "", err.Error())
 	}
-	projectionByteDigest, _, err := cliDigestBytes("CLIProjectionCanonicalBytes", canonicalProjection)
-	if err != nil {
-		return CLIProjectionResult{}, d.rejection(observation, CodeProjectionInternal, operation.name, "", "", transcript, err.Error())
-	}
-	derivationDigest, derivationBytes, err := digestDerivation(observation.digest, d.digest, d.binding.Digest(), projectionByteDigest, transcript)
-	if err != nil {
-		return CLIProjectionResult{}, d.rejection(observation, CodeProjectionInternal, operation.name, "", "", transcript, err.Error())
-	}
-	derivation := CLIProjectionDerivation{
-		digest: derivationDigest, canonicalBytes: derivationBytes, observationDigest: observation.digest,
-		adapterDefinitionDigest: d.digest, definitionDigest: d.binding.Digest(),
-		projectionByteDigest: projectionByteDigest, definitionFields: append([]CLIFieldID(nil), d.fields...),
-		transcript: cloneTranscript(transcript),
-	}
-	return CLIProjectionResult{
-		projectionBytes: canonicalProjection, canonicalBytes: append([]byte(nil), derivationBytes...),
-		fields: cloneProjectedFields(projected), derivation: derivation,
+	return cliBehaviorProjection{
+		projectionBytes: canonicalProjection, fields: projected, transcript: transcript, finalOperation: operation,
 	}, nil
 }
 
-func requirePresentChannel(channel CLIChannelCapture, operation string) *ProjectionRejection {
-	switch channel.state {
-	case ChannelPresent:
-		return nil
-	case ChannelTruncated:
-		return &ProjectionRejection{Code: CodeProjectionTruncated, Operation: operation, Channel: channel.name, Detail: "truncated capture can never project"}
-	default:
-		return &ProjectionRejection{Code: CodeProjectionChannel, Operation: operation, Channel: channel.name, Detail: "required channel is absent"}
-	}
-}
-
-func projectField(field CLIFieldID, observation CLICapturedObservation, stdoutJSON canon.Value, operation string) (CLIExactValue, *ProjectionRejection) {
+func projectField(
+	field CLIFieldID,
+	completion CLICompletion,
+	stdout, stderr []byte,
+	stdoutJSON canon.Value,
+	operation string,
+) (CLIExactValue, *ProjectionRejection) {
 	switch field {
 	case CLIFieldCompletionKind:
-		return exactString(string(observation.completion.kind), operation, CLIChannelExit, field)
+		return exactString(string(completion.kind), operation, CLIChannelExit, field)
 	case CLIFieldExitCode:
-		if observation.completion.kind != CompletionExited {
+		if completion.kind != CompletionExited {
 			return exactMissing(operation, CLIChannelExit, field)
 		}
-		return exactInteger(int64(observation.completion.code), operation, CLIChannelExit, field)
+		return exactInteger(int64(completion.code), operation, CLIChannelExit, field)
 	case CLIFieldExitSignal:
-		if observation.completion.kind != CompletionSignaled {
+		if completion.kind != CompletionSignaled {
 			return exactMissing(operation, CLIChannelExit, field)
 		}
-		return exactString(observation.completion.signal, operation, CLIChannelExit, field)
+		return exactString(completion.signal, operation, CLIChannelExit, field)
 	case CLIFieldStdoutBytes:
-		return exactBytes(observation.stdout.bytes, operation, CLIChannelStdout, field)
+		return exactBytes(stdout, operation, CLIChannelStdout, field)
 	case CLIFieldStderrText:
-		return exactString(string(observation.stderr.bytes), operation, CLIChannelStderr, field)
+		return exactString(string(stderr), operation, CLIChannelStderr, field)
 	case CLIFieldStdoutJSONMode, CLIFieldStdoutJSONSource:
 		member := "mode"
 		if field == CLIFieldStdoutJSONSource {

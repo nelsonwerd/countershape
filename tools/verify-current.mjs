@@ -24,6 +24,7 @@ export const toolSpecifications = Object.freeze([
 	Object.freeze({ name: "go", variable: "COUNTERSHAPE_GO", fallback: "/opt/homebrew/bin/go" }),
 	Object.freeze({ name: "node", variable: null, fallback: process.execPath }),
 	Object.freeze({ name: "git", variable: "COUNTERSHAPE_GIT", fallback: "/usr/bin/git" }),
+	Object.freeze({ name: "sh", variable: "COUNTERSHAPE_SH", fallback: "/bin/sh" }),
 	Object.freeze({ name: "cc", variable: "COUNTERSHAPE_CC", fallback: "/usr/bin/clang" }),
 	Object.freeze({ name: "cxx", variable: "COUNTERSHAPE_CXX", fallback: "/usr/bin/clang++" }),
 ]);
@@ -32,18 +33,43 @@ const goCommon = Object.freeze(["-mod=readonly", "-buildvcs=false"]);
 
 export const currentSteps = Object.freeze([
 	Object.freeze({ id: "workspace-no-ds-store", kind: "guard" }),
-	Object.freeze({ id: "go-build", tool: "go", args: Object.freeze(["build", ...goCommon, "./..."]) }),
-	Object.freeze({ id: "go-vet", tool: "go", args: Object.freeze(["vet", ...goCommon, "./..."]) }),
-	Object.freeze({ id: "go-test-full", tool: "go", args: Object.freeze(["test", ...goCommon, "-count=1", "-p=2", "-timeout=20m", "./..."]) }),
-	Object.freeze({ id: "verification-runner-selftest", tool: "node", path: "tools/verify-current-selftest.mjs", marker: "verification runner self-test passed:" }),
-	Object.freeze({ id: "architecture-u5", tool: "node", path: "tools/check-u5-architecture.mjs", marker: "U5 architecture boundary OK" }),
-	Object.freeze({ id: "architecture-u5-selftest", tool: "node", path: "tools/check-u5-architecture-selftest.mjs", marker: "U5 architecture self-test passed:" }),
-	Object.freeze({ id: "architecture-u6", tool: "node", path: "tools/check-u6-architecture.mjs", marker: "U6 architecture boundary OK" }),
-	Object.freeze({ id: "architecture-u6-selftest", tool: "node", path: "tools/check-u6-architecture-selftest.mjs", marker: "U6 architecture checker self-test OK" }),
-	Object.freeze({ id: "architecture-p07b-a1", tool: "node", path: "tools/check-p07b-architecture.mjs", marker: "P07B source architecture boundary OK" }),
-	Object.freeze({ id: "architecture-p07b-a1-selftest", tool: "node", path: "tools/check-p07b-architecture-selftest.mjs", marker: "P07B architecture self-test OK" }),
-	Object.freeze({ id: "architecture-p07b-a2-1", tool: "node", path: "tools/check-p07b-a2-architecture.mjs", marker: "P07B A2.1 architecture boundary OK" }),
-	Object.freeze({ id: "architecture-p07b-a2-1-selftest", tool: "node", path: "tools/check-p07b-a2-architecture-selftest.mjs", marker: "P07B A2.1 architecture defensive self-test OK" }),
+	Object.freeze({ id: "go-build", tool: "go", tools: Object.freeze(["go", "cc", "cxx"]), args: Object.freeze(["build", ...goCommon, "./..."]) }),
+	Object.freeze({ id: "go-vet", tool: "go", tools: Object.freeze(["go", "cc", "cxx"]), args: Object.freeze(["vet", ...goCommon, "./..."]) }),
+	Object.freeze({ id: "go-test-full", tool: "go", tools: Object.freeze(["go", "node", "git", "sh", "cc", "cxx"]), args: Object.freeze(["test", ...goCommon, "-count=1", "-p=2", "-timeout=20m", "./..."]) }),
+	Object.freeze({ id: "verification-runner-selftest", tool: "node", tools: Object.freeze(["node"]), path: "tools/verify-current-selftest.mjs", marker: "verification runner self-test passed:" }),
+	Object.freeze({ id: "architecture-u5", tool: "node", tools: Object.freeze(["node"]), path: "tools/check-u5-architecture.mjs", marker: "U5 architecture boundary OK" }),
+	Object.freeze({ id: "architecture-u5-selftest", tool: "node", tools: Object.freeze(["node"]), path: "tools/check-u5-architecture-selftest.mjs", marker: "U5 architecture self-test passed:" }),
+	Object.freeze({ id: "architecture-u6", tool: "node", tools: Object.freeze(["node"]), path: "tools/check-u6-architecture.mjs", marker: "U6 architecture boundary OK" }),
+	Object.freeze({ id: "architecture-u6-selftest", tool: "node", tools: Object.freeze(["node"]), path: "tools/check-u6-architecture-selftest.mjs", marker: "U6 architecture checker self-test OK" }),
+	Object.freeze({ id: "architecture-p07b-a1", tool: "node", tools: Object.freeze(["node", "go", "cc", "cxx"]), path: "tools/check-p07b-architecture.mjs", marker: "P07B source architecture boundary OK" }),
+	Object.freeze({ id: "architecture-p07b-a1-selftest", tool: "node", tools: Object.freeze(["node", "go", "cc", "cxx"]), path: "tools/check-p07b-architecture-selftest.mjs", marker: "P07B architecture self-test OK" }),
+	Object.freeze({
+		id: "runtime-example-p07b-a2-2", tool: "node", tools: Object.freeze(["node", "go"]), path: "tools/generate-p07b-a2-runtime-example.mjs",
+		args: Object.freeze(["--check"]), marker: "P07B A2.2 runtime ContractBundle example exact (",
+	}),
+	Object.freeze({
+		id: "planning-example-p07b-a2-2", tool: "node", tools: Object.freeze(["node"]), path: "tools/generate-p07-planning-example.mjs",
+		args: Object.freeze(["--exercise"]),
+		marker: "P07 planning example: real A2.2 bundle conformed and intact entrypoint refused companion tamper before harness load",
+	}),
+	Object.freeze({
+		id: "planning-validator-selftest", tool: "node", tools: Object.freeze(["node"]), path: "tools/validate-planning.mjs",
+		args: Object.freeze(["--self-test"]), marker: "planning validator self-test: ok (",
+	}),
+	Object.freeze({
+		id: "recovery-process-p07b-a2-2", tool: "node", tools: Object.freeze(["node", "go"]), path: "tools/verify-p07b-a2-recovery-process.mjs",
+		marker: "P07B A2.2 fresh-process recovery OK",
+	}),
+	Object.freeze({
+		id: "human-surface-p07b-a2-2-selftest", tool: "node", tools: Object.freeze(["node"]), path: "tools/capture-p07b-a2-human-surface.mjs",
+		args: Object.freeze(["--self-test"]), marker: "P07B A2.2 human-surface renderer self-test OK",
+	}),
+	Object.freeze({
+		id: "human-surface-p07b-a2-2-check", tool: "node", tools: Object.freeze(["node"]), path: "tools/capture-p07b-a2-human-surface.mjs",
+		args: Object.freeze(["--check"]), marker: "P07B A2.2 human-surface capture exact",
+	}),
+	Object.freeze({ id: "architecture-p07b-a2-2", tool: "node", tools: Object.freeze(["node", "go", "cc", "cxx"]), path: "tools/check-p07b-a2-architecture.mjs", marker: "P07B A2.2 architecture boundary OK" }),
+	Object.freeze({ id: "architecture-p07b-a2-2-selftest", tool: "node", tools: Object.freeze(["node", "go", "cc", "cxx"]), path: "tools/check-p07b-a2-architecture-selftest.mjs", marker: "P07B A2.2 architecture defensive self-test OK" }),
 	Object.freeze({ id: "authority-revalidation", kind: "authority-guard" }),
 ]);
 
@@ -147,6 +173,37 @@ export async function revalidateTools(admitted) {
 	for (const specification of toolSpecifications) await revalidateTool(admitted[specification.name]);
 }
 
+export function childToolNames(step) {
+	if (!step || typeof step !== "object" || typeof step.tool !== "string") {
+		throw new VerificationError("VERIFY_PLAN_PRIMARY_TOOL_REQUIRED", step?.id ?? "unnamed step");
+	}
+	if (!Array.isArray(step.tools) || step.tools.length === 0) {
+		throw new VerificationError("VERIFY_PLAN_TOOL_ROSTER_REQUIRED", step.id ?? step.tool);
+	}
+	if (step.tools[0] !== step.tool) {
+		throw new VerificationError("VERIFY_PLAN_PRIMARY_TOOL_MISMATCH", `${step.id ?? step.tool}: ${step.tools[0]} != ${step.tool}`);
+	}
+	const known = new Set(toolSpecifications.map((specification) => specification.name));
+	const seen = new Set();
+	for (const name of step.tools) {
+		if (typeof name !== "string" || !known.has(name)) {
+			throw new VerificationError("VERIFY_PLAN_TOOL_UNKNOWN", `${step.id ?? step.tool}: ${String(name)}`);
+		}
+		if (seen.has(name)) {
+			throw new VerificationError("VERIFY_PLAN_TOOL_DUPLICATE", `${step.id ?? step.tool}: ${name}`);
+		}
+		seen.add(name);
+	}
+	return [...step.tools];
+}
+
+export async function revalidateStepTools(step, admitted, revalidate = revalidateTool) {
+	for (const name of childToolNames(step)) {
+		if (!admitted?.[name]) throw new VerificationError("VERIFY_TOOL_NOT_ADMITTED", `${step.id ?? step.tool}: ${name}`);
+		await revalidate(admitted[name]);
+	}
+}
+
 function slash(value) {
 	return value.split(sep).join("/");
 }
@@ -184,7 +241,11 @@ export async function validateRepositoryPlan(root = repositoryRoot, steps = curr
 	const canonicalRoot = await realpath(absoluteRoot);
 	if (absoluteRoot !== canonicalRoot) throw new VerificationError("VERIFY_REPOSITORY_ROOT_NOT_CANONICAL", `${absoluteRoot} != ${canonicalRoot}`);
 	const paths = new Set(["tools/verify-current.mjs"]);
-	for (const step of steps) if (step.path) paths.add(step.path);
+	for (const step of steps) {
+		if (step.tool) childToolNames(step);
+		else if (Object.hasOwn(step, "tools")) throw new VerificationError("VERIFY_PLAN_PRIMARY_TOOL_REQUIRED", step.id ?? "unnamed step");
+		if (step.path) paths.add(step.path);
+	}
 	for (const row of historical) {
 		for (const path of row.scripts) paths.add(path);
 		paths.add(row.status);
@@ -235,7 +296,7 @@ export async function createPrivateRoots(root = repositoryRoot, admitted) {
 		await requirePrivateDirectory(paths[name], "VERIFY_PRIVATE_DIRECTORY_INVALID");
 	}
 	for (const [name, target] of [
-		["go", admitted.go.path], ["node", admitted.node.path], ["git", admitted.git.path],
+		["go", admitted.go.path], ["node", admitted.node.path], ["git", admitted.git.path], ["sh", admitted.sh.path],
 		["cc", admitted.cc.path], ["c++", admitted.cxx.path],
 	]) await symlink(target, join(paths.authorityBin, name));
 	return Object.freeze(paths);
@@ -268,22 +329,37 @@ export function buildChildEnvironment(admitted, roots) {
 		COUNTERSHAPE_GO: admitted.go.path,
 		COUNTERSHAPE_NODE: admitted.node.path,
 		COUNTERSHAPE_GIT: admitted.git.path,
+		COUNTERSHAPE_SH: admitted.sh.path,
 		COUNTERSHAPE_CC: admitted.cc.path,
 	});
 }
 
-async function childResult(step, admitted, childEnvironment) {
+export function childArguments(step, root = repositoryRoot) {
+	const suffix = [...(step.args ?? [])];
+	return step.path ? [resolve(root, step.path), ...suffix] : suffix;
+}
+
+export async function childResult(step, admitted, childEnvironment, dependencies = {}) {
 	const executable = admitted[step.tool].path;
-	const args = step.path ? [resolve(repositoryRoot, step.path)] : [...step.args];
-	await revalidateTool(admitted[step.tool]);
-	const result = spawnSync(executable, args, {
-		cwd: repositoryRoot,
-		encoding: "utf8",
-		env: childEnvironment,
-		timeout: childTimeoutMS,
-		maxBuffer: maxChildOutput,
-	});
-	await revalidateTool(admitted[step.tool]);
+	const args = childArguments(step);
+	const revalidate = dependencies.revalidate ?? revalidateStepTools;
+	const spawn = dependencies.spawn ?? spawnSync;
+	await revalidate(step, admitted);
+	let result;
+	let spawnFailure;
+	try {
+		result = spawn(executable, args, {
+			cwd: repositoryRoot,
+			encoding: "utf8",
+			env: childEnvironment,
+			timeout: childTimeoutMS,
+			maxBuffer: maxChildOutput,
+		});
+	} catch (error) {
+		spawnFailure = error;
+	}
+	await revalidate(step, admitted);
+	if (spawnFailure) throw spawnFailure;
 	return {
 		status: result.status,
 		signal: result.signal,

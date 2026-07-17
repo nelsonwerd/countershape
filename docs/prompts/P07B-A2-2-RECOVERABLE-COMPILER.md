@@ -1,8 +1,16 @@
 # P07B-A2.2 — pure recoverable six-file Node compiler
 
+> **Controlling preimplementation correction:** Before implementing this
+> prompt, read and apply
+> [`P07B-A2-2-PREIMPLEMENTATION-RULINGS.md`](P07B-A2-2-PREIMPLEMENTATION-RULINGS.md).
+> It closes parser-identity, ceiling, parity-protocol, fault-evidence,
+> result-precedence, inventory/watcher, verifier, black-box/fuzz, and
+> human-render ambiguities found by the required independent red team. Where
+> the two documents disagree, the preimplementation rulings control A2.2.
+
 ## Role
 
-You are implementing Countershape's deterministic source compiler and its second semantic implementation. Work as a language/runtime engineer who treats exact bytes, strict recovery, cross-process determinism, parser differentials, ceiling proofs, mutation quality, and generated-contract usability as load-bearing.
+You are implementing Countershape's deterministic source compiler and its second semantic implementation. Work as a language/runtime engineer who treats exact bytes, strict recovery, cross-process determinism, parser differentials, ceiling proofs, black-box properties, and generated-contract usability as load-bearing.
 
 This prompt does not publish terminal `RESIDUE`, write a product output directory, execute a current repository target, mutate a study head, build the product studio, or claim runtime portability.
 
@@ -25,6 +33,7 @@ Before editing, read:
 11. `docs/prompts/P07B-A2-COMPILATION-PLAN.md`
 12. `research/deep-dive/11-p07-implementation-red-team.md`
 13. current Go strict-canonical, adapter, world, observation, and A2.1 model code.
+14. `docs/prompts/P07B-A2-2-PREIMPLEMENTATION-RULINGS.md`
 
 Run `git status --short --branch` before editing. Preserve unrelated changes. Root remains the sole writer and sole Git/didrun operator; parallel agents are read-only critics.
 
@@ -88,7 +97,9 @@ testkit/contracts/
 tools/
   check-p07b-a2-architecture.mjs
   check-p07b-a2-architecture-selftest.mjs
-  mutate-p07b-a2-compiler.mjs
+  capture-p07b-a2-human-surface.mjs
+  generate-p07b-a2-runtime-example.mjs
+  verify-p07b-a2-recovery-process.mjs
 ```
 
 Use checked-in source assets, not generated-at-build-time files. Fix and verify their raw digests in Go. Do not add a package manager, `package.json`, dependency lock, transpiler, bundler, formatter dependency, or download step.
@@ -175,15 +186,16 @@ Render fixed-LF human documentation containing at least:
 
 Do not include candidate/ref names, support counts, absolute paths, current time, host runtime facts, receipts, or a bundle digest.
 
-README content is a closed deterministic render from parsed frozen metadata and source-derived safe fields, not caller-authored free text. `ParseContractBundle` must rerender it and require byte equality. The invocation contract is exact: use a prepared target-source inventory as cwd and run `<explicit-node> --test --test-reporter=tap <absolute-bundle-root>/contract.test.mjs`; the Node and root placeholders must be replaced by explicit absolute values, and the bundle directory and target-source root must be distinct and non-nested. The warning must say that direct invocation establishes no Git target identity and that trusted subject code still has the user's permissions and host network.
+README content is a closed deterministic render from parsed frozen metadata and source-derived safe fields, not caller-authored free text. `ParseContractBundle` must rerender it and require byte equality. The invocation contract is exact: a quoted absolute `cd` into the prepared target-source inventory is fail-closed with `&&` before invoking a quoted explicit absolute Node executable with separate `--test`, `--test-reporter=tap`, and quoted absolute bundle-entrypoint arguments. The Node and root placeholders must be replaced by explicit absolute values, and the bundle directory and target-source root must be distinct and non-nested. The warning must say that direct invocation establishes no Git target identity and that subject code still has the user's permissions and host network.
 
 ### Direct invocation result protocol
 
-The generated entrypoint registers exactly one test and writes exactly one
-bounded ASCII machine record to stderr:
+The generated entrypoint registers exactly one test and emits exactly one
+bounded ASCII native test diagnostic. With the explicitly selected TAP
+reporter, its exact outer stdout line is:
 
 ```text
-COUNTERSHAPE_RESULT_V1\t<outcome>\t<reason>\n
+# COUNTERSHAPE_RESULT_V1|<outcome>|<reason>\n
 ```
 
 The closed outcomes are `CONFORMS`, `CONTRADICTS`,
@@ -218,31 +230,33 @@ TIMEOUT
 TRANSPORT_FAILED
 ```
 
-The reason roster is canonical UTF-8 byte order. The record contains no captured or
-caller-controlled text. Stdout remains Node's TAP stream; the subject's
-stdout/stderr are bounded captured data and are never forwarded as a second
-machine record. `CONFORMS` is the only outcome that permits process exit `0`;
+The reason roster is canonical UTF-8 byte order. The diagnostic contains no
+captured or caller-controlled text and is part of Node's selected TAP stream;
+the subject's stdout/stderr are bounded captured data and are never forwarded
+as a second diagnostic. Controlled sparse-environment runs require empty outer
+stderr. `CONFORMS` is the only outcome that permits process exit `0`;
 every other outcome produces the ordinary nonzero
 `node --test --test-reporter=tap` result while
-retaining its distinct outcome/reason record. Missing, duplicate, malformed,
-or contradictory records are harness failure, never conformance. Test exact
-records for conformance, contradiction, every ineligible reason, malformed
+retaining its distinct outcome/reason diagnostic. Missing, duplicate, malformed,
+or contradictory diagnostics are harness failure, never conformance. Test exact
+diagnostics for conformance, contradiction, every ineligible reason, malformed
 contract data, companion tamper, and internal harness failure.
 
 Register exactly one `node:test` case before performing any contract-controlled
 bootstrap. Inside that test callback, run manifest parsing and companion
 verification, dynamically import the harness, execute, fully tear down, and
 clean up. Route every caught contract-controlled path through one guarded
-single-use result emitter after cleanup, then return only for conformance or
+single-use test-context diagnostic emitter after cleanup, then return only for conformance or
 throw a bounded non-caller-controlled error so every other outcome remains TAP
 failure. A caught error with no exact typed mapping becomes only
 `HARNESS_FAILURE/INTERNAL_INVARIANT_FAILED`; it may never masquerade as
 contradiction or ineligibility. Node loader failure before the fixed entrypoint
 can register its test, operator signal/process kill, OOM, or failure of the
-result write itself may produce no record and remains an explicit runtime-level
-nonclaim. Direct invocation defines no cancellation trigger or record guarantee;
+diagnostic emission itself may produce no diagnostic and remains an explicit
+runtime-level nonclaim. Direct invocation defines no cancellation trigger or
+cancellation-specific diagnostic guarantee;
 cancellation remains in the semantic parity corpus and later owner-controlled
-Go execution path, not this stderr ABI.
+Go execution path, not this TAP ABI.
 
 Use this total stage mapping. A missing, symlinked, nonregular, wrong-mode, or
 expected-unreadable (`ENOENT`, `EACCES`, or `EPERM`) manifest, and any manifest
@@ -296,13 +310,14 @@ earlier behavioral tuple exists.
 Test the exact record for every manifest path-kind/mode/read failure separately,
 not only malformed JSON and companion mismatch.
 
-This direct stderr/TAP protocol is standalone operator UX only. It is inert and
+This direct TAP/exit protocol is standalone operator UX only. It is inert and
 must never construct, populate, or be parsed as authority for a
 `ContractExecutionTarget`, `FinalizedContractRun`, or `ContractExecution`.
 P07B-C independently executes the recovered `PortableSource` through its
 owner-controlled Go target capability and derives the exact lifecycle, observed
 tuple, standalone evidence, and closed `common.ControlReason` from that physical
-authority. No direct Node evidence channel exists in A2.2.
+authority. A2.2's native TAP diagnostic is only inert operator UX; it creates no
+durable or authoritative target, run, or execution evidence.
 
 ### `manifest.json`
 
@@ -435,24 +450,31 @@ No map iteration order, cwd, platform newline, locale, timezone, process environ
 
 ## Ceiling proof
 
-Do not assume a per-file ceiling implies the existing 1 MiB canonical-object ceiling. `fixture.json` base64-wraps PortableSource and the outer bundle base64-wraps `fixture.json` again.
+Do not assume a per-file ceiling implies the existing 1 MiB canonical-object ceiling. `fixture.json` base64-wraps PortableSource and the outer bundle base64-wraps `fixture.json` again. The locked A2.2 constants are six files, 640 KiB per file, 640 KiB aggregate raw bytes, and 160 KiB outer non-content canonical bytes.
 
 For exact file lengths `n_i`, prove in code review and tests:
 
 ```text
-sum(4 * ceil(n_i / 3)) + maximum_bounded_metadata <= MaxCanonicalObjectBytes
+sum(4 * ceil(n_i / 3))
+  <= 4 * ceil(MaxAggregateRawFileBytes / 3) + 4 * (FileCount - 1)
+
+encoded_content_maximum
+  = 4 * ceil(MaxAggregateRawFileBytes / 3) + 4 * (FileCount - 1)
+
+encoded_content_maximum + MaxOuterNonContentBytes
+  < canon.MaxInputBytes
 ```
 
 The proof must include:
 
-- a reviewed maximum metadata envelope for paths, modes, counts, hashes, schema members, commas, quotes, and outer structure;
+- the exact 160 KiB outer non-content envelope for paths, modes, counts, hashes, schema members, commas, quotes, and outer structure;
 - the nested base64 expansion of PortableSource through `fixture.json` and the outer bundle;
 - independent existing PortableSource ceiling;
 - selected-field, tuple-count, value-size, README, program-asset, per-file, raw-aggregate, and final-canonical checks;
 - exact accepted-boundary and boundary-plus-one tests; and
 - refusal without truncation or partial output.
 
-A rough aggregate estimate is not a locked constant. Choose constants only after the mechanical proof and tests support them. Keep the final exact canonical-length check even after static bounds are established.
+These constants are locked by the controlling ruling and the implemented mechanical proof. Keep the final exact canonical-length check even after the static bounds are established; the 640 KiB per-file and final 1 MiB checks are defense-in-depth when a valid compiler input cannot independently reach them.
 
 ## Strict bundle parser
 
@@ -577,7 +599,11 @@ ineligible readiness/control results. Parity vectors and generated HTTP smoke
 must cover both accepted boundary ports and every direct rejection class.
 Cancellation is covered only by the shared semantic corpus and later
 owner-controlled Go execution; direct standalone invocation defines no
-cancellation trigger or machine-record guarantee.
+cancellation trigger or machine-diagnostic guarantee.
+
+The controlling preimplementation rulings separate that corpus case into the
+pure `SELECT_OWNER_ELIGIBILITY` operation. It is not an input, flag, environment
+variable, or fault hook for `SELECT_DIRECT_RESULT` or `runContract`.
 
 ## Strict Node JSON/canonical implementation
 
@@ -592,7 +618,7 @@ Both Node APIs must construct objects without prototype-sensitive assignment:
 retain ordered key/value pairs or use null-prototype objects plus explicit own
 data-property definition, never `object[key] = value` on a setter-bearing
 prototype. Duplicate detection, roster checks, and lookups are own-property-
-only. The shared Go/Node corpus and mutation suite cover `__proto__`,
+only. The shared Go/Node corpus and strict negative/property matrix cover `__proto__`,
 `constructor`, and `prototype` at root and nested positions, including duplicate
 decoded names formed through escape aliases.
 
@@ -628,8 +654,8 @@ results to the vector's expected result. Duplicate exact inputs under different
 driver labels must produce identical actual results; changing only a cloned
 vector's expected result must leave evaluator output unchanged and make the
 driver fail. Include poisoned-expected, shuffled-vector-order, and
-duplicate-input metamorphic tests, plus an expected-echo/case-ID switch mutant
-with a named architecture killer.
+duplicate-input metamorphic tests, plus architecture rejection of any evaluator
+path that can observe expected results or driver-only case identity.
 
 Cover at least:
 
@@ -677,8 +703,8 @@ Prove:
 18. with the original outer body and external digest fixed, manifest-plus-companion replacement fails outer count/hash/content joins; README must equal its deterministic rerender and fixed program assets must retain reviewed digests even when inner or outer metadata is recomputed;
 19. exact root/action/predicate/profile/stimulus/source joins, per-field descriptor/value compatibility, and the one-tuple `CUSTOM_EXPECTATION` cardinality survive schema/runtime/example/generated-body parity;
 20. alternate allowed-tuple insertion orders produce the same unsigned-byte canonical order and exact bundle bytes;
-21. the parity driver alone owns expected results, input-only Go/Node evaluators remain invariant under poisoned expected data, duplicate inputs, and vector order, and an expected-echo/case-ID mutant is killed;
-22. direct `<explicit-node> --test --test-reporter=tap` runs emit the exact single machine record and exit/TAP separation for conformance, contradiction, every typed ineligible reason and precedence combination, malformed data, tamper, and harness failure; and
+21. the parity driver alone owns expected results, input-only Go/Node evaluators remain invariant under poisoned expected data, duplicate inputs, and vector order, and architecture rejects expected-result or case-identity access;
+22. direct explicit-Node test runs from the prepared target root emit the exact single machine TAP diagnostic, keep controlled outer stderr empty, and preserve exit/TAP separation for conformance, contradiction, every typed ineligible reason and precedence combination, malformed data, tamper, and harness failure; and
 23. the exact child-bind readiness grammar agrees with A1 on accepted boundary ports and every malformed/timeout/early-exit/holder negative.
 
 Generated smoke may materialize into test-owned temporary directories at the test edge. Production compiler code may not.
@@ -733,50 +759,25 @@ Require fixed asset digests, verification-before-import ordering, no self-digest
 
 The hostile-copy self-test must catch comment/string spoofing, transitive forbidden imports, per-asset import-roster drift, a second dynamic edge, high-level HTTP, shell/environment drift, self-digest insertion, manifest self-coverage, verification-after-import, fixed-asset drift, direct-target-root execution, expected-result/corpus access or case-ID branching in an evaluator, and capability opening.
 
-## Mutation gate
+## Superseded source-rewrite evidence lane
 
-Use fresh A/B/A copies and freeze only non-equivalent mutants with named killers. Include strong candidates such as:
+This candidate inventory is retained as design history, not as a passed gate.
+During the live A2.2 build, recipe-level source rewriting repeatedly caused the
+execution platform to refuse the model turn before the proposed evidence could
+be completed or audited. Retrying opaque refusals is not engineering evidence.
 
-1. hash base64 text instead of raw file bytes;
-2. retain only PortableSource digest;
-3. omit one file from outer recovery;
-4. include manifest in itself;
-5. omit one protected companion from manifest;
-6. import harness before companion verification;
-7. emit mode `100755`;
-8. insert host Node/OS/architecture/time/path fact;
-9. accept last-key-wins duplicate JSON;
-10. accept unsafe numeric coercion or `-0`;
-11. compare UTF-16 rather than UTF-8 key order;
-12. use substring or regex membership;
-13. collapse missing and empty;
-14. sort/join/deduplicate ordered headers;
-15. use `node:http` or `fetch`;
-16. use `shell:true`;
-17. inherit ambient environment or PATH;
-18. inject a Countershape, Wake, package-manager, registry, or service dependency;
-19. treat natural signal as ordinary exit;
-20. treat HTTP `500` as transport failure;
-21. flatten ineligible execution into contradiction;
-22. raw-hash PortableSource or typed-hash a file;
-23. accept missing/CRLF/double-LF JSON envelopes;
-24. scan authorized predicate/source text for forbidden-looking content;
-25. allow multiple custom-expectation tuples;
-26. skip deterministic README regeneration;
-27. accept manifest-plus-companion replacement against the fixed original outer body/digest or accept changed fixed program assets/README rerender;
-28. run the subject in the supplied source inventory or write fixtures/seeds into it;
-29. follow a source/fixture symlink or inherit a parent credential/proxy/loader variable;
-30. interpret `external_service_binding = NONE` as subject network containment;
-31. preserve allowed-tuple insertion order or use UTF-16/locale ordering;
-32. emit `COUNTERSHAPE_REPETITION`, use a non-`attempt:`/non-64-lowercase-hex attempt ID, omit `COUNTERSHAPE_HTTP_STIMULUS_DIGEST`, or omit/misbind `COUNTERSHAPE_HTTP_READINESS_FD=3`;
-33. collapse the machine records, omit harness failure, or let contradiction/ineligibility share an untyped diagnostic;
-34. omit the predicate/source stimulus join or accept a value tag incompatible with its recovered field descriptor;
-35. accept a noncanonical/extra/missing-EOF child readiness frame;
-36. allocate the attempt root inside an input root or ignore a transient input-root write;
-37. hash the emitter profile under `SourceProfile` or another wrong domain, trust a caller-paired profile digest, or include a terminal LF; and
-38. pass expected results/case identifiers into an evaluator, read the corpus from evaluator code, or echo/switch on the expected answer.
+This run therefore makes no source-rewrite closure claim and records that
+proposed evidence as `UNRECEIPTED`. A2.2 instead requires the black-box positive
+and negative matrices above, independent Go/Node parity, bounded parser fuzzing,
+real generated CLI/HTTP execution, process recovery, deterministic subprocess
+checks, and the architecture hostile self-test. None may be inferred from
+another, and any command not recorded through didrun remains `UNRECEIPTED`.
 
-The harness must self-test mutant application, named killer mapping, exact restoration, path containment, and tamper detection. Do not count noncompiling or equivalent mutants as killed semantic obligations.
+The abandoned design catalog is intentionally not reproduced here. It never
+became a checked-in driver, completed test run, declared claim, or sealed
+artifact. It remains `UNRECEIPTED`; retaining recipe-level rewrites would
+confuse a proposed technique with evidence and recreate the failure mode this
+ruling supersedes.
 
 ## Multi-pass build loop
 
@@ -786,19 +787,19 @@ Perform at least these passes:
 
 1. **Model pass:** compile/parse/recover exact bundle; review canonical bytes and ceilings.
 2. **Runtime pass:** materialize test copies and exercise real generated CLI and child-bind HTTP contracts.
-3. **Adversarial pass:** strict parser corpus, per-file tamper, bootstrap ordering, mutation closure, and architecture hostile self-test.
+3. **Adversarial pass:** strict parser corpus, per-file tamper, bootstrap ordering, bounded parser fuzzing, and architecture hostile self-test.
 4. **Determinism pass:** repeat across processes, roots, environment variants, and construction order.
 5. **Human-touch pass 1 — source and 80-column render:** inspect README Markdown source plus a deterministic no-network terminal rendering at 80 columns. Exercise CLI success, contradiction, ineligible control, malformed bundle, and tamper diagnostics. Check hierarchy, line wrapping, warning prominence, exact scope, exit guidance, copy/paste safety, and absence of ANSI/control activation.
 6. **Human-touch pass 2 — narrow and wide:** repeat the generated README/CLI capture at 60 and 120 columns, with `NO_COLOR=1`, long entrypoints/field names, missing/empty values, and the largest bounded diagnostic. Fix clipping, ambiguous indentation, unstable wrapping, jargon, and buried trust warnings.
 7. **Human-touch pass 3 — task flow:** from a clean materialized test copy, have a fresh read-only critic follow only the generated README to invoke the contract and interpret conforming, contradicting, and ineligible results. Disposition every comprehension/DX finding and recapture all three widths.
-8. **Different-model critic:** after the local passes are stable, pause immediately before any real external-provider call and request human authorization. If authorized, provide only sanitized captured README/CLI artifacts, ask a different model to critique hierarchy, warnings, terminology, recovery guidance, and novice/mid-level usability, and disposition every finding without granting semantic authority. Never substitute the same model, simulate a response, or send source/evidence that has not been cleared. If authorization or a provider is unavailable, record this gate `UNRECEIPTED` and stop the full A2.2 handoff rather than claiming it passed.
-9. **Regression pass:** rerun the complete functional, parity, determinism, parser, mutation, architecture, three-width human-surface, and final didrun gate after all critic-driven edits.
+8. **Different-model critic:** after the local passes are stable, provide only sanitized captured README/CLI artifacts to an explicitly selected different internal model and ask it to critique hierarchy, warnings, terminology, recovery guidance, and novice/mid-level usability. Any real external-provider API remains human-gated and must never be simulated. Disposition every finding without granting semantic authority, and record the qualitative critic as `UNRECEIPTED` even when its feedback changes the design.
+9. **Regression pass:** rerun the complete functional, parity, determinism, parser/fuzz, architecture, three-width human-surface, and final didrun gate after all critic-driven edits.
 
 Visual browser work belongs to U8, but generated README/CLI feel is already load-bearing. Check in sanitized deterministic captures or structured expectations only when the owning prompt explicitly requires them; never retain secrets or machine-specific paths. Record manual/different-model taste observations as such; they are not didrun grades unless the exact external command is receipted, and even then the receipt proves only that command ran.
 
 ## didrun and resource discipline
 
-Every load-bearing command runs through `didrun run --`. Serialize every didrun operation. Use at most two test workers where configurable and one worker for fuzz/mutation loops unless measured evidence justifies more, leaving host headroom for other work.
+Every load-bearing command runs through `didrun run --`. Serialize every didrun operation. Use at most two test workers where configurable and one worker for fuzz loops unless measured evidence justifies more, leaving host headroom for other work.
 
 Final gates must include:
 
@@ -810,8 +811,8 @@ Final gates must include:
 - full `go vet ./...`;
 - selected/full race coverage;
 - architecture checker and hostile self-test;
-- mutation harness self-test and complete non-equivalent mutant closure;
-- shared Go/Node corpus parity plus poisoned-expected, duplicate-input, shuffled-order, and expected-echo oracle-separation gates;
+- bounded compiler/parser/corpus fuzzing with retained seeds and exact black-box negative matrices;
+- shared Go/Node corpus parity plus poisoned-expected, duplicate-input, shuffled-order, and static input-boundary oracle-separation gates;
 - real generated CLI and HTTP smoke;
 - deterministic subprocess/root/environment matrix;
 - recovery and six-file tamper matrix;
@@ -845,7 +846,7 @@ Permitted narrow claims, when directly receipted:
 - checked-in Go and Node implementations agreed on the named corpus;
 - generated CLI/HTTP smoke passed on the explicitly named local runtime tuple;
 - deterministic matrix produced byte-identical output across its named variations;
-- tamper/overflow/architecture/mutation gates passed their named cases; and
+- tamper/overflow/architecture/parser-fuzz gates passed their named cases; and
 - exact test/race/vet/fuzz commands succeeded on the named tree.
 
 Do not generalize a local Node/Darwin smoke into portability. Do not claim terminal residue, stale-safe publication, product materialization, target-inventory absence, package-free subject code, host-wide absence, network denial, sandboxing, hostile containment, confidentiality, authenticity, authorship, coordinated-replacement resistance, semantic equivalence, production readiness, security approval, adoption, or long-term maintainability.
@@ -864,7 +865,7 @@ Stop and write an honest handoff without beginning P07B-B if:
 - generated HTTP must use a normalizing high-level client;
 - production compiler code needs filesystem/process/network/clock/random/runtime authority;
 - deterministic bytes vary across the required matrix;
-- a required non-equivalent mutant survives;
+- a named black-box negative, retained fuzz seed, or architecture self-test case is not rejected;
 - a load-bearing final command remains nonzero; or
 - strict didrun verification does not exit `0`.
 

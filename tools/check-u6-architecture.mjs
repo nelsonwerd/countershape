@@ -17,7 +17,10 @@ const modulePrefix = "github.com/nelsonwerd/countershape/";
 const reviewedRoots = Object.freeze([
   ["internal/domain", { ".": "domain" }],
   ["internal/compare", { ".": "compare" }],
-  ["internal/observe", { ".": "observe" }],
+  ["internal/observe", {
+    ".": "observe",
+    eligibilitycore: "eligibilitycore",
+  }],
   ["internal/reduce", { ".": "reduce" }],
   ["internal/reduction", { ".": "reduction" }],
   ["internal/store", { ".": "store" }],
@@ -403,7 +406,8 @@ function embedsAuthorityInterface(code) {
 const exactInternalImports = Object.freeze(new Map([
   ["internal/domain", ["internal/canon"]],
   ["internal/compare", ["internal/canon", "internal/domain", "internal/observe"]],
-  ["internal/observe", ["internal/canon", "internal/domain", "internal/world"]],
+  ["internal/observe", ["internal/canon", "internal/domain", "internal/observe/eligibilitycore", "internal/world"]],
+  ["internal/observe/eligibilitycore", ["internal/domain"]],
   ["internal/reduce", ["internal/canon", "internal/compare", "internal/domain"]],
   ["internal/reduction", ["internal/canon", "internal/domain", "internal/reduce", "internal/store"]],
   ["internal/store", ["internal/canon", "internal/choice/promotion/authority", "internal/compare", "internal/confirmation/authority", "internal/domain", "internal/reduce"]],
@@ -468,6 +472,54 @@ function inspectPackageBoundaries(manifest, violations) {
     if (!exactSet(actual, expected)) {
       violations.push(["U6_INTERNAL_IMPORT_LATTICE", `${packageDirectory}: ${actual.sort().join(",")}`]);
     }
+  }
+}
+
+function inspectEligibilityCore(manifest, violations) {
+  const coreEntries = productionEntries(manifest).filter((entry) =>
+    entry.path.startsWith("internal/observe/eligibilitycore/"));
+  if (coreEntries.length !== 1 || coreEntries[0].path !== "internal/observe/eligibilitycore/eligibility.go") {
+    violations.push(["U6_ELIGIBILITY_CORE_FILE_MAP", coreEntries.map((entry) => entry.path).join(",") || "absent"]);
+    return;
+  }
+  const entry = coreEntries[0];
+  const core = entry.lexical.code;
+  const imported = importedPackages(entry.lexical.commentless).map((candidate) => candidate.path).sort();
+  const expectedImport = `${modulePrefix}internal/domain`;
+  if (JSON.stringify(imported) !== JSON.stringify([expectedImport])) {
+    violations.push(["U6_ELIGIBILITY_CORE_IMPORT_ROSTER", imported.join(",")]);
+  }
+  const exportedTypes = [...core.matchAll(/\btype\s+([A-Z][A-Za-z0-9_]*)\b/gu)].map((match) => match[1]).sort();
+  const exportedFunctions = [...core.matchAll(/\bfunc\s+([A-Z][A-Za-z0-9_]*)\s*\(/gu)].map((match) => match[1]).sort();
+  const exportedMethods = [...core.matchAll(/\bfunc\s*\(\s*[A-Za-z_][A-Za-z0-9_]*\s+Decision\s*\)\s*([A-Z][A-Za-z0-9_]*)\s*\(/gu)]
+    .map((match) => match[1]).sort();
+  const exportedConstants = [...core.matchAll(/^\s*([A-Z][A-Za-z0-9_]*)\s+FactKind\s*=/gmu)].map((match) => match[1]).sort();
+  if (JSON.stringify(exportedTypes) !== JSON.stringify(["Decision", "FactKind"]) ||
+      JSON.stringify(exportedFunctions) !== JSON.stringify(["Select"]) ||
+      JSON.stringify(exportedMethods) !== JSON.stringify(["IsEligible", "Reasons"]) ||
+      JSON.stringify(exportedConstants) !== JSON.stringify(["BehaviorCaptured", "ControlIneligible"]) ||
+      /\bvar\s+[A-Z][A-Za-z0-9_]*/u.test(core)) {
+    violations.push(["U6_ELIGIBILITY_CORE_API_ROSTER",
+      `types=${exportedTypes};funcs=${exportedFunctions};methods=${exportedMethods};consts=${exportedConstants}`]);
+  }
+  const decisionBodies = topLevelStructBodies(core, "Decision");
+  if (decisionBodies.length !== 1 || compactCode(decisionBodies[0]) !== "eligible bool reasons []domain.ControlReason") {
+    violations.push(["U6_ELIGIBILITY_CORE_STORAGE", decisionBodies.map(compactCode).join(",") || "absent"]);
+  }
+  const selectBody = functionBody(core, /\bfunc\s+Select\s*\(/u) ?? "";
+  for (const anchor of [
+    "kind == BehaviorCaptured", "len(reasons) != 0", "kind != ControlIneligible",
+    "len(reasons) == 0", "len(reasons) > 3", "if index > 0 && !isTeardown(reason)",
+    "return Decision{reasons: append([]domain.ControlReason(nil), reasons...)}",
+  ]) {
+    requireIncludes(violations, selectBody, anchor, "U6_ELIGIBILITY_CORE_SELECT_DATAFLOW", anchor);
+  }
+  const owner = codeAt(manifest, "internal/observe/eligibility.go");
+  const ownerBody = functionBody(owner, /\bfunc\s+Eligible\s*\(/u) ?? "";
+  if ((ownerBody.match(/\beligibilitycore\s*\.\s*Select\s*\(/gu) ?? []).length !== 2 ||
+      !ownerBody.includes("eligibilitycore.Select(eligibilitycore.ControlIneligible, fact.controls)") ||
+      !ownerBody.includes("eligibilitycore.Select(eligibilitycore.BehaviorCaptured, nil)")) {
+    violations.push(["U6_ELIGIBILITY_OWNER_DATAFLOW", "internal/observe/eligibility.go:Eligible"]);
   }
 }
 
@@ -1756,6 +1808,7 @@ function inspectNonclaims(manifest, violations) {
 function inspectManifest(manifest) {
   const violations = [];
   inspectPackageBoundaries(manifest, violations);
+  inspectEligibilityCore(manifest, violations);
   inspectPortableAuthorityBoundaries(manifest, violations);
   inspectPortableRulingBoundaries(manifest, violations);
   inspectTypedPublication(manifest, violations);
