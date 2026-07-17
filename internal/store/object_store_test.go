@@ -33,9 +33,25 @@ func semanticObjectForTest(t *testing.T, kind, payload string) SemanticObject {
 	return object
 }
 
+// resolvedStoreTestTempDir preserves the store's refusal of symlinked
+// ancestors while allowing tests to run under macOS's /var -> /private/var
+// default temporary-directory alias. Production callers must still supply an
+// already-canonical private root; OpenObjectStore never resolves aliases.
+func resolvedStoreTestTempDir(t testing.TB) string {
+	t.Helper()
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !filepath.IsAbs(root) || filepath.Clean(root) != root {
+		t.Fatalf("resolved temporary directory is not clean and absolute: %q", root)
+	}
+	return root
+}
+
 func newObjectStoreForTest(t *testing.T) (*ObjectStore, string) {
 	t.Helper()
-	root := filepath.Join(t.TempDir(), "semantic-store")
+	root := filepath.Join(resolvedStoreTestTempDir(t), "semantic-store")
 	value, err := OpenObjectStore(root)
 	if err != nil {
 		t.Fatal(err)
@@ -107,7 +123,7 @@ func TestSemanticObjectRejectsWrongDomainKindDigestAndNoncanonicalBytes(t *testi
 }
 
 func TestObjectStoreRejectsIntermediateSymlinkAndCaseAlias(t *testing.T) {
-	parent := t.TempDir()
+	parent := resolvedStoreTestTempDir(t)
 	target := filepath.Join(parent, "target")
 	if err := os.Mkdir(target, 0o700); err != nil {
 		t.Fatal(err)

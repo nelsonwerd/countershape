@@ -89,7 +89,7 @@ func emptyCompletedSweepDraft(t *testing.T, seed int) reduce.CompletedSweepDraft
 
 func newStoreForTest(t *testing.T) (*ReductionSweepStore, string) {
 	t.Helper()
-	root := filepath.Join(t.TempDir(), "reduction-store")
+	root := filepath.Join(resolvedStoreTestTempDir(t), "reduction-store")
 	store, err := OpenReductionSweepStore(root)
 	if err != nil {
 		t.Fatal(err)
@@ -153,7 +153,7 @@ func TestReductionSweepStorePublishesEmptySweepAndReopensAfterRestart(t *testing
 }
 
 func TestReductionSweepStoreConcurrentInstancesPublishWithoutReplacement(t *testing.T) {
-	root := filepath.Join(t.TempDir(), "reduction-store")
+	root := filepath.Join(resolvedStoreTestTempDir(t), "reduction-store")
 	stores := make([]*ReductionSweepStore, 2)
 	for index := range stores {
 		var err error
@@ -210,7 +210,7 @@ func TestReductionSweepStoreConcurrentInstancesPublishWithoutReplacement(t *test
 
 func TestReductionSweepStoreRejectsRootsAndObjectsThatAreNotPrivateDirectories(t *testing.T) {
 	t.Run("root-symlink", func(t *testing.T) {
-		parent := t.TempDir()
+		parent := resolvedStoreTestTempDir(t)
 		target := filepath.Join(parent, "target")
 		if err := os.Mkdir(target, 0o700); err != nil {
 			t.Fatal(err)
@@ -225,7 +225,7 @@ func TestReductionSweepStoreRejectsRootsAndObjectsThatAreNotPrivateDirectories(t
 	})
 
 	t.Run("root-file", func(t *testing.T) {
-		root := filepath.Join(t.TempDir(), "root")
+		root := filepath.Join(resolvedStoreTestTempDir(t), "root")
 		if err := os.WriteFile(root, []byte("not a directory"), 0o600); err != nil {
 			t.Fatal(err)
 		}
@@ -235,7 +235,7 @@ func TestReductionSweepStoreRejectsRootsAndObjectsThatAreNotPrivateDirectories(t
 	})
 
 	t.Run("broad-root-mode", func(t *testing.T) {
-		root := filepath.Join(t.TempDir(), "root")
+		root := filepath.Join(resolvedStoreTestTempDir(t), "root")
 		if err := os.Mkdir(root, 0o700); err != nil {
 			t.Fatal(err)
 		}
@@ -249,7 +249,7 @@ func TestReductionSweepStoreRejectsRootsAndObjectsThatAreNotPrivateDirectories(t
 
 	for _, variant := range []string{"symlink", "file"} {
 		t.Run("objects-"+variant, func(t *testing.T) {
-			parent := t.TempDir()
+			parent := resolvedStoreTestTempDir(t)
 			root := filepath.Join(parent, "root")
 			if err := os.Mkdir(root, 0o700); err != nil {
 				t.Fatal(err)

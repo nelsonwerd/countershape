@@ -79,6 +79,18 @@ type cliA21PreparedDiagnostic struct {
 	AllowedTupleSHA256s []string
 }
 
+func cliA21ResolvedStoreTempDir(t testing.TB) string {
+	t.Helper()
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !filepath.IsAbs(root) || filepath.Clean(root) != root {
+		t.Fatalf("resolved temporary directory is not clean and absolute: %q", root)
+	}
+	return root
+}
+
 func cliA21DescribePrepared(prepared nodeemit.PreparedCompilation) cliA21PreparedDiagnostic {
 	selected := prepared.SelectedFields()
 	selectedLimit := len(selected)
@@ -540,7 +552,7 @@ func TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence(t *test
 	if parsed, parseErr := reducer.ParseCompletedSweepDraft(draft.CanonicalBytes()); parseErr != nil || parsed.Digest() != draft.Digest() {
 		t.Fatalf("physical CLI completed sweep did not round trip exactly: %v", parseErr)
 	}
-	sweepStore, err := store.OpenReductionSweepStore(filepath.Join(t.TempDir(), "sweep-store"))
+	sweepStore, err := store.OpenReductionSweepStore(filepath.Join(cliA21ResolvedStoreTempDir(t), "sweep-store"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -587,7 +599,7 @@ func TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence(t *test
 	if _, parseErr := confirmation.ParseRecord(unknownConfirmation); parseErr == nil {
 		t.Fatal("FreshConfirmation parser accepted an unknown canonical member")
 	}
-	confirmationStore, err := store.OpenObjectStore(filepath.Join(t.TempDir(), "confirmation-store"))
+	confirmationStore, err := store.OpenObjectStore(filepath.Join(cliA21ResolvedStoreTempDir(t), "confirmation-store"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -674,7 +686,7 @@ func TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence(t *test
 	if err != nil || confirmationStore.Validate(context.Background(), choiceObject, choiceAuthority) != nil {
 		t.Fatalf("physical CLI Choicepoint did not persist immutably: %v", err)
 	}
-	promotionRoot := filepath.Join(t.TempDir(), "promotion-store")
+	promotionRoot := filepath.Join(cliA21ResolvedStoreTempDir(t), "promotion-store")
 	promotionStore, err := store.OpenObjectStore(promotionRoot)
 	if err != nil {
 		t.Fatal(err)

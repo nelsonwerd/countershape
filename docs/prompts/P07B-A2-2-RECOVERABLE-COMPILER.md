@@ -8,7 +8,7 @@ This prompt does not publish terminal `RESIDUE`, write a product output director
 
 ## Required starting state
 
-P07B-A1 and P07B-A2.1 must each have their own committed, sealed, strict-clean local boundary. Do not begin from an uncommitted, stale, unknown, or nonzero A2.1 state.
+P07B-A1, P07B-A2.1, and the standalone cumulative-verification maintenance unit in `docs/status/CUMULATIVE-VERIFICATION-MAINTENANCE.md` must each have their own committed, sealed, strict-clean local boundary. Do not begin from an uncommitted, stale, unknown, or nonzero A2.1/maintenance state. From a fresh shell, run `/opt/homebrew/bin/node tools/verify-current.mjs`; a direct pass is the local baseline, while the maintenance didrun Git note and strict-clean manifest remain the receipt authority.
 
 Before editing, read:
 
@@ -20,9 +20,11 @@ Before editing, read:
 6. `docs/THREAT_MODEL.md`
 7. `docs/status/P07B-A1-SOURCE.md`
 8. the sealed A2.1 status/handoff and source diff
-9. `docs/prompts/P07B-A2-COMPILATION-PLAN.md`
-10. `research/deep-dive/11-p07-implementation-red-team.md`
-11. current Go strict-canonical, adapter, world, observation, and A2.1 model code.
+9. `docs/status/CUMULATIVE-VERIFICATION-MAINTENANCE.md`
+10. `docs/VERIFICATION.md`
+11. `docs/prompts/P07B-A2-COMPILATION-PLAN.md`
+12. `research/deep-dive/11-p07-implementation-red-team.md`
+13. current Go strict-canonical, adapter, world, observation, and A2.1 model code.
 
 Run `git status --short --branch` before editing. Preserve unrelated changes. Root remains the sole writer and sole Git/didrun operator; parallel agents are read-only critics.
 
@@ -828,7 +830,7 @@ Then:
 4. run the scoped structured credential-pattern scan over the exact staged blobs through didrun and immediately claim only that named scope;
 5. inspect the staged diff, private artifacts, and obvious credential exposure;
 6. commit without an AI co-author trailer;
-7. run `NO_COLOR=1 didrun seal --commit HEAD`;
+7. in this managed environment, run `didrun seal --commit HEAD` only with Git-note write authority and require `git notes --ref=didrun show HEAD` to succeed;
 8. investigate any aggregate entropy failure before using the logged redacted override;
 9. loop `NO_COLOR=1 didrun verify --strict` until exit `0`, fixing and re-receipting real failures; and
 10. archive the exact uncommitted ledger under a named `.didrun-history/` boundary.

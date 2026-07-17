@@ -9,8 +9,23 @@ import (
 	"testing"
 )
 
+// resolvedPublishTempDir avoids macOS's /var symlink alias so
+// RENAME_NOFOLLOW_ANY reaches the test-owned edge instead of refusing an
+// unrelated ancestor. The production publisher remains strictly no-follow.
+func resolvedPublishTempDir(t testing.TB) string {
+	t.Helper()
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !filepath.IsAbs(root) || filepath.Clean(root) != root {
+		t.Fatalf("resolved temporary directory is not clean and absolute: %q", root)
+	}
+	return root
+}
+
 func TestRenameExclusiveDoesNotOverwriteExistingDestination(t *testing.T) {
-	root := t.TempDir()
+	root := resolvedPublishTempDir(t)
 	source := filepath.Join(root, "source")
 	destination := filepath.Join(root, "destination")
 	if err := os.Mkdir(source, 0o700); err != nil {
@@ -38,7 +53,7 @@ func TestRenameExclusiveDoesNotOverwriteExistingDestination(t *testing.T) {
 }
 
 func TestPostRenameSyncFailureRollsBackVisibleDestination(t *testing.T) {
-	root := t.TempDir()
+	root := resolvedPublishTempDir(t)
 	stage := filepath.Join(root, "stage")
 	finalRoot := filepath.Join(root, "candidate")
 	if err := os.Mkdir(stage, 0o700); err != nil {
@@ -84,7 +99,7 @@ func TestPostRenameRollbackFailureIsTypedAmbiguous(t *testing.T) {
 }
 
 func TestPostRenameRollbackSyncFailureIsTypedAmbiguous(t *testing.T) {
-	root := t.TempDir()
+	root := resolvedPublishTempDir(t)
 	stage := filepath.Join(root, "stage")
 	finalRoot := filepath.Join(root, "candidate")
 	if err := os.Mkdir(stage, 0o700); err != nil {

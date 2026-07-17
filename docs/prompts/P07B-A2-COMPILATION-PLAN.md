@@ -1,10 +1,12 @@
 # P07B-A2 plan — compilation authority and recoverable Node bundle
 
-- **State:** locked implementation decomposition after sealed P07B-A1 source commit `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`, tree `da0e13f37aacd0e7fb2b52b3aeac628f5558c11e`
+- **State:** locked implementation decomposition after sealed P07B-A1 source commit `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`, tree `da0e13f37aacd0e7fb2b52b3aeac628f5558c11e`; A2.2 is additionally gated on sealed, strict-clean P07B-A2.1 and cumulative-verification maintenance boundaries
 - **Scope:** two independently shippable source units; neither publishes `RESIDUE`, creates a product output directory, or constructs current execution evidence
 - **Authority:** this plan narrows execution order without waiving any requirement in `P07-U6-STANDALONE-CONTRACT.md`
 
 ## Locked split
+
+The cumulative-verification maintenance unit is an inserted nonfeature boundary between A2.1 and A2.2. A fresh A2.2 session must read `docs/VERIFICATION.md` and `docs/status/CUMULATIVE-VERIFICATION-MAINTENANCE.md`, confirm the maintenance didrun Git note plus strict exit `0`, and run `/opt/homebrew/bin/node tools/verify-current.mjs` before editing.
 
 1. **A2.1 — compilation authority:** join the current store-bound portable ruling to the exact `PortableSource`, retranslate the retained confirmation proofs, and produce a sealed `PreparedCompilation` wrapper. It privately retains the original authority for P07B-B and separately owns a sanitized internal compiler input free of concrete candidate identity and provenance.
 2. **A2.2 — recoverable compiler:** compile that capability into a deterministic, strictly recoverable six-file Node-core `ContractBundle` and prove Go/Node agreement over the checked-in semantic corpus.
@@ -346,7 +348,7 @@ The hostile-copy self-test covers comment/string spoofing, transitive forbidden 
 
 ## Commit and didrun gates
 
-At each unit, run every load-bearing command through `didrun run --`, claim each final successful command immediately without explicit event addressing, stage only the exact unit, commit, seal, and loop `NO_COLOR=1 didrun verify --strict` until exit `0`.
+At each unit, run every load-bearing command through `didrun run --`, claim each final successful command immediately without explicit event addressing, stage only the exact unit, and commit. In this managed environment, seal only with Git-note write authority, require `git notes --ref=didrun show HEAD` to succeed, and loop `NO_COLOR=1 didrun verify --strict` until exit `0`.
 
 A2.1 requires formatting, focused/full Go tests, selected race, vet, architecture/self-test, mutation closure, source/ruling negative matrix, and restart/reopen tests. A2.2 requires formatting, focused/full/race/vet, schema/runtime/example/generated-body parity, architecture/self-test, mutation closure, oracle-blind Go/Node corpus plus poisoned-expected/metamorphic/expected-echo gates, Node syntax, generated CLI/HTTP smoke, deterministic subprocess matrix, recovery/tamper, and overflow boundaries.
 

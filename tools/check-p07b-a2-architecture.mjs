@@ -766,8 +766,8 @@ function inspect(input, publicAPI) {
 		["internal/domain/domain_test.go", "sha256:27ff69cc148d3ece3111b745be72231baa7a315e55bb71d36535a56ee686f4b9"],
 		["internal/emit/node/model/predicate_test.go", "sha256:b42fb2979b259868a1e55eb40bbbdb62f8e4ce2cf120ff495967a59cc3299b29"],
 		["testkit/studies/cli_precedence/study_darwin_test.go", "sha256:86ef88170329de110283b1f779713e56978225ffa3c365942a6db1afc62f879e"],
-		["testkit/studies/cli_precedence/reduction_darwin_test.go", "sha256:fa92bafd20fdfad932c6d82a16e8807280bbaa8230771e731c636f9e94339e61"],
-		["testkit/studies/http_invoices/reduction_darwin_test.go", "sha256:547d9be58290bb1291a4d5487f3288544495d5d51254eecf31f57c5239dcc05a"],
+		["testkit/studies/cli_precedence/reduction_darwin_test.go", "sha256:27010a72c523ff08469e76afbf29b5fc690b71c5391d4b6464f1da917cfdd69b"],
+		["testkit/studies/http_invoices/reduction_darwin_test.go", "sha256:311a4f497da7fed8705840569465d0516d5ff1664d07444fd349d9734df63fc6"],
 	]) add(api(path).fileDigest !== expected, "P07B_A2_TEST_AST_DRIFT", `${path}:${api(path).fileDigest}`);
 	for (const [path, name, expected, code] of [
 		[choicepointEntry.path, "ChoicepointRecord.WorldPlan", "sha256:3fab6ef185557551d26d665d28a243ea1da98b5552d544c576333ea7d70135db", "P07B_A2_CHOICE_ACCESSOR_DATAFLOW"],

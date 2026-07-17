@@ -80,6 +80,18 @@ type httpA21PreparedDiagnostic struct {
 	AllowedTupleSHA256s []string
 }
 
+func httpA21ResolvedStoreTempDir(t testing.TB) string {
+	t.Helper()
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !filepath.IsAbs(root) || filepath.Clean(root) != root {
+		t.Fatalf("resolved temporary directory is not clean and absolute: %q", root)
+	}
+	return root
+}
+
 func httpA21DescribePrepared(prepared nodeemit.PreparedCompilation) httpA21PreparedDiagnostic {
 	selected := prepared.SelectedFields()
 	selectedLimit := len(selected)
@@ -607,7 +619,7 @@ func TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence(t *testing.T)
 		draft.CurrentStimulusDigest() != run.MinimizedStimulusDigest() {
 		t.Fatalf("physical HTTP empty-neighbor completed sweep was not retained: present=%t err=%v", present, err)
 	}
-	sweepStore, err := store.OpenReductionSweepStore(filepath.Join(t.TempDir(), "sweep-store"))
+	sweepStore, err := store.OpenReductionSweepStore(filepath.Join(httpA21ResolvedStoreTempDir(t), "sweep-store"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -652,7 +664,7 @@ func TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence(t *testing.T)
 	if parsed, parseErr := confirmation.ParseRecord(confirmationDraft.CanonicalBytes()); parseErr != nil || parsed.Digest() != confirmationDraft.Digest() {
 		t.Fatalf("physical HTTP confirmation did not round trip strictly: %v", parseErr)
 	}
-	confirmationStore, err := store.OpenObjectStore(filepath.Join(t.TempDir(), "confirmation-store"))
+	confirmationStore, err := store.OpenObjectStore(filepath.Join(httpA21ResolvedStoreTempDir(t), "confirmation-store"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -783,7 +795,7 @@ func TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence(t *testing.T)
 		t.Fatalf("physical HTTP Choicepoint did not persist immutably: %v", err)
 	}
 
-	promotionRoot := filepath.Join(t.TempDir(), "promotion-store")
+	promotionRoot := filepath.Join(httpA21ResolvedStoreTempDir(t), "promotion-store")
 	promotionStore, err := store.OpenObjectStore(promotionRoot)
 	if err != nil {
 		t.Fatal(err)
@@ -1155,7 +1167,7 @@ func TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence(t *testing.T)
 
 	// A second durable lineage proves the same child-bind confirmation can
 	// authorize an observed HTTP predicate without reusing the custom ruling.
-	allowRoot := filepath.Join(t.TempDir(), "allow-observed-store")
+	allowRoot := filepath.Join(httpA21ResolvedStoreTempDir(t), "allow-observed-store")
 	allowStore, err := store.OpenObjectStore(allowRoot)
 	if err != nil {
 		t.Fatal(err)

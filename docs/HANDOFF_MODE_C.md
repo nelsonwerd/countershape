@@ -12,9 +12,10 @@
 
 ## Current state
 
-- **Pipeline phase:** U0–U6, P07A/U6b, P07B-A1 source/process, and P07B-A2.1 current-ruling compilation authority are sealed and strict-clean. A2.1's exact receipt map and nonclaims live in `docs/status/P07B-A2-1-AUTHORITY.md`. The operator-supplied cumulative-verification maintenance unit is mandatory next; P07B-A2.2 cannot begin until that separate maintenance commit is sealed and strict-clean.
+- **Pipeline phase:** U0–U6, P07A/U6b, P07B-A1 source/process, P07B-A2.1 current-ruling compilation authority, and the cumulative-verification maintenance boundary are sealed and strict-clean. A2.1's exact receipt map and nonclaims live in `docs/status/P07B-A2-1-AUTHORITY.md`; maintenance rulings and receipts live in `docs/status/CUMULATIVE-VERIFICATION-MAINTENANCE.md`. The sole next feature unit is P07B-A2.2.
 - **Git:** repository is on `codex/countershape-autopilot`. P07B-A1 remains sealed at source commit `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`, tree `da0e13f37aacd0e7fb2b52b3aeac628f5558c11e`. Resolve the A2.1 implementation commit and tree locally from the commit containing its status file rather than copying a self-referential hash from prose. Earlier U6a, planning, translator, and P07A-B boundaries remain history.
-- **didrun:** installed globally. Two ledgers broke under concurrent writers and remain preserved under `.didrun-history/`; the P07A-A mixed-generation ledger also remains as strict-red negative history. A2.1's chain-intact pre-seal development ledger is preserved whole at `.didrun-history/2026-07-16-p07b-a2-1-preseal-mixed/.didrun/` because it had no seal watermark and spanned superseded trees; it supports no sealed capability. Every didrun operation is serialized by the primary agent, and final claims are made immediately after their successful command. S6-09 now records the P07B-A1 105-finding entropy-scanner behavior and strict-clean serialized result; S6-08 records claim-generation friction; S6-07 remains the reason agents never write didrun concurrently. See `docs/status/DIDRUN_BUGS.md` before recording evidence.
+- **didrun:** installed globally. Two ledgers broke under concurrent writers and remain preserved under `.didrun-history/`; the P07A-A mixed-generation ledger also remains as strict-red negative history. A2.1's chain-intact pre-seal development ledger is preserved whole at `.didrun-history/2026-07-16-p07b-a2-1-preseal-mixed/.didrun/` because it had no seal watermark and spanned superseded trees; it supports no sealed capability. S6-10 records a live A2.1 seal that returned zero and advanced local state after sandbox denial prevented Git-note publication; the false state is preserved, and all seals in this managed environment require explicit Git-note write authority plus note existence and strict exit `0`. Every didrun operation is serialized by the primary agent, and final claims are made immediately after their successful command. See `docs/status/DIDRUN_BUGS.md` before recording evidence.
+- **Current baseline:** from a fresh repository-root shell, run `/opt/homebrew/bin/node tools/verify-current.mjs`. It builds, vets, runs the complete suite, self-tests its own orchestration, executes every current architecture checker/self-test, labels every historical-only gate without running it, and fails on Finder artifacts. Read `docs/VERIFICATION.md`; a direct pass is not a didrun grade.
 - **Build:** U5 adds the sealed bounded tri-valued reducer. U6 adds the immutable store, physical fresh confirmation, strict Choicepoint/DecisionRecord codecs, blind semantic session, compile eligibility, and opaque store publication capabilities. P07A adds the closed portable algebra, proof-first exact translators, and selected-field ruling authority. P07B-A1 adds bounded self-consistent CLI/HTTP `PortableSource`, a closed logical-Node runner profile, `NODE_LOOPBACK_CHILD_BIND_PIPE_READY_V1`, exact FD3 ready-frame parsing, readiness-only refusal behavior, and a Darwin child-bind Observation. P07B-A2.1 reopens current ruling authority, retains the schedule-ordered confirmation binding roster, exact-joins source/Choicepoint/confirmation/proofs, revalidates complete correlated selected tuples, and returns a sealed preparation with a private authority-narrowed input. It does not implement compiler output, a bundle, residue, materializer, execution target/run/classification, product CLI, server, dashboard, visual renderer, or report.
 - **External APIs:** none used in the product. Current web research is read-only. Real model integrations remain human-gated and must never be faked.
 
@@ -26,19 +27,21 @@
 4. `docs/PROJECTION_ALGEBRA.md`
 5. `research/deep-dive/11-p07-implementation-red-team.md`
 6. `docs/status/P07B-A2-1-AUTHORITY.md`
-7. `docs/prompts/P07B-A2-2-RECOVERABLE-COMPILER.md`
-8. `docs/prompts/P07B-A2-COMPILATION-PLAN.md`
-9. `docs/status/P07B-A1-SOURCE.md`
-10. `docs/status/P07A-RULING.md`
-11. `docs/status/P07-PLANNING.md`
-12. `docs/status/P07A-TRANSLATOR.md`
-13. `research/ideation/07-divergence-and-selection.md`
-14. `research/ideation/06-founder-falsification.md`
-15. `research/ideation/05-counterfactual-prior-art.md`
-16. `research/ideation/04-finalist-duel.md`
-17. `research/ideation/02-wake-overlap-audit.md`
-18. `research/grounding/00-last30days-synthesis.md`
-19. this handoff
+7. `docs/VERIFICATION.md`
+8. `docs/status/CUMULATIVE-VERIFICATION-MAINTENANCE.md`
+9. `docs/prompts/P07B-A2-COMPILATION-PLAN.md`
+10. `docs/prompts/P07B-A2-2-RECOVERABLE-COMPILER.md`
+11. `docs/status/P07B-A1-SOURCE.md`
+12. `docs/status/P07A-RULING.md`
+13. `docs/status/P07-PLANNING.md`
+14. `docs/status/P07A-TRANSLATOR.md`
+15. `research/ideation/07-divergence-and-selection.md`
+16. `research/ideation/06-founder-falsification.md`
+17. `research/ideation/05-counterfactual-prior-art.md`
+18. `research/ideation/04-finalist-duel.md`
+19. `research/ideation/02-wake-overlap-audit.md`
+20. `research/grounding/00-last30days-synthesis.md`
+21. this handoff
 
 Read `research/deep-dive/07-SYNTHESIS.md`, `08-RED_TEAM.md`, and the later P07 implementation-time correction immediately after the semantic contracts and before the ideation files.
 
@@ -122,7 +125,7 @@ For every shippable build unit:
 1. run every load-bearing test/lint/build/integration command through `didrun run -- <command>`;
 2. immediately after each final successful command, declare only its honest claim before recording another event; use `didrun show --session` for diagnosis and review, never as an invitation to delay or explicitly rebind claims;
 3. stage intentional files and commit without an AI `Co-Authored-By` trailer;
-4. run `didrun seal --commit HEAD`;
+4. in this managed environment, run `didrun seal --commit HEAD` only with Git-note write authority, then require `git notes --ref=didrun show HEAD` to succeed;
 5. run `NO_COLOR=1 didrun verify --strict`;
 6. on nonzero: the unit is not done—fix the cause, rerun through didrun, re-claim, commit, reseal, and reverify; never weaken/delete/relabel a failed claim.
 
@@ -306,6 +309,26 @@ The archived development ledger remains intentionally honest: an early zero-exit
 
 A2.1 establishes only construction-time current-ruling/source/Choicepoint/confirmation/proof agreement and an opaque prepared input. Its behavioral cross-study matrix covers one valid same-plan/projection/profile source with different stimulus/execution binding and one valid same-adapter/runner/projection/profile/stimulus/capture source with a different WorldPlan/execution binding. Same-adapter runner drift is unconstructible under the closed source API; profile, entrypoint/start, HTTP readiness/capture, proof, selected-field, and partition drift remain upstream-plus-architecture obligations rather than independently behaviorally receipted branches. It does not establish continued currentness, private input-body exposure, compiler output, bundle recovery, publication, materialization, execution, secret absence, containment, portability, production readiness, security review, or adoption. The full limits, failed-receipt history, and sole next boundary are in `docs/status/P07B-A2-1-AUTHORITY.md`.
 
+## Cumulative-verification maintenance receipt boundary
+
+The maintenance commit is the commit containing `docs/status/CUMULATIVE-VERIFICATION-MAINTENANCE.md`; resolve its hash and tree locally. It is accepted only when its serialized didrun chain is intact, the Git note exists, and strict exits `0`. Its test-only canonical temp-root repair keeps production ancestor/no-follow policy unchanged and makes the stock macOS suite pass twice consecutively without a `TMPDIR` override.
+
+The current architecture chain is `P07B-A2.1 -> P07B-A1 -> U6/P07A-B -> U5`. U1–U4 architecture gates and every frozen mutation gate are explicit historical sealed-unit contracts: the one-command baseline prints them as `HISTORICAL-ONLY NOT-RUN`, does not spawn them, and never calls them passed on today's tree. U5's typed adapter reducer providers and P07A/U6's later test-fixture/production-lattice split are the recorded two-step boundary evolution, not a weakened U3/U4 checker. The exact route-by-finding rationale and negative diagnostics live in the status file.
+
+| Claimed capability | didrun claim label | Verbatim grade |
+| --- | --- | --- |
+| Go formatting and Node verifier syntax | `maintenance formatting and verifier syntax` | `TREE-EXACT` |
+| Canonical test roots plus named no-follow negative controls | `maintenance canonical temp roots and no-follow controls` | `TREE-EXACT` |
+| Verification-runner hostile self-test | `maintenance verification runner hostile self-test` | `TREE-EXACT` |
+| First stock-`TMPDIR` complete suite | `maintenance stock macOS TMPDIR full suite pass one` | `TREE-EXACT` |
+| Second consecutive stock-`TMPDIR` complete suite | `maintenance stock macOS TMPDIR full suite pass two` | `TREE-EXACT` |
+| One-command cumulative baseline | `maintenance one-command cumulative verification baseline` | `TREE-EXACT` |
+| Exact staged inventory and diff | `maintenance exact staged inventory and diff` | `TREE-EXACT` |
+| Scoped staged structured credential-pattern scan | `maintenance scoped staged credential-pattern scan` | `TREE-EXACT` |
+| Serialized didrun chain | `maintenance didrun chain intact` | `TREE-EXACT` |
+
+The baseline command is `/opt/homebrew/bin/node tools/verify-current.mjs`; its complete environment and output contract are in `docs/VERIFICATION.md`. It is not a receipt system and does not establish current-tree compatibility for historical gates, mutation completeness, cross-platform behavior, security, production readiness, adoption, or maintainership.
+
 ### Pre-A2 planning-wire correction
 
 Before any runtime bundle codec or compiler existed, the follow-up prompt-pack
@@ -338,13 +361,13 @@ separate reviewed boundary.
 
 ## Exact next actions if this task resumes elsewhere
 
-1. Run `git status --short --branch`; resolve the A2.1 implementation commit containing `docs/status/P07B-A2-1-AUTHORITY.md`, confirm it and P07B-A1 source commit `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3` are sealed, require an intact serialized chain plus `NO_COLOR=1 didrun verify --strict` exit `0`, and confirm no `.didrun` path is staged or tracked. Keep old failed commits and archived ledgers as negative history; never reseal or rewrite them.
-2. Execute only the cumulative-verification maintenance request at `/Users/drewnelson/.codex/attachments/fac7f825-1946-4bcc-880a-1feb4d1b7a40/pasted-text.txt`. Intent-audit its four findings, keep the authority packages and truth kernel unchanged, commit it separately, seal it, and require strict exit `0`.
-3. Only after that maintenance boundary is strict-clean, read `docs/status/P07B-A2-1-AUTHORITY.md`, `docs/prompts/P07B-A2-2-RECOVERABLE-COMPILER.md`, `docs/prompts/P07B-A2-COMPILATION-PLAN.md`, `research/deep-dive/11-p07-implementation-red-team.md`, `docs/SEMANTICS.md`, `docs/PROJECTION_ALGEBRA.md`, and the new node emitter source seams.
+1. Run `git status --short --branch`; resolve the maintenance commit containing `docs/status/CUMULATIVE-VERIFICATION-MAINTENANCE.md` and the A2.1 implementation commit containing `docs/status/P07B-A2-1-AUTHORITY.md`. Confirm their didrun Git notes exist, require `NO_COLOR=1 didrun verify --strict` exit `0`, and confirm no `.didrun` path is staged or tracked. Keep old failed commits and archived ledgers as negative history; never reseal or rewrite them.
+2. Run `/opt/homebrew/bin/node tools/verify-current.mjs` from a fresh shell. Read `docs/VERIFICATION.md`; do not treat a direct result as a didrun grade, and do not run historical-only gates against the current tree.
+3. Read `docs/status/P07B-A2-1-AUTHORITY.md`, `docs/prompts/P07B-A2-2-RECOVERABLE-COMPILER.md`, `docs/prompts/P07B-A2-COMPILATION-PLAN.md`, `research/deep-dive/11-p07-implementation-red-team.md`, `docs/SEMANTICS.md`, `docs/PROJECTION_ALGEBRA.md`, and the node emitter source seams.
 4. Implement only P07B-A2.2: consume the private A2.1 authority-narrowed input through the owning node package and build the pure deterministic recoverable six-file compiler, strict parser/recovery surface, fixed Node-core second implementation, and shared Go/Node semantic corpus. Preserve every A2.1 authority and nonclaim. A2.2 still performs no residue publication or product materialization.
 5. Continue through P07B-B terminal publication/materialization and P07B-C target/run/execution only as separately committed, sealed, strict-clean units. Do not start the product CLI/server/studio until all P07B authority units are sealed and strict-clean.
 6. Wrap every load-bearing verification command in `didrun run --` and claim each final success immediately before another event is recorded. Any nonzero command or mutant survivor is a real unfinished result: repair, rerun, preserve failed history, and never weaken or relabel the gate.
-7. At each shippable boundary, declare only successful final-tree claims, stage exact intended paths, commit, run `didrun seal --commit HEAD`, and loop `NO_COLOR=1 didrun verify --strict` until exit `0`.
+7. At each shippable boundary, declare only successful final-tree claims, stage exact intended paths, commit, run every `didrun seal` with Git-note write authority, confirm the note exists, and loop `NO_COLOR=1 didrun verify --strict` until exit `0`.
 8. Keep the root as sole writer and sole didrun/claim/Git/seal operator. Parallel agents may perform bounded read-only audits only; never allow parallel didrun writers or parallelize two didrun calls inside one tool orchestration.
 9. Human-surface craft begins with A2.2's generated README/CLI and expands in U8. Run the specified multi-pass render/functional loops. A real different-model critic is human-gated: pause before the provider call, never simulate it, and label its evidence honestly. U8 still requires at least three full viewport/accessibility loops.
 10. Before final delivery, run the human-cleared S6 disposable real-agent protocol, produce strict plus HTML didrun reports, map every claim to its verbatim grade, and disclose the adoption, production-hardening, security-review, cross-platform, and maintainership tail.
@@ -356,7 +379,7 @@ Before editing, reply in your working notes with:
 1. the one product verb;
 2. the three distinct truth authorities (Git, Choicepoint observations/ruling, didrun receipts);
 3. two things the system must never claim;
-4. the current A2.1 implementation commit (resolve locally from its status file), its strict-clean receipt map and explicit nonclaims, plus P07B-A1 source prerequisite `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`; and
-5. the current bounded shippable unit (cumulative-verification maintenance only until its separate strict-clean seal; then P07B-A2.2 pure recoverable compiler, with no residue publication, product materialization, execution, or UI).
+4. the current maintenance and A2.1 implementation commits (resolve locally from their status files), their strict-clean receipt maps and explicit nonclaims, plus P07B-A1 source prerequisite `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`; and
+5. the current bounded shippable unit (P07B-A2.2 pure recoverable compiler, with no residue publication, product materialization, execution, or UI).
 
 If any answer is missing, read the files above again. Do not infer a didrun grade from this handoff; run strict verification locally.

@@ -302,12 +302,24 @@ func finalizationRunWithBudgetBinding(t *testing.T, seed int, accepted, planBoun
 
 func newFinalizationStore(t *testing.T) (*store.ReductionSweepStore, string) {
 	t.Helper()
-	root := filepath.Join(t.TempDir(), "reduction-store")
+	root := filepath.Join(resolvedFinalizationTempDir(t), "reduction-store")
 	value, err := store.OpenReductionSweepStore(root)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return value, root
+}
+
+func resolvedFinalizationTempDir(t testing.TB) string {
+	t.Helper()
+	root, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !filepath.IsAbs(root) || filepath.Clean(root) != root {
+		t.Fatalf("resolved temporary directory is not clean and absolute: %q", root)
+	}
+	return root
 }
 
 func publishCompletion(t *testing.T, value *store.ReductionSweepStore, draft reduce.CompletedSweepDraft) SweepCompletion {
