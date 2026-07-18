@@ -1,0 +1,195 @@
+{
+  "schema_version": "countershape/p07b-c-unit-paths/v1",
+  "units": {
+    "C0A": {
+      "exact": [
+        "docs/ARCHITECTURE.md",
+        "docs/CLAIM_VOCABULARY.md",
+        "docs/CONCEPT_BRIEF.md",
+        "docs/HANDOFF_MODE_C.md",
+        "docs/PROMPT_PACK.md",
+        "docs/SEMANTICS.md",
+        "docs/STATE_MACHINES.md",
+        "docs/THREAT_MODEL.md",
+        "docs/VERIFICATION.md",
+        "docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md",
+        "docs/status/P07B-C-C0-AUTHORITY.md",
+        "research/deep-dive/p07b-c/00-scope-and-method.md",
+        "research/deep-dive/p07b-c/01-authority-model.md",
+        "research/deep-dive/p07b-c/02-runtime-security.md",
+        "research/deep-dive/p07b-c/03-store-service.md",
+        "research/deep-dive/p07b-c/04-verification.md",
+        "research/deep-dive/p07b-c/05-dx-wake-fit.md",
+        "research/deep-dive/p07b-c/06-adversarial-design.md",
+        "research/deep-dive/p07b-c/07-synthesis.md",
+        "research/deep-dive/p07b-c/08-different-model-red-team.md",
+        "research/deep-dive/p07b-c/09-follow-up-verification.md",
+        "research/deep-dive/p07b-c/10-executive-briefing.md",
+        "spec/verification/p07b-c-c0-authority.json",
+        "spec/verification/p07b-c-unit-paths.json",
+        "tools/check-p07b-c-plan.mjs",
+        "tools/check-p07b-c-unit-scope.mjs",
+        "tools/verify-current-selftest.mjs",
+        "tools/verify-current.mjs"
+      ],
+      "prefixes": []
+    },
+    "C0B": {
+      "exact": [
+        "docs/HANDOFF_MODE_C.md",
+        "docs/status/DIDRUN_BUGS.md",
+        "docs/status/P07B-C-C0-AUTHORITY.md",
+        "spec/verification/p07b-c-c0-receipt.json"
+      ],
+      "prefixes": []
+    },
+    "C1": {
+      "exact": [
+        "docs/ARCHITECTURE.md",
+        "docs/CLAIM_VOCABULARY.md",
+        "docs/CONCEPT_BRIEF.md",
+        "docs/HANDOFF_MODE_C.md",
+        "docs/SEMANTICS.md",
+        "docs/STATE_MACHINES.md",
+        "docs/THREAT_MODEL.md",
+        "docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md",
+        "docs/status/P07B-C-C1-SEMANTICS.md",
+        "spec/examples/v1/contract-execution-target.valid.json",
+        "spec/examples/v1/contract-execution.valid.json",
+        "spec/examples/v1/finalized-contract-run.valid.json",
+        "spec/schema/v1/contract-execution-target.schema.json",
+        "spec/schema/v1/contract-execution.schema.json",
+        "spec/schema/v1/finalized-contract-run.schema.json",
+        "spec/verification/p07b-c-unit-paths.json",
+        "tools/check-p07b-c-architecture-selftest.mjs",
+        "tools/check-p07b-c-architecture.mjs",
+        "tools/check-p07b-c-plan.mjs",
+        "tools/generate-p07-planning-example.mjs",
+        "tools/validate-planning.mjs",
+        "tools/verify-current-selftest.mjs",
+        "tools/verify-current.mjs"
+      ],
+      "prefixes": [
+        "internal/contractexec/model/"
+      ]
+    },
+    "C2": {
+      "exact": [
+        "docs/ARCHITECTURE.md",
+        "docs/HANDOFF_MODE_C.md",
+        "docs/SEMANTICS.md",
+        "docs/STATE_MACHINES.md",
+        "docs/THREAT_MODEL.md",
+        "docs/status/P07B-C-C2-PERSISTENCE.md",
+        "internal/store/execution_interlock.go",
+        "internal/store/execution_interlock_test.go",
+        "internal/store/nonhead_contract.go",
+        "internal/store/nonhead_contract_test.go",
+        "internal/store/private_contract_run.go",
+        "internal/store/private_contract_run_test.go",
+        "spec/verification/p07b-c-unit-paths.json",
+        "tools/check-p07b-c-architecture-selftest.mjs",
+        "tools/check-p07b-c-architecture.mjs",
+        "tools/verify-current-selftest.mjs",
+        "tools/verify-current.mjs"
+      ],
+      "prefixes": []
+    },
+    "C3": {
+      "exact": [
+        "docs/ARCHITECTURE.md",
+        "docs/HANDOFF_MODE_C.md",
+        "docs/SEMANTICS.md",
+        "docs/STATE_MACHINES.md",
+        "docs/THREAT_MODEL.md",
+        "docs/status/P07B-C-C3-TARGET.md",
+        "internal/contractexec/target.go",
+        "internal/contractexec/target_test.go",
+        "internal/gitobj/single_target.go",
+        "internal/gitobj/single_target_test.go",
+        "spec/verification/p07b-c-unit-paths.json",
+        "tools/check-p07b-c-architecture-selftest.mjs",
+        "tools/check-p07b-c-architecture.mjs",
+        "tools/verify-current-selftest.mjs",
+        "tools/verify-current.mjs"
+      ],
+      "prefixes": [
+        "internal/hostepoch/",
+        "internal/noderuntime/"
+      ]
+    },
+    "C4": {
+      "exact": [
+        "docs/ARCHITECTURE.md",
+        "docs/CLAIM_VOCABULARY.md",
+        "docs/HANDOFF_MODE_C.md",
+        "docs/SEMANTICS.md",
+        "docs/STATE_MACHINES.md",
+        "docs/THREAT_MODEL.md",
+        "docs/status/P07B-C-C4-CLI-PROFILE.md",
+        "spec/verification/p07b-c-unit-paths.json",
+        "tools/check-p07b-c-architecture-selftest.mjs",
+        "tools/check-p07b-c-architecture.mjs",
+        "tools/verify-current-selftest.mjs",
+        "tools/verify-current.mjs"
+      ],
+      "prefixes": [
+        "internal/contractexec/runner/",
+        "internal/processmechanics/",
+        "testkit/contractexec/cli/"
+      ]
+    },
+    "C5": {
+      "exact": [
+        "docs/ARCHITECTURE.md",
+        "docs/CLAIM_VOCABULARY.md",
+        "docs/HANDOFF_MODE_C.md",
+        "docs/SEMANTICS.md",
+        "docs/STATE_MACHINES.md",
+        "docs/THREAT_MODEL.md",
+        "docs/status/P07B-C-C5-HTTP-SCOPE.md",
+        "spec/verification/p07b-c-unit-paths.json",
+        "tools/check-p07b-c-architecture-selftest.mjs",
+        "tools/check-p07b-c-architecture.mjs",
+        "tools/verify-current-selftest.mjs",
+        "tools/verify-current.mjs"
+      ],
+      "prefixes": [
+        "internal/contractexec/http/",
+        "internal/contractexec/scope/",
+        "testkit/contractexec/http/"
+      ]
+    },
+    "C6A": {
+      "exact": [
+        "docs/ARCHITECTURE.md",
+        "docs/CLAIM_VOCABULARY.md",
+        "docs/CONCEPT_BRIEF.md",
+        "docs/HANDOFF_MODE_C.md",
+        "docs/SEMANTICS.md",
+        "docs/STATE_MACHINES.md",
+        "docs/THREAT_MODEL.md",
+        "docs/status/DIDRUN_BUGS.md",
+        "docs/status/P07B-C-C6-EVIDENCE.md",
+        "spec/verification/p07b-c-unit-paths.json",
+        "tools/check-p07b-c-architecture-selftest.mjs",
+        "tools/check-p07b-c-architecture.mjs",
+        "tools/verify-current-selftest.mjs",
+        "tools/verify-current.mjs"
+      ],
+      "prefixes": [
+        "docs/captures/p07b-c/",
+        "testkit/contractexec/",
+        "tools/p07b-c/"
+      ]
+    },
+    "C6B": {
+      "exact": [
+        "docs/HANDOFF_MODE_C.md",
+        "docs/status/DIDRUN_BUGS.md",
+        "docs/status/P07B-C-C6-EVIDENCE.md"
+      ],
+      "prefixes": []
+    }
+  }
+}

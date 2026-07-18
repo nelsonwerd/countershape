@@ -29,13 +29,13 @@ export const toolSpecifications = Object.freeze([
 	Object.freeze({ name: "cxx", variable: "COUNTERSHAPE_CXX", fallback: "/usr/bin/clang++" }),
 ]);
 
-const goCommon = Object.freeze(["-mod=readonly", "-buildvcs=false"]);
+const goCommon = Object.freeze(["-mod=readonly", "-buildvcs=false", "-p=1"]);
 
 export const currentSteps = Object.freeze([
 	Object.freeze({ id: "workspace-no-ds-store", kind: "guard" }),
 	Object.freeze({ id: "go-build", tool: "go", tools: Object.freeze(["go", "cc", "cxx"]), args: Object.freeze(["build", ...goCommon, "./..."]) }),
 	Object.freeze({ id: "go-vet", tool: "go", tools: Object.freeze(["go", "cc", "cxx"]), args: Object.freeze(["vet", ...goCommon, "./..."]) }),
-	Object.freeze({ id: "go-test-full", tool: "go", tools: Object.freeze(["go", "node", "git", "sh", "cc", "cxx"]), args: Object.freeze(["test", ...goCommon, "-count=1", "-p=2", "-timeout=20m", "./..."]) }),
+	Object.freeze({ id: "go-test-full", tool: "go", tools: Object.freeze(["go", "node", "git", "sh", "cc", "cxx"]), args: Object.freeze(["test", ...goCommon, "-count=1", "-timeout=20m", "./..."]) }),
 	Object.freeze({ id: "verification-runner-selftest", tool: "node", tools: Object.freeze(["node"]), path: "tools/verify-current-selftest.mjs", marker: "verification runner self-test passed:" }),
 	Object.freeze({ id: "architecture-u5", tool: "node", tools: Object.freeze(["node"]), path: "tools/check-u5-architecture.mjs", marker: "U5 architecture boundary OK" }),
 	Object.freeze({ id: "architecture-u5-selftest", tool: "node", tools: Object.freeze(["node"]), path: "tools/check-u5-architecture-selftest.mjs", marker: "U5 architecture self-test passed:" }),
@@ -72,6 +72,14 @@ export const currentSteps = Object.freeze([
 	Object.freeze({ id: "architecture-p07b-a2-2-selftest", tool: "node", tools: Object.freeze(["node", "go", "cc", "cxx"]), path: "tools/check-p07b-a2-architecture-selftest.mjs", marker: "P07B A2.2 architecture defensive self-test OK" }),
 	Object.freeze({ id: "architecture-p07b-b", tool: "node", tools: Object.freeze(["node", "go", "cc", "cxx"]), path: "tools/check-p07b-b-architecture.mjs", marker: "P07B B architecture boundary OK" }),
 	Object.freeze({ id: "architecture-p07b-b-selftest", tool: "node", tools: Object.freeze(["node", "go", "cc", "cxx"]), path: "tools/check-p07b-b-architecture-selftest.mjs", marker: "P07B B architecture defensive self-test OK" }),
+	Object.freeze({
+		id: "architecture-p07b-c-plan-selftest", tool: "node", tools: Object.freeze(["node", "git"]), path: "tools/check-p07b-c-plan.mjs",
+		args: Object.freeze(["--self-test"]), marker: "P07B-C C0 plan checker self-test passed:",
+	}),
+	Object.freeze({
+		id: "architecture-p07b-c-unit-scope-selftest", tool: "node", tools: Object.freeze(["node"]), path: "tools/check-p07b-c-unit-scope.mjs",
+		args: Object.freeze(["--self-test"]), marker: "P07B-C unit scope self-test passed:",
+	}),
 	Object.freeze({ id: "authority-revalidation", kind: "authority-guard" }),
 ]);
 
@@ -318,7 +326,7 @@ export function buildChildEnvironment(admitted, roots) {
 		GOPROXY: "off",
 		GOSUMDB: "off",
 		GOVCS: "*:off",
-		GOFLAGS: "-mod=readonly -buildvcs=false",
+		GOFLAGS: "-mod=readonly -buildvcs=false -p=1",
 		CGO_ENABLED: "1",
 		CC: admitted.cc.path,
 		CXX: admitted.cxx.path,

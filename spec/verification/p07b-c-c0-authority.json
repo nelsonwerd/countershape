@@ -1,0 +1,59 @@
+{
+  "schema_version": "countershape/p07b-c-c0-authority/v1",
+  "semantic_objects": [
+    {
+      "name": "ContractExecutionTarget",
+      "storage": "IMMUTABLE_NONHEAD",
+      "production_issuer": "C3"
+    },
+    {
+      "name": "FinalizedContractRun",
+      "storage": "IMMUTABLE_NONHEAD",
+      "production_issuer": "C4"
+    },
+    {
+      "name": "ContractExecution",
+      "storage": "IMMUTABLE_NONHEAD",
+      "production_issuer": "C4"
+    }
+  ],
+  "operational_objects": [
+    {
+      "name": "ExecutionInterlock",
+      "storage": "STORE_PRIVATE_MUTABLE",
+      "authority": "SPAWN_EXCLUSION_ONLY",
+      "production_acquirer": "C4"
+    }
+  ],
+  "authority_edges": {
+    "storage_substrate": "C2_NO_PRODUCTION_ISSUER",
+    "official_target": "C3_ONLY",
+    "start_claim_and_run_permit": "C4_RUNNER_ONLY",
+    "run_permit_consumer": "internal/contractexec/runner",
+    "process_mechanics": "internal/processmechanics_NO_SEMANTIC_OR_PERMIT_AUTHORITY",
+    "reset": "EXPLICIT_OPERATOR_PLUS_DISTINCT_MEASURED_BOOT_SESSION"
+  },
+  "scope_domains": [
+    "TARGET_INVENTORY",
+    "CHILD_BINDINGS",
+    "IMPORT_RESOLUTION",
+    "SERVICE_BINDINGS",
+    "NAMED_PARENT_SECRET_SENTINEL_INHERITANCE"
+  ],
+  "scope_states": [
+    "COMPLETE",
+    "PARTIAL",
+    "VIOLATED"
+  ],
+  "reserved_surface": "P08",
+  "wake_boundary": "IMMUTABLE_REF_INERT_PROVENANCE_ONLY",
+  "unit_order": [
+    "C0",
+    "C1",
+    "C2",
+    "C3",
+    "C4",
+    "C5",
+    "C6"
+  ]
+}

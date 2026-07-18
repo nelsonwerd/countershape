@@ -20,8 +20,9 @@ The runner executes, in order:
 6. fresh-process compiler-to-parser recovery;
 7. the deterministic human-surface renderer self-test and exact six-scenario capture check;
 8. the P07B-A2.2 layered architecture checker and its 117-case hostile self-test;
-9. the P07B-B terminal-publication/materialization architecture checker and its metadata-negative defensive self-test; and
-10. final revalidation of every admitted tool authority.
+9. the P07B-B terminal-publication/materialization architecture checker and its metadata-negative defensive self-test;
+10. the P07B-C C0 exact authority-declaration/plan and machine-readable staged-unit-scope mutation self-tests; and
+11. final revalidation of every admitted tool authority.
 
 The current architecture chain is also nested fail-closed: P07B-B invokes P07B-A2.2, which invokes P07B-A1, which invokes U6, which invokes U5. The evolved A2.2 checker retains the sealed A2.1 authority closure internally; there is no duplicate top-level A2.1 row pointing at the same file. The explicit top-level rows make membership and every self-test visible even though the lower checkers are inherited transitively.
 
@@ -33,11 +34,13 @@ The proposed A2.2 source-rewrite driver never became a checked-in executable, co
 
 The P07B-B defensive self-test likewise uses one clean canonical execution plus cloned metadata/topology negatives. It does not generate or rewrite production source copies into a recipe corpus and makes no mutation-completeness claim.
 
-P07B-B source commit `eb06bdcf18f8e14db1257e73733afdc05cac045e`, tree `d95c907754f3347bae885a64c98b30ad1ea00256`, is sealed and strict-clean with `16/16` claims recorded-exact. That source note receipts only its named commands. The current documentation reconciliation and its exact-final-boundary HTML remain independently gated before P07B-C.
+P07B-B source commit `eb06bdcf18f8e14db1257e73733afdc05cac045e`, tree `d95c907754f3347bae885a64c98b30ad1ea00256`, is sealed and strict-clean with `16/16` claims recorded-exact. Final B handoff commit `464e47adbf7f4497dfafa89938a9539239ffd41b`, tree `c7e80d6e6819d4e2c54aaedeb4dc3ef730de58c6`, independently verifies `5/5 TREE-EXACT` with its matching ledger. C0 adds planning/scope self-tests only; every P07B-C runtime capability remains absent and `UNRECEIPTED`.
+
+The C0 plan self-test accepts exactly two receipt phases. C0a requires all eight status rows to remain `UNRECEIPTED` while `spec/verification/p07b-c-c0-receipt.json` is absent. C0b requires that file to contain the exact C0a source commit/tree, strict `8/8` counts, ordered claim roster, and verbatim `TREE-EXACT` grades. Through its declared admitted Git authority, the checker requires the source commit to be a real ancestor, recomputes its tree, parses its didrun Git note, and matches all eight successful tree-exact note claims and event coverage; status and a delimited handoff table must match every field. Hostile self-tests cover wrong commit, wrong tree, wrong grade, and handoff disagreement. This phase split prevents the receipt-document commit from invalidating its own enrolled cumulative gate without letting a self-consistent invented receipt pass.
 
 ## Hermetic child environment
 
-The runner accepts no arguments, root override, skip flag, or historical-run mode. It creates a private mode-`0700` run root below ignored `.countershape/verify-current/`, then gives children fresh `HOME`, `TMPDIR`, `GOTMPDIR`, `GOCACHE`, `GOPATH`, and `GOMODCACHE` directories. It sets `GOENV=off`, `GOWORK=off`, `GOTOOLCHAIN=local`, `GOPROXY=off`, `GOSUMDB=off`, `GOVCS=*:off`, `CGO_ENABLED=1`, `GOMAXPROCS=2`, fixed locale/timezone/color values, and a sparse `PATH`. Ambient `GOFLAGS`, Node preload paths, proxy variables, and credentials are not copied.
+The runner accepts no arguments, root override, skip flag, or historical-run mode. It creates a private mode-`0700` run root below ignored `.countershape/verify-current/`, then gives children fresh `HOME`, `TMPDIR`, `GOTMPDIR`, `GOCACHE`, `GOPATH`, and `GOMODCACHE` directories. It sets `GOENV=off`, `GOWORK=off`, `GOTOOLCHAIN=local`, `GOPROXY=off`, `GOSUMDB=off`, `GOVCS=*:off`, `GOFLAGS=-mod=readonly -buildvcs=false -p=1`, `CGO_ENABLED=1`, `GOMAXPROCS=2`, fixed locale/timezone/color values, and a sparse `PATH`. Direct Go build/vet/test rows also carry `-p=1`, so nested and direct package parallelism obey the same resource ceiling. Ambient `GOFLAGS`, Node preload paths, proxy variables, and credentials are not copied.
 
 The locked Darwin defaults are:
 

@@ -100,7 +100,7 @@ A negative fixture demonstrates why the machinery matters: a deliberately naive 
 
 A physically new confirmation batch uses new attempt artifacts, invocation counters outside the selected predicate, and a rotated schedule. The blind-first ruling allows the `404` outcome, selects status only, shows the metadata body as nonasserted, and reveals provenance before finalization. A deliberately weak field set must return `AMBIGUOUS_SCOPE`.
 
-The emitted bundle runs without a Countershape runtime, package, import, service binding, or `PATH` dependency in the isolated target inventory. No package-registry denial is claimed; loopback remains available because the local HTTP service is the test subject. Candidate B conforms; A and C contradict. Candidate D's current execution is classified from current evidence and never rewrites its historical instability. A custom `401` expectation makes every eligible stable candidate contradict. `REJECT_ALL` emits no code.
+The emitted bundle runs without a Countershape runtime, package, import, service binding, or `PATH` dependency in the isolated target inventory. No package-registry denial is claimed; loopback remains available because the local HTTP service is the test subject. Candidate B conforms; A and C contradict. Candidate D's exact target/run is classified from its own evidence and never rewrites its historical instability. A custom `401` expectation makes every eligible stable candidate contradict. `REJECT_ALL` emits no code.
 
 ### CLI precedence study
 
@@ -180,8 +180,8 @@ The normative objects are:
 15. `PortableSource`: an implemented P07B-A1 live exact reconstruction witness, not a ruling or self-authenticating serialized claim. Its closed adapter constructor retains bounded runnable bytes and reproduces its supplied exact plan, projection binding/definition, minimized stimulus, profile, runner/start/readiness/capture authorities, and execution binding. Equality to the current Choicepoint/FreshConfirmation remains an A2 application-service obligation.
 16. `ContractBundle`: deterministic recoverable six-file Node-core source, typed exact predicate, and every exact file byte. Its domain-separated digest is external to its canonical body.
 17. `ContractExecutionTarget`: immutable nonhead pre-spawn authority over the reopened bundle/source profile, one explicit Git-pinned inspected and verified private materialization, one fresh durable conformance attempt, and one admitted/revalidated Node runtime. Its external typed digest is absent from its body; parsed bytes are inert.
-18. `FinalizedContractRun`: immutable nonhead physical-run authority bound to one exact target and the same exact fresh attempt, with closed lifecycle, a constructor-derived clean/ineligible disposition, the exact projected tuple when present, and scoped target-inventory/child-binding evidence. Its external typed digest is absent from its body.
-19. `ContractExecution`: separately published derived conformance/contradiction or ineligible classification bound to one exact target and its exact finalized run; it independently authors neither tuple nor control reason, duplicates no target/lifecycle/observation authority, and never freshens the Choicepoint or changes the terminal study head.
+18. `FinalizedContractRun`: immutable nonhead physical-run authority bound to one exact target/attempt/start intent, with a bounded closed-run witness whose single process-control owner preserves at most one primary cause plus independent teardown/orphan controls, independent `COMPLETE | PARTIAL | VIOLATED` standalone scope over five named checks, and the exact projected tuple when present. Raw/large evidence remains private, may contain secrets, and establishes no confidentiality. Its external typed digest is absent from its body.
+19. `ContractExecution`: separately published classifier-profile-bound conformance/contradiction or ineligible conclusion over one exact official target and finalized run. It accepts neither tuple nor process/scope reason, duplicates no physical authority, supports classification-only retry without spawn, and never freshens the Choicepoint or changes the terminal study head.
 
 Git is content authority. Countershape is authority only for the canonical artifacts and transitions it creates. The human is authority only for the fields and exact witness they explicitly rule on. didrun remains external; an unknown grade round-trips unchanged and missing evidence is `UNRECEIPTED`.
 
@@ -254,7 +254,7 @@ Fresh Choicepoints retain the existing 27-member body but use `ADAPTER_BOUND_POR
 
 The portable value profile is closed to tagged missing, null, Boolean, safe canonical integer, exact string, exact bytes, ordered string list, and strict canonical JSON. The HTTP ordered list preserves duplicates and order. The CLI/HTTP historical wire formats remain different and unchanged; the translator freezes both exact compatibility codecs instead of normalizing fingerprints.
 
-## P07B/U6c standalone contract boundary (A1/A2 sealed; B in qualification; C future)
+## P07B/U6c standalone contract boundary (A1/A2/B sealed; C0 design locked; C1 next)
 
 `DecisionRecord`, `ContractBundle`, `ContractExecutionTarget`, `FinalizedContractRun`, and `ContractExecution` are separate truth objects.
 
@@ -277,15 +277,17 @@ manifest.json
 
 The bundle uses a closed `one-of-exact/v1` predicate AST and only the HTTP/CLI fields exercised by the proof studies. It embeds path, mode, count, raw-byte digest, and exact base64 content for all six files, so a reopened terminal residue can rematerialize itself. `manifest.json` covers the other five files and never itself; the outer ContractBundle covers all six. The bundle's typed digest is external and no generated file embeds it. Scoped emitter metadata introduces no time, randomness, absolute path, concrete candidate/branch identity, declared secret value, host-runtime fact, execution/didrun receipt, or formatter drift as a new typed structural fact; generated harness code adds no Countershape dependency, package install, shell, or configured external-service dependency. This is not a content scan, redaction, secret-free claim, or network-containment claim: authorized PortableSource bytes, predicate values, and source-derived human text may contain sensitive, host-looking, or candidate-looking data, and trusted subject code retains host-network authority. The exact declared semantic profile is `countershape-node-core-exact/v1`; it receipts no runtime tuple. Exact Node version/major/native OS/architecture are claimed only after their standalone matrix entries run.
 
-Standalone means an isolated target inventory can invoke the test with Countershape absent from that inventory's `PATH`, source, dependencies, import graph, and service-call closure. It is not a host-wide filesystem, network, registry, or containment claim. Local loopback remains available only for the HTTP target. `ELIGIBLE_OBSERVATION` yields `CONFORMS` or `CONTRADICTS`; harness, capture, projection, and teardown failures are typed `INELIGIBLE_EXECUTION`, even though both contradiction and ineligibility produce a nonzero ordinary test.
+The planned C standalone claim closes exactly five observer-produced domains for the prepared target: target inventory, child bindings, import resolution, service bindings, and named parent-secret sentinel inheritance. Each run reports that scope as `COMPLETE`, `PARTIAL`, or `VIOLATED`; only complete unviolated scope plus clean process closure and an exact projected tuple may yield `CONFORMS` or `CONTRADICTS`. This is not a host-wide filesystem, network, registry, listener-ownership, confidentiality, or containment claim. Local loopback remains available for the HTTP target, and both contradiction and ineligibility still produce a nonzero ordinary direct test.
 
 The vendored Node harness is a second semantic implementation. A single normative corpus must drive Go and Node through strict parsing, field selection, missing/empty distinctions, raw HTTP/CLI capture, projection, eligible/ineligible taxonomy, and selected-field mutations. Standalone is unclaimed until those bytes/results agree for the exercised profile. Artifact hashes establish byte integrity, not authorship.
 
 The P07B-B implementation revalidates the complete expected `RULING` token under the store transition before creating an object or temporary file. A stale loser publishes nothing. The bundle object becomes durable before the head advances to terminal `RESIDUE`; a crash between those operations may leave an unreachable immutable object, never a head that names a missing object. No executable directory exists before residue. Materialization reconstructs from the committed bundle through a private same-parent stage, descriptor-relative no-follow operations, repeated exact reopen/hash/roster checks, and Darwin exclusive no-follow rename. A post-residue export failure is explicitly retryable and does not pretend the durable transition was rolled back. The named commands for this boundary are receipted at sealed source `eb06bdcf18f8e14db1257e73733afdc05cac045e`; other platforms and hostile same-user replacement remain nonclaims.
 
-Later checks begin by publishing and reopening an independent immutable `ContractExecutionTarget`. The target is constructed only from the exact reopened bundle/source profile, a live Git-issued single-target capability whose once-pinned object was inspected and verified into a private materialization, a fresh durably allocated `CONFORMANCE` attempt, and a measured/revalidated explicit Node runtime. It never reuses the historical 2–4-candidate `WorldInstance` authority; copied OIDs/digests, a parsed target, or dirty working-tree bytes cannot substitute. The initial CLI profile is only logical `node` plus one exact clean repository-relative JavaScript entrypoint; arbitrary repository executables require a new physically confirmed lineage.
+Later checks begin by publishing and reopening an independent immutable `ContractExecutionTarget`. The target is constructed only from the exact reopened bundle/residue, a live Git-issued single-target capability whose once-pinned object was inspected and verified into a private materialization, a fresh durably allocated `CONFORMANCE` attempt, and a measured/revalidated explicit Node runtime. A typed store-private publication witness makes the object official; generic CAS bytes, copied OIDs/digests, a parsed target, dirty working-tree bytes, or historical `WorldInstance` authority cannot substitute. The initial profile is only logical `node` plus one exact clean repository-relative JavaScript entrypoint; arbitrary repository executables require a new physically confirmed lineage.
 
-After the target runs and materialization, process, teardown, and orphan evidence are terminal, `FinalizedContractRun` binds that exact target, the same attempt-artifact digest, the closed lifecycle, one `ELIGIBLE_CLEAN` or `INELIGIBLE_CONTROL(reason)` disposition, the exact projected tuple when present, and scoped standalone evidence. `ContractExecution` then binds only the external target digest, that exact finalized-run digest, and the derived conformance or ineligible class; it cannot independently supply a tuple or reason, and bundle/tree/attempt/runtime/lifecycle/observation facts are not duplicated for caller pairing. If Git pinning/inspection/materialization, runtime admission, target publication, run finalization, or target/run matching is unavailable, the outer service refuses classification publication. Direct Node execution remains independent. ContractExecutions fix `historical_execution_evidence_reused = false`, `choicepoint_freshened = false`, and `study_head_advanced = false`; repeated runs allocate distinct targets/runs/executions while leaving the study at the same terminal bundle residue.
+Before spawn, a store-private operational `ExecutionInterlock` serializes subject admission for one measured Darwin boot session; it can block work but never authors or selects semantic results. Only the C4 contract runner may acquire it from an opaque C3-issued official-target capability. The runner then creates the deterministic target-keyed `StartClaim`, and only the combined durable interlock/claim winner receives one process-local `RunPermit`; read/reopen, C2 test fixtures, losing claimants, copied owner data, lease expiry, or restart never reissue it. A separate `SpawnObservation` records `START_ERROR` or an observed child PID. Missing observation is unknown and cannot enter an FCR. Conclusive terminal closure makes the witness durable before releasing the interlock. Ambiguity permanently consumes the target and leaves the interlock held on that boot session; a fresh target alone is insufficient. Reset requires explicit operator action plus a measured boot-session identity demonstrably distinct from the held identity; otherwise no further subject spawn is admitted. The claim ceiling is serialized cooperative at-most-once spawn admission per target, not exactly-once execution or survivor absence after crash.
+
+After process, teardown, drains, orphan inspection, runtime/materialization revalidation, and scope measurement are terminal, `FinalizedContractRun` binds that exact target/attempt to a bounded closed-run witness. Process control and standalone `COMPLETE | PARTIAL | VIOLATED` scope remain separate; only clean projected closure plus complete unviolated scope is eligible. `ContractExecution` then binds the exact official target/run and a literal classifier profile and persists only the derived class. It independently supplies no tuple or process/scope reason, and classification-only retry never spawns. Direct Node execution remains independent black-box/operator evidence. Repeated trials allocate distinct target/run/execution triples while package topology and exact head evidence keep the terminal residue unchanged. P07B-C adds no result list, latest/current selector, mutable semantic status, or process resume; the private interlock is the sole mutable operational exception and has no result authority.
 
 ## Execution and security boundary
 
@@ -338,7 +340,7 @@ internal/contractsource/ implemented byte-complete runnable-source reconstructio
 internal/runnerprofile/  implemented closed logical-Node runner profile
 internal/emit/node/     deterministic standalone source and terminal residue application
 internal/contractmaterialize/ retryable exact six-file native publication
-internal/contractexec/  future immutable nonhead current execution evidence
+internal/contractexec/  future exact-digest nonhead target, run, and classification services
 internal/store/         content-addressed artifacts and atomic heads
 internal/server/        authenticated loopback API
 internal/report/        default-minimized local evidence export
@@ -391,7 +393,10 @@ SOURCE_SPEC -> COMPILED_PLAN -> MATERIALIZED_CANDIDATE_SET
 -> FRESH_CONFIRMATION -> CHOICEPOINT_READY -> RULING
 -> CONTRACT_BUNDLE
 
-CONTRACT_BUNDLE -> CONTRACT_EXECUTION_EVIDENCE (immutable nonhead object)
+CONTRACT_BUNDLE
+-> CONTRACT_EXECUTION_TARGET (immutable nonhead)
+-> FINALIZED_CONTRACT_RUN (immutable nonhead)
+-> CONTRACT_EXECUTION (immutable nonhead)
 ```
 
 The full product target above remains an immutable successor-study model. U6a implements the public typed spine `SOURCE_PLAN -> BASELINE -> DIVERGENCE -> REDUCTION -> CONFIRMATION -> CHOICEPOINT_READY -> RULING`; P07B-B adds the first construction-safe terminal `RESIDUE` transition while preserving the U6a meanings. ContractExecutionTarget, FinalizedContractRun, and ContractExecution are never stages. U6a/P07B-B do not implement durable successor branches, `STALE`/`INVALIDATED` status objects, deferred-session reopening, or archived head history. `CANCELLED` and `PARTIAL` remain nonadvancing evidence concepts. Future work must add new objects rather than edit historical Choicepoint bytes.
@@ -399,11 +404,14 @@ The full product target above remains an immutable successor-study model. U6a im
 ### Execution attempt
 
 ```text
-ALLOCATED -> MATERIALIZING -> STARTING -> READY
--> PROBING -> CAPTURING -> TEARING_DOWN -> FINALIZED
+TARGET_PUBLISHED
+-> START_INTENT_CLAIMED_AND_RUN_PERMIT_MINTED
+-> SPAWN_START_ERROR | CHILD_PID_OBSERVED
+-> READY -> PROBING -> CAPTURING -> TEARING_DOWN
+-> CLOSED_RUN_WITNESS -> FINALIZED_CONTRACT_RUN
 ```
 
-Each state can terminate in a typed control result. Only eligible `FINALIZED` evidence may project.
+Missing spawn observation never advances. Owner-controlled projection may succeed before later teardown or scope closure fails, so the finalized run may retain that projected tuple as physical evidence. Only a finalized run with no primary/cleanup process control and standalone `COMPLETE` without violation may use the tuple for membership or produce `CONFORMS`/`CONTRADICTS`; retained projection under any ineligible disposition remains nonclassifying evidence.
 
 ### Product state jurisdictions
 
@@ -431,7 +439,7 @@ Each unit is separately verified, claimed, committed, sealed, and gated on `NO_C
 10. **U6c/P07B-A2.1 — compilation authority (sealed):** current-revalidated ruling snapshot, exact source/Choicepoint/confirmation/proof joins, selected-tuple partition revalidation, and one sealed preparation with a private authority-narrowed input; no generated files or store writes.
 11. **U6c/P07B-A2.2 — recoverable compiler (sealed):** deterministic recoverable six-file bundle, strict parser, fixed Node-core runtime assets, Go/Node raw-wire corpus, physical generated-contract evidence, and bounded recovery/fuzz/architecture gates; no residue or product materializer.
 12. **U6c/P07B-B — terminal publication/materialization (sealed source):** opaque node-issued publication, stale-safe terminal residue, full predecessor restart, and retryable exact Darwin/arm64/cgo six-file publication; no execution target or classification.
-13. **U6c/P07B-C — standalone execution (next after B):** target-inventory absence checks, admitted runtime, immutable target and finalized run, and derived immutable nonhead current execution.
+13. **U6c/P07B-C — standalone execution (C0 design locked; C1 next):** strict three-object semantics; typed nonhead publication; a private boot-session interlock plus intent-only serialized cooperative at-most-once spawn admission; direct single-target Git and Node authority; bounded finalized run with separate process and five-domain standalone axes; classifier-profile-bound immutable execution; no semantic execution head or process resume.
 14. **U7 — complete CLI and reference studies:** safe next actions, both end-to-end proofs, allow-many, custom none-conforms, reject/defer, three clean reproductions, named-machine timings.
 15. **U8 — secure decision bench:** authenticated loopback API, complete state renderer, 1440/375 flows, at least three full visual passes, Playwright/axe/manual checks, and a real different-model screenshot critic.
 16. **U9 — local export, packaging, and hardening:** minimized evidence export, embedded assets/single binary, docs/license/contributor path, adversarial suite, performance/limitations ledger, final strict verify, didrun HTML evidence, receipts handoff.
@@ -451,7 +459,7 @@ Honest fallback milestones are allowed: truth-kernel prototype, observation-only
 | Outcome map | candidate permutation and serialized API/UI shape trap preserve exact map digest | kill Choicepoint claim |
 | Reduction | both domains shrink; unresolved yields `BEST_KNOWN`; one complete durable sweep earns local grade | observation-only |
 | Rulings | legal transitions exact; no defaults; tuple-set allow-many; weak fields reject; noncompilable actions emit nothing | no executable residue |
-| Standalone bundle | exact source preimage matches the ruling; cross-root recoverable byte identity; stale loser writes nothing; materialization retries; Countershape absent from the target inventory; exercised Node/OS/architecture receipt; selected fields only; none-conforms works | selected-field DecisionRecord only |
+| Standalone bundle | exact source preimage matches the ruling; cross-root recoverable byte identity; stale loser writes nothing; materialization retries; all five standalone domains close as observer-produced `COMPLETE`; exercised Node path/version/OS/architecture receipt; selected fields only; none-conforms works | selected-field DecisionRecord only |
 | Decisive proof | contamination, flake, visible projection, shape trap, physical confirmation, separation, and absence each change/refuse a false result | relabel observation/approval prototype |
 | Two-domain kernel | no domain branches/coercions in generic identity/observe/compare/reduce/choice services | narrow to one domain |
 | Studio security | auth/Host/Origin/CORS/CSRF/CAS attacks fail; blind payload omits identity/support; output inert | CLI only |
@@ -484,7 +492,7 @@ didrun references remain opaque verbatim receipt grades associated with their ex
 - Wake invalidates the original local-agent-runtime direction.
 - didrun substantially owns command receipt, Git freshness, claim grading, sealing, and HTML evidence.
 - Git checkout/worktree/archive paths can apply policy; temporary directories are not sandboxes.
-- World configuration, measured execution, captured evidence, projection, human intent, emitted source, and current execution require different authorities.
+- World configuration, measured execution, captured evidence, projection, human intent, emitted source, exact execution target, finalized run, and classification require different authorities.
 - Finite repeats cannot prove determinism; failures cannot become product values; shape-only reduction can ask a different question.
 - `REJECT_ALL` has no positive executable oracle; weak selected fields can broaden a ruling.
 
@@ -515,4 +523,4 @@ didrun references remain opaque verbatim receipt grades associated with their ex
 
 ## Handoff state
 
-**U0–U6, P07A, P07B-A1, P07B-A2.1, accepted corrected P07B-A2.2, and P07B-B implementation source are sealed and strict-clean.** A1 source commit `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3` remains the source/process prerequisite; accepted A2.2 source is `6bf33350944dcdd56a4ceaa70f1d0836203ffb1f`, followed by receipt-document boundary `8f7663e2d29b63b1bb3ddca0a18bd5cfcf0fe4b1` at tree `e30957e807c9e8145a286cbb97f7cec309f7897c`. P07B-B source is `eb06bdcf18f8e14db1257e73733afdc05cac045e`, tree `d95c907754f3347bae885a64c98b30ad1ea00256`, with `16/16` source claims; its exact grades and nonclaims live in `docs/status/P07B-B-TERMINAL-PUBLICATION.md`. P07B-C target/run/execution remains the sole next feature boundary only after the current B receipt-document commit is sealed, Git-note-present, strict-clean, and represented by its exact-boundary HTML. `REFINE` remains a valid semantic noncompilable DecisionRecord but durable promotion refuses it without object publication or head mutation.
+**U0–U6, P07A, P07B-A1, P07B-A2.1, accepted corrected P07B-A2.2, and the complete P07B-B boundary are sealed and strict-clean.** A1 source commit `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3` remains the source/process prerequisite; accepted A2.2 source is `6bf33350944dcdd56a4ceaa70f1d0836203ffb1f`, followed by receipt-document boundary `8f7663e2d29b63b1bb3ddca0a18bd5cfcf0fe4b1` at tree `e30957e807c9e8145a286cbb97f7cec309f7897c`. P07B-B source is `eb06bdcf18f8e14db1257e73733afdc05cac045e`, tree `d95c907754f3347bae885a64c98b30ad1ea00256`, with `16/16` source claims; final handoff commit `464e47adbf7f4497dfafa89938a9539239ffd41b` is independently strict-clean with its matching live ledger and exact HTML. The P07B-C deep dive corrected the future design; C0 remains `UNRECEIPTED` until its own commit/seal/strict gate, and C1 semantic implementation is next afterward. `REFINE` remains a valid semantic noncompilable DecisionRecord but durable promotion refuses it without object publication or head mutation.

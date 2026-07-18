@@ -40,7 +40,10 @@ SOURCE_SPEC
   -> RULING
   -> CONTRACT_BUNDLE
 
-CONTRACT_BUNDLE -> CONTRACT_EXECUTION_EVIDENCE (immutable nonhead object)
+CONTRACT_BUNDLE
+  -> CONTRACT_EXECUTION_TARGET (immutable nonhead)
+  -> FINALIZED_CONTRACT_RUN (immutable nonhead)
+  -> CONTRACT_EXECUTION (immutable nonhead)
 ```
 
 Each name denotes a distinct immutable object kind, not a mutable phase field.
@@ -57,8 +60,8 @@ Each name denotes a distinct immutable object kind, not a mutable phase field.
 | `CHOICEPOINT_READY` | `RULING` | the local decision session completes against the exact current digest; action and selected/context fields are valid; caller attribution is recorded without human-authenticity proof | typed decision or durable-promotion refusal |
 | `RULING` | `CONTRACT_BUNDLE` | current ruling uses the P07A adapter-bound portable mode; action is compilable; selected fields are nonempty and separate allowed/disallowed tuples; an exact PortableSource reconstructs the same plan/projection/minimized stimulus; the emitter creates one recoverable six-file body; the complete expected head token remains current | legacy/noncompilable/ambiguous/source/profile/stale refusal; no residue and no final directory |
 | `CONTRACT_BUNDLE` | immutable nonhead `CONTRACT_EXECUTION_TARGET` | exact bundle/source reopen; one explicit Git ref is pinned, inspected, privately materialized, and reopened; one Node runtime is measured/revalidated; one fresh conformance marker is durable; target publishes and reopens before spawn | any authority/materialization/runtime/freshness failure refuses target publication; study head remains the same bundle residue |
-| `CONTRACT_EXECUTION_TARGET` | immutable nonhead `FINALIZED_CONTRACT_RUN` | the exact reopened target capability runs; materialization revalidation, process result, teardown, orphan check, observation/projection, exact tuple when present, constructor-derived terminal disposition, and scoped standalone facts close against the same target attempt | target/attempt mismatch or incomplete lifecycle refuses finalization; study head remains the same bundle residue |
-| `FINALIZED_CONTRACT_RUN` | immutable `CONTRACT_EXECUTION_EVIDENCE` | exact target and exact target-bound finalized run reopen; `ELIGIBLE_CLEAN` plus its projected tuple derives conformance/contradiction, while `INELIGIBLE_CONTROL(reason)` derives the ineligible class | target/run or disposition mismatch refuses classification publication; study head remains the same bundle residue |
+| `CONTRACT_EXECUTION_TARGET` | immutable nonhead `FINALIZED_CONTRACT_RUN` | the C4 runner acquires the private boot-session interlock from opaque official-target authority, wins StartClaim/RunPermit once, records conclusive SpawnObservation, makes the full owner witness durable, and only then releases the interlock; process control, projection when present, teardown/drains/orphan checks, revalidation, and all five standalone domains close against the same target/attempt | no permit, missing observation, target/attempt mismatch, or incomplete terminal evidence refuses finalization; ambiguity consumes the target and holds the interlock on that boot; study head remains the same bundle residue |
+| `FINALIZED_CONTRACT_RUN` | immutable nonhead `CONTRACT_EXECUTION` | exact official target/run reopen under one literal classifier profile; clean projected process closure plus `COMPLETE` unviolated scope derives conformance/contradiction, while either ineligible axis derives the ineligible class | target/run/profile or derived-result mismatch refuses classification publication; retry performs no spawn; study head remains the same bundle residue |
 
 `REJECT_ALL` and `DEFER` may create a final noncompilable `RULING`/`DecisionRecord`, but neither has an edge to `CONTRACT_BUNDLE`; U6 does not reopen a deferred head. A semantic `REFINE` DecisionRecord may be constructed, but durable promotion returns `REFINE_REQUIRES_SUCCESSOR_STUDY` before object publication or head mutation.
 
@@ -409,7 +412,7 @@ A stale loser creates no object, temporary file, or final output. A crash after 
 
 Go/Node parity disagreement blocks the external P07B ship-and-claim gate, not this semantic transition. didrun grades remain opaque external evidence and never authorize residue publication. A qualifying parity receipt maps to a claim without editing the bundle or study head; an absent receipt leaves the capability `UNRECEIPTED` rather than inventing a runtime transition result.
 
-## Future P07B/U6c contract-execution state machine
+## Corrected future P07B/U6c contract-execution state machine
 
 Historical evidence and later exact-target conformance are never merged:
 
@@ -418,24 +421,42 @@ EXPLICIT_TARGET_REF_PINNED
   -> TARGET_INSPECTED
   -> TARGET_PRIVATELY_MATERIALIZED_AND_REOPENED
   -> NODE_RUNTIME_ADMITTED_AND_REVALIDATED
+  -> DARWIN_BOOT_SESSION_ADMITTED
   -> CONFORMANCE_ATTEMPT_MARKER_DURABLE
   -> CONTRACT_EXECUTION_TARGET_PUBLISHED_AND_REOPENED
-  -> TARGET_RUNNING
-  -> LIFECYCLE_OBSERVATION_AND_STANDALONE_SCOPE_CLOSED
+  -> EXECUTION_INTERLOCK_HELD_FOR_TARGET_AND_BOOT_SESSION
+  -> START_INTENT_CLAIMED_AND_RUN_PERMIT_MINTED
+  -> SPAWN_ATTEMPTED
+  -> START_ERROR_OBSERVED | CHILD_PID_OBSERVED | SPAWN_OUTCOME_UNKNOWN
+  -> PROCESS_AND_STANDALONE_AXES_CLOSED
+  -> TERMINAL_WITNESS_DURABLE
+  -> EXECUTION_INTERLOCK_RELEASED
   -> FINALIZED_CONTRACT_RUN_PUBLISHED_AND_REOPENED
-  -> ELIGIBLE_CLEAN + PROJECTED(tuple) -> CONFORMS | CONTRADICTS
-     or INELIGIBLE_CONTROL(reason) -> INELIGIBLE_EXECUTION
+  -> CONTRACT_EXECUTION_CLASSIFIED_AND_REOPENED
+
+SPAWN_OUTCOME_UNKNOWN
+  -> TARGET_PERMANENTLY_CONSUMED_AND_INTERLOCK_HELD
+  -> NO_FCR_OR_CLASSIFICATION
+
+PROCESS_CLEAN + PROJECTED(tuple) + STANDALONE_COMPLETE
+  -> ELIGIBLE_CLEAN -> CONFORMS | CONTRADICTS
+
+PROCESS_CONTROL(primary?, teardown_error?, orphan_risk?) and/or STANDALONE_PARTIAL | STANDALONE_VIOLATED
+  -> INELIGIBLE_CONTROL | INELIGIBLE_STANDALONE | INELIGIBLE_CONTROL_AND_STANDALONE
+  -> INELIGIBLE_EXECUTION
 ```
 
-`ContractExecutionTarget` is a nonhead pre-spawn object, not proof that a process ran. It is constructed only from the reopened bundle/source profile, opaque live `InspectedTree` plus its exact verified materialization, owned admitted Node capability, and fresh durable attempt allocation. It never routes through the comparison-only `SelectedTreeSet -> WorldPlan -> CandidateExecutionBinding -> WorldInstance` chain. A parsed target, copied OIDs/digests/runtime strings, dirty working-tree bytes, or a fake one-member candidate set cannot create execution authority.
+`ContractExecutionTarget` is a nonhead pre-spawn object, not proof that a process ran. It is constructed only from the reopened bundle/residue, opaque live `InspectedTree` plus its exact verified materialization, owned admitted Node capability, and fresh durable attempt allocation. It is official only through its typed store-private publication witness and exact link. It never routes through the comparison-only `SelectedTreeSet -> WorldPlan -> CandidateExecutionBinding -> WorldInstance` chain. A parsed target, copied OIDs/digests/runtime strings, dirty working-tree bytes, a generic CAS object, or a fake one-member candidate set cannot create execution authority.
 
-`FinalizedContractRun` is the nonhead proof boundary for that one physical run, not a predicate classification. It binds the exact external target digest and the same exact attempt-artifact digest to terminal lifecycle, one constructor-derived `ELIGIBLE_CLEAN` or `INELIGIBLE_CONTROL(reason)` disposition, the exact projected tuple when present, and scoped target-inventory/child-binding facts. A run from another target or attempt cannot be paired into a classification, even if its observed tuple bytes happen to match. `ContractExecution` cannot independently author a tuple or reason.
+One store-private `ExecutionInterlock` is the sole mutable operational exception to the nonhead semantic model. It serializes subject spawn for a measured boot session but cannot author, discover, or select a run/result. Only the C4 contract runner may acquire it from an opaque C3-issued official-target capability. The runner then creates the target-keyed durable `StartClaim`; only the combined durable winner receives one opaque, process-local, single-consumption `RunPermit`. A generic read/publish, C2 test fixture, losing creator, copied owner epoch, lease expiry, or restart never receives another. `SpawnObservation` separately records `START_ERROR` or an observed child PID. Missing observation is `UNKNOWN`, never `NOT_STARTED`, and cannot enter an FCR. A conclusive terminal witness becomes durable before the interlock releases. Any ambiguity permanently consumes that target and leaves the interlock held on the same boot; a fresh target/attempt is not sufficient retry authority. Reset requires explicit operator action plus a measured boot-session identity demonstrably distinct from the held identity; otherwise no further subject spawn is admitted. This is serialized cooperative at-most-once spawn admission, not exactly-once execution or process-resume authority.
 
-- `CONFORMS`: target-eligible selected-field tuple is a member of the allowed complete-tuple set.
-- `CONTRADICTS`: target-eligible selected-field tuple is not a member.
-- `INELIGIBLE_EXECUTION(reason)`: target start, readiness, timeout, capture, projection, output, orphan, or teardown control prevented an eligible tuple.
+`FinalizedContractRun` is the nonhead proof boundary for one physical run, not predicate classification. It binds the exact target, attempt, start intent, and owner-produced terminal facts to a bounded canonical `ClosedRunWitness`. One process-control owner preserves at most one primary cause plus independent teardown/orphan controls; cleanup findings cannot overwrite the primary cause, and any retained control makes that axis ineligible. Standalone scope independently closes exactly five domains as `COMPLETE`, `PARTIAL`, or `VIOLATED`; partial/violated scope is ineligible even when a projected tuple exists and is never smuggled into the process `ControlReason` roster. A run from another target/attempt cannot be paired into classification even when tuple bytes match. Raw/large evidence remains private and bounded; default output never implies confidentiality.
 
-Both contradiction and ineligibility produce a nonzero ordinary test, but TAP diagnostics and machine codes remain distinct. Direct generated execution changes into the prepared target root and invokes an explicit absolute Node executable with separate test-reporter and absolute bundle-entrypoint arguments. It uses exactly one native test diagnostic rendered as `# COUNTERSHAPE_RESULT_V1|<outcome>|<reason>` on selected TAP stdout; controlled sparse-environment runs keep outer stderr empty, and only `CONFORMS` exits zero. The closed outcome/reason roster belongs to the A2.2 generated-contract profile and includes a nonclassification `HARNESS_FAILURE` for otherwise-unmapped internal failure. Only `ELIGIBLE_CLEAN` plus an exact `PROJECTED` tuple in the exact target-bound `FinalizedContractRun` may produce eligible conformance. A target execution never freshens, modifies, or reclassifies the historical Choicepoint, even when its pinned tree equals a historical candidate tree. Each target/run/classification triple is separate immutable nonhead evidence with `study_head_advanced = false`; repeated runs leave the terminal residue unchanged.
+- `CONFORMS`: clean projected selected-field tuple under standalone `COMPLETE` is a member of the allowed complete-tuple set.
+- `CONTRADICTS`: clean projected selected-field tuple under standalone `COMPLETE` is not a member.
+- `INELIGIBLE_EXECUTION`: process control and/or partial/violated standalone scope prevented an eligible conclusion; exact reasons remain only in the finalized run.
+
+Both contradiction and ineligibility produce a nonzero ordinary direct Node test, but TAP diagnostics and machine codes remain distinct. Direct generated execution remains a separately exercised operator/black-box path and never becomes Go target/run/classification authority. `ContractExecution` binds the exact official target/run plus literal classifier profile and persists only the derived class. A classification-publication retry performs no spawn. A target execution never freshens, modifies, or reclassifies the historical Choicepoint, even when its pinned tree equals a historical candidate tree. Each target/run/classification triple is separate immutable nonhead evidence; package topology and before/after head evidence prove no head advance rather than an authored Boolean.
 
 ## Future product study-presentation lifecycle target
 
@@ -486,11 +507,16 @@ A crash may leave finalized immutable semantic objects and nonadvancing partial-
 | --- | --- | --- |
 | moving display ref changes pinned candidate | keep original identity or create new lineage | ref spelling is not execution identity |
 | `CandidateExecutionKey` or copied digests -> evidence allocation | typed binding refusal | allocation requires opaque `CandidateExecutionBinding` plus actual matching `WorldPlan` |
-| copied target/tree/source/runtime fields, parsed `ContractExecutionTarget`, fake one-member candidate set, or historical `WorldInstance` -> contract run | target-authority refusal | only the exact reopened bundle, live Git-issued inspected/materialized target, fresh durable attempt, and admitted runtime may construct and execute a target |
+| copied target/tree/source/runtime fields, parsed `ContractExecutionTarget`, fake one-member candidate set, or historical `WorldInstance` -> official target/run | target-authority refusal | only the C3 live issuer may return official-target authority, and only the C4 runner may consume it |
+| generic CAS read, C2 fixture, existing StartClaim, losing interlock/claimant, copied owner epoch, lease expiry, or restart -> RunPermit | `TARGET_START_ALREADY_CLAIMED` or interlock refusal; no permit | only the C4 combined interlock/claim durable winner may receive the one process-local permit |
+| StartClaim -> child started/stopped/absent fact | preserve intent only; spawn outcome remains unknown without owner observation | store intent is not an OS-process transaction |
+| ambiguous/crashed target -> FCR, interlock release, or any same-boot target spawn | refuse; keep interlock held | fresh target identity does not clear survivor uncertainty; only explicit operator reset plus a measured boot-session identity demonstrably distinct from the held identity can reopen admission |
 | finalized run for target/attempt A -> classification for target/attempt B | `TARGET_RUN_MISMATCH`; no classification | lifecycle and observation authority cannot be caller-paired across physical attempts |
+| standalone `PARTIAL` or `VIOLATED` plus projected tuple -> eligible conformance | `INELIGIBLE_EXECUTION` | missing or forbidden scope evidence cannot become a behavior conclusion |
+| standalone-scope failure -> process `ControlReason` | preserve a separate scope axis | process control and absence measurement have different truth jurisdictions |
 | unsupported Git entry omitted and remaining tree runs | `UNCOMPARABLE` | partial tree would misrepresent source |
 | `STARTING` before verified materialization | attempt control failure | execution source is not established |
-| projection before clean `FINALIZED` teardown | ineligible control | behavior cannot outrun lifecycle evidence |
+| retained projection before terminal closure -> tuple membership/classification | refuse until FCR closes clean process plus `COMPLETE` scope | useful projected bytes may be retained, but behavior classification cannot outrun lifecycle/scope evidence |
 | timeout/output/teardown reason -> outcome fingerprint | reject construction | controls are not behavior values |
 | `RejectedComparison` -> token/trial/batch/map | pre-batch study refusal | assessment did not admit the matrix |
 | `UNSTABLE`, `UNCOMPARABLE`, or `INCOMPLETE` candidate -> eligible map entry | list as excluded | only `OBSERVED_STABLE(k/k,h)` enters the eligible labeled map |
@@ -516,6 +542,7 @@ A crash may leave finalized immutable semantic objects and nonadvancing partial-
 | post-residue materialization failure -> claim no durable change | `RESIDUE_PERSISTED_EXPORT_INCOMPLETE`; retry from bundle | source publication and filesystem export are separate truths |
 | bundle digest -> `CONFORMS` without execution | no transition | source bytes are not current behavior |
 | target conformance -> historical Choicepoint freshening or head advance | immutable nonhead ContractExecutionTarget, FinalizedContractRun, and ContractExecution only | truth jurisdictions differ |
+| exact nonhead target/run/execution -> filesystem traversal, latest/current selector, or mutable status | reject field/API | P07B-C is exact-digest-only and does not add an execution head |
 | stale CAS head -> last-write-wins | `CAS_CONFLICT` | concurrent/stale clients cannot overwrite intent |
 | crash -> process resume/replay | no resume; any already-persisted nonadvancing evidence stays inert and a retry allocates a new world | persistence is not an execution runtime and U6 writes no crash-time status object |
 | Wake session/effect/gate -> Countershape state | reject field/object | Wake is inert candidate provenance only |
@@ -541,7 +568,7 @@ Additional prohibited transitions include promoting an unqualified `STABLE` labe
 | U6c / P07B-A2.1 | nontransitioning current-ruling compilation preparation | source/ruling/Choicepoint/confirmation/proof equality and selected-tuple partition gates pass; no head advance or durable currentness after return |
 | U6c / P07B-A2.2 | nontransitioning recoverable bundle compilation and strict Go/Node semantic evaluation | sealed parity, recovery, generated-runtime, and pure-boundary gates pass; no head advance |
 | U6c / P07B-B (sealed source) | exact `RULING -> RESIDUE` terminal transition plus nonsemantic retryable physical materialization | source grades are `TREE-EXACT`; receipt-document closure and exact-boundary HTML must pass before the next unit |
-| U6c / P07B-C (future) | immutable nonhead target, finalized run, and derived current execution | target-inventory absence plus contradiction/ineligibility and target/run pairing negatives must pass; study head remains terminal residue |
+| U6c / P07B-C (C0 design locked; runtime future) | typed nonhead target/run/classification plus one private boot-session interlock, serialized intent-only at-most-once spawn admission, and separate process/scope axes | C1–C6 semantic, store/interlock, Git/runtime, lifecycle, five-domain scope, classification, and cumulative gates must independently seal; the interlock has no result authority and study head remains terminal residue |
 | U7 | complete study lifecycle and both decisive reference lineages | three clean runs preserve semantic bytes while all attempts are new |
 | U8 | authenticated transport and full renderer state matrix | blind leakage, request forgery, presentation obligations, visual/accessibility gates pass |
 | U9 | export/packaging/final claim mapping | exact environment receipts, final strict verify, HTML evidence, honest handoff |

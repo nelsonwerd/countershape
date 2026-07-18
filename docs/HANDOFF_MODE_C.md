@@ -12,11 +12,11 @@
 
 ## Current state
 
-- **Pipeline phase:** U0–U6, P07A/U6b, P07B-A1, P07B-A2.1, cumulative-verification maintenance, accepted corrected P07B-A2.2, P07B-B implementation source, P07B-B receipt reconciliation, and the S6-13 ledger-location finding are sealed and strict-clean. Any final handoff-only descendant must independently remain note-present, strict-clean with its witness ledger live, and represented by an exact-commit HTML before P07B-C begins.
-- **Git:** repository is on `codex/countershape-autopilot`. P07B-B source commit `eb06bdcf18f8e14db1257e73733afdc05cac045e`, tree `d95c907754f3347bae885a64c98b30ad1ea00256`, is sealed and strict-clean with `16/16` claims. Receipt-document commit `b4ac17bd66c6260fd4b12b9277ab5259659c55e1`, tree `7e9847d976d32a6307e7ccd5f2437391f0a4298a`, is sealed and strict-clean with `6/6` claims when its witness ledger is live. S6-13 commit `c5ce6e20fa23b106f6e8fabcc210180f50d6c6b2`, tree `4c3e8b4ed25ba9bdce95a7f4a705c2f840bcbd86`, is sealed and strict-clean with `6/6` claims. Resolve the final handoff descendant's exact OID from Git and the external handoff rather than embedding a self-referential hash here.
-- **didrun:** installed globally and unchanged during this unit. The mixed 69-event B development ledger is preserved whole under ignored `.didrun-history/2026-07-17-p07b-b-development/.didrun/` and supports no final claim. The serialized 16-event source ledger, six-event receipt ledger, and six-event S6 ledger are preserved separately under `.didrun-history/2026-07-17-p07b-b-source/.didrun/`, `.didrun-history/2026-07-17-p07b-b-receipt/.didrun/`, and `.didrun-history/2026-07-17-p07b-b-s6-maintenance/.didrun/`. Strict requires the matching ledger at live `.didrun`: without it, strict can resolve the note yet exit `1` with every claim `UNKNOWN`. Source, receipt, and S6 notes record `secrets_override: true` after plain seals stopped on 39, 27, and 26 aggregate entropy findings. These are redacted-export disclosures, not secret-absence results. S6-12 and S6-13 record the live behavior and remaining tool tail.
-- **Current baseline:** from a fresh repository-root shell, run `/opt/homebrew/bin/node tools/verify-current.mjs`. The evolved 22-step roster builds, vets, runs the complete suite, self-tests its orchestration, checks/exercises generated artifacts, fresh-process recovery, deterministic human capture, every current architecture checker/self-test through P07B-B, labels every historical-only gate without running it, and fails on Finder artifacts. Read `docs/VERIFICATION.md`; a direct pass is not a didrun grade.
-- **Build:** A2.2's accepted pure compiler remains byte-stable. Sealed P07B-B adds opaque node-issued terminal publication, full-token CAS-before-object creation, durable exact `RESIDUE` reopen with complete predecessor reconstruction, and an optional Darwin/arm64/cgo materializer that freshly reopens store-bound residue, performs descriptor-relative no-follow exact six-file publication, converges exact retries, and refuses mismatched existing output. It still implements no pinned execution target, admitted runtime, finalized run/classification, product CLI, server, dashboard, or report.
+- **Pipeline phase:** U0–U6, P07A/U6b, P07B-A1, P07B-A2.1, cumulative-verification maintenance, accepted corrected P07B-A2.2, and the complete P07B-B source/receipt/S6/final-handoff boundary are sealed and strict-clean. P07B-C C0 deep-dive/scope-lock files are the current working unit and remain `UNRECEIPTED` until their own commit, seal, note check, and strict exit `0`.
+- **Git:** repository is on `codex/countershape-autopilot`. P07B-B source commit `eb06bdcf18f8e14db1257e73733afdc05cac045e`, tree `d95c907754f3347bae885a64c98b30ad1ea00256`, is sealed/strict-clean with `16/16` claims. Receipt commit `b4ac17bd66c6260fd4b12b9277ab5259659c55e1` is `6/6`; S6-13 commit `c5ce6e20fa23b106f6e8fabcc210180f50d6c6b2` is `6/6`. Final B handoff commit `464e47adbf7f4497dfafa89938a9539239ffd41b`, tree `c7e80d6e6819d4e2c54aaedeb4dc3ef730de58c6`, independently verifies `5/5 TREE-EXACT` with its matching ledger live. Its exact HTML is `.countershape/evidence/p07b-b-final-464e47adbf7f.html`, SHA-256 `c7e7c66bdc2d8a608dcc2a1dfc3ba6ef90e2373071c3f9ac841b7d72fdd1a62c`. The C0 working tree is not yet a committed capability.
+- **didrun:** installed globally and unchanged. Final B strict was independently rerun successfully, then the complete live ledger was preserved under ignored `.didrun-history/2026-07-18-p07b-b-final-handoff-live/.didrun/` before C0 began. The earlier B ledgers remain preserved separately. Strict is not self-contained after ledger movement: restore the exact matching ledger before reproducing an old strict result. All redacted-export/entropy disclosures remain non-secret-absence findings.
+- **Current baseline:** from a fresh repository-root shell, run `/opt/homebrew/bin/node tools/verify-current.mjs`. The evolved 24-step roster uses Go `-p=1`, builds, vets, runs the complete suite, self-tests its orchestration, checks/exercises generated artifacts, fresh-process recovery, deterministic human capture, every current architecture checker/self-test through P07B-B, and the C0 plan/scope self-tests; it labels every historical-only gate without running it and fails on Finder artifacts. Read `docs/VERIFICATION.md`; a direct pass is not a didrun grade.
+- **Build:** A2.2's accepted compiler and sealed P07B-B terminal publication/materialization remain unchanged. P07B-C still implements no pinned target, admitted runtime, interlock/start admission, finalized run, classification, product CLI, server, dashboard, or report. C0 only locks the corrected future authority: three immutable semantic objects; typed official publication; one private boot-session `ExecutionInterlock`; intent-only StartClaim plus C4-runner-only process-local RunPermit; separate SpawnObservation; bounded process/scope witness; no semantic execution head.
 - **External APIs:** none used in the product. The A2.2 UX pass used a different internal model over sanitized captures; its qualitative verdict is `UNRECEIPTED` and has no semantic authority. Any real external model/API integration remains human-gated and must never be faked.
 
 ## Read first, in order
@@ -25,26 +25,46 @@
 2. `docs/CONCEPT_BRIEF.md`
 3. `docs/SEMANTICS.md`
 4. `docs/PROJECTION_ALGEBRA.md`
-5. `research/deep-dive/11-p07-implementation-red-team.md`
-6. `docs/prompts/P07B-B-TERMINAL-PUBLICATION.md`
-7. `docs/status/P07B-B-TERMINAL-PUBLICATION.md`
-8. `docs/status/P07B-A2-2-COMPILER.md`
-9. `docs/status/P07B-A2-1-AUTHORITY.md`
-10. `docs/VERIFICATION.md`
-11. `docs/status/CUMULATIVE-VERIFICATION-MAINTENANCE.md`
-12. `docs/prompts/P07B-A2-COMPILATION-PLAN.md`
-13. `docs/prompts/P07B-A2-2-RECOVERABLE-COMPILER.md`
-14. `docs/status/P07B-A1-SOURCE.md`
-15. `docs/status/P07A-RULING.md`
-16. `docs/status/P07-PLANNING.md`
-17. `docs/status/P07A-TRANSLATOR.md`
-18. `research/ideation/07-divergence-and-selection.md`
-19. `research/ideation/06-founder-falsification.md`
-20. `research/ideation/05-counterfactual-prior-art.md`
-21. `research/ideation/04-finalist-duel.md`
-22. `research/ideation/02-wake-overlap-audit.md`
-23. `research/grounding/00-last30days-synthesis.md`
-24. this handoff
+5. `docs/ARCHITECTURE.md`
+6. `docs/STATE_MACHINES.md`
+7. `docs/THREAT_MODEL.md`
+8. `docs/CLAIM_VOCABULARY.md`
+9. `docs/PROMPT_PACK.md`
+10. `docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md`
+11. `research/deep-dive/p07b-c/00-scope-and-method.md`
+12. `research/deep-dive/p07b-c/01-authority-model.md`
+13. `research/deep-dive/p07b-c/02-runtime-security.md`
+14. `research/deep-dive/p07b-c/03-store-service.md`
+15. `research/deep-dive/p07b-c/04-verification.md`
+16. `research/deep-dive/p07b-c/05-dx-wake-fit.md`
+17. `research/deep-dive/p07b-c/06-adversarial-design.md`
+18. `research/deep-dive/p07b-c/07-synthesis.md`
+19. `research/deep-dive/p07b-c/08-different-model-red-team.md`
+20. `research/deep-dive/p07b-c/09-follow-up-verification.md`
+21. `research/deep-dive/p07b-c/10-executive-briefing.md`
+22. `research/deep-dive/11-p07-implementation-red-team.md`
+23. `docs/prompts/P07B-B-TERMINAL-PUBLICATION.md`
+24. `docs/status/P07B-B-TERMINAL-PUBLICATION.md`
+25. `docs/status/P07B-A2-2-COMPILER.md`
+26. `docs/status/P07B-A2-1-AUTHORITY.md`
+27. `docs/VERIFICATION.md`
+28. `docs/status/CUMULATIVE-VERIFICATION-MAINTENANCE.md`
+29. `docs/prompts/P07B-A2-COMPILATION-PLAN.md`
+30. `docs/prompts/P07B-A2-2-RECOVERABLE-COMPILER.md`
+31. `docs/status/P07B-A1-SOURCE.md`
+32. `docs/status/P07A-RULING.md`
+33. `docs/status/P07-PLANNING.md`
+34. `docs/status/P07A-TRANSLATOR.md`
+35. `research/ideation/07-divergence-and-selection.md`
+36. `research/ideation/06-founder-falsification.md`
+37. `research/ideation/05-counterfactual-prior-art.md`
+38. `research/ideation/04-finalist-duel.md`
+39. `research/ideation/02-wake-overlap-audit.md`
+40. `research/grounding/00-last30days-synthesis.md`
+41. `spec/verification/p07b-c-c0-authority.json`
+42. `spec/verification/p07b-c-unit-paths.json`
+43. `docs/status/P07B-C-C0-AUTHORITY.md`
+44. this handoff
 
 Read `research/deep-dive/07-SYNTHESIS.md`, `08-RED_TEAM.md`, and the later P07 implementation-time correction immediately after the semantic contracts and before the ideation files.
 
@@ -71,7 +91,7 @@ A Choicepoint contains:
 - blind-first local-caller ruling: allow one/many, custom expectation, reject all, or defer may promote to the fixed `RULING` head; semantic `REFINE` is noncompilable and durable promotion refuses because successor-study construction is not implemented;
 - exact-witness scope only, no-default selected fields, nonasserted fields, and mandatory allowed/disallowed separation;
 - separate DecisionRecord, deterministic ContractBundle, pre-spawn ContractExecutionTarget, exact FinalizedContractRun, and fresh ContractExecution classification; derived wire facts such as `compilable` are reconstructed and never accepted as emitter authority;
-- Go/Node semantic parity vectors and physical Countershape-absence proof;
+- Go/Node semantic parity vectors and observer-produced closure across the five scoped standalone domains;
 - receipt references without grade inflation.
 
 The system does **not** establish global equivalence, completeness, correctness, security, maintainability, or production readiness.
@@ -106,7 +126,7 @@ The preimplementation P07 review found that sealed U6 could not support its orig
 The locked correction in `research/deep-dive/11-p07-implementation-red-team.md` is:
 
 1. **P07A/U6b — implemented and sealed:** preserve every historical CLI/HTTP projection byte and the 27-member Choicepoint body; strictly translate roster-verified adapter wires under the exact projection binding into a closed portable algebra; make fresh Choicepoints use `ADAPTER_BOUND_PORTABLE_FIELDS_V1`; add real selectable/differing fields and selected-only custom expectations; keep legacy whole-projection records byte-identical and nonemittable.
-2. **P07B/U6c:** require the current portable ruling plus a byte-complete `PortableSource` that reconstructs the exact plan/binding/minimized stimulus and matches every verified confirmation execution-binding digest; independently retranslate reopened confirmation projections rather than trusting source-carried tuples; require a new physical HTTP plan → observation → confirmation → portable Choicepoint → selected-field ruling lineage under `NODE_LOOPBACK_CHILD_BIND_PIPE_READY_V1`, leaving inherited-listener P07A rulings structurally nonemittable; support only the antecedent-backed logical-Node-plus-repository-script launch; compile a recoverable six-file bundle; stale-check before publication; make post-residue materialization retryable; use raw `node:net` parity; publish/reopen a capability-only `ContractExecutionTarget` for one explicit pinned/verified tree, fresh attempt, and admitted runtime before spawn; publish a matching `FinalizedContractRun` only after the exact lifecycle closes with a constructor-derived disposition, exact projected tuple when present, and scoped standalone evidence; and publish `ContractExecution` as immutable nonhead derived classification bound to both exact objects, with no independently supplied tuple or control reason.
+2. **P07B/U6c:** require the current portable ruling plus a byte-complete `PortableSource` that reconstructs the exact plan/binding/minimized stimulus and matches every verified confirmation execution-binding digest; independently retranslate reopened confirmation projections rather than trusting source-carried tuples; require a new physical HTTP plan → observation → confirmation → portable Choicepoint → selected-field ruling lineage under `NODE_LOOPBACK_CHILD_BIND_PIPE_READY_V1`, leaving inherited-listener P07A rulings structurally nonemittable; support only the antecedent-backed logical-Node-plus-repository-script launch; compile a recoverable six-file bundle; stale-check before publication; make post-residue materialization retryable; use raw `node:net` parity; let only C3 publish/reopen a capability-only `ContractExecutionTarget` for one explicit pinned/verified tree, fresh attempt, measured boot session, and admitted runtime; let only the higher C4 runner acquire the private boot-session interlock, record target-keyed intent, and consume the winner-only process-local permit while low-level mechanics sees no semantic authority; keep missing SpawnObservation ineligible and the interlock held; publish a matching `FinalizedContractRun` only after a bounded owner-produced witness closes separate primary-plus-cleanup process control and `COMPLETE | PARTIAL | VIOLATED` standalone axes; and publish `ContractExecution` as immutable classifier-profile-bound derived classification with no independently supplied tuple or process/scope reason and no process rerun on classification retry.
 
 This is a prerequisite repair, not a scope reduction. P07A selected-field authority is explicitly not yet export-ready source authority.
 
@@ -474,9 +494,11 @@ S6-13 records why this snapshot does not eliminate the matching local-ledger
 dependency. The S6-13 report is local at
 `.countershape/evidence/p07b-b-final-c5ce6e20fa23.html`, SHA-256
 `96dd70a1c02627b1b702eb70f7177cd60f0097896a88c0e3e960540d342bd251`.
-The external handoff supplies the exact OID/path/hash for the final sealed
-descendant so this repository document does not require an infinite hash-only
-commit chain.
+The later final-B handoff descendant is commit
+`464e47adbf7f4497dfafa89938a9539239ffd41b`, tree
+`c7e80d6e6819d4e2c54aaedeb4dc3ef730de58c6`. Its exact report is
+`.countershape/evidence/p07b-b-final-464e47adbf7f.html`, SHA-256
+`c7e7c66bdc2d8a608dcc2a1dfc3ba6ef90e2373071c3f9ac841b7d72fdd1a62c`.
 
 ### Pre-A2 planning-wire correction
 
@@ -510,14 +532,15 @@ separate reviewed boundary.
 
 ## Exact next actions if this task resumes elsewhere
 
-1. Run `git status --short --branch`; confirm branch `codex/countershape-autopilot` contains sealed P07B-B source `eb06bdcf18f8e14db1257e73733afdc05cac045e`, receipt-document boundary `b4ac17bd66c6260fd4b12b9277ab5259659c55e1`, and S6-13 boundary `c5ce6e20fa23b106f6e8fabcc210180f50d6c6b2`; no `.didrun` path may be staged/tracked, and current HEAD must have its own Git note plus strict exit `0` with its matching ledger live.
-2. Preserve the B source, receipt-document, S6-maintenance, and final-handoff ledgers separately under ignored `.didrun-history/`; neither the 69-event development ledger nor any earlier failed/stale event supports a final capability. Keep or restore an identical live copy when strict must be reproduced.
-3. Confirm the exact-final-B HTML was generated outside Git for current sealed HEAD and use the external handoff's exact path/hash. A nonzero strict or HTML-generation exit leaves B unfinished.
-4. Wrap every load-bearing verification command in `didrun run --` and claim each final success immediately before another event is recorded. Any nonzero command or mutant survivor is a real unfinished result: repair, rerun, preserve failed history, and never weaken or relabel the gate.
-5. At each shippable boundary, declare only successful final-tree claims, stage exact intended paths, commit, seal, confirm the note exists, and loop `NO_COLOR=1 didrun verify --strict` until exit `0`.
-6. Keep the root as sole writer and sole didrun/claim/Git/seal operator. Parallel agents may perform bounded read-only audits only; never allow parallel didrun writers or parallelize two didrun calls inside one tool orchestration.
-7. A2.2's generated README/CLI completed deterministic 60/80/120-column capture, functional result-flow review, and a sanitized different-internal-model critique. The deterministic capture has didrun evidence; manual visual judgment and the critic remain `UNRECEIPTED` qualitative observations. Any external-provider call remains human-gated. U8 still requires at least three full viewport/accessibility loops.
-8. Only after the receipt-document commit is sealed, note-present, strict-clean, and represented by the required exact-commit HTML may P07B-C begin. Preserve the adoption, production-hardening, security-review, cross-platform, and maintainership tail.
+1. Run `git status --short --branch`; confirm branch `codex/countershape-autopilot` and sealed final B commit `464e47adbf7f4497dfafa89938a9539239ffd41b`. No `.didrun` path may be staged/tracked.
+2. If reproducing B strict, restore its exact preserved ledger. Do not use the archived B ledger for C0 events. Start C0 with a fresh `.didrun` only after the B ledger is safely preserved.
+3. Read the complete P07B-C research package and controlling prompt. Preserve the final corrected spine: three persisted semantic objects; typed official publication; one private boot-session interlock with no result authority; C3-only official target issuer; C4-runner-only StartClaim/RunPermit consumption; separate SpawnObservation; process plus COMPLETE/PARTIAL/VIOLATED scope axes; classifier-profile-bound immutable execution; no semantic execution head.
+4. Finish only C0. Add/check the exact machine-readable authority declaration, metadata plan validator and mutation self-test, machine-readable unit path allowlist and staged-scope self-test, repaired serial-Go cumulative verifier, and provisional C0 status. Run every load-bearing C0 check through `didrun run --` and claim each final success immediately before another event.
+5. Stage exact C0a paths through the allowlist, review the diff/credential-prefix scope, commit `docs: lock P07B-C execution authority`, seal, require the Git note, and loop `NO_COLOR=1 didrun verify --strict` until exit `0`.
+6. Reconcile that exact source commit/tree, strict counts, ordered claim labels, and verbatim grades in `spec/verification/p07b-c-c0-receipt.json` plus the required delimited status/handoff receipt maps as a separate C0b receipt-document commit. The already-enrolled plan self-test must reopen the actual ancestor commit/tree and didrun Git note through admitted Git and pass its reconciled-state branch; then seal/note/strict C0b independently and keep its matching ledger live.
+7. Only after C0b is sealed/strict-clean begin C1 strict inert semantics. Do not edit the legacy C schemas/examples during C0; they are explicitly superseded planning fixtures until C1 evolves the C0 checker, replaces the fixtures, and receipts runtime/schema/example intersection.
+8. Keep the root as sole writer and didrun/Git/seal operator. Parallel agents remain bounded read-only critics. No external provider is needed; any future real call remains human-gated.
+9. Preserve the adoption, comprehension, production-hardening, independent-security-review, cross-platform, release, and maintainership tail.
 
 ## Orientation handshake for a fresh agent/chat
 
@@ -527,6 +550,6 @@ Before editing, reply in your working notes with:
 2. the three distinct truth authorities (Git, Choicepoint observations/ruling, didrun receipts);
 3. two things the system must never claim;
 4. the maintenance and A2.1 commits, P07B-A1 source prerequisite `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`, A2.2 checkpoint `32efaaf2f6d9fc58389d48d18219ce03995a2805`, accepted corrected source `6bf33350944dcdd56a4ceaa70f1d0836203ffb1f`, B0 scope lock `7f04b2a5129dcbee2fc991453aefdd6713281b86`, and the eventual sealed B implementation/receipt-document commits, with their exact receipt maps and nonclaims; and
-5. the current bounded shippable unit: P07B-B terminal publication/retryable materialization, with P07B-C execution and all product UI still excluded.
+5. the current bounded shippable unit: P07B-C C0 research/authority scope lock only; every C runtime capability and all product UI remain excluded and `UNRECEIPTED`.
 
 If any answer is missing, read the files above again. Do not infer a didrun grade from this handoff; run strict verification locally.
