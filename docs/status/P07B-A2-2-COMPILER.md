@@ -140,6 +140,8 @@ P07B-A2.2 does **not** establish:
 
 After the receipt-document commit containing this reconciliation is sealed,
 Git-note-present, and strict-clean, the sole next feature unit is P07B-B
-terminal publication plus retryable materialization. P07B-C target/run/
+terminal publication plus retryable materialization under the controlling
+preimplementation contract in
+`docs/prompts/P07B-B-TERMINAL-PUBLICATION.md`. P07B-C target/run/
 execution and every product CLI, server, dashboard, report, or studio surface
 remain later independently gated units.
