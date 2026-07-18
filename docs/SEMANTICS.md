@@ -1,7 +1,7 @@
 # Countershape semantic authority contract
 
 - **Contract version:** `semantics-v1`
-- **Status:** controlling model; runtime authority is receipted through P07A, P07B-A1 source/child-bind Observation, P07B-A2.1 current-ruling compilation preparation, and accepted P07B-A2.2 pure compiler output; P07B-B terminal publication/retryable native materialization is implemented but unreceipted until its independent gate, while execution remains future
+- **Status:** controlling model; runtime authority is receipted through P07A, P07B-A1 source/child-bind Observation, P07B-A2.1 current-ruling compilation preparation, accepted P07B-A2.2 pure compiler output, and sealed P07B-B terminal publication/retryable native materialization source; execution remains future
 - **Purpose:** separate structural identity, measured facts, comparison assessment, observed behavior, and storage/wire projection
 
 Countershape does not treat a digest-shaped string, a status enum, or a JSON object as evidence merely because it has the right fields. Each stronger state is available only through the operation that can establish it. Some schemas describe exact canonical artifact bodies; others describe external storage or wire envelopes. Production constructors must rebuild the corresponding opaque authority from stricter inputs.
@@ -137,7 +137,7 @@ A DTO Boolean such as a derived `compilable` display field, a string status such
 
 The store checks the complete expected `RULING` token under the exclusive transition before creating an object or temporary file. It durably publishes and reopens the bundle before advancing the head. A stale loser publishes nothing. A crash after immutable object publication but before head publication may leave an unreachable object; a head must never refer to a missing one. Final output materialization happens only after residue publication and is retryable from the reopened bundle. A post-residue materialization failure reports that durable publication already occurred.
 
-The P07B-B publication/materialization paragraphs describe the current working-tree candidate and remain `UNRECEIPTED` until its independent source and receipt-document boundaries are sealed and strict-clean. The P07B-C target, finalized-run, and execution paragraphs below are future design authority only.
+The P07B-B publication/materialization paragraphs describe sealed source commit `eb06bdcf18f8e14db1257e73733afdc05cac045e`; only the exact commands mapped in its status document inherit their verbatim grades. The current receipt reconciliation must itself be sealed and strict-clean. The P07B-C target, finalized-run, and execution paragraphs below are future design authority only.
 
 `ContractExecutionTarget` is a separate immutable nonhead pre-spawn authority. It binds one reopened bundle and exact source profile, one explicit Git-pinned inspected and verified private materialization, one fresh durably allocated conformance attempt, and one measured/revalidated Node executable and owned runtime probe. It is constructed only from retained live capabilities; a parsed body, copied OIDs, or copied digests are inert. It does not reuse `WorldInstance`, whose authority remains closed over the historical 2–4-candidate comparison plan. Dirty working-tree bytes are never represented as the pinned target or executed by this edge.
 

@@ -33,6 +33,8 @@ The proposed A2.2 source-rewrite driver never became a checked-in executable, co
 
 The P07B-B defensive self-test likewise uses one clean canonical execution plus cloned metadata/topology negatives. It does not generate or rewrite production source copies into a recipe corpus and makes no mutation-completeness claim.
 
+P07B-B source commit `eb06bdcf18f8e14db1257e73733afdc05cac045e`, tree `d95c907754f3347bae885a64c98b30ad1ea00256`, is sealed and strict-clean with `16/16` claims recorded-exact. That source note receipts only its named commands. The current documentation reconciliation and its exact-final-boundary HTML remain independently gated before P07B-C.
+
 ## Hermetic child environment
 
 The runner accepts no arguments, root override, skip flag, or historical-run mode. It creates a private mode-`0700` run root below ignored `.countershape/verify-current/`, then gives children fresh `HOME`, `TMPDIR`, `GOTMPDIR`, `GOCACHE`, `GOPATH`, and `GOMODCACHE` directories. It sets `GOENV=off`, `GOWORK=off`, `GOTOOLCHAIN=local`, `GOPROXY=off`, `GOSUMDB=off`, `GOVCS=*:off`, `CGO_ENABLED=1`, `GOMAXPROCS=2`, fixed locale/timezone/color values, and a sparse `PATH`. Ambient `GOFLAGS`, Node preload paths, proxy variables, and credentials are not copied.

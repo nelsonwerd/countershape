@@ -12,11 +12,11 @@
 
 ## Current state
 
-- **Pipeline phase:** U0–U6, P07A/U6b, P07B-A1, P07B-A2.1, cumulative-verification maintenance, and the accepted corrected P07B-A2.2 compiler are sealed and strict-clean. P07B-B terminal publication/retryable materialization is implemented on the working tree; its final fresh-ledger qualification and implementation commit/seal/strict loop are pending, followed by a separate receipt-document commit/seal/strict loop and exact-final-boundary HTML report.
-- **Git:** repository is on `codex/countershape-autopilot` at sealed B0 scope-lock commit `7f04b2a5129dcbee2fc991453aefdd6713281b86`. The uncommitted P07B-B candidate is intentionally provisional. Accepted A2.2 source is `6bf33350944dcdd56a4ceaa70f1d0836203ffb1f`, followed by receipt-document boundary `8f7663e2d29b63b1bb3ddca0a18bd5cfcf0fe4b1` at tree `e30957e807c9e8145a286cbb97f7cec309f7897c`; P07B-A1 remains sealed at `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`.
-- **didrun:** installed globally and unchanged during this unit. The current development ledger contains honest failed/stale events and successful events from superseded working trees; none supports a final claim. Before qualification, preserve it whole under ignored `.didrun-history/`, then use one fresh serialized ledger with the root as the only didrun/claim/Git/seal operator. Plain-seal entropy behavior and any override must be disclosed exactly; see `docs/status/DIDRUN_BUGS.md`.
+- **Pipeline phase:** U0–U6, P07A/U6b, P07B-A1, P07B-A2.1, cumulative-verification maintenance, accepted corrected P07B-A2.2, and the P07B-B implementation source are sealed and strict-clean. The current working tree reconciles P07B-B's exact source grades and must receive its own independent Git note and strict exit `0`; then generate the required exact-final-B-boundary HTML outside Git before P07B-C begins.
+- **Git:** repository is on `codex/countershape-autopilot`. P07B-B source commit `eb06bdcf18f8e14db1257e73733afdc05cac045e`, tree `d95c907754f3347bae885a64c98b30ad1ea00256`, is sealed, Git-note-present, and strict-clean with `16/16` claims. The current uncommitted change is receipt reconciliation only. Accepted A2.2 source is `6bf33350944dcdd56a4ceaa70f1d0836203ffb1f`, followed by receipt-document boundary `8f7663e2d29b63b1bb3ddca0a18bd5cfcf0fe4b1` at tree `e30957e807c9e8145a286cbb97f7cec309f7897c`; P07B-A1 remains sealed at `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`.
+- **didrun:** installed globally and unchanged during this unit. The mixed 69-event B development ledger is preserved whole under ignored `.didrun-history/2026-07-17-p07b-b-development/.didrun/` and supports no final claim. The serialized 16-event source ledger is preserved separately under `.didrun-history/2026-07-17-p07b-b-source/.didrun/`; its note records every grade `TREE-EXACT` plus `secrets_override: true` after the plain seal stopped on 39 aggregate entropy findings. This is a redacted-export disclosure, not a secret-absence result. Use a fresh ledger for the receipt-document boundary; `docs/status/DIDRUN_BUGS.md` S6-12 records the live B-session behavior and remaining tool tail.
 - **Current baseline:** from a fresh repository-root shell, run `/opt/homebrew/bin/node tools/verify-current.mjs`. The evolved 22-step roster builds, vets, runs the complete suite, self-tests its orchestration, checks/exercises generated artifacts, fresh-process recovery, deterministic human capture, every current architecture checker/self-test through P07B-B, labels every historical-only gate without running it, and fails on Finder artifacts. Read `docs/VERIFICATION.md`; a direct pass is not a didrun grade.
-- **Build:** A2.2's accepted pure compiler remains byte-stable. P07B-B adds opaque node-issued terminal publication, full-token CAS-before-object creation, durable exact `RESIDUE` reopen with complete predecessor reconstruction, and an optional Darwin/arm64/cgo materializer that freshly reopens store-bound residue, performs descriptor-relative no-follow exact six-file publication, converges exact retries, and refuses mismatched existing output. The candidate still implements no pinned execution target, admitted runtime, finalized run/classification, product CLI, server, dashboard, or report.
+- **Build:** A2.2's accepted pure compiler remains byte-stable. Sealed P07B-B adds opaque node-issued terminal publication, full-token CAS-before-object creation, durable exact `RESIDUE` reopen with complete predecessor reconstruction, and an optional Darwin/arm64/cgo materializer that freshly reopens store-bound residue, performs descriptor-relative no-follow exact six-file publication, converges exact retries, and refuses mismatched existing output. It still implements no pinned execution target, admitted runtime, finalized run/classification, product CLI, server, dashboard, or report.
 - **External APIs:** none used in the product. The A2.2 UX pass used a different internal model over sanitized captures; its qualitative verdict is `UNRECEIPTED` and has no semantic authority. Any real external model/API integration remains human-gated and must never be faked.
 
 ## Read first, in order
@@ -411,10 +411,10 @@ matrices plus the cumulative baseline. Both source notes record
 `secrets_override: true`; this is a redacted-export disclosure, not a secret-
 absence claim or publication authorization.
 
-## P07B-B current implementation boundary
+## P07B-B sealed implementation boundary
 
-The uncommitted candidate described in
-`docs/status/P07B-B-TERMINAL-PUBLICATION.md` adds the sole construction-safe
+Source commit `eb06bdcf18f8e14db1257e73733afdc05cac045e`, tree
+`d95c907754f3347bae885a64c98b30ad1ea00256`, adds the sole construction-safe
 terminal `RESIDUE` edge plus retryable exact Darwin/arm64/cgo six-file
 publication. It keeps parsed/copyable bundle data inert, reconstructs the full
 predecessor chain on restart, publishes no directory before terminal residue,
@@ -423,12 +423,37 @@ added direct store-transition/confirmation closure, stable ambiguity
 normalization, effective-UID/final-parent trust checks, nonblocking special-file
 opens, existing-observation versus physical-mismatch classification,
 rename-outcome reconciliation, and genuine different-residue destination
-collision coverage. These are working-tree facts, not grades. Every B receipt row remains
-`UNRECEIPTED` until the exact implementation commit is sealed, Git-note-
-present, and strict-clean. A separately sealed receipt-document boundary must
-then copy the source note's exact commit/tree and verbatim grades. Under the
-later post-spec user requirement, generate an HTML report outside Git for that
-exact final B commit as a closure artifact, not as a substitute receipt claim.
+collision coverage, plus explicit cancellation before and after the exclusive
+rename boundary. The source Git note exists, strict verification exits `0`, and
+all 16 named grades below are copied verbatim. This receipt reconciliation must
+still receive its own seal, note, and strict exit `0`. Under the later post-spec
+user requirement, generate an HTML report outside Git for that exact final B
+commit as a closure artifact, not as a substitute receipt claim.
+
+### P07B-B source receipts
+
+| Claimed capability | didrun claim label | Verbatim grade |
+| --- | --- | --- |
+| Go formatting and Node verifier syntax | `P07B B formatting and verifier syntax` | `TREE-EXACT` |
+| Publication/reopen/store/authority suites | `P07B B focused publication reopen and store suites` | `TREE-EXACT` |
+| Materializer durability/fault matrix | `P07B B materializer durability and fault matrix` | `TREE-EXACT` |
+| CLI publication/restart/materialization | `P07B B CLI publication restart and materialization matrix` | `TREE-EXACT` |
+| HTTP publication/concurrent materialization | `P07B B HTTP publication and concurrent materialization matrix` | `TREE-EXACT` |
+| Focused race suite | `P07B B focused race suite` | `TREE-EXACT` |
+| Store public API closure | `P07B B store public API closure` | `TREE-EXACT` |
+| Exact architecture boundary | `P07B B exact architecture boundary` | `TREE-EXACT` |
+| Defensive architecture self-test | `P07B B architecture defensive self-test` | `TREE-EXACT` |
+| Complete repository pass one | `P07B B complete Go repository suite pass one` | `TREE-EXACT` |
+| Complete repository pass two | `P07B B complete Go repository suite pass two` | `TREE-EXACT` |
+| Complete Go vet | `P07B B complete Go vet` | `TREE-EXACT` |
+| Cumulative verification baseline | `P07B B cumulative verification baseline` | `TREE-EXACT` |
+| Exact staged inventory/diff | `P07B B exact staged inventory and diff check` | `TREE-EXACT` |
+| Scoped staged credential-pattern scan | `P07B B scoped staged structured credential-pattern scan` | `TREE-EXACT` |
+| Serialized didrun chain | `P07B B didrun chain intact` | `TREE-EXACT` |
+
+The source-bound HTML is local at
+`.countershape/evidence/p07b-b-source-eb06bdcf18f8.html`, SHA-256
+`df743fc83943eb3b4e903698860a5658ade4b29ccffe01aa2eb453a7d387ddfb`.
 
 ### Pre-A2 planning-wire correction
 
@@ -453,7 +478,7 @@ separate reviewed boundary.
 ### U6 operational facts that P07A/P07B must preserve
 
 - **Store/layout:** closed `countershape/v1` canonical payloads live under `objects/sha256/<prefix>/<digest>`; mutable heads live under `studies/<derived-study-id>/head.json`; private capture material has a separate private directory. This is a local Darwin reference layout, not a stable public migration format.
-- **Head spine:** `SOURCE_PLAN -> BASELINE -> DIVERGENCE -> REDUCTION -> CONFIRMATION -> CHOICEPOINT_READY -> RULING`. U6a and P07A expose no `RESIDUE` transition; P07B-B is the sole construction-safe terminal ContractBundle `RESIDUE` edge on this tree, subject to its independent receipt gate. No unit adds branching lineage, archived history, partial resume, or cancelled resume. ContractExecutionTarget, FinalizedContractRun, and ContractExecution remain separate immutable nonhead objects.
+- **Head spine:** `SOURCE_PLAN -> BASELINE -> DIVERGENCE -> REDUCTION -> CONFIRMATION -> CHOICEPOINT_READY -> RULING -> RESIDUE`. U6a and P07A stop at `RULING`; sealed P07B-B owns the sole construction-safe terminal ContractBundle `RESIDUE` edge. No unit adds branching lineage, archived history, partial resume, or cancelled resume. ContractExecutionTarget, FinalizedContractRun, and ContractExecution remain separate immutable nonhead objects.
 - **Freshness:** confirmation creates a fresh 32-byte challenge, derives an exact ordinal nonce, requires finalized `CONFIRMATION` process-edge facts, and enforces current-run plus discovery/reduction evidence disjointness. This is relative physical-fixture evidence, not hostile-process attestation or timestamp truth.
 - **Blind kernel:** the closed DTO omits system-supplied candidate/ref/producer identity, support counts, total candidate count, source order, and reveal data; fingerprint-only aliases/order ignore support. Caller-authored scenario or behavior content may still reveal identity, and U6 says nothing about DOM/accessibility/CSS behavior.
 - **Attribution:** a DecisionRecord says `LOCAL_CALLER_ASSERTED_OPERATOR` and `AUTHENTICITY_NOT_ESTABLISHED_IN_U6`. Review-surface markers prove recorded presentation only, not comprehension or debiasing.
@@ -462,14 +487,14 @@ separate reviewed boundary.
 
 ## Exact next actions if this task resumes elsewhere
 
-1. Run `git status --short --branch`; confirm branch `codex/countershape-autopilot` still descends from sealed B0 commit `7f04b2a5129dcbee2fc991453aefdd6713281b86`, no `.didrun` path is staged/tracked, and the current P07B-B candidate matches `docs/status/P07B-B-TERMINAL-PUBLICATION.md`.
-2. Preserve the mixed development ledger whole under ignored `.didrun-history/`; it supports no final capability. Start one fresh serialized ledger only after every B source, test, checker, and implementation-status doc is stable.
-3. Finish the complete B matrix, claim each successful final event immediately, stage only the exact intended roster, commit, seal, independently confirm the Git note, and loop `NO_COLOR=1 didrun verify --strict` until exit `0`. Nonzero leaves B unfinished.
+1. Run `git status --short --branch`; confirm branch `codex/countershape-autopilot` still contains sealed P07B-B source `eb06bdcf18f8e14db1257e73733afdc05cac045e`, no `.didrun` path is staged/tracked, and the current receipt-document boundary has its own Git note and strict exit `0`.
+2. Preserve the B source and receipt-document ledgers separately under ignored `.didrun-history/`; neither the 69-event development ledger nor any earlier failed/stale event supports a final capability.
+3. Confirm the exact-final-B HTML was generated outside Git for the sealed receipt-document commit and record its path/hash in the external handoff. A nonzero strict or HTML-generation exit leaves B unfinished.
 4. Wrap every load-bearing verification command in `didrun run --` and claim each final success immediately before another event is recorded. Any nonzero command or mutant survivor is a real unfinished result: repair, rerun, preserve failed history, and never weaken or relabel the gate.
 5. At each shippable boundary, declare only successful final-tree claims, stage exact intended paths, commit, seal, confirm the note exists, and loop `NO_COLOR=1 didrun verify --strict` until exit `0`.
 6. Keep the root as sole writer and sole didrun/claim/Git/seal operator. Parallel agents may perform bounded read-only audits only; never allow parallel didrun writers or parallelize two didrun calls inside one tool orchestration.
 7. A2.2's generated README/CLI completed deterministic 60/80/120-column capture, functional result-flow review, and a sanitized different-internal-model critique. The deterministic capture has didrun evidence; manual visual judgment and the critic remain `UNRECEIPTED` qualitative observations. Any external-provider call remains human-gated. U8 still requires at least three full viewport/accessibility loops.
-8. After the source commit is strict-clean, create a separate receipt reconciliation that copies its exact commit/tree and verbatim grades, seal that docs boundary independently, and generate the required strict HTML report for the exact final B commit outside Git. Only then may P07B-C begin. Preserve the adoption, production-hardening, security-review, cross-platform, and maintainership tail.
+8. Only after the receipt-document commit is sealed, note-present, strict-clean, and represented by the required exact-commit HTML may P07B-C begin. Preserve the adoption, production-hardening, security-review, cross-platform, and maintainership tail.
 
 ## Orientation handshake for a fresh agent/chat
 

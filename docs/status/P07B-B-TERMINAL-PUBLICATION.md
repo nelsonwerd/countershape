@@ -1,10 +1,12 @@
 # P07B-B terminal publication and retryable-materialization qualification
 
-- **State:** implementation and red-team correction are complete on the working tree; final fresh-ledger qualification plus the implementation commit/seal/strict loop are pending, followed by a separately receipted documentation-reconciliation commit/seal/strict loop
+- **State:** implementation and red-team correction are complete; source commit `eb06bdcf18f8e14db1257e73733afdc05cac045e` is sealed, Git-note-present, and strict-clean, while this receipt reconciliation becomes durable only when the commit containing it receives its own Git note and strict exit `0`
 - **Prerequisites:** sealed P07B-A2.2 accepted source `6bf33350944dcdd56a4ceaa70f1d0836203ffb1f`, sealed receipt-document boundary `8f7663e2d29b63b1bb3ddca0a18bd5cfcf0fe4b1` at tree `e30957e807c9e8145a286cbb97f7cec309f7897c`, and sealed B0 controlling-spec commit `7f04b2a5129dcbee2fc991453aefdd6713281b86`
 - **Receipt ceiling:** one exact terminal `ContractBundle` residue plus optional retryable exact six-file publication on the named Darwin/arm64/cgo tuple; no execution target, contract run, conformance classification, product surface, containment, or production claim
 - **Controlling contract:** `docs/prompts/P07B-B-TERMINAL-PUBLICATION.md`
-- **Evidence rule:** no row in this document is a positive receipt until the implementation commit is sealed, its didrun Git note exists, and `NO_COLOR=1 didrun verify --strict` exits `0`
+- **Source boundary:** commit `eb06bdcf18f8e14db1257e73733afdc05cac045e`, tree `d95c907754f3347bae885a64c98b30ad1ea00256`; Git note present; strict exit `0`; `16/16` claims recorded-exact
+- **Seal disclosure:** the plain seal stopped on 39 aggregate high-entropy findings after the exact staged inventory and scoped named credential-pattern scan passed; the source note records `secrets_override: true` and strict reports `sealed with --allow-secrets (redacted export)`, which is neither a secret-absence result nor publication authorization
+- **Evidence rule:** grades below are copied verbatim from the source Git note; this reconciliation is durable only after its own commit is independently sealed, Git-note-present, and strict-clean
 
 ## Implemented semantic boundary
 
@@ -53,7 +55,7 @@ boundary are reported as ambiguous unless exact reconciliation succeeds.
 
 ## Exercised implementation matrix
 
-The working-tree suites currently include:
+The sealed-source suites include:
 
 - real CLI `ALLOW_OBSERVED` and child-bind HTTP `CUSTOM_EXPECTATION` publication;
 - in-process and fresh-process/store publication convergence;
@@ -65,10 +67,12 @@ The working-tree suites currently include:
 - two independent CLI destinations, exact-existing inode-preserving retry, immutable tamper refusal, and unchanged terminal head;
 - sequential and two-goroutine HTTP same-bundle convergence, plus a genuine two-residue different-bundle destination race with exactly one creator and one immutable mismatch refusal, with no surviving private stage;
 - descriptor-relative exact publication, retained-parent replacement/trust drift, intermediate-symlink replacement, case aliases, same-inode mutation between independent reads, special bits, full file-kind/content/mode/link/roster mismatch, stage allocation/cleanup uncertainty, roster-close failure, short/zero writes, existing-output observation failure, destination appearance at rename, post-rename sync/close/reopen faults, rename-outcome ambiguity, and cleanup faults; and
+- cancellation after the successful pre-rename stage sync with exact cleanup, plus cancellation immediately after successful exclusive rename with uninterrupted durability reconciliation; and
 - lexical and deterministic physical root, descendant, and parent-alias object-store/output overlap refusal.
 
-These are implementation inventory statements, not grades. The final receipt
-document must copy the sealed note's verbatim grades after qualification.
+These are implementation inventory statements. Only the specifically named
+commands in the receipt map inherit their verbatim didrun grades; the inventory
+does not create broader security, portability, or production claims.
 
 ## Architecture and cumulative-evidence design
 
@@ -92,29 +96,30 @@ silently executed or claimed on the evolved tree.
 
 ## Qualification receipt map
 
-Until the implementation commit is sealed and strict-clean, every capability
-below is `UNRECEIPTED`. A follow-up receipt reconciliation must replace only
-the grade column with the sealed Git note's verbatim result and record the
-exact commit/tree and final event count.
+These grades are copied verbatim from the sealed Git note on source commit
+`eb06bdcf18f8e14db1257e73733afdc05cac045e`, tree
+`d95c907754f3347bae885a64c98b30ad1ea00256`. The serialized ledger contains
+exactly 16 complete events and 16 claims; its independent closure reports
+`16 events chain intact`.
 
-| Claimed capability | Intended didrun claim label | Current grade |
+| Claimed capability | didrun claim label | Verbatim grade |
 | --- | --- | --- |
-| Go formatting and Node verifier syntax | `P07B B formatting and verifier syntax` | `UNRECEIPTED` |
-| Focused publication, reopen, store, and authority suites | `P07B B focused publication reopen and store suites` | `UNRECEIPTED` |
-| Materializer durability and fault matrix | `P07B B materializer durability and fault matrix` | `UNRECEIPTED` |
-| Real CLI terminal publication, restart, retry, and refusal matrix | `P07B B CLI publication restart and materialization matrix` | `UNRECEIPTED` |
-| Real HTTP publication and concurrent materialization convergence | `P07B B HTTP publication and concurrent materialization matrix` | `UNRECEIPTED` |
-| Focused race-enabled terminal publication/materialization packages | `P07B B focused race suite` | `UNRECEIPTED` |
-| Store public API and typed transition closure | `P07B B store public API closure` | `UNRECEIPTED` |
-| Exact P07B-B architecture boundary | `P07B B exact architecture boundary` | `UNRECEIPTED` |
-| Defensive metadata-fact architecture self-test | `P07B B architecture defensive self-test` | `UNRECEIPTED` |
-| First complete repository suite under stock macOS temporary-root policy | `P07B B complete Go repository suite pass one` | `UNRECEIPTED` |
-| Second consecutive complete repository suite | `P07B B complete Go repository suite pass two` | `UNRECEIPTED` |
-| Complete Go vet | `P07B B complete Go vet` | `UNRECEIPTED` |
-| One-command cumulative current baseline | `P07B B cumulative verification baseline` | `UNRECEIPTED` |
-| Exact staged inventory and diff integrity | `P07B B exact staged inventory and diff check` | `UNRECEIPTED` |
-| Scoped staged structured credential-pattern scan | `P07B B scoped staged structured credential-pattern scan` | `UNRECEIPTED` |
-| Serialized didrun ledger chain integrity | `P07B B didrun chain intact` | `UNRECEIPTED` |
+| Go formatting and Node verifier syntax | `P07B B formatting and verifier syntax` | `TREE-EXACT` |
+| Focused publication, reopen, store, and authority suites | `P07B B focused publication reopen and store suites` | `TREE-EXACT` |
+| Materializer durability and fault matrix | `P07B B materializer durability and fault matrix` | `TREE-EXACT` |
+| Real CLI terminal publication, restart, retry, and refusal matrix | `P07B B CLI publication restart and materialization matrix` | `TREE-EXACT` |
+| Real HTTP publication and concurrent materialization convergence | `P07B B HTTP publication and concurrent materialization matrix` | `TREE-EXACT` |
+| Focused race-enabled terminal publication/materialization packages | `P07B B focused race suite` | `TREE-EXACT` |
+| Store public API and typed transition closure | `P07B B store public API closure` | `TREE-EXACT` |
+| Exact P07B-B architecture boundary | `P07B B exact architecture boundary` | `TREE-EXACT` |
+| Defensive metadata-fact architecture self-test | `P07B B architecture defensive self-test` | `TREE-EXACT` |
+| First complete repository suite under stock macOS temporary-root policy | `P07B B complete Go repository suite pass one` | `TREE-EXACT` |
+| Second consecutive complete repository suite | `P07B B complete Go repository suite pass two` | `TREE-EXACT` |
+| Complete Go vet | `P07B B complete Go vet` | `TREE-EXACT` |
+| One-command cumulative current baseline | `P07B B cumulative verification baseline` | `TREE-EXACT` |
+| Exact staged inventory and diff integrity | `P07B B exact staged inventory and diff check` | `TREE-EXACT` |
+| Scoped staged structured credential-pattern scan | `P07B B scoped staged structured credential-pattern scan` | `TREE-EXACT` |
+| Serialized didrun ledger chain integrity | `P07B B didrun chain intact` | `TREE-EXACT` |
 
 The later, post-spec user requirement for an exact-final-B-commit HTML report
 is part of this boundary, even though the earlier sealed controlling prompt
@@ -122,6 +127,9 @@ deferred HTML to final closure. Generate it outside Git after the receipt-
 document commit is sealed and strict-clean; it is a closure artifact, not a
 substitute receipt-table claim. Overall project closure must generate a new
 report for its own final commit; a B report cannot be reused for a later tree.
+The source-bound report is preserved locally at
+`.countershape/evidence/p07b-b-source-eb06bdcf18f8.html` with SHA-256
+`df743fc83943eb3b4e903698860a5658ade4b29ccffe01aa2eb453a7d387ddfb`.
 
 ## Permanent negative history
 
@@ -130,8 +138,10 @@ checker-development failures, and a materializer test that initially assumed a
 fault-injected handle remained open after the corrected cleanup path had
 already closed it. Those events support no capability and must never be
 relabelled. Successful development events also belong to superseded tree
-identities and support no final claim; the final matrix must be rerun from a
-fresh serialized ledger.
+identities and support no final claim. The complete 69-event development ledger
+is preserved at `.didrun-history/2026-07-17-p07b-b-development/.didrun/`; the
+separate 16-event source ledger is preserved at
+`.didrun-history/2026-07-17-p07b-b-source/.didrun/`.
 
 Platform generation refusals encountered while drafting an abandoned dense
 source-rewrite driver are session diagnostics, not didrun evidence, a caught

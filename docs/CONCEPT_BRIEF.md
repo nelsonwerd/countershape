@@ -2,7 +2,7 @@
 
 - **Working name:** Countershape (package, domain, trademark, and legal clearance not performed)
 - **Mode:** open-source-first experimental infrastructure
-- **State:** deep dive and adversarial red team complete; U1–U6, P07A, P07B-A1, P07B-A2.1, and the corrected pure recoverable P07B-A2.2 compiler are sealed and strict-clean; P07B-B terminal publication/retryable materialization is implemented and undergoing final qualification
+- **State:** deep dive and adversarial red team complete; U1–U6, P07A, P07B-A1, P07B-A2.1, the corrected pure recoverable P07B-A2.2 compiler, and P07B-B terminal publication/retryable materialization source are sealed and strict-clean; P07B-B receipt-document reconciliation is the current closure boundary
 - **Last updated:** 2026-07-17
 - **Founder persona:** Soren Vale
 - **Confidence:** 8/10 in the truth kernel; 6/10 in the bounded reference instrument; 3/10 in review compression; 3/10 in adoption
@@ -281,7 +281,7 @@ Standalone means an isolated target inventory can invoke the test with Countersh
 
 The vendored Node harness is a second semantic implementation. A single normative corpus must drive Go and Node through strict parsing, field selection, missing/empty distinctions, raw HTTP/CLI capture, projection, eligible/ineligible taxonomy, and selected-field mutations. Standalone is unclaimed until those bytes/results agree for the exercised profile. Artifact hashes establish byte integrity, not authorship.
 
-The P07B-B implementation revalidates the complete expected `RULING` token under the store transition before creating an object or temporary file. A stale loser publishes nothing. The bundle object becomes durable before the head advances to terminal `RESIDUE`; a crash between those operations may leave an unreachable immutable object, never a head that names a missing object. No executable directory exists before residue. Materialization reconstructs from the committed bundle through a private same-parent stage, descriptor-relative no-follow operations, repeated exact reopen/hash/roster checks, and Darwin exclusive no-follow rename. A post-residue export failure is explicitly retryable and does not pretend the durable transition was rolled back. This paragraph becomes receipted only at the exact sealed B commit; other platforms and hostile same-user replacement remain nonclaims.
+The P07B-B implementation revalidates the complete expected `RULING` token under the store transition before creating an object or temporary file. A stale loser publishes nothing. The bundle object becomes durable before the head advances to terminal `RESIDUE`; a crash between those operations may leave an unreachable immutable object, never a head that names a missing object. No executable directory exists before residue. Materialization reconstructs from the committed bundle through a private same-parent stage, descriptor-relative no-follow operations, repeated exact reopen/hash/roster checks, and Darwin exclusive no-follow rename. A post-residue export failure is explicitly retryable and does not pretend the durable transition was rolled back. The named commands for this boundary are receipted at sealed source `eb06bdcf18f8e14db1257e73733afdc05cac045e`; other platforms and hostile same-user replacement remain nonclaims.
 
 Later checks begin by publishing and reopening an independent immutable `ContractExecutionTarget`. The target is constructed only from the exact reopened bundle/source profile, a live Git-issued single-target capability whose once-pinned object was inspected and verified into a private materialization, a fresh durably allocated `CONFORMANCE` attempt, and a measured/revalidated explicit Node runtime. It never reuses the historical 2–4-candidate `WorldInstance` authority; copied OIDs/digests, a parsed target, or dirty working-tree bytes cannot substitute. The initial CLI profile is only logical `node` plus one exact clean repository-relative JavaScript entrypoint; arbitrary repository executables require a new physically confirmed lineage.
 
@@ -315,7 +315,7 @@ Original/derivation, Captured-to-Projection operations, nonasserted fields, and 
 
 ## Reference architecture
 
-The Go core owns identity and behavior state. `contractsource` and `runnerprofile` are implemented A1 substrate, the node emitter/compiler is sealed A2.2 source, and terminal publication/materialization is the P07B-B qualification boundary. Execution, server, report, and web paths remain future P07B-C/U8/U9 targets until their own sealed receipts exist:
+The Go core owns identity and behavior state. `contractsource` and `runnerprofile` are implemented A1 substrate, the node emitter/compiler is sealed A2.2 source, and terminal publication/materialization is sealed P07B-B source. Execution, server, report, and web paths remain future P07B-C/U8/U9 targets until their own sealed receipts exist:
 
 ```text
 cmd/countershape/
@@ -430,7 +430,7 @@ Each unit is separately verified, claimed, committed, sealed, and gated on `NO_C
 9. **U6c/P07B-A1 — source/process substrate (sealed):** byte-complete self-consistent source reconstruction, closed logical-Node runner profile, portable HTTP child-bind/readiness grammar, and physical Observation; no current-ruling join or compiler.
 10. **U6c/P07B-A2.1 — compilation authority (sealed):** current-revalidated ruling snapshot, exact source/Choicepoint/confirmation/proof joins, selected-tuple partition revalidation, and one sealed preparation with a private authority-narrowed input; no generated files or store writes.
 11. **U6c/P07B-A2.2 — recoverable compiler (sealed):** deterministic recoverable six-file bundle, strict parser, fixed Node-core runtime assets, Go/Node raw-wire corpus, physical generated-contract evidence, and bounded recovery/fuzz/architecture gates; no residue or product materializer.
-12. **U6c/P07B-B — terminal publication/materialization (in qualification):** opaque node-issued publication, stale-safe terminal residue, full predecessor restart, and retryable exact Darwin/arm64/cgo six-file publication; no execution target or classification.
+12. **U6c/P07B-B — terminal publication/materialization (sealed source):** opaque node-issued publication, stale-safe terminal residue, full predecessor restart, and retryable exact Darwin/arm64/cgo six-file publication; no execution target or classification.
 13. **U6c/P07B-C — standalone execution (next after B):** target-inventory absence checks, admitted runtime, immutable target and finalized run, and derived immutable nonhead current execution.
 14. **U7 — complete CLI and reference studies:** safe next actions, both end-to-end proofs, allow-many, custom none-conforms, reject/defer, three clean reproductions, named-machine timings.
 15. **U8 — secure decision bench:** authenticated loopback API, complete state renderer, 1440/375 flows, at least three full visual passes, Playwright/axe/manual checks, and a real different-model screenshot critic.
@@ -497,7 +497,7 @@ didrun references remain opaque verbatim receipt grades associated with their ex
 
 ### Strong engineering inferences still to test
 
-- The P07B-B implementation can preserve full-token publication and descriptor-relative retry semantics across the exercised fault and concurrency matrix; its final sealed qualification is still pending.
+- Sealed P07B-B source preserves full-token publication and descriptor-relative retry semantics across the exercised fault and concurrency matrix; the current closure task is the independently sealed receipt-document reconciliation and exact-boundary HTML.
 - A designed human-facing blind-first selected-field UX can make the now-implemented semantic session comprehensible without leaking candidate identity.
 
 ### Unvalidated technical/product/market bets
@@ -515,4 +515,4 @@ didrun references remain opaque verbatim receipt grades associated with their ex
 
 ## Handoff state
 
-**U0–U6, P07A, P07B-A1, P07B-A2.1, and the accepted corrected P07B-A2.2 compiler are sealed and strict-clean. P07B-B terminal publication/retryable materialization is implemented and undergoing final fresh-ledger qualification.** A1 source commit `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3` remains the source/process prerequisite; accepted A2.2 source is `6bf33350944dcdd56a4ceaa70f1d0836203ffb1f`, followed by receipt-document boundary `8f7663e2d29b63b1bb3ddca0a18bd5cfcf0fe4b1` at tree `e30957e807c9e8145a286cbb97f7cec309f7897c`. The exact provisional B scope, evidence plan, and nonclaims live in `docs/status/P07B-B-TERMINAL-PUBLICATION.md`. P07B-C target/run/execution remains the sole next feature boundary only after B is committed, sealed, Git-note-present, and strict-clean. `REFINE` remains a valid semantic noncompilable DecisionRecord but durable promotion refuses it without object publication or head mutation.
+**U0–U6, P07A, P07B-A1, P07B-A2.1, accepted corrected P07B-A2.2, and P07B-B implementation source are sealed and strict-clean.** A1 source commit `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3` remains the source/process prerequisite; accepted A2.2 source is `6bf33350944dcdd56a4ceaa70f1d0836203ffb1f`, followed by receipt-document boundary `8f7663e2d29b63b1bb3ddca0a18bd5cfcf0fe4b1` at tree `e30957e807c9e8145a286cbb97f7cec309f7897c`. P07B-B source is `eb06bdcf18f8e14db1257e73733afdc05cac045e`, tree `d95c907754f3347bae885a64c98b30ad1ea00256`, with `16/16` source claims; its exact grades and nonclaims live in `docs/status/P07B-B-TERMINAL-PUBLICATION.md`. P07B-C target/run/execution remains the sole next feature boundary only after the current B receipt-document commit is sealed, Git-note-present, strict-clean, and represented by its exact-boundary HTML. `REFINE` remains a valid semantic noncompilable DecisionRecord but durable promotion refuses it without object publication or head mutation.
