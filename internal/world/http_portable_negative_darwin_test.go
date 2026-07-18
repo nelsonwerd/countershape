@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	httpmodel "github.com/nelsonwerd/countershape/internal/adapters/http/model"
 	"github.com/nelsonwerd/countershape/internal/domain"
@@ -17,6 +18,11 @@ import (
 	"github.com/nelsonwerd/countershape/internal/runnerprofile"
 	"github.com/nelsonwerd/countershape/testkit/gitrepo"
 )
+
+const portableNegativeFDHolder = `
+import { spawn } from "node:child_process";
+spawn(process.execPath, ["-e", "setTimeout(() => {}, 10000)"], { stdio: ["ignore", "ignore", "ignore", 3] });
+`
 
 const portableNegativeEntrypoint = "fixture/case.mjs"
 
@@ -195,49 +201,47 @@ func (h portableHTTPNegativeHarness) execute(t *testing.T, nonce string) Result 
 }
 
 func TestHTTPPortableReadinessFailuresRemainFinalizedReceipts(t *testing.T) {
-	const spawnFDHolder = `
-import { spawn } from "node:child_process";
-spawn(process.execPath, ["-e", "setTimeout(() => {}, 25)"], { stdio: ["ignore", "ignore", "ignore", 3] });
-`
 	tests := []struct {
-		name       string
-		program    string
-		wantBytes  []byte
-		wantEOF    bool
-		diagnostic string
+		name        string
+		program     string
+		readinessMS int64
+		wantBytes   []byte
+		wantEOF     bool
+		diagnostic  string
 	}{
 		{
-			name: "exit-before-readiness", program: spawnFDHolder + `process.exit(0);`,
-			wantBytes: nil, wantEOF: true, diagnostic: "HTTP_PROCESS_EXITED_BEFORE_READINESS",
+			name: "exit-before-readiness", program: portableNegativeFDHolder + `process.exit(0);`,
+			readinessMS: 2_000, wantBytes: nil, wantEOF: false,
+			diagnostic: "HTTP_PROCESS_EXITED_BEFORE_READINESS",
 		},
 		{
 			name: "malformed-frame-eof",
 			program: `import { closeSync, writeSync } from "node:fs";
 writeSync(3, Buffer.from("COUNTERSHAPE_READY_V1 00080\n", "ascii"));
 closeSync(3);
-setTimeout(() => {}, 1000);`,
-			wantBytes: []byte("COUNTERSHAPE_READY_V1 00080\n"), wantEOF: true,
+setInterval(() => {}, 1000);`,
+			readinessMS: 2_000, wantBytes: []byte("COUNTERSHAPE_READY_V1 00080\n"), wantEOF: true,
 			diagnostic: "HTTP_READINESS_PROTOCOL_REJECTED",
 		},
 		{
 			name: "valid-frame-held-open",
 			program: `import { writeSync } from "node:fs";
 writeSync(3, Buffer.from("COUNTERSHAPE_READY_V1 43127\n", "ascii"));
-setTimeout(() => {}, 1000);`,
-			wantBytes: []byte("COUNTERSHAPE_READY_V1 43127\n"), wantEOF: false,
+setInterval(() => {}, 1000);`,
+			readinessMS: 2_000, wantBytes: []byte("COUNTERSHAPE_READY_V1 43127\n"), wantEOF: false,
 			diagnostic: "HTTP_READINESS_TIMEOUT",
 		},
 		{
 			name: "valid-frame-bytes-exit-before-eof-acceptance",
 			program: `import { writeSync } from "node:fs";
 writeSync(3, Buffer.from("COUNTERSHAPE_READY_V1 43127\n", "ascii"));
-` + spawnFDHolder + `process.exit(0);`,
-			wantBytes: []byte("COUNTERSHAPE_READY_V1 43127\n"), wantEOF: true,
+` + portableNegativeFDHolder + `process.exit(0);`,
+			readinessMS: 2_000, wantBytes: []byte("COUNTERSHAPE_READY_V1 43127\n"), wantEOF: false,
 			diagnostic: "HTTP_PROCESS_EXITED_BEFORE_READINESS",
 		},
 	}
 	for _, test := range tests {
-		harness := newPortableHTTPNegativeHarness(t, test.program, 80)
+		harness := newPortableHTTPNegativeHarness(t, test.program, test.readinessMS)
 		result := harness.execute(t, "portable-negative-"+test.name)
 		wantStates := []domain.AttemptState{
 			domain.AttemptAllocated, domain.AttemptMaterializing, domain.AttemptStarting,
@@ -252,6 +256,7 @@ writeSync(3, Buffer.from("COUNTERSHAPE_READY_V1 43127\n", "ascii"));
 		process := result.Process()
 		if primary, present := process.PrimaryControl(); !present || primary != domain.ControlReadinessError ||
 			process.DiagnosticCode() != test.diagnostic || !process.Started() || !process.ProcessGroupOwned() ||
+			process.PreTermGroupProbe() != preTermProbePresent || !process.TermSent() ||
 			!process.DirectChildWaited() || !process.DrainsComplete() || !process.FinalGroupProbeClean() ||
 			process.TeardownError() || process.OrphanRisk() {
 			t.Fatalf("process receipt did not retain a clean controlled readiness failure: primary=%q/%t diagnostic=%q receipt=%+v",
@@ -284,6 +289,65 @@ writeSync(3, Buffer.from("COUNTERSHAPE_READY_V1 43127\n", "ascii"));
 		if _, present := result.HTTPInvocationEvidence(); present {
 			t.Fatalf("%s: rejected readiness produced an invocation receipt", test.name)
 		}
+	}
+}
+
+func TestHTTPPortableEarlyExitRetainsCausallyLaterReadinessEOF(t *testing.T) {
+	contract, err := httpmodel.NewPortableHTTPReadinessContract()
+	if err != nil {
+		t.Fatal(err)
+	}
+	frame, err := httpmodel.NewHTTPReadyPortFrame(43127)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, test := range []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "empty", payload: nil},
+		{name: "complete-frame", payload: frame.CanonicalBytes()},
+	} {
+		t.Run(test.name, func(t *testing.T) {
+			reader, writer, err := os.Pipe()
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer reader.Close()
+			defer writer.Close()
+			if len(test.payload) > 0 {
+				if _, err := writer.Write(test.payload); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			waitC := make(chan waitResult)
+			senderDone := make(chan struct{})
+			abortSender := make(chan struct{})
+			go func() {
+				defer close(senderDone)
+				select {
+				case waitC <- waitResult{}:
+					_ = writer.Close()
+				case <-abortSender:
+				}
+			}()
+
+			overflow := make(chan struct{}, 2)
+			observed, waited, control, diagnostic := awaitExactHTTPReadiness(
+				context.Background(), reader, time.Second,
+				newCappedCapture(1024, overflow), newCappedCapture(1024, overflow),
+				overflow, waitC, contract,
+			)
+			close(abortSender)
+			<-senderDone
+			if waited == nil || control != domain.ControlReadinessError ||
+				diagnostic != "HTTP_PROCESS_EXITED_BEFORE_READINESS" || observed.err != nil ||
+				!observed.eof || !slices.Equal(observed.bytes, test.payload) {
+				t.Fatalf("early exit lost causally later readiness closure: observed=%+v waited=%+v control=%q diagnostic=%q",
+					observed, waited, control, diagnostic)
+			}
+		})
 	}
 }
 

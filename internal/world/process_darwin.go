@@ -70,6 +70,20 @@ type darwinGroupController interface {
 	probe(processGroupID int) (bool, error)
 }
 
+type preTermProbeClock interface {
+	now() time.Time
+	wait(time.Duration)
+}
+
+type systemPreTermProbeClock struct{}
+
+func (systemPreTermProbeClock) now() time.Time { return time.Now() }
+
+func (systemPreTermProbeClock) wait(duration time.Duration) {
+	timer := time.NewTimer(duration)
+	<-timer.C
+}
+
 type systemDarwinGroups struct{}
 
 func (systemDarwinGroups) signal(processGroupID int, signal syscall.Signal) error {
@@ -480,7 +494,13 @@ func teardownOwnedProcessGroup(
 	// The probe must be the immediately preceding kernel observation. If the
 	// original group is already absent, signaling its numeric PGID would only
 	// increase the chance of hitting an unrelated reused group.
-	present, probeErr := controller.probe(result.processGroupID)
+	present, probeErr := resolvePreTermGroupProbe(
+		controller,
+		result.processGroupID,
+		teardownDeadline,
+		teardownBudget,
+		systemPreTermProbeClock{},
+	)
 	if probeErr != nil {
 		result.preTermProbe = preTermProbeUncertain
 		result.teardownError = true
@@ -525,6 +545,51 @@ func teardownOwnedProcessGroup(
 		result.teardownError = true
 		result.orphanRisk = true
 		result.diagnosticCode = firstDiagnostic(result.diagnosticCode, "TERM_SIGNAL_FAILED")
+	}
+}
+
+func resolvePreTermGroupProbe(
+	controller darwinGroupController,
+	processGroupID int,
+	teardownDeadline time.Time,
+	teardownBudget time.Duration,
+	clock preTermProbeClock,
+) (bool, error) {
+	present, err := controller.probe(processGroupID)
+	if err == nil || !present || !errors.Is(err, syscall.EPERM) {
+		return present, err
+	}
+
+	// Darwin can transiently return EPERM for an owned group containing only
+	// zombies. It proves numeric presence but is not authority to signal. Spend
+	// at most one quarter of the already-declared teardown budget resolving it,
+	// while retaining the majority for TERM/KILL, drains, and final absence.
+	retryDeadline := clock.now().Add(teardownBudget / 4)
+	if retryDeadline.After(teardownDeadline) {
+		retryDeadline = teardownDeadline
+	}
+	for {
+		remaining := retryDeadline.Sub(clock.now())
+		if remaining <= 0 {
+			return present, err
+		}
+		pause := time.Millisecond
+		if pause > remaining {
+			pause = remaining
+		}
+		clock.wait(pause)
+		if !clock.now().Before(retryDeadline) {
+			return present, err
+		}
+
+		nextPresent, nextErr := controller.probe(processGroupID)
+		if !clock.now().Before(retryDeadline) {
+			return present, err
+		}
+		present, err = nextPresent, nextErr
+		if err == nil || !present || !errors.Is(err, syscall.EPERM) {
+			return present, err
+		}
 	}
 }
 

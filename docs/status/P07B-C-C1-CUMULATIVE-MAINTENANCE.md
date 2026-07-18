@@ -1,6 +1,6 @@
 # P07B-C C1 cumulative-verification maintenance
 
-Status: source repair and receipt reconciliation sealed and strict-clean; P07B-C C1 remains `UNRECEIPTED`
+Status: source repair and receipt reconciliation sealed and strict-clean; C1 source is separately sealed and strict-clean, and tracked C1 grades require a separately sealed C1B receipt boundary
 
 ## Sealed source boundary
 
@@ -57,11 +57,12 @@ on seven aggregate high-entropy path/identifier findings after the staged
 structured credential scan passed; the logged redacted-export override remains
 visible. This is not a secret-absence finding.
 
-## Scope
+## Sealed output-cap scope
 
-This maintenance unit repairs one timing-sensitive assertion in the existing
-Darwin process-world test fixture. It does not change capture limits, output
-control precedence, process teardown, receipts, or P07B-C execution semantics.
+The sealed output-cap unit above repairs one timing-sensitive assertion in the
+existing Darwin process-world test fixture. It does not change capture limits,
+output control precedence, process teardown, receipts, or P07B-C execution
+semantics.
 
 ## Ruling
 
@@ -87,6 +88,27 @@ session. They do not establish scheduler independence on every platform,
 production readiness, secret absence, security review, or future-regression
 freedom.
 
-P07B-C C1 semantic capabilities are a separate unit and remain `UNRECEIPTED`
-until the exact C1 commit is sealed, its Git note exists, and strict verification
-exits `0`.
+P07B-C C1 semantic source commit `2fceacecbacb89fd7650f1570b2af33e6ea25ed3`
+is separately sealed, note-present, and strict-clean with `19/19` claims. Its
+tracked grades are authoritative only through an agreeing receipt declaration,
+source note, status, and handoff plus a separately sealed C1B boundary.
+
+## Separate C1B pre-enrollment lifecycle amendment
+
+The later C1B pre-enrollment maintenance boundary is separate from the sealed
+output-cap repair and does change one current Darwin teardown edge. An initial
+positive-presence `EPERM` observation is consistent with a transient zombie-only
+group state but does not authorize signaling. The owner retries only that exact
+state within one quarter of the declared teardown budget, clipped to the overall
+deadline. A later absence closes cleanly without a signal; later clean presence
+alone authorizes TERM; persistent EPERM and every other error remain fail-closed
+with teardown uncertainty and orphan risk.
+
+The final-ledger rehearsal that exposed this edge remains archived as negative
+history and supports no claim. The repair decomposes its earlier timer-sensitive
+fixture into a causally synchronized late-EOF proof and a live inherited-writer
+teardown check. It also adds fake-clock deadline controls so an observation at or
+after the retry deadline cannot become signal authority. This paragraph is a
+semantic disclosure, not a self-receipt: the exact maintenance commit, didrun
+note, and strict result must exist before C1B opens, and C1B cannot relabel this
+historical boundary.

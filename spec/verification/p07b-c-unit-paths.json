@@ -91,6 +91,38 @@
       ],
       "prefixes": []
     },
+    "C1M": {
+      "exact": [
+        "docs/ARCHITECTURE.md",
+        "docs/CONCEPT_BRIEF.md",
+        "docs/PROMPT_PACK.md",
+        "docs/SEMANTICS.md",
+        "docs/STATE_MACHINES.md",
+        "docs/THREAT_MODEL.md",
+        "docs/VERIFICATION.md",
+        "docs/decisions/0002-u2-impure-boundary.md",
+        "docs/status/P07B-C-C0-AUTHORITY.md",
+        "docs/status/P07B-C-C1-CUMULATIVE-MAINTENANCE.md",
+        "docs/status/P07B-C-C1-SEMANTICS.md",
+        "docs/status/U2.md",
+        "internal/world/http_portable_negative_darwin_test.go",
+        "internal/world/process_darwin.go",
+        "internal/world/process_darwin_test.go",
+        "spec/verification/p07b-c-unit-paths.json",
+        "tools/check-p07b-c-plan.mjs",
+        "tools/check-p07b-c-unit-scope.mjs"
+      ],
+      "prefixes": []
+    },
+    "C1B": {
+      "exact": [
+        "docs/HANDOFF_MODE_C.md",
+        "docs/status/DIDRUN_BUGS.md",
+        "docs/status/P07B-C-C1-SEMANTICS.md",
+        "spec/verification/p07b-c-c1-receipt.json"
+      ],
+      "prefixes": []
+    },
     "C2": {
       "exact": [
         "docs/ARCHITECTURE.md",

@@ -536,6 +536,36 @@ type scriptedProbeStep struct {
 	err     error
 }
 
+type scriptedPreTermProbeClock struct {
+	current   time.Time
+	overshoot time.Duration
+	waits     []time.Duration
+}
+
+func (s *scriptedPreTermProbeClock) now() time.Time { return s.current }
+
+func (s *scriptedPreTermProbeClock) wait(duration time.Duration) {
+	s.waits = append(s.waits, duration)
+	s.current = s.current.Add(duration + s.overshoot)
+}
+
+type deadlineCrossingGroupProbe struct {
+	clock       *scriptedPreTermProbeClock
+	nextPresent bool
+	calls       int
+}
+
+func (*deadlineCrossingGroupProbe) signal(int, syscall.Signal) error { return nil }
+
+func (s *deadlineCrossingGroupProbe) probe(int) (bool, error) {
+	s.calls++
+	if s.calls == 1 {
+		return true, syscall.EPERM
+	}
+	s.clock.current = s.clock.current.Add(time.Millisecond)
+	return s.nextPresent, nil
+}
+
 func (s *scriptedGroupProbe) signal(_ int, signal syscall.Signal) error {
 	s.signals = append(s.signals, signal)
 	s.events = append(s.events, "signal")
@@ -576,13 +606,121 @@ func TestPreTermProbeControlsWhetherTheOriginalGroupIsSignaled(t *testing.T) {
 		}
 	})
 
-	t.Run("probe-error-skips-signal-and-retains-uncertainty", func(t *testing.T) {
-		controller := &scriptedGroupProbe{probeErrors: []error{syscall.EPERM}}
+	t.Run("non-eperm-probe-error-skips-signal-and-retains-uncertainty", func(t *testing.T) {
+		controller := &scriptedGroupProbe{probeErrors: []error{syscall.EIO}}
 		result := physicalProcessResult{processGroupOwned: true, processGroupID: 4242}
 		teardownOwnedProcessGroup(&result, controller, time.Now().Add(time.Second), time.Second)
 		if result.preTermProbe != preTermProbeUncertain || result.termSent || len(controller.signals) != 0 ||
 			!result.teardownError || !result.orphanRisk || result.diagnosticCode != "PRE_TERM_GROUP_PROBE_FAILED" {
 			t.Fatalf("uncertain pre-TERM probe was not fail-closed: result=%+v events=%v", result, controller.events)
+		}
+	})
+
+	t.Run("transient-initial-eperm-then-absent-skips-term", func(t *testing.T) {
+		controller := &scriptedGroupProbe{steps: []scriptedProbeStep{
+			{present: true, err: syscall.EPERM},
+			{present: false},
+		}}
+		result := physicalProcessResult{processGroupOwned: true, processGroupID: 4242}
+		teardownOwnedProcessGroup(&result, controller, time.Now().Add(time.Second), time.Second)
+		if result.preTermProbe != preTermProbeAbsent || result.termSent || len(controller.signals) != 0 ||
+			result.teardownError || result.orphanRisk || strings.Join(controller.events, ",") != "probe,probe" {
+			t.Fatalf("transient initial EPERM did not resolve to clean absence: result=%+v events=%v", result, controller.events)
+		}
+	})
+
+	t.Run("transient-initial-eperm-then-clean-presence-allows-term", func(t *testing.T) {
+		controller := &scriptedGroupProbe{steps: []scriptedProbeStep{
+			{present: true, err: syscall.EPERM},
+			{present: true},
+			{present: false},
+		}}
+		result := physicalProcessResult{processGroupOwned: true, processGroupID: 4242}
+		teardownOwnedProcessGroup(&result, controller, time.Now().Add(time.Second), time.Second)
+		if result.preTermProbe != preTermProbePresent || !result.termSent || result.killSent ||
+			len(controller.signals) != 1 || controller.signals[0] != syscall.SIGTERM ||
+			result.teardownError || result.orphanRisk ||
+			strings.Join(controller.events, ",") != "probe,probe,signal,probe" {
+			t.Fatalf("transient initial EPERM did not require clean presence before TERM: result=%+v events=%v", result, controller.events)
+		}
+	})
+
+	t.Run("persistent-initial-eperm-remains-uncertain", func(t *testing.T) {
+		steps := make([]scriptedProbeStep, 64)
+		for index := range steps {
+			steps[index] = scriptedProbeStep{present: true, err: syscall.EPERM}
+		}
+		controller := &scriptedGroupProbe{steps: steps}
+		result := physicalProcessResult{processGroupOwned: true, processGroupID: 4242}
+		teardownOwnedProcessGroup(&result, controller, time.Now().Add(3*time.Millisecond), 20*time.Millisecond)
+		if result.preTermProbe != preTermProbeUncertain || result.termSent || len(controller.signals) != 0 ||
+			!result.teardownError || !result.orphanRisk || result.diagnosticCode != "PRE_TERM_GROUP_PROBE_FAILED" {
+			t.Fatalf("persistent initial EPERM did not remain fail-closed: result=%+v events=%v", result, controller.events)
+		}
+	})
+
+	t.Run("exact-retry-deadline-does-not-consume-a-later-clean-probe", func(t *testing.T) {
+		start := time.Unix(100, 0)
+		clock := &scriptedPreTermProbeClock{current: start}
+		controller := &scriptedGroupProbe{steps: []scriptedProbeStep{
+			{present: true, err: syscall.EPERM},
+			{present: false},
+		}}
+		present, err := resolvePreTermGroupProbe(controller, 4242, start.Add(time.Second), 4*time.Millisecond, clock)
+		if !present || !errors.Is(err, syscall.EPERM) || controller.calls != 1 ||
+			len(clock.waits) != 1 || clock.waits[0] != time.Millisecond {
+			t.Fatalf("exact retry deadline consumed post-deadline authority: present=%t err=%v calls=%d waits=%v",
+				present, err, controller.calls, clock.waits)
+		}
+	})
+
+	t.Run("retry-wait-overshoot-does-not-consume-a-later-clean-probe", func(t *testing.T) {
+		start := time.Unix(100, 0)
+		clock := &scriptedPreTermProbeClock{current: start, overshoot: time.Nanosecond}
+		controller := &scriptedGroupProbe{steps: []scriptedProbeStep{
+			{present: true, err: syscall.EPERM},
+			{present: true},
+		}}
+		present, err := resolvePreTermGroupProbe(controller, 4242, start.Add(time.Second), 4*time.Millisecond, clock)
+		if !present || !errors.Is(err, syscall.EPERM) || controller.calls != 1 || len(clock.waits) != 1 {
+			t.Fatalf("overshot retry deadline consumed post-deadline authority: present=%t err=%v calls=%d waits=%v",
+				present, err, controller.calls, clock.waits)
+		}
+	})
+
+	for _, test := range []struct {
+		name        string
+		cleanResult bool
+	}{
+		{name: "absence", cleanResult: false},
+		{name: "presence", cleanResult: true},
+	} {
+		t.Run("probe-crossing-retry-deadline-discarded-"+test.name, func(t *testing.T) {
+			start := time.Unix(100, 0)
+			clock := &scriptedPreTermProbeClock{current: start}
+			controller := &deadlineCrossingGroupProbe{clock: clock, nextPresent: test.cleanResult}
+			present, err := resolvePreTermGroupProbe(controller, 4242, start.Add(time.Second), 8*time.Millisecond, clock)
+			if !present || !errors.Is(err, syscall.EPERM) || controller.calls != 2 ||
+				len(clock.waits) != 1 || clock.waits[0] != time.Millisecond {
+				t.Fatalf("probe crossing retry deadline became signal authority: present=%t err=%v calls=%d waits=%v",
+					present, err, controller.calls, clock.waits)
+			}
+		})
+	}
+
+	t.Run("outer-teardown-deadline-bounds-retry-probes", func(t *testing.T) {
+		start := time.Unix(100, 0)
+		clock := &scriptedPreTermProbeClock{current: start}
+		controller := &scriptedGroupProbe{steps: []scriptedProbeStep{
+			{present: true, err: syscall.EPERM},
+			{present: true, err: syscall.EPERM},
+			{present: false},
+		}}
+		present, err := resolvePreTermGroupProbe(controller, 4242, start.Add(2*time.Millisecond), time.Second, clock)
+		if !present || !errors.Is(err, syscall.EPERM) || controller.calls != 2 ||
+			len(clock.waits) != 2 || clock.waits[0] != time.Millisecond || clock.waits[1] != time.Millisecond {
+			t.Fatalf("outer teardown deadline failed to bound probes: present=%t err=%v calls=%d waits=%v",
+				present, err, controller.calls, clock.waits)
 		}
 	})
 

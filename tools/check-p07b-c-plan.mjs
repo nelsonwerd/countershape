@@ -2,8 +2,10 @@
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { readFile, realpath } from "node:fs/promises";
-import { dirname, isAbsolute, resolve } from "node:path";
+import { constants as fsConstants } from "node:fs";
+import { lstat, mkdir, mkdtemp, open, readFile, readdir, realpath, rm, symlink, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isDeepStrictEqual } from "node:util";
 
@@ -47,9 +49,11 @@ const promptHeadings = Object.freeze([
 
 const authorityDeclarationPath = "spec/verification/p07b-c-c0-authority.json";
 const receiptDeclarationPath = "spec/verification/p07b-c-c0-receipt.json";
+const c1ReceiptDeclarationPath = "spec/verification/p07b-c-c1-receipt.json";
 const statusPath = "docs/status/P07B-C-C0-AUTHORITY.md";
 const c1MaintenanceStatusPath = "docs/status/P07B-C-C1-CUMULATIVE-MAINTENANCE.md";
 const c1StatusPath = "docs/status/P07B-C-C1-SEMANTICS.md";
+const c1DidrunBugsPath = "docs/status/DIDRUN_BUGS.md";
 const sealedC0AIdentity = Object.freeze({
 	commit: "1c6d9fdef339314bfcb99d7d53f3a7c5040e5020",
 	tree: "97574c4ef3f967a1194b2ebdeed246a77efabfc7",
@@ -57,6 +61,11 @@ const sealedC0AIdentity = Object.freeze({
 const sealedC0BIdentity = Object.freeze({
 	commit: "47044e95f405b7252959415adb1aa0dbea8045ab",
 	tree: "d0b30300c6dd80eea95583e9b97cd819a6481f4a",
+});
+const sealedC1Identity = Object.freeze({
+	commit: "2fceacecbacb89fd7650f1570b2af33e6ea25ed3",
+	tree: "573fcd0b5548f9f7368493afe801a4bbd2cc9a34",
+	subject: "feat: define P07B-C execution semantics",
 });
 const c0ClaimLabels = Object.freeze([
 	"P07B C0 authority plan coherence",
@@ -89,6 +98,51 @@ const c1ClaimLabels = Object.freeze([
 	"P07B C1 cumulative verification",
 	"P07B C1 didrun chain intact",
 ]);
+const c1ClaimTypes = Object.freeze([
+	...Array(15).fill("tests-pass"),
+	"command-succeeded",
+	"command-succeeded",
+	"tests-pass",
+	"command-succeeded",
+]);
+const expectedC1ReceiptEvidence = Object.freeze({
+	html_report: {
+		path: ".countershape/evidence/p07b-c-c1-final-2fceacecbacb.html",
+		sha256: "52e09b237d2afc9f4844ceef7e171d218dee2d05fb1ed3f0b22e1e41f1f8f51d",
+		bytes: 10394,
+		authority: "LOCAL_SNAPSHOT_NOT_PORTABLE_STRICT_WITNESS",
+	},
+	ledger_archive: {
+		path: ".didrun-history/2026-07-18-p07b-c-c1-source/.didrun/",
+		authority: "LOCAL_IGNORED_ARCHIVE_NOT_GIT_AUTHORITY",
+		manifest_format: "sorted-relative-posix-path-tab-size-tab-sha256-newline/v1",
+		sealed_event_count: 19,
+		archive_session_event_count: 20,
+		claim_count: 19,
+		seal_count: 1,
+		object_file_count: 77,
+		total_file_count: 81,
+		total_bytes: 478508,
+		all_files_manifest_sha256: "be365f510e8e824090529a5f710b557506f3ea795f8835818dfbe5c68066ca38",
+		objects_manifest_sha256: "b72ea691de9acfd1de11bc7e1203a120222dd7b5079fdba6ae2331af336f989b",
+		gitignore_sha256: "cdbcae15105d6b781e620813c79c7e868740d4e9cc53ce6f5fcbbc12387adf4b",
+		session_log_sha256: "2df996d7da7821ad7bb11b46a4186473293ea5cab1d5fd5899ec8e7dc16f4752",
+		claims_jsonl_sha256: "a4ce64dc38932d98e32851e77e8f5f52ef6e417a581f536cf66ccbd34bcfcc49",
+		seals_jsonl_sha256: "742fc31388da2d489423f8a63b7d86653398087a55426592305b1acd343224ca",
+	},
+	git_note: {
+		version: 1,
+		blob_oid: "5d990e07d9ad6960de298bdc232818aac838700e",
+		body_sha256: "c7f32d8e3ecb0f788c29c205215f9335b499e7ed50a74536fb7b06fcf8a3f9ea",
+	},
+	seal_redaction: {
+		finding_count: 346,
+		finding_kinds: ["high-entropy"],
+		finding_provenance: "LOCAL_TERMINAL_OBSERVATION_NOT_GIT_NOTE",
+		structured_staged_scan_findings: 0,
+		structured_scan_provenance: "SEALED_C1_SUPPORTING_EVENT_16",
+	},
+});
 const c1MaintenanceIdentity = Object.freeze({
 	sourceCommit: "fa3d0c12b4c599744b666b2848e38a2499f33a89",
 	sourceTree: "c908c4e580144aa481f646090a1a21d92c86e1cf",
@@ -147,12 +201,14 @@ const expectedAuthorityDeclaration = Object.freeze({
 const requiredText = Object.freeze({
 	"docs/SEMANTICS.md": [
 		"For P07B-C C1, `internal/contractexec/model` is the semantic authority",
+		"Tracked C1 grades are authoritative only through",
 		"store-private `ExecutionInterlock`",
 		"Only the C4 contract runner may acquire it from an opaque C3-issued official-target capability",
 		"fresh target alone is insufficient",
 		"classification-only retry and never reruns a process",
 	],
 	"docs/ARCHITECTURE.md": [
+		"tracked C1 grades require a separately sealed C1B receipt reconciliation",
 		"sole mutable operational exception to the nonhead model",
 		"C1's entire production topology is `internal/contractexec/model`",
 		"internal/processmechanics/",
@@ -175,6 +231,7 @@ const requiredText = Object.freeze({
 		"classifier-profile-bound conformance/contradiction or ineligible conclusion",
 		"C0 authority sealed; C1 owns inert canonical semantics",
 		"private interlock is the sole mutable operational exception",
+		"C2 is gated on a separately sealed, source-only C1B receipt reconciliation",
 	],
 	"docs/CLAIM_VOCABULARY.md": [
 		"| `ExecutionInterlock` |",
@@ -185,8 +242,8 @@ const requiredText = Object.freeze({
 	"docs/PROMPT_PACK.md": [
 		"prompts/P07B-C-TARGET-RUN-EXECUTION.md",
 		"Only the higher contract runner may consume official target/admission authority",
-		"C1 inert-semantics source current",
-		"C1 must seal/strict-clean before C2",
+		"C1 source sealed; separate C1B receipt gate",
+		"C2 requires separately sealed/strict-clean C1B",
 	],
 	"docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md": [
 		"C0 → C1 → C2 → C3 → C4 → C5 → C6",
@@ -273,17 +330,19 @@ const requiredText = Object.freeze({
 		"Machine-readable authority summary: `spec/verification/p07b-c-c0-authority.json`.",
 		"C0 implements no C runtime type",
 		"C0b reconciliation commit `47044e95f405b7252959415adb1aa0dbea8045ab`",
-		"C0 is complete. C1's inert semantic source boundary is current",
+		"C0 is complete. C1 source commit `2fceacecbacb89fd7650f1570b2af33e6ea25ed3`",
 	],
 	"docs/VERIFICATION.md": [
 		"P07B-C C1 inert-model architecture checker",
 		"Composition is one-way (`B -> C1`)",
 		"eight byte-exact schema-valid/runtime-invalid cases",
 		"GOFLAGS=-mod=readonly -buildvcs=false -p=1",
+		"sha256:eb51c52657591df8faa5d3c4737291c071e40c07eb9c32bde88af1a36e68bf76",
 	],
 	"spec/verification/p07b-c-unit-paths.json": [
 		"countershape/p07b-c-unit-paths/v1",
 		"\"C0A\"",
+		"\"C1M\"",
 		"\"C6B\"",
 	],
 	"tools/check-p07b-c-unit-scope.mjs": [
@@ -391,6 +450,69 @@ const requiredC1Paths = Object.freeze([
 	"tools/validate-planning.mjs",
 	"tools/verify-current-selftest.mjs",
 	"tools/verify-current.mjs",
+]);
+const requiredC1MaintenancePaths = Object.freeze([
+	"docs/ARCHITECTURE.md",
+	"docs/CONCEPT_BRIEF.md",
+	"docs/PROMPT_PACK.md",
+	"docs/SEMANTICS.md",
+	"docs/STATE_MACHINES.md",
+	"docs/THREAT_MODEL.md",
+	"docs/VERIFICATION.md",
+	"docs/decisions/0002-u2-impure-boundary.md",
+	"docs/status/P07B-C-C0-AUTHORITY.md",
+	"docs/status/P07B-C-C1-CUMULATIVE-MAINTENANCE.md",
+	"docs/status/P07B-C-C1-SEMANTICS.md",
+	"docs/status/U2.md",
+	"internal/world/http_portable_negative_darwin_test.go",
+	"internal/world/process_darwin.go",
+	"internal/world/process_darwin_test.go",
+	"spec/verification/p07b-c-unit-paths.json",
+	"tools/check-p07b-c-plan.mjs",
+	"tools/check-p07b-c-unit-scope.mjs",
+]);
+const requiredC1MaintenanceDigest = "sha256:eb51c52657591df8faa5d3c4737291c071e40c07eb9c32bde88af1a36e68bf76";
+const requiredC1MaintenanceRosterText = requiredC1MaintenancePaths
+	.map((path, index) => `${index === requiredC1MaintenancePaths.length - 1 ? "and " : ""}\`${path}\``)
+	.join(", ");
+const requiredC1MaintenanceDeclaration = `over exactly these ${requiredC1MaintenancePaths.length} paths: ${requiredC1MaintenanceRosterText}. Their sorted-newline roster digest is \`${requiredC1MaintenanceDigest}\`.`;
+const requiredC1MaintenanceText = Object.freeze({
+	"docs/STATE_MACHINES.md": [
+		"retrying only `(present=true, EPERM)` within its bounded sub-budget",
+		"skip TERM on absence, signal only after clean presence",
+		"including when a transient positive-presence `EPERM` observation resolves to absence",
+	],
+	"docs/THREAT_MODEL.md": [
+		"only clean observed presence authorizes it",
+		"persistence or every other probe error retains uncertainty and authorizes no blind signal",
+		"KILL requires clean continued presence after bounded grace",
+	],
+	"docs/decisions/0002-u2-impure-boundary.md": [
+		"current behavior from the P07B-C C1B pre-enrollment maintenance boundary",
+		"does not relabel or extend the sealed historical U2 receipt",
+		"retried for at most one quarter of the declared teardown budget, clipped to the overall teardown deadline",
+		"persistent `EPERM` and every other probe error retain uncertainty and authorize no blind signal",
+	],
+	"docs/status/P07B-C-C1-CUMULATIVE-MAINTENANCE.md": [
+		"## Separate C1B pre-enrollment lifecycle amendment",
+		"A later absence closes cleanly without a signal; later clean presence",
+		"semantic disclosure, not a self-receipt:",
+	],
+	"docs/status/U2.md": [
+		"The rows above describe the sealed U2 commit and are not relabeled",
+		"to the later maintenance boundary, not the historical U2 grade.",
+	],
+	"docs/VERIFICATION.md": [
+		"begins no retry at or after that deadline",
+		"without the old timer-controlled fd-holder closure premise",
+		"This maintenance boundary is a prerequisite gate for C1B but is not C1B, cannot grade C1B",
+	],
+});
+const requiredC1BPaths = Object.freeze([
+	"docs/HANDOFF_MODE_C.md",
+	"docs/status/DIDRUN_BUGS.md",
+	"docs/status/P07B-C-C1-SEMANTICS.md",
+	"spec/verification/p07b-c-c1-receipt.json",
 ]);
 
 async function readBytes(root, path, overrides) {
@@ -539,6 +661,352 @@ function requireExactlyOnce(body, snippet, path, phase, errors) {
 	if (count !== 1) errors.push(`${path}: ${phase} requires exactly one ${JSON.stringify(snippet)}; found ${count}`);
 }
 
+function requireClaimLabelExactlyOnce(body, label, path, phase, errors) {
+	requireExactlyOnce(body, `\`${label}\``, path, `${phase} claim-label uniqueness`, errors);
+}
+
+function rejectC1BSelfReceiptClaims(body, path, errors) {
+	const patterns = [
+		/\bC1B (?:receipt )?commit `[0-9a-f]{40}`/iu,
+		/\bC1B (?:receipt )?tree `[0-9a-f]{40}`/iu,
+		/\bC1B[^\n]*(?:`?tree-exact`?|claims recorded-exact|note-present|strict exit(?:\s*:\s*|\s+)`?0`?|(?:is|was|has been) (?:sealed|strict-clean|verified)|passed verification)/iu,
+	];
+	for (const pattern of patterns) {
+		if (pattern.test(body)) errors.push(`${path}: C1B self-receipt claim is forbidden`);
+	}
+}
+
+function c1ReceiptDisclosureLines(receipt) {
+	const { html_report: html, ledger_archive: ledger, git_note: note, seal_redaction: redaction } = receipt.evidence;
+	return Object.freeze([
+		`C1 source commit \`${receipt.source_commit}\`, tree \`${receipt.source_tree}\`, is sealed, note-present, and strict-clean with \`${receipt.strict_claims_recorded_exact}/${receipt.strict_claims_total} claims recorded-exact\`.`,
+		`The C1 seal records \`secrets_override: true\` after ${redaction.finding_count} local scanner findings, all kind \`high-entropy\`; this is not evidence of secret absence.`,
+		`The separately claimed structured staged credential scan reported \`${redaction.structured_staged_scan_findings}\` findings; its provenance is sealed supporting event \`16\`, not the Git note alone.`,
+		`Local ignored ledger archive \`${ledger.path}\` contains \`${ledger.sealed_event_count}\` sealed events and \`${ledger.archive_session_event_count}\` archived session events; event 20 is post-seal note reconciliation and is outside the sealed manifest.`,
+		`Ledger manifests use \`${ledger.manifest_format}\`; all-files SHA-256 is \`${ledger.all_files_manifest_sha256}\` and objects-only SHA-256 is \`${ledger.objects_manifest_sha256}\`.`,
+		`Archive core SHA-256 values are session \`${ledger.session_log_sha256}\`, claims \`${ledger.claims_jsonl_sha256}\`, seals \`${ledger.seals_jsonl_sha256}\`, and .gitignore \`${ledger.gitignore_sha256}\`.`,
+		`The local HTML snapshot is \`${html.path}\`, SHA-256 \`${html.sha256}\`, ${html.bytes} bytes; it is not a portable strict witness.`,
+		`The C1 Git note blob is \`${note.blob_oid}\` with body SHA-256 \`${note.body_sha256}\`.`,
+	]);
+}
+
+const c1DidrunLiveLine = "Live S6 behavior: didrun preserved failed development receipts, chained every wrapper event, buffered the long cumulative verifier without intermediate stdout, required an explicit seal override for high-entropy-only findings, wrote the Git note, and then reported 19/19 claims recorded-exact at strict exit 0.";
+
+function sha256(bytes) {
+	return createHash("sha256").update(bytes).digest("hex");
+}
+
+function admittedLocalPath(root, declaredPath) {
+	const absolute = resolve(root, declaredPath);
+	const relation = relative(root, absolute);
+	if (relation === "" || relation === ".." || relation.startsWith(`..${sep}`) || isAbsolute(relation)) {
+		throw new Error(`local evidence path escapes repository: ${declaredPath}`);
+	}
+	return absolute;
+}
+
+async function admittedExistingLocalPath(root, declaredPath) {
+	const absolute = admittedLocalPath(root, declaredPath);
+	const rootStat = await lstat(root);
+	if (rootStat.isSymbolicLink() || !rootStat.isDirectory()) throw new Error("evidence root is not a real directory");
+	let cursor = root;
+	for (const component of relative(root, absolute).split(sep)) {
+		cursor = resolve(cursor, component);
+		const status = await lstat(cursor);
+		if (status.isSymbolicLink()) throw new Error(`local evidence path contains symlink: ${relative(root, cursor)}`);
+	}
+	const realRoot = await realpath(root);
+	const realTarget = await realpath(absolute);
+	const relation = relative(realRoot, realTarget);
+	if (relation === ".." || relation.startsWith(`..${sep}`) || isAbsolute(relation)) {
+		throw new Error(`local evidence real path escapes repository: ${declaredPath}`);
+	}
+	return absolute;
+}
+
+async function readRegularNoFollow(absolute) {
+	const handle = await open(absolute, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+	try {
+		const status = await handle.stat();
+		if (!status.isFile()) throw new Error(`local evidence is not a regular file: ${absolute}`);
+		return await handle.readFile();
+	} finally {
+		await handle.close();
+	}
+}
+
+async function collectRegularFiles(root, directory = root) {
+	const entries = await readdir(directory, { withFileTypes: true });
+	entries.sort((left, right) => Buffer.compare(Buffer.from(left.name, "utf8"), Buffer.from(right.name, "utf8")));
+	const files = [];
+	for (const entry of entries) {
+		const absolute = resolve(directory, entry.name);
+		const status = await lstat(absolute);
+		if (status.isSymbolicLink()) throw new Error(`local evidence contains symlink: ${relative(root, absolute)}`);
+		if (status.isDirectory()) files.push(...await collectRegularFiles(root, absolute));
+		else if (status.isFile()) files.push(absolute);
+		else throw new Error(`local evidence contains non-regular entry: ${relative(root, absolute)}`);
+	}
+	return files;
+}
+
+function parseJSONLines(bytes, path) {
+	const text = bytes.toString("utf8");
+	if (!text.endsWith("\n")) throw new Error(`${path} lacks final newline`);
+	return text.slice(0, -1).split("\n").map((line, index) => {
+		try {
+			return JSON.parse(line);
+		} catch (error) {
+			throw new Error(`${path} line ${index + 1} is not JSON (${error.message})`);
+		}
+	});
+}
+
+function manifestDigest(entries) {
+	const body = entries.map(({ path, bytes, digest }) => `${path}\t${bytes.length}\t${digest}\n`).join("");
+	return sha256(Buffer.from(body, "utf8"));
+}
+
+async function verifyC1LocalEvidence(root, receipt) {
+	const errors = [];
+	const html = receipt.evidence.html_report;
+	try {
+		const bytes = await readRegularNoFollow(await admittedExistingLocalPath(root, html.path));
+		if (bytes.length !== html.bytes) errors.push("local HTML byte count");
+		if (sha256(bytes) !== html.sha256) errors.push("local HTML digest");
+	} catch (error) {
+		errors.push(`local HTML unavailable (${error.message})`);
+	}
+
+	const ledger = receipt.evidence.ledger_archive;
+	try {
+		const archiveRoot = await admittedExistingLocalPath(root, ledger.path);
+		const archiveStat = await lstat(archiveRoot);
+		if (!archiveStat.isDirectory() || archiveStat.isSymbolicLink()) throw new Error("archive root is not a real directory");
+		const files = await collectRegularFiles(archiveRoot);
+		const entries = await Promise.all(files.map(async (absolute) => {
+			const manifestPath = relative(archiveRoot, absolute).split(sep).join("/");
+			if (/[/\\\u0000-\u001f\u007f]/u.test(manifestPath.replaceAll("/", ""))) {
+				throw new Error(`manifest path is not serializable: ${manifestPath}`);
+			}
+			const bytes = await readRegularNoFollow(absolute);
+			return {
+				path: manifestPath,
+				bytes,
+				digest: sha256(bytes),
+			};
+		}));
+		entries.sort((left, right) => Buffer.compare(Buffer.from(left.path, "utf8"), Buffer.from(right.path, "utf8")));
+		const objects = entries.filter((entry) => entry.path.startsWith("objects/"));
+		if (entries.length !== ledger.total_file_count) errors.push("local ledger total file count");
+		if (objects.length !== ledger.object_file_count) errors.push("local ledger object file count");
+		if (entries.reduce((total, entry) => total + entry.bytes.length, 0) !== ledger.total_bytes) errors.push("local ledger byte count");
+		if (manifestDigest(entries) !== ledger.all_files_manifest_sha256) errors.push("local ledger all-files manifest digest");
+		if (manifestDigest(objects) !== ledger.objects_manifest_sha256) errors.push("local ledger objects manifest digest");
+		for (const object of objects) {
+			if (object.path !== `objects/${object.digest}`) errors.push(`content-addressed object mismatch: ${object.path}`);
+		}
+		const byPath = new Map(entries.map((entry) => [entry.path, entry]));
+		for (const [path, expected] of [
+			["session.log", ledger.session_log_sha256],
+			["claims.jsonl", ledger.claims_jsonl_sha256],
+			["seals.jsonl", ledger.seals_jsonl_sha256],
+			[".gitignore", ledger.gitignore_sha256],
+		]) {
+			if (byPath.get(path)?.digest !== expected) errors.push(`local ledger core digest: ${path}`);
+		}
+		const sessions = parseJSONLines(byPath.get("session.log")?.bytes ?? Buffer.alloc(0), "session.log");
+		const claims = parseJSONLines(byPath.get("claims.jsonl")?.bytes ?? Buffer.alloc(0), "claims.jsonl");
+		const seals = parseJSONLines(byPath.get("seals.jsonl")?.bytes ?? Buffer.alloc(0), "seals.jsonl");
+		if (sessions.length !== ledger.archive_session_event_count) errors.push("local ledger session event count");
+		if (claims.length !== ledger.claim_count) errors.push("local ledger claim count");
+		if (seals.length !== ledger.seal_count) errors.push("local ledger seal count");
+		for (let index = 0; index < sessions.length; index += 1) {
+			const entry = sessions[index];
+			const expectedPrev = index === 0 ? "0".repeat(64) : sessions[index - 1]?.entry_hash;
+			if (entry?.index !== index || entry?.prev_hash !== expectedPrev || !/^[0-9a-f]{64}$/u.test(entry?.entry_hash ?? "")) {
+				errors.push(`local ledger session chain entry ${index}`);
+			}
+		}
+		for (let index = 0; index < c1ClaimLabels.length; index += 1) {
+			const claim = claims[index];
+			if (claim?.label !== c1ClaimLabels[index] || claim?.ctype !== c1ClaimTypes[index] ||
+				claim?.declared_at_index !== index || !isDeepStrictEqual(claim?.event_indices, [index]) ||
+				!isDeepStrictEqual(claim?.pathspecs, [])) {
+				errors.push(`local ledger claim ${index + 1}`);
+			}
+		}
+		if (seals[0]?.commit !== receipt.source_commit || seals[0]?.tree !== receipt.source_tree ||
+			seals[0]?.claims_watermark !== ledger.sealed_event_count) {
+			errors.push("local ledger seal identity");
+		}
+	} catch (error) {
+		errors.push(`local ledger unavailable (${error.message})`);
+	}
+	return errors;
+}
+
+async function writeJSONLines(path, values) {
+	await writeFile(path, `${values.map((value) => JSON.stringify(value)).join("\n")}\n`, "utf8");
+}
+
+async function buildLocalEvidenceFixture() {
+	const root = await mkdtemp(resolve(tmpdir(), "countershape-c1-evidence-"));
+	const htmlPath = "evidence/report.html";
+	const archivePath = "archive/.didrun/";
+	const htmlAbsolute = resolve(root, htmlPath);
+	const archiveRoot = resolve(root, archivePath);
+	const objectsRoot = resolve(archiveRoot, "objects");
+	await mkdir(resolve(root, "evidence"), { recursive: true });
+	await mkdir(objectsRoot, { recursive: true });
+	const htmlBytes = Buffer.from("<html><body>fixture</body></html>\n", "utf8");
+	await writeFile(htmlAbsolute, htmlBytes);
+	const sessions = [];
+	for (let index = 0; index < 20; index += 1) {
+		sessions.push({
+			index,
+			prev_hash: index === 0 ? "0".repeat(64) : sessions[index - 1].entry_hash,
+			entry_hash: sha256(Buffer.from(`fixture-entry-${index}`, "utf8")),
+			event: { coverage: "complete", exit_code: 0 },
+		});
+	}
+	const claims = c1ClaimLabels.map((label, index) => ({
+		label,
+		ctype: c1ClaimTypes[index],
+		declared_at_index: index,
+		event_indices: [index],
+		pathspecs: [],
+	}));
+	const seals = [{
+		claims_watermark: c1ClaimLabels.length,
+		commit: sealedC1Identity.commit,
+		tree: sealedC1Identity.tree,
+	}];
+	await writeJSONLines(resolve(archiveRoot, "session.log"), sessions);
+	await writeJSONLines(resolve(archiveRoot, "claims.jsonl"), claims);
+	await writeJSONLines(resolve(archiveRoot, "seals.jsonl"), seals);
+	await writeFile(resolve(archiveRoot, ".gitignore"), "*\n!.gitignore\n", "utf8");
+	const objectBytes = Buffer.from("fixture-object\n", "utf8");
+	const objectPath = resolve(objectsRoot, sha256(objectBytes));
+	await writeFile(objectPath, objectBytes);
+	const files = await collectRegularFiles(archiveRoot);
+	const entries = await Promise.all(files.map(async (absolute) => {
+		const bytes = await readRegularNoFollow(absolute);
+		return {
+			path: relative(archiveRoot, absolute).split(sep).join("/"),
+			bytes,
+			digest: sha256(bytes),
+		};
+	}));
+	entries.sort((left, right) => Buffer.compare(Buffer.from(left.path, "utf8"), Buffer.from(right.path, "utf8")));
+	const byPath = new Map(entries.map((entry) => [entry.path, entry]));
+	const objects = entries.filter((entry) => entry.path.startsWith("objects/"));
+	const receipt = {
+		evidence: {
+			html_report: {
+				path: htmlPath,
+				sha256: sha256(htmlBytes),
+				bytes: htmlBytes.length,
+				authority: "LOCAL_SNAPSHOT_NOT_PORTABLE_STRICT_WITNESS",
+			},
+			ledger_archive: {
+				path: archivePath,
+				authority: "LOCAL_IGNORED_ARCHIVE_NOT_GIT_AUTHORITY",
+				manifest_format: "sorted-relative-posix-path-tab-size-tab-sha256-newline/v1",
+				sealed_event_count: 19,
+				archive_session_event_count: sessions.length,
+				claim_count: claims.length,
+				seal_count: seals.length,
+				object_file_count: objects.length,
+				total_file_count: entries.length,
+				total_bytes: entries.reduce((total, entry) => total + entry.bytes.length, 0),
+				all_files_manifest_sha256: manifestDigest(entries),
+				objects_manifest_sha256: manifestDigest(objects),
+				gitignore_sha256: byPath.get(".gitignore").digest,
+				session_log_sha256: byPath.get("session.log").digest,
+				claims_jsonl_sha256: byPath.get("claims.jsonl").digest,
+				seals_jsonl_sha256: byPath.get("seals.jsonl").digest,
+			},
+		},
+		source_commit: sealedC1Identity.commit,
+		source_tree: sealedC1Identity.tree,
+	};
+	return {
+		root,
+		receipt,
+		htmlAbsolute,
+		htmlBytes,
+		objectPath,
+		objectBytes,
+		sessionPath: resolve(archiveRoot, "session.log"),
+		sessions,
+		claimsPath: resolve(archiveRoot, "claims.jsonl"),
+		claims,
+		sealPath: resolve(archiveRoot, "seals.jsonl"),
+		seals,
+	};
+}
+
+async function runLocalEvidenceSelfTest() {
+	const fixture = await buildLocalEvidenceFixture();
+	let rejected = 0;
+	const expectFailure = async (name, expected) => {
+		const errors = await verifyC1LocalEvidence(fixture.root, fixture.receipt);
+		if (!errors.some((error) => error.includes(expected))) {
+			throw new Error(`P07B-C C1 local-evidence self-test false negative: ${name}`);
+		}
+		rejected += 1;
+	};
+	try {
+		const baseline = await verifyC1LocalEvidence(fixture.root, fixture.receipt);
+		if (baseline.length > 0) throw new Error(`P07B-C C1 local-evidence self-test baseline failed: ${baseline.join(", ")}`);
+
+		await writeFile(fixture.htmlAbsolute, Buffer.from("tampered-html\n", "utf8"));
+		await expectFailure("HTML bytes", "local HTML");
+		await writeFile(fixture.htmlAbsolute, fixture.htmlBytes);
+
+		await rm(fixture.htmlAbsolute);
+		await symlink(resolve(fixture.root, "archive"), fixture.htmlAbsolute);
+		await expectFailure("HTML symlink", "symlink");
+		await rm(fixture.htmlAbsolute);
+		await writeFile(fixture.htmlAbsolute, fixture.htmlBytes);
+
+		await writeFile(fixture.objectPath, Buffer.from("tampered-object\n", "utf8"));
+		await expectFailure("content-addressed object", "content-addressed object mismatch");
+		await writeFile(fixture.objectPath, fixture.objectBytes);
+
+		const manifest = fixture.receipt.evidence.ledger_archive.all_files_manifest_sha256;
+		fixture.receipt.evidence.ledger_archive.all_files_manifest_sha256 = "f".repeat(64);
+		await expectFailure("manifest digest", "all-files manifest digest");
+		fixture.receipt.evidence.ledger_archive.all_files_manifest_sha256 = manifest;
+
+		fixture.receipt.evidence.ledger_archive.total_file_count += 1;
+		await expectFailure("file count", "total file count");
+		fixture.receipt.evidence.ledger_archive.total_file_count -= 1;
+
+		const hostileClaims = structuredClone(fixture.claims);
+		hostileClaims[0].label = "wrong label";
+		await writeJSONLines(fixture.claimsPath, hostileClaims);
+		await expectFailure("claim roster", "local ledger claim 1");
+		await writeJSONLines(fixture.claimsPath, fixture.claims);
+
+		const hostileSessions = structuredClone(fixture.sessions);
+		hostileSessions[1].prev_hash = "f".repeat(64);
+		await writeJSONLines(fixture.sessionPath, hostileSessions);
+		await expectFailure("session linkage", "session chain entry 1");
+		await writeJSONLines(fixture.sessionPath, fixture.sessions);
+
+		const hostileSeals = structuredClone(fixture.seals);
+		hostileSeals[0].commit = "f".repeat(40);
+		await writeJSONLines(fixture.sealPath, hostileSeals);
+		await expectFailure("seal identity", "local ledger seal identity");
+		await writeJSONLines(fixture.sealPath, fixture.seals);
+		return rejected;
+	} finally {
+		await rm(fixture.root, { recursive: true, force: true });
+	}
+}
+
 function validateReceiptDeclaration(receipt) {
 	const errors = [];
 	const keys = [
@@ -605,9 +1073,22 @@ async function loadReceiptAuthorityFromGit(root, receipt) {
 	const requested = process.env.COUNTERSHAPE_GIT || "/usr/bin/git";
 	if (!isAbsolute(requested)) throw new Error("COUNTERSHAPE_GIT must be absolute");
 	const git = await realpath(requested);
-	const env = { HOME: process.env.HOME || "/", PATH: "/usr/bin:/bin", LANG: "C", LC_ALL: "C", NO_COLOR: "1" };
+	const env = {
+		HOME: process.env.HOME || "/",
+		PATH: "/usr/bin:/bin",
+		LANG: "C",
+		LC_ALL: "C",
+		NO_COLOR: "1",
+		GIT_CONFIG_NOSYSTEM: "1",
+		GIT_CONFIG_GLOBAL: "/dev/null",
+		GIT_NO_LAZY_FETCH: "1",
+		GIT_OPTIONAL_LOCKS: "0",
+		GIT_TERMINAL_PROMPT: "0",
+	};
 	const run = (args, accepted = [0]) => {
-		const result = spawnSync(git, args, { cwd: root, encoding: "utf8", timeout: 30_000, maxBuffer: 4 * 1024 * 1024, env });
+		const result = spawnSync(git, ["--no-replace-objects", ...args], {
+			cwd: root, encoding: "utf8", timeout: 30_000, maxBuffer: 4 * 1024 * 1024, env,
+		});
 		if (result.error || result.signal || !accepted.includes(result.status) || (result.stderr?.length ?? 0) !== 0) {
 			throw new Error(`git ${args[0]} failed (status=${result.status}, signal=${result.signal}, error=${result.error?.message ?? "none"})`);
 		}
@@ -616,16 +1097,212 @@ async function loadReceiptAuthorityFromGit(root, receipt) {
 	const commit = run(["rev-parse", "--verify", `${receipt.source_commit}^{commit}`]).stdout.trim();
 	if (commit !== receipt.source_commit) throw new Error("source commit did not reopen exactly");
 	const tree = run(["rev-parse", "--verify", `${receipt.source_commit}^{tree}`]).stdout.trim();
+	const parent = run(["rev-parse", "--verify", `${receipt.source_commit}^`]).stdout.trim();
 	const subject = run(["show", "-s", "--format=%s", receipt.source_commit]).stdout.trimEnd();
 	const ancestor = run(["merge-base", "--is-ancestor", receipt.source_commit, "HEAD"], [0, 1]).status === 0;
 	const noteText = run(["notes", "--ref=didrun", "show", receipt.source_commit]).stdout;
+	const noteListing = run(["notes", "--ref=didrun", "list", receipt.source_commit]).stdout.trim();
+	if (!/^[0-9a-f]{40}$/u.test(noteListing)) {
+		throw new Error("didrun Git note object identity is malformed");
+	}
 	let note;
 	try {
 		note = JSON.parse(noteText);
 	} catch (error) {
 		throw new Error(`didrun Git note is not JSON (${error.message})`);
 	}
-	return { commit, tree, subject, ancestor_of_head: ancestor, note };
+	return {
+		commit,
+		tree,
+		parent,
+		subject,
+		ancestor_of_head: ancestor,
+		note,
+		note_blob_oid: noteListing,
+		note_body_sha256: createHash("sha256").update(noteText, "utf8").digest("hex"),
+	};
+}
+
+function validateC1ReceiptDeclaration(receipt) {
+	const errors = [];
+	const keys = [
+		"claims", "coverage_complete_events", "coverage_total_events", "evidence", "schema_version",
+		"secrets_override", "source_commit", "source_subject", "source_tree", "strict_claims_recorded_exact",
+		"strict_claims_total", "strict_exit_code",
+	];
+	if (!receipt || typeof receipt !== "object" || Array.isArray(receipt) ||
+		!isDeepStrictEqual(Object.keys(receipt).sort(), keys)) return ["root field roster"];
+	if (receipt.schema_version !== "countershape/p07b-c-c1-receipt/v1") errors.push("schema version");
+	if (receipt.source_commit !== sealedC1Identity.commit) errors.push("source commit");
+	if (receipt.source_tree !== sealedC1Identity.tree) errors.push("source tree");
+	if (receipt.source_subject !== sealedC1Identity.subject) errors.push("source subject");
+	if (receipt.strict_exit_code !== 0) errors.push("strict exit code");
+	if (receipt.strict_claims_recorded_exact !== c1ClaimLabels.length || receipt.strict_claims_total !== c1ClaimLabels.length) {
+		errors.push("strict claim counts");
+	}
+	if (receipt.coverage_total_events !== c1ClaimLabels.length || receipt.coverage_complete_events !== c1ClaimLabels.length) {
+		errors.push("coverage counts");
+	}
+	if (receipt.secrets_override !== true) errors.push("redacted seal disclosure");
+	if (!Array.isArray(receipt.claims) || receipt.claims.length !== c1ClaimLabels.length) {
+		errors.push("claim roster length");
+	} else {
+		for (let index = 0; index < c1ClaimLabels.length; index += 1) {
+			const claim = receipt.claims[index];
+			if (!claim || typeof claim !== "object" || Array.isArray(claim) ||
+				!isDeepStrictEqual(Object.keys(claim).sort(), ["grade", "label", "supporting_event_index", "type"]) ||
+				claim.supporting_event_index !== index || claim.type !== c1ClaimTypes[index] ||
+				claim.label !== c1ClaimLabels[index] || claim.grade !== "TREE-EXACT") {
+				errors.push(`claim ${index + 1}`);
+			}
+		}
+	}
+	if (!isDeepStrictEqual(receipt.evidence, expectedC1ReceiptEvidence)) errors.push("local evidence declaration");
+	return errors;
+}
+
+function validateC1ReceiptAuthority(receipt, authority) {
+	const errors = [];
+	if (!authority || typeof authority !== "object" || Array.isArray(authority)) return ["missing Git/didrun authority"];
+	if (authority.commit !== receipt.source_commit) errors.push("source commit does not equal admitted Git commit");
+	if (authority.tree !== receipt.source_tree) errors.push("source tree does not equal Git commit tree");
+	if (authority.parent !== c1MaintenanceIdentity.receiptCommit) errors.push("source parent");
+	if (authority.subject !== receipt.source_subject) errors.push("source commit subject");
+	if (authority.ancestor_of_head !== true) errors.push("source commit is not an ancestor of HEAD");
+	if (authority.note_blob_oid !== receipt.evidence.git_note.blob_oid) errors.push("didrun note object identity");
+	if (authority.note_body_sha256 !== receipt.evidence.git_note.body_sha256) errors.push("didrun note body digest");
+	const note = authority.note;
+	if (!note || typeof note !== "object" || Array.isArray(note)) {
+		errors.push("missing parsed didrun Git note");
+		return errors;
+	}
+	if (note.version !== receipt.evidence.git_note.version) errors.push("didrun note version");
+	if (note.commit !== receipt.source_commit) errors.push("didrun note commit");
+	if (note.tree !== receipt.source_tree) errors.push("didrun note tree");
+	if (note.secrets_override !== receipt.secrets_override) errors.push("didrun note redacted seal disclosure");
+	if (!Array.isArray(note.claims) || note.claims.length !== c1ClaimLabels.length) {
+		errors.push("didrun note claim roster length");
+	} else {
+		for (let index = 0; index < c1ClaimLabels.length; index += 1) {
+			const recorded = note.claims[index];
+			const claim = recorded?.claim;
+			if (claim?.label !== c1ClaimLabels[index] || claim?.ctype !== c1ClaimTypes[index] ||
+				claim?.declared_at_index !== index || !isDeepStrictEqual(claim?.event_indices, [index]) ||
+				!isDeepStrictEqual(claim?.pathspecs, []) || !Array.isArray(claim?.argv_preview) || claim.argv_preview.length === 0 ||
+				recorded?.supporting_event_index !== index || recorded?.grade !== "tree-exact" || recorded?.exit_code !== 0 ||
+				recorded?.reason !== "self-stable command ran against the sealed tree" || !isDeepStrictEqual(recorded?.delta, [])) {
+				errors.push(`didrun note claim ${index + 1}`);
+			}
+		}
+	}
+	if (note.coverage?.total_events !== receipt.coverage_total_events ||
+		note.coverage?.by_coverage?.complete !== receipt.coverage_complete_events ||
+		!isDeepStrictEqual(Object.keys(note.coverage?.by_coverage ?? {}), ["complete"])) {
+		errors.push("didrun note exact event coverage");
+	}
+	return errors;
+}
+
+async function checkC1ReceiptPhase(root, overrides, status, handoff, errors, injectedReceiptAuthority) {
+	let receiptText;
+	let didrunBugs;
+	try {
+		receiptText = await readText(root, c1ReceiptDeclarationPath, overrides);
+	} catch (error) {
+		if (error.code !== "ENOENT") errors.push(`${c1ReceiptDeclarationPath}: unreadable (${error.message})`);
+	}
+	try {
+		didrunBugs = await readText(root, c1DidrunBugsPath, overrides);
+	} catch (error) {
+		errors.push(`${c1DidrunBugsPath}: unreadable (${error.message})`);
+	}
+
+	if (receiptText === undefined) {
+		const sealedPendingState = `**Source state:** sealed C1 source commit \`${sealedC1Identity.commit}\`, tree \`${sealedC1Identity.tree}\`, is note-present and strict-clean with \`19/19\` claims. Tracked C1 receipt reconciliation is pending; every C1 capability below remains \`UNRECEIPTED\` until the separately sealed C1B receipt boundary binds the source note, status, and handoff without grading itself.`;
+		requireExactlyOnce(
+			status,
+			sealedPendingState,
+			c1StatusPath,
+			"C1 sealed-source pending-receipt state",
+			errors,
+		);
+		for (const label of c1ClaimLabels) {
+			requireExactlyOnce(status, `\`${label}\` | \`UNRECEIPTED\``, c1StatusPath, "C1 pending source receipt map", errors);
+			requireClaimLabelExactlyOnce(status, label, c1StatusPath, "C1 pending source receipt map", errors);
+		}
+		if (handoff.includes("<!-- P07B-C-C1-SOURCE-RECEIPTS:START -->") ||
+			handoff.includes("<!-- P07B-C-C1-SOURCE-RECEIPTS:END -->")) {
+			errors.push(`docs/HANDOFF_MODE_C.md: C1 pending receipt state cannot contain a source receipt block`);
+		}
+		if (didrunBugs?.includes("<!-- P07B-C-C1-DIDRUN-LIVE:START -->") ||
+			didrunBugs?.includes("<!-- P07B-C-C1-DIDRUN-LIVE:END -->")) {
+			errors.push(`${c1DidrunBugsPath}: C1 pending receipt state cannot contain a didrun live-session block`);
+		}
+		rejectC1BSelfReceiptClaims(status, c1StatusPath, errors);
+		rejectC1BSelfReceiptClaims(handoff, "docs/HANDOFF_MODE_C.md", errors);
+		if (didrunBugs !== undefined) rejectC1BSelfReceiptClaims(didrunBugs, c1DidrunBugsPath, errors);
+		return;
+	}
+
+	let receipt;
+	try {
+		receipt = JSON.parse(receiptText);
+	} catch (error) {
+		errors.push(`${c1ReceiptDeclarationPath}: invalid JSON (${error.message})`);
+		return;
+	}
+	const receiptErrors = validateC1ReceiptDeclaration(receipt);
+	for (const error of receiptErrors) errors.push(`${c1ReceiptDeclarationPath}: invalid receipt declaration (${error})`);
+	if (receiptErrors.length > 0) return;
+	let authority = injectedReceiptAuthority;
+	if (authority === undefined) {
+		try {
+			authority = await loadReceiptAuthorityFromGit(root, receipt);
+		} catch (error) {
+			errors.push(`${c1ReceiptDeclarationPath}: Git/didrun authority unavailable (${error.message})`);
+			return;
+		}
+	}
+	const authorityErrors = validateC1ReceiptAuthority(receipt, authority);
+	for (const error of authorityErrors) errors.push(`${c1ReceiptDeclarationPath}: Git/didrun authority mismatch (${error})`);
+	if (authorityErrors.length > 0) return;
+
+	const state = `**Source receipt:** C1 source commit \`${receipt.source_commit}\`, tree \`${receipt.source_tree}\`, is sealed, note-present, and strict-clean; every source grade below is \`TREE-EXACT\`. This C1B receipt-document working unit binds only that existing source and remains \`UNRECEIPTED\` until its own commit, seal, note, and strict boundary.`;
+	requireExactlyOnce(status, state, c1StatusPath, "C1B reconciled source state", errors);
+	requireExactlyOnce(status, "## C1 source receipt map", c1StatusPath, "C1B receipt heading", errors);
+	requireExactlyOnce(status, "- C1 source strict exit: `0`", c1StatusPath, "C1B strict result", errors);
+	requireExactlyOnce(status, `- C1 source strict claims: \`${receipt.strict_claims_recorded_exact}/${receipt.strict_claims_total} claims recorded-exact\``, c1StatusPath, "C1B strict claim count", errors);
+	requireExactlyOnce(status, "This receipt binds only the already-existing C1 source commit. C1B cannot name or grade its own commit, tree, Git note, or strict result.", c1StatusPath, "C1B no-recursion boundary", errors);
+	for (const claim of receipt.claims) {
+		requireExactlyOnce(status, `| \`${claim.label}\` | \`${claim.type}\` | \`${claim.grade}\` |`, c1StatusPath, "C1B source receipt map", errors);
+		requireClaimLabelExactlyOnce(status, claim.label, c1StatusPath, "C1B source receipt map", errors);
+	}
+	const disclosures = c1ReceiptDisclosureLines(receipt);
+	for (const index of [1, 2, 3, 4, 6]) {
+		requireExactlyOnce(status, disclosures[index], c1StatusPath, "C1B source evidence disclosure", errors);
+	}
+	requireExactlyOnce(handoff, "<!-- P07B-C-C1-SOURCE-RECEIPTS:START -->", "docs/HANDOFF_MODE_C.md", "C1B receipt block", errors);
+	requireExactlyOnce(handoff, "<!-- P07B-C-C1-SOURCE-RECEIPTS:END -->", "docs/HANDOFF_MODE_C.md", "C1B receipt block", errors);
+	requireExactlyOnce(handoff, `C1 source commit \`${receipt.source_commit}\`, tree \`${receipt.source_tree}\`.`, "docs/HANDOFF_MODE_C.md", "C1B source identity", errors);
+	requireExactlyOnce(handoff, `C1 strict claims: \`${receipt.strict_claims_recorded_exact}/${receipt.strict_claims_total} claims recorded-exact\`; strict exit: \`0\`.`, "docs/HANDOFF_MODE_C.md", "C1B strict result", errors);
+	for (const claim of receipt.claims) {
+		requireExactlyOnce(handoff, `| \`${claim.label}\` | \`${claim.type}\` | \`${claim.grade}\` |`, "docs/HANDOFF_MODE_C.md", "C1B claim map", errors);
+		requireClaimLabelExactlyOnce(handoff, claim.label, "docs/HANDOFF_MODE_C.md", "C1B claim map", errors);
+	}
+	for (const disclosure of disclosures) {
+		requireExactlyOnce(handoff, disclosure, "docs/HANDOFF_MODE_C.md", "C1B source evidence disclosure", errors);
+	}
+	if (didrunBugs !== undefined) {
+		requireExactlyOnce(didrunBugs, "<!-- P07B-C-C1-DIDRUN-LIVE:START -->", c1DidrunBugsPath, "C1B didrun live-session block", errors);
+		requireExactlyOnce(didrunBugs, "<!-- P07B-C-C1-DIDRUN-LIVE:END -->", c1DidrunBugsPath, "C1B didrun live-session block", errors);
+		for (const disclosure of disclosures) {
+			requireExactlyOnce(didrunBugs, disclosure, c1DidrunBugsPath, "C1B didrun source disclosure", errors);
+		}
+		requireExactlyOnce(didrunBugs, c1DidrunLiveLine, c1DidrunBugsPath, "C1B didrun live-session behavior", errors);
+	}
+	rejectC1BSelfReceiptClaims(status, c1StatusPath, errors);
+	rejectC1BSelfReceiptClaims(handoff, "docs/HANDOFF_MODE_C.md", errors);
+	if (didrunBugs !== undefined) rejectC1BSelfReceiptClaims(didrunBugs, c1DidrunBugsPath, errors);
 }
 
 async function checkStatusPhase(root, overrides, status, handoff, errors, injectedReceiptAuthority) {
@@ -717,7 +1394,7 @@ async function checkStatusPhase(root, overrides, status, handoff, errors, inject
 	}
 }
 
-export async function checkPlan(root = repositoryRoot, overrides = new Map(), receiptAuthority) {
+export async function checkPlan(root = repositoryRoot, overrides = new Map(), receiptAuthority, c1ReceiptAuthority) {
 	const errors = [];
 	const bodies = new Map();
 
@@ -735,6 +1412,37 @@ export async function checkPlan(root = repositoryRoot, overrides = new Map(), re
 		}
 	}
 
+	for (const [path, snippets] of Object.entries(requiredC1MaintenanceText)) {
+		let body;
+		try {
+			body = bodies.get(path) ?? await readText(root, path, overrides);
+			bodies.set(path, body);
+		} catch (error) {
+			errors.push(`${path}: unreadable (${error.message})`);
+			continue;
+		}
+		for (const snippet of snippets) {
+			if (!body.includes(snippet)) {
+				errors.push(`${path}: missing required pre-enrollment maintenance ruling: ${JSON.stringify(snippet)}`);
+			}
+		}
+	}
+	const computedC1MaintenanceDigest = `sha256:${createHash("sha256")
+		.update(`${requiredC1MaintenancePaths.join("\n")}\n`, "utf8").digest("hex")}`;
+	if (computedC1MaintenanceDigest !== requiredC1MaintenanceDigest) {
+		errors.push(`internal C1M roster digest mismatch: ${computedC1MaintenanceDigest}`);
+	}
+	const verificationBody = bodies.get("docs/VERIFICATION.md");
+	if (verificationBody !== undefined) {
+		requireExactlyOnce(
+			verificationBody,
+			requiredC1MaintenanceDeclaration,
+			"docs/VERIFICATION.md",
+			"pre-enrollment maintenance scope declaration",
+			errors,
+		);
+	}
+
 	try {
 		const maintenanceStatus = await readText(root, c1MaintenanceStatusPath, overrides);
 		for (const fixed of [
@@ -746,7 +1454,7 @@ export async function checkPlan(root = repositoryRoot, overrides = new Map(), re
 			"6/6 claims recorded-exact",
 			".didrun-history/2026-07-18-p07b-c-c1-output-cap-maintenance/.didrun/",
 			".didrun-history/2026-07-18-p07b-c-c1-output-cap-maintenance-receipt/.didrun/",
-			"P07B-C C1 remains `UNRECEIPTED`",
+			"tracked C1 grades require a separately sealed C1B receipt boundary",
 		]) {
 			if (!maintenanceStatus.includes(fixed)) {
 				errors.push(`${c1MaintenanceStatusPath}: missing sealed maintenance authority: ${JSON.stringify(fixed)}`);
@@ -765,8 +1473,9 @@ export async function checkPlan(root = repositoryRoot, overrides = new Map(), re
 		errors.push(`${c1MaintenanceStatusPath}: unreadable (${error.message})`);
 	}
 
+	let c1Status;
 	try {
-		const c1Status = await readText(root, c1StatusPath, overrides);
+		c1Status = await readText(root, c1StatusPath, overrides);
 		for (const snippet of [
 			"C1 implements the strict, inert canonical algebra",
 			"The three JSON Schemas are closed syntax projections",
@@ -779,9 +1488,6 @@ export async function checkPlan(root = repositoryRoot, overrides = new Map(), re
 		]) {
 			if (!c1Status.includes(snippet)) errors.push(`${c1StatusPath}: missing required C1 boundary: ${JSON.stringify(snippet)}`);
 		}
-		for (const label of c1ClaimLabels) {
-			requireExactlyOnce(c1Status, `\`${label}\` | \`UNRECEIPTED\``, c1StatusPath, "C1 source receipt map", errors);
-		}
 	} catch (error) {
 		errors.push(`${c1StatusPath}: unreadable (${error.message})`);
 	}
@@ -790,6 +1496,9 @@ export async function checkPlan(root = repositoryRoot, overrides = new Map(), re
 	const handoff = bodies.get("docs/HANDOFF_MODE_C.md");
 	if (status !== undefined && handoff !== undefined) {
 		await checkStatusPhase(root, overrides, status, handoff, errors, receiptAuthority);
+		if (c1Status !== undefined) {
+			await checkC1ReceiptPhase(root, overrides, c1Status, handoff, errors, c1ReceiptAuthority);
+		}
 	}
 
 	for (const path of controllingPaths) {
@@ -835,6 +1544,18 @@ export async function checkPlan(root = repositoryRoot, overrides = new Map(), re
 		if (!isDeepStrictEqual(specification.units.C1.prefixes, [])) {
 			errors.push("spec/verification/p07b-c-unit-paths.json: C1 prefix roster mismatch");
 		}
+		if (!isDeepStrictEqual(specification.units.C1M.exact, requiredC1MaintenancePaths)) {
+			errors.push("spec/verification/p07b-c-unit-paths.json: C1M exact path roster mismatch");
+		}
+		if (!isDeepStrictEqual(specification.units.C1M.prefixes, [])) {
+			errors.push("spec/verification/p07b-c-unit-paths.json: C1M prefix roster mismatch");
+		}
+		if (!isDeepStrictEqual(specification.units.C1B.exact, requiredC1BPaths)) {
+			errors.push("spec/verification/p07b-c-unit-paths.json: C1B exact path roster mismatch");
+		}
+		if (!isDeepStrictEqual(specification.units.C1B.prefixes, [])) {
+			errors.push("spec/verification/p07b-c-unit-paths.json: C1B prefix roster mismatch");
+		}
 	} catch (error) {
 		errors.push(`spec/verification/p07b-c-unit-paths.json: invalid (${error.message})`);
 	}
@@ -849,6 +1570,7 @@ async function mutatedText(path, transform) {
 async function runSelfTest() {
 	const baseline = await checkPlan();
 	if (baseline.length > 0) throw new Error(`P07B-C C1 evolved plan checker self-test baseline failed:\n${baseline.join("\n")}`);
+	const localEvidenceMutations = await runLocalEvidenceSelfTest();
 
 	const promptPath = "docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md";
 	const prompt = await readText(repositoryRoot, promptPath, new Map());
@@ -915,6 +1637,7 @@ async function runSelfTest() {
 	const currentHandoff = await readText(repositoryRoot, "docs/HANDOFF_MODE_C.md", new Map());
 	const currentC1MaintenanceStatus = await readText(repositoryRoot, c1MaintenanceStatusPath, new Map());
 	const currentC1Status = await readText(repositoryRoot, c1StatusPath, new Map());
+	const currentC1DidrunBugs = await readText(repositoryRoot, c1DidrunBugsPath, new Map());
 	const currentPromptPack = await readText(repositoryRoot, "docs/PROMPT_PACK.md", new Map());
 	const currentVerification = await readText(repositoryRoot, "docs/VERIFICATION.md", new Map());
 	const syntheticHandoff = `${currentHandoff.replace(
@@ -931,6 +1654,111 @@ async function runSelfTest() {
 	if (syntheticBaseline.length > 0) {
 		throw new Error(`P07B-C C0 plan checker synthetic C0B baseline failed:\n${syntheticBaseline.join("\n")}`);
 	}
+
+	const syntheticC1Receipt = {
+		schema_version: "countershape/p07b-c-c1-receipt/v1",
+		source_commit: sealedC1Identity.commit,
+		source_tree: sealedC1Identity.tree,
+		source_subject: sealedC1Identity.subject,
+		strict_exit_code: 0,
+		strict_claims_recorded_exact: c1ClaimLabels.length,
+		strict_claims_total: c1ClaimLabels.length,
+		coverage_total_events: c1ClaimLabels.length,
+		coverage_complete_events: c1ClaimLabels.length,
+		secrets_override: true,
+		claims: c1ClaimLabels.map((label, index) => ({
+			label,
+			type: c1ClaimTypes[index],
+			grade: "TREE-EXACT",
+			supporting_event_index: index,
+		})),
+		evidence: structuredClone(expectedC1ReceiptEvidence),
+	};
+	const syntheticC1ReceiptText = `${JSON.stringify(syntheticC1Receipt, null, 2)}\n`;
+	const syntheticC1Authority = await loadReceiptAuthorityFromGit(repositoryRoot, syntheticC1Receipt);
+	const c1ReconciledState = `**Source receipt:** C1 source commit \`${syntheticC1Receipt.source_commit}\`, tree \`${syntheticC1Receipt.source_tree}\`, is sealed, note-present, and strict-clean; every source grade below is \`TREE-EXACT\`. This C1B receipt-document working unit binds only that existing source and remains \`UNRECEIPTED\` until its own commit, seal, note, and strict boundary.`;
+	const c1NoRecursion = "This receipt binds only the already-existing C1 source commit. C1B cannot name or grade its own commit, tree, Git note, or strict result.";
+	const c1Disclosures = c1ReceiptDisclosureLines(syntheticC1Receipt);
+	let syntheticC1Status = currentC1Status
+		.replace(
+			/^\*\*Source state:\*\*.*$/mu,
+			`${c1ReconciledState}\n\n- C1 source strict exit: \`0\`\n- C1 source strict claims: \`${c1ClaimLabels.length}/${c1ClaimLabels.length} claims recorded-exact\`\n\n${c1NoRecursion}\n\n${[1, 2, 3, 4, 6].map((index) => c1Disclosures[index]).join("\n\n")}`,
+		)
+		.replace("## Intended C1 receipt map", "## C1 source receipt map")
+		.replace(
+			"| Intended capability | Exact claim label | Source grade |\n| --- | --- | --- |",
+			"| Intended capability | Exact claim label | Claim type | Source grade |\n| --- | --- | --- | --- |",
+		);
+	for (let index = 0; index < c1ClaimLabels.length; index += 1) {
+		const label = c1ClaimLabels[index];
+		syntheticC1Status = syntheticC1Status.replace(
+			`| \`${label}\` | \`UNRECEIPTED\` |`,
+			`| \`${label}\` | \`${c1ClaimTypes[index]}\` | \`TREE-EXACT\` |`,
+		);
+	}
+	const c1ReceiptBlock = [
+		"<!-- P07B-C-C1-SOURCE-RECEIPTS:START -->",
+		"### P07B-C C1 source receipt map",
+		"",
+		`C1 source commit \`${syntheticC1Receipt.source_commit}\`, tree \`${syntheticC1Receipt.source_tree}\`.`,
+		`C1 strict claims: \`${c1ClaimLabels.length}/${c1ClaimLabels.length} claims recorded-exact\`; strict exit: \`0\`.`,
+		"",
+		...c1Disclosures,
+		"",
+		"| Claim label | Claim type | Verbatim grade |",
+		"| --- | --- | --- |",
+		...syntheticC1Receipt.claims.map((claim) => `| \`${claim.label}\` | \`${claim.type}\` | \`${claim.grade}\` |`),
+		"<!-- P07B-C-C1-SOURCE-RECEIPTS:END -->",
+	].join("\n");
+	const syntheticC1Handoff = `${currentHandoff.replace(
+		/\n?<!-- P07B-C-C1-SOURCE-RECEIPTS:START -->[\s\S]*?<!-- P07B-C-C1-SOURCE-RECEIPTS:END -->\n?/u,
+		"\n",
+	).trimEnd()}\n\n${c1ReceiptBlock}\n`;
+	const c1DidrunBlock = [
+		"<!-- P07B-C-C1-DIDRUN-LIVE:START -->",
+		"## P07B-C C1 live-session evidence",
+		"",
+		...c1Disclosures,
+		"",
+		c1DidrunLiveLine,
+		"",
+		"This section binds only the already-sealed C1 source. C1B remains ungraded in its own tracked files.",
+		"<!-- P07B-C-C1-DIDRUN-LIVE:END -->",
+	].join("\n");
+	const syntheticC1DidrunBugs = `${currentC1DidrunBugs.replace(
+		/\n?<!-- P07B-C-C1-DIDRUN-LIVE:START -->[\s\S]*?<!-- P07B-C-C1-DIDRUN-LIVE:END -->\n?/u,
+		"\n",
+	).trimEnd()}\n\n${c1DidrunBlock}\n`;
+	const syntheticC1Overrides = new Map([
+		[c1StatusPath, syntheticC1Status],
+		[c1ReceiptDeclarationPath, syntheticC1ReceiptText],
+		["docs/HANDOFF_MODE_C.md", syntheticC1Handoff],
+		[c1DidrunBugsPath, syntheticC1DidrunBugs],
+	]);
+	const syntheticC1Baseline = await checkPlan(
+		repositoryRoot,
+		syntheticC1Overrides,
+		undefined,
+		syntheticC1Authority,
+	);
+	if (syntheticC1Baseline.length > 0) {
+		throw new Error(`P07B-C C1 plan checker synthetic C1B baseline failed:\n${syntheticC1Baseline.join("\n")}`);
+	}
+	const mutateC1Receipt = (transform) => {
+		const candidate = structuredClone(syntheticC1Receipt);
+		transform(candidate);
+		return `${JSON.stringify(candidate, null, 2)}\n`;
+	};
+	const mutateC1Authority = (transform) => {
+		const candidate = structuredClone(syntheticC1Authority);
+		transform(candidate);
+		return candidate;
+	};
+	const mutateC1Overrides = (path, value) => {
+		const candidate = new Map(syntheticC1Overrides);
+		candidate.set(path, value);
+		return candidate;
+	};
 
 	let currentReceiptText;
 	try {
@@ -954,6 +1782,28 @@ async function runSelfTest() {
 		})(),
 		expect: "invalid receipt declaration",
 	};
+	let currentC1ReceiptText;
+	try {
+		currentC1ReceiptText = await readText(repositoryRoot, c1ReceiptDeclarationPath, new Map());
+	} catch (error) {
+		if (error.code !== "ENOENT") throw error;
+	}
+	const c1PhaseReceiptCase = currentC1ReceiptText === undefined ? {
+		name: "pending C1 source receipt inflation", path: c1StatusPath,
+		value: currentC1Status.replace(
+			`\`${c1ClaimLabels[0]}\` | \`UNRECEIPTED\``,
+			`\`${c1ClaimLabels[0]}\` | \`TREE-EXACT\``,
+		),
+		expect: "C1 pending source receipt map",
+	} : {
+		name: "reconciled C1 source receipt-grade mutation", path: c1ReceiptDeclarationPath,
+		value: (() => {
+			const candidate = JSON.parse(currentC1ReceiptText);
+			candidate.claims[0].grade = "UNRECEIPTED";
+			return `${JSON.stringify(candidate, null, 2)}\n`;
+		})(),
+		expect: "invalid receipt declaration",
+	};
 	const cases = [
 		{
 			name: "C1 maintenance receipt-grade regression", path: c1MaintenanceStatusPath,
@@ -963,17 +1813,10 @@ async function runSelfTest() {
 			),
 			expect: "maintenance receipt map",
 		},
+		c1PhaseReceiptCase,
 		{
-			name: "C1 source receipt inflation", path: c1StatusPath,
-			value: currentC1Status.replace(
-				`\`${c1ClaimLabels[0]}\` | \`UNRECEIPTED\``,
-				`\`${c1ClaimLabels[0]}\` | \`TREE-EXACT\``,
-			),
-			expect: "C1 source receipt map",
-		},
-		{
-			name: "C1 prompt-pack current-phase removal", path: "docs/PROMPT_PACK.md",
-			value: currentPromptPack.replace("C1 must seal/strict-clean before C2", "C1 gate omitted"),
+			name: "C1 prompt-pack receipt-gate removal", path: "docs/PROMPT_PACK.md",
+			value: currentPromptPack.replace("C2 requires separately sealed/strict-clean C1B", "C1B gate omitted"),
 			expect: "missing required C0 ruling",
 		},
 		{
@@ -982,8 +1825,34 @@ async function runSelfTest() {
 			expect: "missing required C0 ruling",
 		},
 		{
+			name: "C1M verification roster path substitution", path: "docs/VERIFICATION.md",
+			value: currentVerification.replace("`docs/THREAT_MODEL.md`", "`docs/THREAT_MODEL-RENAMED.md`"),
+			expect: "pre-enrollment maintenance scope declaration",
+		},
+		{
+			name: "C1M verification roster digest substitution", path: "docs/VERIFICATION.md",
+			value: currentVerification.replace(requiredC1MaintenanceDigest, `sha256:${"0".repeat(64)}`),
+			expect: "pre-enrollment maintenance scope declaration",
+		},
+		{
+			name: "C1M lifecycle signal-authority regression", path: "docs/STATE_MACHINES.md",
+			value: (await readText(repositoryRoot, "docs/STATE_MACHINES.md", new Map())).replace(
+				"skip TERM on absence, signal only after clean presence",
+				"signal on numeric presence",
+			),
+			expect: "missing required pre-enrollment maintenance ruling",
+		},
+		{
+			name: "C1M historical U2 provenance removal", path: "docs/decisions/0002-u2-impure-boundary.md",
+			value: (await readText(repositoryRoot, "docs/decisions/0002-u2-impure-boundary.md", new Map())).replace(
+				"does not relabel or extend the sealed historical U2 receipt",
+				"inherits the historical U2 receipt",
+			),
+			expect: "missing required pre-enrollment maintenance ruling",
+		},
+		{
 			name: "sealed C0 successor regression", path: statusPath,
-			value: currentStatus.replace("C0 is complete. C1's inert semantic source boundary is current", "C0 successor omitted"),
+			value: currentStatus.replace("C0 is complete. C1 source commit `2fceacecbacb89fd7650f1570b2af33e6ea25ed3`", "C0 successor omitted"),
 			expect: "missing required C0 ruling",
 		},
 		{
@@ -1100,6 +1969,91 @@ async function runSelfTest() {
 			expect: "C1 exact path roster mismatch",
 		},
 		{
+			name: "C1M exact path deletion", path: configPath,
+			value: (() => {
+				const candidate = structuredClone(currentConfiguration);
+				candidate.units.C1M.exact = candidate.units.C1M.exact.filter(
+					(path) => path !== "internal/world/process_darwin_test.go",
+				);
+				return `${JSON.stringify(candidate, null, 2)}\n`;
+			})(),
+			expect: "C1M exact path roster mismatch",
+		},
+		{
+			name: "C1M exact path substitution", path: configPath,
+			value: (() => {
+				const candidate = structuredClone(currentConfiguration);
+				candidate.units.C1M.exact = candidate.units.C1M.exact.map((path) =>
+					path === "internal/world/process_darwin_test.go" ? "internal/world/process_darwin_unreviewed.go" : path,
+				).sort();
+				return `${JSON.stringify(candidate, null, 2)}\n`;
+			})(),
+			expect: "C1M exact path roster mismatch",
+		},
+		{
+			name: "C1M prefix introduction", path: configPath,
+			value: (() => {
+				const candidate = structuredClone(currentConfiguration);
+				candidate.units.C1M.prefixes = ["vendor/"];
+				return `${JSON.stringify(candidate, null, 2)}\n`;
+			})(),
+			expect: "C1M prefix roster mismatch",
+		},
+		{
+			name: "C1B unit omission", path: configPath,
+			value: (() => {
+				const candidate = structuredClone(currentConfiguration);
+				delete candidate.units.C1B;
+				return `${JSON.stringify(candidate, null, 2)}\n`;
+			})(),
+			expect: "invalid",
+		},
+		{
+			name: "C1B unit order drift", path: configPath,
+			value: (() => {
+				const candidate = structuredClone(currentConfiguration);
+				const entries = Object.entries(candidate.units);
+				const c1b = entries.find(([unit]) => unit === "C1B");
+				candidate.units = Object.fromEntries([
+					...entries.filter(([unit]) => unit !== "C1B" && unit !== "C2"),
+					entries.find(([unit]) => unit === "C2"),
+					c1b,
+				]);
+				return `${JSON.stringify(candidate, null, 2)}\n`;
+			})(),
+			expect: "invalid",
+		},
+		{
+			name: "C1B receipt path removal", path: configPath,
+			value: (() => {
+				const candidate = structuredClone(currentConfiguration);
+				candidate.units.C1B.exact = candidate.units.C1B.exact.filter(
+					(path) => path !== c1ReceiptDeclarationPath,
+				);
+				return `${JSON.stringify(candidate, null, 2)}\n`;
+			})(),
+			expect: "C1B exact path roster mismatch",
+		},
+		{
+			name: "C1B exact-path expansion", path: configPath,
+			value: (() => {
+				const candidate = structuredClone(currentConfiguration);
+				candidate.units.C1B.exact.push("tools/c1b-self-authorized.mjs");
+				candidate.units.C1B.exact.sort();
+				return `${JSON.stringify(candidate, null, 2)}\n`;
+			})(),
+			expect: "C1B exact path roster mismatch",
+		},
+		{
+			name: "C1B prefix introduction", path: configPath,
+			value: (() => {
+				const candidate = structuredClone(currentConfiguration);
+				candidate.units.C1B.prefixes = ["docs/status/"];
+				return `${JSON.stringify(candidate, null, 2)}\n`;
+			})(),
+			expect: "invalid",
+		},
+		{
 			name: "fourth semantic object", path: authorityDeclarationPath,
 			value: mutateAuthority((candidate) => candidate.semantic_objects.push({
 				name: "FourthObject", storage: "IMMUTABLE_NONHEAD", production_issuer: "C4",
@@ -1139,6 +2093,258 @@ async function runSelfTest() {
 			expect: "authority declaration mismatch",
 		},
 		phaseReceiptCase,
+		{
+			name: "C1B receipt with unreconciled status",
+			overrides: mutateC1Overrides(
+				c1StatusPath,
+				syntheticC1Status.replace(c1ReconciledState, "**Source receipt:** C1 source reconciliation omitted."),
+			),
+			c1ReceiptAuthority: syntheticC1Authority,
+			expect: "C1B reconciled source state",
+		},
+		{
+			name: "C1B self-referential receipt field",
+			overrides: mutateC1Overrides(c1ReceiptDeclarationPath, mutateC1Receipt((candidate) => {
+				candidate.receipt_commit = "f".repeat(40);
+			})),
+			c1ReceiptAuthority: syntheticC1Authority,
+			expect: "invalid receipt declaration",
+		},
+		{
+			name: "C1B source claim order drift",
+			overrides: mutateC1Overrides(c1ReceiptDeclarationPath, mutateC1Receipt((candidate) => {
+				[candidate.claims[0], candidate.claims[1]] = [candidate.claims[1], candidate.claims[0]];
+			})),
+			c1ReceiptAuthority: syntheticC1Authority,
+			expect: "invalid receipt declaration",
+		},
+		{
+			name: "C1B local evidence digest drift",
+			overrides: mutateC1Overrides(c1ReceiptDeclarationPath, mutateC1Receipt((candidate) => {
+				candidate.evidence.html_report.sha256 = "0".repeat(64);
+			})),
+			c1ReceiptAuthority: syntheticC1Authority,
+			expect: "invalid receipt declaration",
+		},
+		{
+			name: "C1B admitted source commit mismatch",
+			overrides: syntheticC1Overrides,
+			c1ReceiptAuthority: mutateC1Authority((candidate) => { candidate.commit = "f".repeat(40); }),
+			expect: "Git/didrun authority mismatch",
+		},
+		{
+			name: "C1B admitted source tree mismatch",
+			overrides: syntheticC1Overrides,
+			c1ReceiptAuthority: mutateC1Authority((candidate) => { candidate.tree = "f".repeat(40); }),
+			expect: "Git/didrun authority mismatch",
+		},
+		{
+			name: "C1B source parent mismatch",
+			overrides: syntheticC1Overrides,
+			c1ReceiptAuthority: mutateC1Authority((candidate) => { candidate.parent = "f".repeat(40); }),
+			expect: "Git/didrun authority mismatch",
+		},
+		{
+			name: "C1B source subject mismatch",
+			overrides: syntheticC1Overrides,
+			c1ReceiptAuthority: mutateC1Authority((candidate) => { candidate.subject = "wrong subject"; }),
+			expect: "Git/didrun authority mismatch",
+		},
+		{
+			name: "C1B source ancestry mismatch",
+			overrides: syntheticC1Overrides,
+			c1ReceiptAuthority: mutateC1Authority((candidate) => { candidate.ancestor_of_head = false; }),
+			expect: "Git/didrun authority mismatch",
+		},
+		{
+			name: "C1B note object mismatch",
+			overrides: syntheticC1Overrides,
+			c1ReceiptAuthority: mutateC1Authority((candidate) => { candidate.note_blob_oid = "f".repeat(40); }),
+			expect: "Git/didrun authority mismatch",
+		},
+		{
+			name: "C1B note body digest mismatch",
+			overrides: syntheticC1Overrides,
+			c1ReceiptAuthority: mutateC1Authority((candidate) => { candidate.note_body_sha256 = "f".repeat(64); }),
+			expect: "Git/didrun authority mismatch",
+		},
+		{
+			name: "C1B note label mismatch",
+			overrides: syntheticC1Overrides,
+			c1ReceiptAuthority: mutateC1Authority((candidate) => { candidate.note.claims[0].claim.label = "wrong label"; }),
+			expect: "Git/didrun authority mismatch",
+		},
+		{
+			name: "C1B note version mismatch",
+			overrides: syntheticC1Overrides,
+			c1ReceiptAuthority: mutateC1Authority((candidate) => { candidate.note.version = 2; }),
+			expect: "Git/didrun authority mismatch",
+		},
+		{
+			name: "C1B note commit mismatch",
+			overrides: syntheticC1Overrides,
+			c1ReceiptAuthority: mutateC1Authority((candidate) => { candidate.note.commit = "f".repeat(40); }),
+			expect: "Git/didrun authority mismatch",
+		},
+		{
+			name: "C1B note tree mismatch",
+			overrides: syntheticC1Overrides,
+			c1ReceiptAuthority: mutateC1Authority((candidate) => { candidate.note.tree = "f".repeat(40); }),
+			expect: "Git/didrun authority mismatch",
+		},
+		{
+			name: "C1B note seal override mismatch",
+			overrides: syntheticC1Overrides,
+			c1ReceiptAuthority: mutateC1Authority((candidate) => { candidate.note.secrets_override = false; }),
+			expect: "Git/didrun authority mismatch",
+		},
+		{
+			name: "C1B note claim type mismatch",
+			overrides: syntheticC1Overrides,
+			c1ReceiptAuthority: mutateC1Authority((candidate) => { candidate.note.claims[0].claim.ctype = "command-succeeded"; }),
+			expect: "Git/didrun authority mismatch",
+		},
+		{
+			name: "C1B note declared index mismatch",
+			overrides: syntheticC1Overrides,
+			c1ReceiptAuthority: mutateC1Authority((candidate) => { candidate.note.claims[0].claim.declared_at_index = 1; }),
+			expect: "Git/didrun authority mismatch",
+		},
+		{
+			name: "C1B note event-index mismatch",
+			overrides: syntheticC1Overrides,
+			c1ReceiptAuthority: mutateC1Authority((candidate) => { candidate.note.claims[0].claim.event_indices = [1]; }),
+			expect: "Git/didrun authority mismatch",
+		},
+		{
+			name: "C1B note pathspec mismatch",
+			overrides: syntheticC1Overrides,
+			c1ReceiptAuthority: mutateC1Authority((candidate) => { candidate.note.claims[0].claim.pathspecs = ["docs/"]; }),
+			expect: "Git/didrun authority mismatch",
+		},
+		{
+			name: "C1B note argv preview omission",
+			overrides: syntheticC1Overrides,
+			c1ReceiptAuthority: mutateC1Authority((candidate) => { candidate.note.claims[0].claim.argv_preview = []; }),
+			expect: "Git/didrun authority mismatch",
+		},
+		{
+			name: "C1B note support-index mismatch",
+			overrides: syntheticC1Overrides,
+			c1ReceiptAuthority: mutateC1Authority((candidate) => { candidate.note.claims[0].supporting_event_index = 1; }),
+			expect: "Git/didrun authority mismatch",
+		},
+		{
+			name: "C1B note exit mismatch",
+			overrides: syntheticC1Overrides,
+			c1ReceiptAuthority: mutateC1Authority((candidate) => { candidate.note.claims[0].exit_code = 1; }),
+			expect: "Git/didrun authority mismatch",
+		},
+		{
+			name: "C1B note reason mismatch",
+			overrides: syntheticC1Overrides,
+			c1ReceiptAuthority: mutateC1Authority((candidate) => { candidate.note.claims[0].reason = "wrong reason"; }),
+			expect: "Git/didrun authority mismatch",
+		},
+		{
+			name: "C1B note delta mismatch",
+			overrides: syntheticC1Overrides,
+			c1ReceiptAuthority: mutateC1Authority((candidate) => { candidate.note.claims[0].delta = ["dirty"]; }),
+			expect: "Git/didrun authority mismatch",
+		},
+		{
+			name: "C1B note grade mismatch",
+			overrides: syntheticC1Overrides,
+			c1ReceiptAuthority: mutateC1Authority((candidate) => { candidate.note.claims[0].grade = "tree"; }),
+			expect: "Git/didrun authority mismatch",
+		},
+		{
+			name: "C1B note coverage mismatch",
+			overrides: syntheticC1Overrides,
+			c1ReceiptAuthority: mutateC1Authority((candidate) => { candidate.note.coverage.by_coverage.complete -= 1; }),
+			expect: "Git/didrun authority mismatch",
+		},
+		{
+			name: "C1B no-recursion statement removal",
+			overrides: mutateC1Overrides(c1StatusPath, syntheticC1Status.replace(c1NoRecursion, "C1B receipt boundary omitted.")),
+			c1ReceiptAuthority: syntheticC1Authority,
+			expect: "C1B no-recursion boundary",
+		},
+		{
+			name: "C1B status grade mismatch",
+			overrides: mutateC1Overrides(
+				c1StatusPath,
+				syntheticC1Status.replace(
+					`| \`${c1ClaimLabels[0]}\` | \`${c1ClaimTypes[0]}\` | \`TREE-EXACT\` |`,
+					`| \`${c1ClaimLabels[0]}\` | \`${c1ClaimTypes[0]}\` | \`UNRECEIPTED\` |`,
+				),
+			),
+			c1ReceiptAuthority: syntheticC1Authority,
+			expect: "C1B source receipt map",
+		},
+		{
+			name: "C1B contradictory duplicate status row",
+			overrides: mutateC1Overrides(
+				c1StatusPath,
+				`${syntheticC1Status}\n| duplicate | \`${c1ClaimLabels[0]}\` | \`${c1ClaimTypes[0]}\` | \`UNRECEIPTED\` |\n`,
+			),
+			c1ReceiptAuthority: syntheticC1Authority,
+			expect: "claim-label uniqueness",
+		},
+		{
+			name: "C1B status self-commit claim",
+			overrides: mutateC1Overrides(
+				c1StatusPath,
+				`${syntheticC1Status}\nC1B commit \`${"f".repeat(40)}\` is note-present with \`TREE-EXACT\`.\n`,
+			),
+			c1ReceiptAuthority: syntheticC1Authority,
+			expect: "C1B self-receipt claim",
+		},
+		{
+			name: "C1B handoff self-strict claim",
+			overrides: mutateC1Overrides(
+				"docs/HANDOFF_MODE_C.md",
+				`${syntheticC1Handoff}\nC1B strict exit: \`0\`; 7/7 claims recorded-exact.\n`,
+			),
+			c1ReceiptAuthority: syntheticC1Authority,
+			expect: "C1B self-receipt claim",
+		},
+		{
+			name: "C1B hash-free self-grade claim",
+			overrides: mutateC1Overrides(
+				c1DidrunBugsPath,
+				`${syntheticC1DidrunBugs}\nC1B is sealed and strict-clean.\n`,
+			),
+			c1ReceiptAuthority: syntheticC1Authority,
+			expect: "C1B self-receipt claim",
+		},
+		{
+			name: "C1B didrun live-session block removal",
+			overrides: mutateC1Overrides(
+				c1DidrunBugsPath,
+				syntheticC1DidrunBugs.replace("<!-- P07B-C-C1-DIDRUN-LIVE:START -->", "<!-- C1 LIVE OMITTED -->"),
+			),
+			c1ReceiptAuthority: syntheticC1Authority,
+			expect: "C1B didrun live-session block",
+		},
+		{
+			name: "C1B didrun disclosure removal",
+			overrides: mutateC1Overrides(
+				c1DidrunBugsPath,
+				syntheticC1DidrunBugs.replace(c1Disclosures[4], "Ledger manifest disclosure omitted."),
+			),
+			c1ReceiptAuthority: syntheticC1Authority,
+			expect: "C1B didrun source disclosure",
+		},
+		{
+			name: "C1B handoff HTML digest mismatch",
+			overrides: mutateC1Overrides(
+				"docs/HANDOFF_MODE_C.md",
+				syntheticC1Handoff.replace(syntheticC1Receipt.evidence.html_report.sha256, "f".repeat(64)),
+			),
+			c1ReceiptAuthority: syntheticC1Authority,
+			expect: "C1B source evidence disclosure",
+		},
 		{
 			name: "synthetic C0B receipt/status disagreement",
 			overrides: new Map([
@@ -1186,23 +2392,42 @@ async function runSelfTest() {
 
 	for (const testCase of cases) {
 		const overrides = testCase.overrides ?? new Map([[testCase.path, testCase.value]]);
-		const errors = await checkPlan(repositoryRoot, overrides, testCase.receiptAuthority);
+		const errors = await checkPlan(
+			repositoryRoot,
+			overrides,
+			testCase.receiptAuthority,
+			testCase.c1ReceiptAuthority,
+		);
 		if (!errors.some((error) => error.includes(testCase.expect))) {
 			throw new Error(`P07B-C C1 evolved plan checker self-test false negative: ${testCase.name}`);
 		}
 	}
 
-	console.log(`P07B-C C1 evolved plan checker self-test passed: ${cases.length} authority, structure, evidence, semantic-projection, and allowlist mutations rejected`);
+	console.log(`P07B-C C1 evolved plan checker self-test passed: ${cases.length + localEvidenceMutations} authority, structure, local-evidence, semantic-projection, and allowlist mutations rejected`);
 }
 
 async function main() {
 	const mode = process.argv[2];
 	if (mode === "--self-test") {
-		if (process.argv.length !== 3) throw new Error("usage: check-p07b-c-plan.mjs [--self-test]");
+		if (process.argv.length !== 3) throw new Error("usage: check-p07b-c-plan.mjs [--self-test|--verify-c1-local-evidence]");
 		await runSelfTest();
 		return;
 	}
-	if (mode !== undefined) throw new Error("usage: check-p07b-c-plan.mjs [--self-test]");
+	if (mode === "--verify-c1-local-evidence") {
+		if (process.argv.length !== 3) throw new Error("usage: check-p07b-c-plan.mjs [--self-test|--verify-c1-local-evidence]");
+		const planErrors = await checkPlan();
+		if (planErrors.length > 0) {
+			throw new Error(`P07B-C C1 local-evidence precondition failed:\n${planErrors.join("\n")}`);
+		}
+		const receipt = JSON.parse(await readText(repositoryRoot, c1ReceiptDeclarationPath, new Map()));
+		const evidenceErrors = await verifyC1LocalEvidence(repositoryRoot, receipt);
+		if (evidenceErrors.length > 0) {
+			throw new Error(`P07B-C C1 local-evidence verification failed:\n${evidenceErrors.join("\n")}`);
+		}
+		console.log("P07B-C C1 local evidence passed: HTML plus the ignored 19-event sealed/20-event archived ledger snapshot match the closed receipt declaration; this local snapshot is not portable strict authority");
+		return;
+	}
+	if (mode !== undefined) throw new Error("usage: check-p07b-c-plan.mjs [--self-test|--verify-c1-local-evidence]");
 
 	const errors = await checkPlan();
 	if (errors.length > 0) {

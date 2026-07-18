@@ -70,6 +70,6 @@ The six lanes did not rubber-stamp the initial plan. Synthesis first removed per
 
 C0 implements no C runtime type, schema replacement, store layout, target issuer, Git materializer, boot-session admission, Node admission, interlock, StartClaim, RunPermit, SpawnObservation, process mechanics, standalone detector, FCR, classification, product CLI, server, dashboard, or report. It validates no runtime capability. Linux, Windows, other Node/platform tuples, host-wide absence, network/registry denial, listener ownership, containment, confidentiality, hostile same-user resistance, descriptor-bound execution, security review, production readiness, comprehension, adoption, and maintainership remain `UNRECEIPTED` human/engineering tail.
 
-## Current successor boundary
+## Sealed successor gate
 
-C0 is complete. C1's inert semantic source boundary is current and remains `UNRECEIPTED` until its exact final ledger, commit, seal, Git note, and strict exit `0`. C2 must not begin before that gate; this historical C0 status grants no C1 runtime or persistence authority.
+C0 is complete. C1 source commit `2fceacecbacb89fd7650f1570b2af33e6ea25ed3`, tree `573fcd0b5548f9f7368493afe801a4bbd2cc9a34`, is sealed, note-present, and strict-clean with `19/19` claims. Tracked C1 grades are authoritative only through an agreeing receipt declaration, source note, status, and handoff plus a separately sealed C1B boundary; C2 is gated on that boundary. This historical C0 status grants no C1 runtime or persistence authority.

@@ -1,8 +1,8 @@
 # P07B-C C1 inert-semantics status
 
-**Source state:** C1 implementation working tree. Every C1 capability below remains `UNRECEIPTED` in source until the exact C1 commit is sealed, its didrun Git note is present, and `NO_COLOR=1 didrun verify --strict` exits `0`.
+**Source state:** sealed C1 source commit `2fceacecbacb89fd7650f1570b2af33e6ea25ed3`, tree `573fcd0b5548f9f7368493afe801a4bbd2cc9a34`, is note-present and strict-clean with `19/19` claims. Tracked C1 receipt reconciliation is pending; every C1 capability below remains `UNRECEIPTED` until the separately sealed C1B receipt boundary binds the source note, status, and handoff without grading itself.
 
-**Immediate sealed predecessor:** cumulative output-cap maintenance source `fa3d0c12b4c599744b666b2848e38a2499f33a89`, tree `c908c4e580144aa481f646090a1a21d92c86e1cf`, is note-present and strict-clean with `8/8 TREE-EXACT`; its receipt reconciliation `3f31370a70979c4c5fe3a523be19e05f84271e96`, tree `29c5708b05c562984a0b7b66d6cfe3ac6e19c626`, is note-present and strict-clean with `6/6 TREE-EXACT`. The source changes only one Darwin test stimulus, its fixture, and its status file; the receipt changes only that status file. Neither changes runtime control or a C1 semantic path.
+**Immediate sealed predecessor to the C1 source:** cumulative output-cap maintenance source `fa3d0c12b4c599744b666b2848e38a2499f33a89`, tree `c908c4e580144aa481f646090a1a21d92c86e1cf`, is note-present and strict-clean with `8/8 TREE-EXACT`; its receipt reconciliation `3f31370a70979c4c5fe3a523be19e05f84271e96`, tree `29c5708b05c562984a0b7b66d6cfe3ac6e19c626`, is note-present and strict-clean with `6/6 TREE-EXACT`. The source changes only one Darwin test stimulus, its fixture, and its status file; the receipt changes only that status file. Neither changes runtime control or a C1 semantic path.
 
 ## Boundary
 
