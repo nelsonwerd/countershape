@@ -12,12 +12,30 @@
 
 ## Current state
 
-- **Pipeline phase:** U0–U6, P07A/U6b, P07B-A1, P07B-A2.1, cumulative-verification maintenance, accepted corrected P07B-A2.2, and the complete P07B-B source/receipt/S6/final-handoff boundary are sealed and strict-clean. P07B-C C0 deep-dive/scope-lock files are the current working unit and remain `UNRECEIPTED` until their own commit, seal, note check, and strict exit `0`.
-- **Git:** repository is on `codex/countershape-autopilot`. P07B-B source commit `eb06bdcf18f8e14db1257e73733afdc05cac045e`, tree `d95c907754f3347bae885a64c98b30ad1ea00256`, is sealed/strict-clean with `16/16` claims. Receipt commit `b4ac17bd66c6260fd4b12b9277ab5259659c55e1` is `6/6`; S6-13 commit `c5ce6e20fa23b106f6e8fabcc210180f50d6c6b2` is `6/6`. Final B handoff commit `464e47adbf7f4497dfafa89938a9539239ffd41b`, tree `c7e80d6e6819d4e2c54aaedeb4dc3ef730de58c6`, independently verifies `5/5 TREE-EXACT` with its matching ledger live. Its exact HTML is `.countershape/evidence/p07b-b-final-464e47adbf7f.html`, SHA-256 `c7e7c66bdc2d8a608dcc2a1dfc3ba6ef90e2373071c3f9ac841b7d72fdd1a62c`. The C0 working tree is not yet a committed capability.
-- **didrun:** installed globally and unchanged. Final B strict was independently rerun successfully, then the complete live ledger was preserved under ignored `.didrun-history/2026-07-18-p07b-b-final-handoff-live/.didrun/` before C0 began. The earlier B ledgers remain preserved separately. Strict is not self-contained after ledger movement: restore the exact matching ledger before reproducing an old strict result. All redacted-export/entropy disclosures remain non-secret-absence findings.
+- **Pipeline phase:** U0–U6, P07A/U6b, P07B-A1, P07B-A2.1, cumulative-verification maintenance, accepted corrected P07B-A2.2, the complete P07B-B boundary, and P07B-C C0a source are sealed and strict-clean. P07B-C C0 deep-dive/scope-lock files are the current working unit; within that unit, C0b receipt reconciliation is current and remains unreceipted until its own commit, seal, note check, and strict exit `0`.
+- **Git:** repository is on `codex/countershape-autopilot`. Final B handoff commit `464e47adbf7f4497dfafa89938a9539239ffd41b`, tree `c7e80d6e6819d4e2c54aaedeb4dc3ef730de58c6`, remains independently `5/5 TREE-EXACT`; its exact HTML is `.countershape/evidence/p07b-b-final-464e47adbf7f.html`, SHA-256 `c7e7c66bdc2d8a608dcc2a1dfc3ba6ef90e2373071c3f9ac841b7d72fdd1a62c`. C0a source commit `1c6d9fdef339314bfcb99d7d53f3a7c5040e5020`, tree `97574c4ef3f967a1194b2ebdeed246a77efabfc7`, is note-present and strict-clean with `8/8` claims; every verbatim grade is `TREE-EXACT`. The current dirty tree is C0b receipt documentation only.
+- **didrun:** installed globally and unchanged. The C0a eight-event serialized ledger is preserved under ignored `.didrun-history/2026-07-18-p07b-c-c0a-source/.didrun/`; restore it to reproduce C0a strict. Its plain seal stopped on four aggregate high-entropy findings after the exact staged scope and named credential-pattern scan passed; the logged redacted-export override then sealed and strict exited `0`. This is not secret absence. C0b starts with a fresh live ledger. Earlier B ledgers remain preserved separately.
 - **Current baseline:** from a fresh repository-root shell, run `/opt/homebrew/bin/node tools/verify-current.mjs`. The evolved 24-step roster uses Go `-p=1`, builds, vets, runs the complete suite, self-tests its orchestration, checks/exercises generated artifacts, fresh-process recovery, deterministic human capture, every current architecture checker/self-test through P07B-B, and the C0 plan/scope self-tests; it labels every historical-only gate without running it and fails on Finder artifacts. Read `docs/VERIFICATION.md`; a direct pass is not a didrun grade.
 - **Build:** A2.2's accepted compiler and sealed P07B-B terminal publication/materialization remain unchanged. P07B-C still implements no pinned target, admitted runtime, interlock/start admission, finalized run, classification, product CLI, server, dashboard, or report. C0 only locks the corrected future authority: three immutable semantic objects; typed official publication; one private boot-session `ExecutionInterlock`; intent-only StartClaim plus C4-runner-only process-local RunPermit; separate SpawnObservation; bounded process/scope witness; no semantic execution head.
 - **External APIs:** none used in the product. The A2.2 UX pass used a different internal model over sanitized captures; its qualitative verdict is `UNRECEIPTED` and has no semantic authority. Any real external model/API integration remains human-gated and must never be faked.
+
+<!-- P07B-C-C0A-RECEIPTS:START -->
+### P07B-C C0a receipt map
+
+C0a source commit `1c6d9fdef339314bfcb99d7d53f3a7c5040e5020`, tree `97574c4ef3f967a1194b2ebdeed246a77efabfc7`.
+C0a strict claims: `8/8 claims recorded-exact`; strict exit: `0`.
+
+| Claim label | Verbatim grade |
+| --- | --- |
+| `P07B C0 authority plan coherence` | `TREE-EXACT` |
+| `P07B C0 plan checker self-test` | `TREE-EXACT` |
+| `P07B C0 unit scope self-test` | `TREE-EXACT` |
+| `P07B C0 inherited planning validation` | `TREE-EXACT` |
+| `P07B C0 cumulative verification` | `TREE-EXACT` |
+| `P07B C0 exact staged scope and diff` | `TREE-EXACT` |
+| `P07B C0 scoped staged credential scan` | `TREE-EXACT` |
+| `P07B C0 didrun chain intact` | `TREE-EXACT` |
+<!-- P07B-C-C0A-RECEIPTS:END -->
 
 ## Read first, in order
 
@@ -535,12 +553,11 @@ separate reviewed boundary.
 1. Run `git status --short --branch`; confirm branch `codex/countershape-autopilot` and sealed final B commit `464e47adbf7f4497dfafa89938a9539239ffd41b`. No `.didrun` path may be staged/tracked.
 2. If reproducing B strict, restore its exact preserved ledger. Do not use the archived B ledger for C0 events. Start C0 with a fresh `.didrun` only after the B ledger is safely preserved.
 3. Read the complete P07B-C research package and controlling prompt. Preserve the final corrected spine: three persisted semantic objects; typed official publication; one private boot-session interlock with no result authority; C3-only official target issuer; C4-runner-only StartClaim/RunPermit consumption; separate SpawnObservation; process plus COMPLETE/PARTIAL/VIOLATED scope axes; classifier-profile-bound immutable execution; no semantic execution head.
-4. Finish only C0. Add/check the exact machine-readable authority declaration, metadata plan validator and mutation self-test, machine-readable unit path allowlist and staged-scope self-test, repaired serial-Go cumulative verifier, and provisional C0 status. Run every load-bearing C0 check through `didrun run --` and claim each final success immediately before another event.
-5. Stage exact C0a paths through the allowlist, review the diff/credential-prefix scope, commit `docs: lock P07B-C execution authority`, seal, require the Git note, and loop `NO_COLOR=1 didrun verify --strict` until exit `0`.
-6. Reconcile that exact source commit/tree, strict counts, ordered claim labels, and verbatim grades in `spec/verification/p07b-c-c0-receipt.json` plus the required delimited status/handoff receipt maps as a separate C0b receipt-document commit. The already-enrolled plan self-test must reopen the actual ancestor commit/tree and didrun Git note through admitted Git and pass its reconciled-state branch; then seal/note/strict C0b independently and keep its matching ledger live.
-7. Only after C0b is sealed/strict-clean begin C1 strict inert semantics. Do not edit the legacy C schemas/examples during C0; they are explicitly superseded planning fixtures until C1 evolves the C0 checker, replaces the fixtures, and receipts runtime/schema/example intersection.
-8. Keep the root as sole writer and didrun/Git/seal operator. Parallel agents remain bounded read-only critics. No external provider is needed; any future real call remains human-gated.
-9. Preserve the adoption, comprehension, production-hardening, independent-security-review, cross-platform, release, and maintainership tail.
+4. Finish only C0b. Reopen the actual C0a ancestor commit/tree and didrun Git note through the already-enrolled reconciled-state checker; require all eight source rows, status, handoff, and the machine receipt to agree.
+5. Run every load-bearing C0b check through a fresh serialized didrun ledger and claim each final success immediately. Stage only `C0B`, commit `docs: receipt P07B-C C0 authority lock`, seal, require the Git note, and loop `NO_COLOR=1 didrun verify --strict` until exit `0`.
+6. Only after C0b is sealed/strict-clean begin C1 strict inert semantics. Do not edit the legacy C schemas/examples during C0; they are explicitly superseded planning fixtures until C1 evolves the C0 checker, replaces the fixtures, and receipts runtime/schema/example intersection.
+7. Keep the root as sole writer and didrun/Git/seal operator. Parallel agents remain bounded read-only critics. No external provider is needed; any future real call remains human-gated.
+8. Preserve the adoption, comprehension, production-hardening, independent-security-review, cross-platform, release, and maintainership tail.
 
 ## Orientation handshake for a fresh agent/chat
 
@@ -550,6 +567,6 @@ Before editing, reply in your working notes with:
 2. the three distinct truth authorities (Git, Choicepoint observations/ruling, didrun receipts);
 3. two things the system must never claim;
 4. the maintenance and A2.1 commits, P07B-A1 source prerequisite `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`, A2.2 checkpoint `32efaaf2f6d9fc58389d48d18219ce03995a2805`, accepted corrected source `6bf33350944dcdd56a4ceaa70f1d0836203ffb1f`, B0 scope lock `7f04b2a5129dcbee2fc991453aefdd6713281b86`, and the eventual sealed B implementation/receipt-document commits, with their exact receipt maps and nonclaims; and
-5. the current bounded shippable unit: P07B-C C0 research/authority scope lock only; every C runtime capability and all product UI remain excluded and `UNRECEIPTED`.
+5. the current bounded shippable unit: P07B-C C0 research/authority scope lock only, specifically C0b receipt reconciliation; every C runtime capability and all product UI remain excluded and `UNRECEIPTED`.
 
 If any answer is missing, read the files above again. Do not infer a didrun grade from this handoff; run strict verification locally.

@@ -1,0 +1,42 @@
+{
+  "schema_version": "countershape/p07b-c-c0-receipt/v1",
+  "source_commit": "1c6d9fdef339314bfcb99d7d53f3a7c5040e5020",
+  "source_tree": "97574c4ef3f967a1194b2ebdeed246a77efabfc7",
+  "strict_exit_code": 0,
+  "strict_claims_recorded_exact": 8,
+  "strict_claims_total": 8,
+  "claims": [
+    {
+      "label": "P07B C0 authority plan coherence",
+      "grade": "TREE-EXACT"
+    },
+    {
+      "label": "P07B C0 plan checker self-test",
+      "grade": "TREE-EXACT"
+    },
+    {
+      "label": "P07B C0 unit scope self-test",
+      "grade": "TREE-EXACT"
+    },
+    {
+      "label": "P07B C0 inherited planning validation",
+      "grade": "TREE-EXACT"
+    },
+    {
+      "label": "P07B C0 cumulative verification",
+      "grade": "TREE-EXACT"
+    },
+    {
+      "label": "P07B C0 exact staged scope and diff",
+      "grade": "TREE-EXACT"
+    },
+    {
+      "label": "P07B C0 scoped staged credential scan",
+      "grade": "TREE-EXACT"
+    },
+    {
+      "label": "P07B C0 didrun chain intact",
+      "grade": "TREE-EXACT"
+    }
+  ]
+}

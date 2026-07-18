@@ -1,6 +1,11 @@
 # P07B-C C0 authority-lock status
 
-**State:** provisional C0a source document; every C0 row below is `UNRECEIPTED` until the source commit is claimed, committed, sealed, note-checked, and strict-clean. A later C0b receipt-document commit must replace this paragraph with the exact source commit/tree and verbatim grades and add `spec/verification/p07b-c-c0-receipt.json`; the enrolled checker validates either the complete provisional state or the complete reconciled state, never a mixture.
+**State:** C0b reconciled receipt document for source commit `1c6d9fdef339314bfcb99d7d53f3a7c5040e5020`, tree `97574c4ef3f967a1194b2ebdeed246a77efabfc7`. C0a is sealed, note-present, and strict-clean; this C0b document remains unreceipted until its own commit/seal/note/strict boundary.
+
+- C0a strict exit: `0`
+- C0a strict claims: `8/8 claims recorded-exact`
+- C0a seal disclosure: `sealed with --allow-secrets (redacted export)` after the plain seal stopped on four aggregate high-entropy findings
+- C0a ledger archive: `.didrun-history/2026-07-18-p07b-c-c0a-source/.didrun/`
 
 ## Sealed predecessor
 
@@ -37,25 +42,25 @@ The six lanes did not rubber-stamp the initial plan. Synthesis first removed per
 - Research package: `research/deep-dive/p07b-c/00-scope-and-method.md` through `10-executive-briefing.md`.
 - Controlling pack: `docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md`.
 - Machine-readable authority summary: `spec/verification/p07b-c-c0-authority.json`.
-- Future C0b receipt state: `spec/verification/p07b-c-c0-receipt.json` (correctly absent during C0a). Its source identity and eight grades must reopen from the real ancestor commit/tree and didrun Git note, and its status/handoff tables must match.
+- C0b receipt state: `spec/verification/p07b-c-c0-receipt.json` (correctly absent during C0a, present now). Its source identity and eight grades reopen from the real ancestor commit/tree and didrun Git note, and its status/handoff tables match.
 - Machine-readable unit scope: `spec/verification/p07b-c-unit-paths.json`.
 - C0 plan/structure checker: `tools/check-p07b-c-plan.mjs` with bounded mutation self-test.
 - Staged-scope checker: `tools/check-p07b-c-unit-scope.mjs` with strict config/path self-test.
 - Cumulative verifier: repaired to direct and inherited Go `-p=1`; C0 self-tests enrolled before C0 seals.
 - Proof style: architecture/metadata, black-box, property, parity, recovery, and boundary evidence. The abandoned dense source-rewrite recipe corpus remains unclaimed and is not recreated.
 
-## Provisional receipt map
+## C0a receipt map
 
 | Intended C0a capability | Intended claim label | Current grade |
 | --- | --- | --- |
-| C0 authority/document/section consistency | `P07B C0 authority plan coherence` | `UNRECEIPTED` |
-| Plan-checker bounded mutation resistance | `P07B C0 plan checker self-test` | `UNRECEIPTED` |
-| Unit-scope checker bounded mutation resistance | `P07B C0 unit scope self-test` | `UNRECEIPTED` |
-| Inherited planning compatibility | `P07B C0 inherited planning validation` | `UNRECEIPTED` |
-| Serial-Go cumulative repository baseline | `P07B C0 cumulative verification` | `UNRECEIPTED` |
-| Exact C0A staged path/diff boundary | `P07B C0 exact staged scope and diff` | `UNRECEIPTED` |
-| Scoped structured credential-prefix scan | `P07B C0 scoped staged credential scan` | `UNRECEIPTED` |
-| Serialized didrun chain | `P07B C0 didrun chain intact` | `UNRECEIPTED` |
+| C0 authority/document/section consistency | `P07B C0 authority plan coherence` | `TREE-EXACT` |
+| Plan-checker bounded mutation resistance | `P07B C0 plan checker self-test` | `TREE-EXACT` |
+| Unit-scope checker bounded mutation resistance | `P07B C0 unit scope self-test` | `TREE-EXACT` |
+| Inherited planning compatibility | `P07B C0 inherited planning validation` | `TREE-EXACT` |
+| Serial-Go cumulative repository baseline | `P07B C0 cumulative verification` | `TREE-EXACT` |
+| Exact C0A staged path/diff boundary | `P07B C0 exact staged scope and diff` | `TREE-EXACT` |
+| Scoped structured credential-prefix scan | `P07B C0 scoped staged credential scan` | `TREE-EXACT` |
+| Serialized didrun chain | `P07B C0 didrun chain intact` | `TREE-EXACT` |
 
 ## Explicit nonclaims
 
@@ -63,4 +68,4 @@ C0 implements no C runtime type, schema replacement, store layout, target issuer
 
 ## Next boundary
 
-Finish C0a only: run the final C0 checks through a fresh didrun ledger, claim each successful event immediately, stage only the `C0A` allowlist, commit, seal, require the Git note, and strict-verify until exit `0`. Then create C0b by adding the strict receipt declaration and replacing provisional receipt state with the exact source commit/tree and verbatim grades, independently claim/commit/seal/note/strict it, and only then begin C1.
+Finish C0b only: run the reconciled plan/self-test, C0B staged-scope/diff, scoped credential scan, cumulative verifier, and ledger-chain check through a fresh serialized didrun ledger; claim each final success immediately. Commit `docs: receipt P07B-C C0 authority lock`, seal, require the Git note, and loop strict until exit `0`. Only then begin C1.
