@@ -12,9 +12,9 @@
 
 ## Current state
 
-- **Pipeline phase:** U0–U6, P07A/U6b, P07B-A1, P07B-A2.1, cumulative-verification maintenance, accepted corrected P07B-A2.2, and the P07B-B implementation source are sealed and strict-clean. The current working tree reconciles P07B-B's exact source grades and must receive its own independent Git note and strict exit `0`; then generate the required exact-final-B-boundary HTML outside Git before P07B-C begins.
-- **Git:** repository is on `codex/countershape-autopilot`. P07B-B source commit `eb06bdcf18f8e14db1257e73733afdc05cac045e`, tree `d95c907754f3347bae885a64c98b30ad1ea00256`, is sealed, Git-note-present, and strict-clean with `16/16` claims. The current uncommitted change is receipt reconciliation only. Accepted A2.2 source is `6bf33350944dcdd56a4ceaa70f1d0836203ffb1f`, followed by receipt-document boundary `8f7663e2d29b63b1bb3ddca0a18bd5cfcf0fe4b1` at tree `e30957e807c9e8145a286cbb97f7cec309f7897c`; P07B-A1 remains sealed at `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`.
-- **didrun:** installed globally and unchanged during this unit. The mixed 69-event B development ledger is preserved whole under ignored `.didrun-history/2026-07-17-p07b-b-development/.didrun/` and supports no final claim. The serialized 16-event source ledger is preserved separately under `.didrun-history/2026-07-17-p07b-b-source/.didrun/`; its note records every grade `TREE-EXACT` plus `secrets_override: true` after the plain seal stopped on 39 aggregate entropy findings. This is a redacted-export disclosure, not a secret-absence result. Use a fresh ledger for the receipt-document boundary; `docs/status/DIDRUN_BUGS.md` S6-12 records the live B-session behavior and remaining tool tail.
+- **Pipeline phase:** U0–U6, P07A/U6b, P07B-A1, P07B-A2.1, cumulative-verification maintenance, accepted corrected P07B-A2.2, P07B-B implementation source, and the P07B-B receipt-document boundary are sealed and strict-clean. Final audit found one didrun ledger-location dependency; the current maintenance tree records it and must receive its own independent note/strict gate plus a regenerated exact-final-commit HTML before P07B-C begins.
+- **Git:** repository is on `codex/countershape-autopilot`. P07B-B source commit `eb06bdcf18f8e14db1257e73733afdc05cac045e`, tree `d95c907754f3347bae885a64c98b30ad1ea00256`, is sealed and strict-clean with `16/16` claims. Receipt-document commit `b4ac17bd66c6260fd4b12b9277ab5259659c55e1`, tree `7e9847d976d32a6307e7ccd5f2437391f0a4298a`, is sealed and strict-clean with `6/6` claims when its witness ledger is live. The current uncommitted change records S6-13 only. Accepted A2.2 source is `6bf33350944dcdd56a4ceaa70f1d0836203ffb1f`; P07B-A1 remains sealed at `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`.
+- **didrun:** installed globally and unchanged during this unit. The mixed 69-event B development ledger is preserved whole under ignored `.didrun-history/2026-07-17-p07b-b-development/.didrun/` and supports no final claim. The serialized 16-event source ledger is preserved separately under `.didrun-history/2026-07-17-p07b-b-source/.didrun/`. The six-event receipt ledger is preserved under `.didrun-history/2026-07-17-p07b-b-receipt/.didrun/` and requires an identical live `.didrun` copy for strict verification: without it, strict resolves the note but exits `1` with `0/6` `UNKNOWN`; restoring it returns `6/6` `TREE-EXACT`. Source and receipt notes record `secrets_override: true` after plain seals stopped on 39 and 27 aggregate entropy findings. These are redacted-export disclosures, not secret-absence results. S6-12 and S6-13 record the live behavior and remaining tool tail.
 - **Current baseline:** from a fresh repository-root shell, run `/opt/homebrew/bin/node tools/verify-current.mjs`. The evolved 22-step roster builds, vets, runs the complete suite, self-tests its orchestration, checks/exercises generated artifacts, fresh-process recovery, deterministic human capture, every current architecture checker/self-test through P07B-B, labels every historical-only gate without running it, and fails on Finder artifacts. Read `docs/VERIFICATION.md`; a direct pass is not a didrun grade.
 - **Build:** A2.2's accepted pure compiler remains byte-stable. Sealed P07B-B adds opaque node-issued terminal publication, full-token CAS-before-object creation, durable exact `RESIDUE` reopen with complete predecessor reconstruction, and an optional Darwin/arm64/cgo materializer that freshly reopens store-bound residue, performs descriptor-relative no-follow exact six-file publication, converges exact retries, and refuses mismatched existing output. It still implements no pinned execution target, admitted runtime, finalized run/classification, product CLI, server, dashboard, or report.
 - **External APIs:** none used in the product. The A2.2 UX pass used a different internal model over sanitized captures; its qualitative verdict is `UNRECEIPTED` and has no semantic authority. Any real external model/API integration remains human-gated and must never be faked.
@@ -425,10 +425,11 @@ opens, existing-observation versus physical-mismatch classification,
 rename-outcome reconciliation, and genuine different-residue destination
 collision coverage, plus explicit cancellation before and after the exclusive
 rename boundary. The source Git note exists, strict verification exits `0`, and
-all 16 named grades below are copied verbatim. This receipt reconciliation must
-still receive its own seal, note, and strict exit `0`. Under the later post-spec
-user requirement, generate an HTML report outside Git for that exact final B
-commit as a closure artifact, not as a substitute receipt claim.
+all 16 named grades below are copied verbatim. Receipt-document commit
+`b4ac17bd66c6260fd4b12b9277ab5259659c55e1` is separately sealed and strict-
+clean with its witness ledger live. Under the later post-spec user requirement,
+generate an HTML report outside Git for the exact final B commit as a closure
+artifact, not as a substitute receipt claim.
 
 ### P07B-B source receipts
 
@@ -454,6 +455,23 @@ commit as a closure artifact, not as a substitute receipt claim.
 The source-bound HTML is local at
 `.countershape/evidence/p07b-b-source-eb06bdcf18f8.html`, SHA-256
 `df743fc83943eb3b4e903698860a5658ade4b29ccffe01aa2eb453a7d387ddfb`.
+
+### P07B-B receipt-document receipts
+
+| Claimed capability | didrun claim label | Verbatim grade |
+| --- | --- | --- |
+| Documentation syntax and stale-state check | `P07B B receipt documentation syntax and stale state check` | `TREE-EXACT` |
+| Exact reconciliation of all source claims | `P07B B receipt documents reconcile 16 source claims` | `TREE-EXACT` |
+| Cumulative verification baseline | `P07B B receipt documentation cumulative verification baseline` | `TREE-EXACT` |
+| Exact staged inventory/diff | `P07B B receipt exact staged inventory and diff check` | `TREE-EXACT` |
+| Scoped staged credential-pattern scan | `P07B B receipt scoped staged structured credential-pattern scan` | `TREE-EXACT` |
+| Serialized didrun chain | `P07B B receipt didrun chain intact` | `TREE-EXACT` |
+
+Receipt-document HTML:
+`.countershape/evidence/p07b-b-final-b4ac17bd66c6.html`, SHA-256
+`09f870a05eb9726d27fa2db13064fe5cb4b8ca182708b5a4ddeeb047cfc8414b`.
+S6-13 records why this snapshot does not eliminate the matching local-ledger
+dependency. The current maintenance commit requires a new exact-final report.
 
 ### Pre-A2 planning-wire correction
 
@@ -487,9 +505,9 @@ separate reviewed boundary.
 
 ## Exact next actions if this task resumes elsewhere
 
-1. Run `git status --short --branch`; confirm branch `codex/countershape-autopilot` still contains sealed P07B-B source `eb06bdcf18f8e14db1257e73733afdc05cac045e`, no `.didrun` path is staged/tracked, and the current receipt-document boundary has its own Git note and strict exit `0`.
-2. Preserve the B source and receipt-document ledgers separately under ignored `.didrun-history/`; neither the 69-event development ledger nor any earlier failed/stale event supports a final capability.
-3. Confirm the exact-final-B HTML was generated outside Git for the sealed receipt-document commit and record its path/hash in the external handoff. A nonzero strict or HTML-generation exit leaves B unfinished.
+1. Run `git status --short --branch`; confirm branch `codex/countershape-autopilot` contains sealed P07B-B source `eb06bdcf18f8e14db1257e73733afdc05cac045e` and receipt-document boundary `b4ac17bd66c6260fd4b12b9277ab5259659c55e1`, no `.didrun` path is staged/tracked, and the current S6-13 maintenance boundary has its own Git note and strict exit `0` with its ledger live.
+2. Preserve the B source, receipt-document, and S6-maintenance ledgers separately under ignored `.didrun-history/`; neither the 69-event development ledger nor any earlier failed/stale event supports a final capability. Keep or restore an identical live copy when strict must be reproduced.
+3. Confirm the exact-final-B HTML was generated outside Git for the sealed S6-maintenance commit and record its path/hash in the external handoff. A nonzero strict or HTML-generation exit leaves B unfinished.
 4. Wrap every load-bearing verification command in `didrun run --` and claim each final success immediately before another event is recorded. Any nonzero command or mutant survivor is a real unfinished result: repair, rerun, preserve failed history, and never weaken or relabel the gate.
 5. At each shippable boundary, declare only successful final-tree claims, stage exact intended paths, commit, seal, confirm the note exists, and loop `NO_COLOR=1 didrun verify --strict` until exit `0`.
 6. Keep the root as sole writer and sole didrun/claim/Git/seal operator. Parallel agents may perform bounded read-only audits only; never allow parallel didrun writers or parallelize two didrun calls inside one tool orchestration.

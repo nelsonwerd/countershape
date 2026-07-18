@@ -1,12 +1,13 @@
 # P07B-B terminal publication and retryable-materialization qualification
 
-- **State:** implementation and red-team correction are complete; source commit `eb06bdcf18f8e14db1257e73733afdc05cac045e` is sealed, Git-note-present, and strict-clean, while this receipt reconciliation becomes durable only when the commit containing it receives its own Git note and strict exit `0`
+- **State:** implementation, red-team correction, and receipt reconciliation are sealed and strict-clean; the current maintenance boundary records the post-archive strict-verification dependency found during final audit and becomes durable only when its own commit receives a Git note and strict exit `0`
 - **Prerequisites:** sealed P07B-A2.2 accepted source `6bf33350944dcdd56a4ceaa70f1d0836203ffb1f`, sealed receipt-document boundary `8f7663e2d29b63b1bb3ddca0a18bd5cfcf0fe4b1` at tree `e30957e807c9e8145a286cbb97f7cec309f7897c`, and sealed B0 controlling-spec commit `7f04b2a5129dcbee2fc991453aefdd6713281b86`
 - **Receipt ceiling:** one exact terminal `ContractBundle` residue plus optional retryable exact six-file publication on the named Darwin/arm64/cgo tuple; no execution target, contract run, conformance classification, product surface, containment, or production claim
 - **Controlling contract:** `docs/prompts/P07B-B-TERMINAL-PUBLICATION.md`
 - **Source boundary:** commit `eb06bdcf18f8e14db1257e73733afdc05cac045e`, tree `d95c907754f3347bae885a64c98b30ad1ea00256`; Git note present; strict exit `0`; `16/16` claims recorded-exact
-- **Seal disclosure:** the plain seal stopped on 39 aggregate high-entropy findings after the exact staged inventory and scoped named credential-pattern scan passed; the source note records `secrets_override: true` and strict reports `sealed with --allow-secrets (redacted export)`, which is neither a secret-absence result nor publication authorization
-- **Evidence rule:** grades below are copied verbatim from the source Git note; this reconciliation is durable only after its own commit is independently sealed, Git-note-present, and strict-clean
+- **Receipt-document boundary:** commit `b4ac17bd66c6260fd4b12b9277ab5259659c55e1`, tree `7e9847d976d32a6307e7ccd5f2437391f0a4298a`; Git note present; strict exit `0` with its witness ledger live; `6/6` claims recorded-exact
+- **Seal disclosure:** the source and receipt-document plain seals stopped on 39 and 27 aggregate high-entropy findings after their exact staged inventories and scoped named credential-pattern scans passed; both notes record `secrets_override: true` and strict reports `sealed with --allow-secrets (redacted export)`, which is neither a secret-absence result nor publication authorization
+- **Evidence rule:** source grades below are copied verbatim from the source Git note; the receipt-document note and S6-13 maintenance evidence remain separate and cannot upgrade the product claim ceiling
 
 ## Implemented semantic boundary
 
@@ -130,6 +131,14 @@ report for its own final commit; a B report cannot be reused for a later tree.
 The source-bound report is preserved locally at
 `.countershape/evidence/p07b-b-source-eb06bdcf18f8.html` with SHA-256
 `df743fc83943eb3b4e903698860a5658ade4b29ccffe01aa2eb453a7d387ddfb`.
+The receipt-document report is preserved at
+`.countershape/evidence/p07b-b-final-b4ac17bd66c6.html` with SHA-256
+`09f870a05eb9726d27fa2db13064fe5cb4b8ca182708b5a4ddeeb047cfc8414b`.
+Final audit then proved that strict verification exits `1` with all claims
+`UNKNOWN` when the matching ledger is only archived, and returns to `0` after
+an identical live copy is restored; `docs/status/DIDRUN_BUGS.md` S6-13 records
+the exact boundary. Because the maintenance record changes HEAD, generate a
+new exact-final-commit HTML after that maintenance commit seals.
 
 ## Permanent negative history
 
