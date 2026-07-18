@@ -1,6 +1,37 @@
 # P07B-C C1 cumulative-verification maintenance
 
-Status: source repair pending receipt and seal
+Status: source repair sealed and strict-clean; receipt-document correction in progress
+
+## Sealed source boundary
+
+- Commit: `fa3d0c12b4c599744b666b2848e38a2499f33a89`
+- Tree: `c908c4e580144aa481f646090a1a21d92c86e1cf`
+- Strict result: `8/8 claims recorded-exact`; exit `0`
+- Git note: present under `refs/notes/didrun`
+- Seal disclosure: `sealed with --allow-secrets (redacted export)`
+- Ledger archive: `.didrun-history/2026-07-18-p07b-c-c1-output-cap-maintenance/.didrun/`
+
+The plain seal stopped on five aggregate high-entropy findings. A masked
+classification located four verifier-generated historical script/status
+identifiers and the exact staged status-file path; the exact committed delta
+then passed the named structured credential-pattern scan. This is not a
+secret-absence finding or permission to publish the local ledger.
+
+The development history permanently retains one unclaimed green scan that ran
+after the index was cleared and one unclaimed nonzero scan with an incorrectly
+guessed full commit hash. The corrected scan binds the exact full commit and
+three-path delta. Neither earlier event supports a capability.
+
+| Claim label | Verbatim grade |
+| --- | --- |
+| `P07B-C C1 maintenance exact output caps stable 50x` | `TREE-EXACT` |
+| `P07B-C C1 maintenance independent limit mutation guard stable 20x` | `TREE-EXACT` |
+| `P07B-C C1 maintenance simultaneous overflow lifecycle stable 20x` | `TREE-EXACT` |
+| `P07B-C C1 maintenance world package` | `TREE-EXACT` |
+| `P07B-C C1 maintenance cumulative verifier` | `TREE-EXACT` |
+| `P07B-C C1 maintenance staged diff clean` | `TREE-EXACT` |
+| `P07B-C C1 maintenance exact three-path scope` | `TREE-EXACT` |
+| `P07B-C C1 maintenance exact commit structured credential scan` | `TREE-EXACT` |
 
 ## Scope
 
@@ -23,14 +54,15 @@ the control event instead of racing it. The existing stderr-overflow stimulus
 already has the corresponding order: exact stdout first, overflowing stderr
 second.
 
-## Intended receipts
+## Evidence boundary
 
-- repeated exact independent-cap test;
-- repeated mutation guard for distinct stdout/stderr limits;
-- repeated simultaneous-overflow lifecycle test;
-- complete `internal/world` package test; and
-- cumulative repository verification after the maintenance commit is joined
-  to the C1 branch.
+The eight source claims above establish only the exact repaired test stimulus,
+its repeated local Darwin behavior, the complete world package, the then-current
+24-step repository verifier, and exact source-unit bookkeeping on this macOS
+session. They do not establish scheduler independence on every platform,
+production readiness, secret absence, security review, or future-regression
+freedom.
 
-Until the unit is committed, sealed, and strict-verified, all capabilities in
-this status file are `UNRECEIPTED`.
+P07B-C C1 semantic capabilities are a separate unit and remain `UNRECEIPTED`
+until the exact C1 commit is sealed, its Git note exists, and strict verification
+exits `0`.
