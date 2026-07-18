@@ -59,6 +59,9 @@ func main() {
 	case "emit":
 		emit(os.Stdout, options.stdoutBytes, 'o')
 		emit(os.Stderr, options.stderrBytes, 'e')
+	case "emit-stderr-first":
+		emit(os.Stderr, options.stderrBytes, 'e')
+		emit(os.Stdout, options.stdoutBytes, 'o')
 	case "echo-stdin":
 		if _, err := io.Copy(os.Stdout, os.Stdin); err != nil {
 			fatal(err)

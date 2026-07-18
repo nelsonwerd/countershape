@@ -376,7 +376,11 @@ func TestStdoutAndStderrHaveIndependentExactCaps(t *testing.T) {
 		}
 	})
 	t.Run("stdout-overflow", func(t *testing.T) {
-		result, _ := runFixtureProcess(t, context.Background(), executable, "emit",
+		// Complete the sibling channel before triggering the overflow. The
+		// OUTPUT_LIMIT contract tears the process group down immediately, so a
+		// sequential stdout-first fixture cannot promise that its later stderr
+		// write will be scheduled before SIGTERM.
+		result, _ := runFixtureProcess(t, context.Background(), executable, "emit-stderr-first",
 			[]string{"--stdout-bytes", "18", "--stderr-bytes", "9"}, 17, 9, time.Second, 400*time.Millisecond)
 		if result.primary != domain.ControlOutputLimit || !result.stdoutOverflow || result.stderrOverflow ||
 			len(result.stdout) != 17 || result.stdoutObserved != 18 || result.stderrObserved != 9 {
