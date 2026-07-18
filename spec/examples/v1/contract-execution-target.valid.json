@@ -1,43 +1,56 @@
 {
-  "schema_version": "countershape/v1",
-  "kind": "ContractExecutionTarget",
-  "target_version": "contract-execution-target/v1",
-  "publication_scope": "IMMUTABLE_NONHEAD_PRESPAWN_AUTHORITY_V1",
+  "attempt_binding": {
+    "allocation_profile": "PRIVATE_FRESH_ROOT_V1",
+    "attempt_artifact_digest": "sha256:3333333333333333333333333333333333333333333333333333333333333333",
+    "instance_nonce": "4444444444444444444444444444444444444444444444444444444444444444",
+    "marker_ordering": "DURABLE_BEFORE_SPAWN",
+    "purpose": "CONFORMANCE"
+  },
+  "boot_session_binding": {
+    "identity_digest": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
+    "profile": "DARWIN_KERN_BOOTTIME_V1"
+  },
   "contract_bundle_digest": "sha256:29fe7db464de802f4ac268e8c0a93562d7fc5078753ff6f69d1d77b0d937f763",
-  "source_binding": {
-    "portable_source_digest": "sha256:44708ca00a256d55eeb228efd04ff762d73b64b2e503e2324e0cc1e19e50b2a5",
-    "portable_profile_digest": "sha256:43e2a5459bdcb880376f3b3e31ffc54ce0e9ead13590b72ee91cd4bb2830609e",
-    "source_profile_digest": "sha256:68de7ca7aa438e978b1f5af0c8cebc5775582eef95e21dc7ccfa9b2392ab480c"
+  "kind": "ContractExecutionTarget",
+  "publication_scope": "IMMUTABLE_NONHEAD_PRESPAWN_AUTHORITY_V1",
+  "runtime_binding": {
+    "admitted_executable_path": "/opt/homebrew/bin/node",
+    "architecture": "arm64",
+    "authority": "ADMITTED_NODE_PROCESS_EXEC_PATH_V1",
+    "child_resolution": "PROCESS_EXEC_PATH_EQUALS_ADMITTED_RUNTIME_V1",
+    "executable_identity": {
+      "byte_count": 1024,
+      "bytes_digest": "sha256:6666666666666666666666666666666666666666666666666666666666666666",
+      "mode": "100755"
+    },
+    "major": 25,
+    "measured_process_exec_path": "/opt/homebrew/bin/node",
+    "name": "node",
+    "platform": "darwin",
+    "probe_program_digest": "sha256:7777777777777777777777777777777777777777777777777777777777777777",
+    "version": "25.2.1"
+  },
+  "schema_version": "countershape/v1",
+  "target_version": "contract-execution-target/v1",
+  "terminal_residue_binding": {
+    "current_digest": "sha256:29fe7db464de802f4ac268e8c0a93562d7fc5078753ff6f69d1d77b0d937f763",
+    "current_kind": "ContractBundle",
+    "head_digest": "sha256:ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "head_revision": 8,
+    "lineage_root_digest": "sha256:2222222222222222222222222222222222222222222222222222222222222222",
+    "profile": "EXACT_TERMINAL_RESIDUE_HEAD_V1",
+    "stage": "RESIDUE",
+    "study_id": "study:1111111111111111111111111111111111111111111111111111111111111111"
   },
   "tree_binding": {
     "authority": "GIT_PIN_INSPECT_MATERIALIZE_V1",
-    "pinned_tree": {
-      "object_format": "sha1",
-      "commit_oid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-      "tree_oid": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-      "tree_identity_digest": "sha256:43a2ee21ecf1e11ec2dfbf7322cac9f4fa526ebe3c4f7acfc4b4f33b9521fd11"
-    },
-    "portable_tree_digest": "sha256:c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2",
-    "materialization_policy_digest": "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
-    "materialization_manifest_digest": "sha256:c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4",
-    "execution_root_scope": "PRIVATE_PINNED_MATERIALIZATION_ONLY_V1"
-  },
-  "attempt_binding": {
-    "purpose": "CONFORMANCE",
-    "attempt_artifact_digest": "sha256:e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5",
-    "instance_nonce": "0123456789abcdef0123456789abcdef",
-    "allocation_profile": "PRIVATE_FRESH_ROOT_V1",
-    "marker_ordering": "DURABLE_BEFORE_SPAWN"
-  },
-  "runtime_binding": {
-    "authority": "ADMITTED_NODE_PROCESS_EXEC_PATH_V1",
-    "name": "node",
-    "version": "25.2.1",
-    "major": 25,
-    "os": "darwin",
-    "architecture": "arm64",
-    "executable_bytes_digest": "sha256:e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8",
-    "probe_program_digest": "sha256:e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9",
-    "child_resolution": "PROCESS_EXEC_PATH_EQUALS_ADMITTED_RUNTIME_V1"
+    "commit_oid": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "execution_root_scope": "PRIVATE_PINNED_MATERIALIZATION_ONLY_V1",
+    "materialization_manifest_digest": "sha256:eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+    "materialization_policy_digest": "sha256:dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "object_format": "sha1",
+    "portable_tree_digest": "sha256:cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "tree_identity_digest": "sha256:43a2ee21ecf1e11ec2dfbf7322cac9f4fa526ebe3c4f7acfc4b4f33b9521fd11",
+    "tree_oid": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
   }
 }

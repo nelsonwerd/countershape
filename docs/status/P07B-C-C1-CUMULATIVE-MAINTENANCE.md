@@ -1,6 +1,6 @@
 # P07B-C C1 cumulative-verification maintenance
 
-Status: source repair sealed and strict-clean; receipt-document correction in progress
+Status: source repair and receipt reconciliation sealed and strict-clean; P07B-C C1 remains `UNRECEIPTED`
 
 ## Sealed source boundary
 
@@ -32,6 +32,30 @@ three-path delta. Neither earlier event supports a capability.
 | `P07B-C C1 maintenance staged diff clean` | `TREE-EXACT` |
 | `P07B-C C1 maintenance exact three-path scope` | `TREE-EXACT` |
 | `P07B-C C1 maintenance exact commit structured credential scan` | `TREE-EXACT` |
+
+## Sealed receipt reconciliation
+
+- Commit: `3f31370a70979c4c5fe3a523be19e05f84271e96`
+- Tree: `29c5708b05c562984a0b7b66d6cfe3ac6e19c626`
+- Strict result: `6/6 claims recorded-exact`; exit `0`
+- Git note: present under `refs/notes/didrun`
+- Seal disclosure: `sealed with --allow-secrets (redacted export)`
+- Ledger archive: `.didrun-history/2026-07-18-p07b-c-c1-output-cap-maintenance-receipt/.didrun/`
+
+| Receipt claim label | Verbatim grade |
+| --- | --- |
+| `P07B-C C1 maintenance receipt reconciliation` | `TREE-EXACT` |
+| `P07B-C C1 maintenance receipt cumulative verifier` | `TREE-EXACT` |
+| `P07B-C C1 maintenance receipt staged diff clean` | `TREE-EXACT` |
+| `P07B-C C1 maintenance receipt exact one-path scope` | `TREE-EXACT` |
+| `P07B-C C1 maintenance receipt staged credential scan` | `TREE-EXACT` |
+| `P07B-C C1 maintenance receipt didrun chain intact` | `TREE-EXACT` |
+
+The receipt commit reconciles this status file to the sealed source note and
+re-runs the then-current 24-step cumulative verifier. Its own plain seal stopped
+on seven aggregate high-entropy path/identifier findings after the staged
+structured credential scan passed; the logged redacted-export override remains
+visible. This is not a secret-absence finding.
 
 ## Scope
 

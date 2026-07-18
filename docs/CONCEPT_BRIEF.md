@@ -2,8 +2,8 @@
 
 - **Working name:** Countershape (package, domain, trademark, and legal clearance not performed)
 - **Mode:** open-source-first experimental infrastructure
-- **State:** deep dive and adversarial red team complete; U1–U6, P07A, P07B-A1, P07B-A2.1, the corrected pure recoverable P07B-A2.2 compiler, and P07B-B terminal publication/retryable materialization source are sealed and strict-clean; P07B-B receipt-document reconciliation is the current closure boundary
-- **Last updated:** 2026-07-17
+- **State:** deep dive and adversarial red team complete; U1–U6, P07A, every P07B-A/B boundary, and both P07B-C C0 boundaries are sealed and strict-clean; P07B-C C1 inert semantics are the current source boundary and remain `UNRECEIPTED` until their own seal and strict-clean gate
+- **Last updated:** 2026-07-18
 - **Founder persona:** Soren Vale
 - **Confidence:** 8/10 in the truth kernel; 6/10 in the bounded reference instrument; 3/10 in review compression; 3/10 in adoption
 - **Semantic authority:** `docs/SEMANTICS.md` and `docs/PROJECTION_ALGEBRA.md` control structural identity, measurement/admission, and preservation semantics
@@ -254,7 +254,7 @@ Fresh Choicepoints retain the existing 27-member body but use `ADAPTER_BOUND_POR
 
 The portable value profile is closed to tagged missing, null, Boolean, safe canonical integer, exact string, exact bytes, ordered string list, and strict canonical JSON. The HTTP ordered list preserves duplicates and order. The CLI/HTTP historical wire formats remain different and unchanged; the translator freezes both exact compatibility codecs instead of normalizing fingerprints.
 
-## P07B/U6c standalone contract boundary (A1/A2/B sealed; C0 design locked; C1 next)
+## P07B/U6c standalone contract boundary (A1/A2/B and C0 sealed; C1 inert semantics boundary)
 
 `DecisionRecord`, `ContractBundle`, `ContractExecutionTarget`, `FinalizedContractRun`, and `ContractExecution` are separate truth objects.
 
@@ -317,7 +317,7 @@ Original/derivation, Captured-to-Projection operations, nonasserted fields, and 
 
 ## Reference architecture
 
-The Go core owns identity and behavior state. `contractsource` and `runnerprofile` are implemented A1 substrate, the node emitter/compiler is sealed A2.2 source, and terminal publication/materialization is sealed P07B-B source. Execution, server, report, and web paths remain future P07B-C/U8/U9 targets until their own sealed receipts exist:
+The Go core owns identity and behavior state. `contractsource` and `runnerprofile` are implemented A1 substrate, the node emitter/compiler is sealed A2.2 source, and terminal publication/materialization is sealed P07B-B source. C1 owns only the inert `internal/contractexec/model` canonical algebra: strict target/run/execution construction and parsing, derived classification, and closed syntax projections. It adds no store, Git, runtime, process, publication, CLI, server, report, or web authority, and remains `UNRECEIPTED` until its own commit/seal/strict gate. Those physical and product paths remain future P07B-C/U8/U9 targets until their named sealed receipts exist:
 
 ```text
 cmd/countershape/
@@ -439,7 +439,7 @@ Each unit is separately verified, claimed, committed, sealed, and gated on `NO_C
 10. **U6c/P07B-A2.1 — compilation authority (sealed):** current-revalidated ruling snapshot, exact source/Choicepoint/confirmation/proof joins, selected-tuple partition revalidation, and one sealed preparation with a private authority-narrowed input; no generated files or store writes.
 11. **U6c/P07B-A2.2 — recoverable compiler (sealed):** deterministic recoverable six-file bundle, strict parser, fixed Node-core runtime assets, Go/Node raw-wire corpus, physical generated-contract evidence, and bounded recovery/fuzz/architecture gates; no residue or product materializer.
 12. **U6c/P07B-B — terminal publication/materialization (sealed source):** opaque node-issued publication, stale-safe terminal residue, full predecessor restart, and retryable exact Darwin/arm64/cgo six-file publication; no execution target or classification.
-13. **U6c/P07B-C — standalone execution (C0 design locked; C1 next):** strict three-object semantics; typed nonhead publication; a private boot-session interlock plus intent-only serialized cooperative at-most-once spawn admission; direct single-target Git and Node authority; bounded finalized run with separate process and five-domain standalone axes; classifier-profile-bound immutable execution; no semantic execution head or process resume.
+13. **U6c/P07B-C — standalone execution (C0 authority sealed; C1 owns inert canonical semantics):** strict three-object semantics; later typed nonhead publication; a private boot-session interlock plus intent-only serialized cooperative at-most-once spawn admission; direct single-target Git and Node authority; bounded finalized run with separate process and five-domain standalone axes; classifier-profile-bound immutable execution; no semantic execution head or process resume.
 14. **U7 — complete CLI and reference studies:** safe next actions, both end-to-end proofs, allow-many, custom none-conforms, reject/defer, three clean reproductions, named-machine timings.
 15. **U8 — secure decision bench:** authenticated loopback API, complete state renderer, 1440/375 flows, at least three full visual passes, Playwright/axe/manual checks, and a real different-model screenshot critic.
 16. **U9 — local export, packaging, and hardening:** minimized evidence export, embedded assets/single binary, docs/license/contributor path, adversarial suite, performance/limitations ledger, final strict verify, didrun HTML evidence, receipts handoff.
@@ -505,7 +505,7 @@ didrun references remain opaque verbatim receipt grades associated with their ex
 
 ### Strong engineering inferences still to test
 
-- Sealed P07B-B source preserves full-token publication and descriptor-relative retry semantics across the exercised fault and concurrency matrix; the current closure task is the independently sealed receipt-document reconciliation and exact-boundary HTML.
+- C1 source now carries the strict inert target/run/classification algebra and its defensive gates, but no C1 capability is receipted until the exact C1 commit, didrun note, and strict-clean result exist.
 - A designed human-facing blind-first selected-field UX can make the now-implemented semantic session comprehensible without leaking candidate identity.
 
 ### Unvalidated technical/product/market bets
@@ -523,4 +523,4 @@ didrun references remain opaque verbatim receipt grades associated with their ex
 
 ## Handoff state
 
-**U0–U6, P07A, P07B-A1, P07B-A2.1, accepted corrected P07B-A2.2, and the complete P07B-B boundary are sealed and strict-clean.** A1 source commit `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3` remains the source/process prerequisite; accepted A2.2 source is `6bf33350944dcdd56a4ceaa70f1d0836203ffb1f`, followed by receipt-document boundary `8f7663e2d29b63b1bb3ddca0a18bd5cfcf0fe4b1` at tree `e30957e807c9e8145a286cbb97f7cec309f7897c`. P07B-B source is `eb06bdcf18f8e14db1257e73733afdc05cac045e`, tree `d95c907754f3347bae885a64c98b30ad1ea00256`, with `16/16` source claims; final handoff commit `464e47adbf7f4497dfafa89938a9539239ffd41b` is independently strict-clean with its matching live ledger and exact HTML. The P07B-C deep dive corrected the future design; C0 remains `UNRECEIPTED` until its own commit/seal/strict gate, and C1 semantic implementation is next afterward. `REFINE` remains a valid semantic noncompilable DecisionRecord but durable promotion refuses it without object publication or head mutation.
+**U0–U6, P07A, P07B-A1, P07B-A2.1, accepted corrected P07B-A2.2, the complete P07B-B boundary, and both P07B-C C0 receipt boundaries are sealed and strict-clean.** A1 source commit `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3` remains the source/process prerequisite; accepted A2.2 source is `6bf33350944dcdd56a4ceaa70f1d0836203ffb1f`, followed by receipt-document boundary `8f7663e2d29b63b1bb3ddca0a18bd5cfcf0fe4b1` at tree `e30957e807c9e8145a286cbb97f7cec309f7897c`. P07B-B source is `eb06bdcf18f8e14db1257e73733afdc05cac045e`, tree `d95c907754f3347bae885a64c98b30ad1ea00256`, with `16/16` source claims; final handoff commit `464e47adbf7f4497dfafa89938a9539239ffd41b` is independently strict-clean with its matching live ledger and exact HTML. P07B-C C0a source commit `1c6d9fdef339314bfcb99d7d53f3a7c5040e5020`, tree `97574c4ef3f967a1194b2ebdeed246a77efabfc7`, is reconciled by strict-clean C0b commit `47044e95f405b7252959415adb1aa0dbea8045ab`, tree `d0b30300c6dd80eea95583e9b97cd819a6481f4a`. C1's inert semantic implementation is the current source boundary and remains `UNRECEIPTED` until its own commit/seal/strict gate; no C1 source fact implies store, runtime, process, or product authority. `REFINE` remains a valid semantic noncompilable DecisionRecord but durable promotion refuses it without object publication or head mutation.

@@ -29,7 +29,7 @@ import {
 
 const selftestPath = fileURLToPath(import.meta.url);
 const verifierPath = resolve(dirname(selftestPath), "verify-current.mjs");
-const expectedRosterDigest = "d94d54d15bf4a5cd0e0429aa1f8d0de0af0fdb0b14a46577102a9d0e9029f2b6";
+const expectedRosterDigest = "0338d82f7199edff546b0083c1fbfb2ff5423d98ec9f3221e511d59591613af2";
 
 function fail(code, detail) {
 	throw new Error(`${code}: ${detail}`);
@@ -70,6 +70,57 @@ async function inspectRosters() {
 		expect(new Set(names).size === names.length, "VERIFY_SELFTEST_DUPLICATE_STEP_TOOL", `${step.id}: ${names.join(",")}`);
 		expect(names.every((name) => knownTools.has(name)), "VERIFY_SELFTEST_UNKNOWN_STEP_TOOL", `${step.id}: ${names.join(",")}`);
 	}
+	const exactStep = (id, expected) => {
+		const step = currentSteps.find((candidate) => candidate.id === id);
+		expect(step !== undefined, "VERIFY_SELFTEST_C1_STEP_MISSING", id);
+		for (const [field, value] of Object.entries(expected)) {
+			expect(JSON.stringify(step[field]) === JSON.stringify(value), "VERIFY_SELFTEST_C1_STEP_DRIFT", `${id}:${field}`);
+		}
+	};
+	exactStep("planning-example-p07b-a2-2", {
+		tool: "node",
+		tools: ["node", "go"],
+		path: "tools/generate-p07-planning-example.mjs",
+		args: ["--exercise"],
+	});
+	exactStep("planning-validator-selftest", {
+		tool: "node",
+		tools: ["node", "go"],
+		path: "tools/validate-planning.mjs",
+		args: ["--self-test"],
+		marker: "planning validator self-test: ok (",
+	});
+	exactStep("architecture-p07b-b", {
+		tool: "node",
+		tools: ["node", "go", "cc", "cxx"],
+		path: "tools/check-p07b-b-architecture.mjs",
+		marker: "P07B B architecture boundary OK",
+	});
+	exactStep("architecture-p07b-b-selftest", {
+		tool: "node",
+		tools: ["node", "go", "cc", "cxx"],
+		path: "tools/check-p07b-b-architecture-selftest.mjs",
+		marker: "P07B B architecture defensive self-test OK",
+	});
+	exactStep("architecture-p07b-c-c1", {
+		tool: "node",
+		tools: ["node", "go"],
+		path: "tools/check-p07b-c-architecture.mjs",
+		marker: "P07B-C C1 architecture boundary OK",
+	});
+	exactStep("architecture-p07b-c-c1-selftest", {
+		tool: "node",
+		tools: ["node", "go"],
+		path: "tools/check-p07b-c-architecture-selftest.mjs",
+		marker: "P07B-C C1 architecture defensive self-test OK",
+	});
+	exactStep("architecture-p07b-c-plan-selftest", {
+		tool: "node",
+		tools: ["node", "git"],
+		path: "tools/check-p07b-c-plan.mjs",
+		args: ["--self-test"],
+		marker: "P07B-C C1 evolved plan checker self-test passed:",
+	});
 
 	const toolEntries = (await readdir(resolve(repositoryRoot, "tools"))).sort();
 	const mutationFiles = toolEntries.filter((name) => /^(?:mutate|test-mutate)-.+\.mjs$/u.test(name)).map((name) => `tools/${name}`);

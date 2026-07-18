@@ -2,6 +2,7 @@
 
 import fs from "node:fs";
 import crypto from "node:crypto";
+import { spawnSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
@@ -114,8 +115,7 @@ const ENUM_GROUP_BINDINGS = new Map([
     { schema: "decision-record.schema.json", pointer: "#/properties/action" },
   ]],
   ["contract execution", [
-    { schema: "contract-execution.schema.json", pointer: "#/properties/result/oneOf/0/properties/conformance" },
-    { schema: "contract-execution.schema.json", pointer: "#/properties/result/oneOf/1/properties/execution_class" },
+    { schema: "contract-execution.schema.json", pointer: "#/properties/result" },
   ]],
   ["network mode", [
     { schema: "world-plan.schema.json", pointer: "#/properties/network_mode" },
@@ -1174,6 +1174,133 @@ function p07TypedDigest(kind, value) {
   return `sha256:${hash.digest("hex")}`;
 }
 
+const C1_SCHEMA_RUNTIME_CASE_NAMES = Object.freeze([
+  "duplicate evidence kind with distinct digest",
+  "process evidence order",
+  "clean process with primary",
+  "spawn process mismatch",
+  "scope order",
+  "scope evidence role",
+  "scope aggregate",
+  "private zero correlation",
+]);
+const C1_SCHEMA_RUNTIME_CORPUS_DIGEST = "78f5a2c76d38dc2de96b11cf0439f33f73427160fc441ba89f9f39897dab6d4b";
+
+function c1SchemaRuntimeOverapproximationCases(finalizedRun) {
+  const cases = C1_SCHEMA_RUNTIME_CASE_NAMES.map((name) => ({
+    name,
+    body: structuredClone(finalizedRun),
+  }));
+  const witness = (candidate) => candidate.body.closed_run_witness;
+  witness(cases[0]).process_closure.evidence_refs[1].kind = "MATERIALIZATION_REVALIDATION";
+  [
+    witness(cases[1]).process_closure.evidence_refs[0],
+    witness(cases[1]).process_closure.evidence_refs[1],
+  ] = [
+    witness(cases[1]).process_closure.evidence_refs[1],
+    witness(cases[1]).process_closure.evidence_refs[0],
+  ];
+  witness(cases[2]).process_closure.primary_reason = "TIMEOUT";
+  witness(cases[3]).spawn_observation = { status: "START_ERROR", error_code: "OS_START_ERROR" };
+  [
+    witness(cases[4]).standalone_scope.checks[0],
+    witness(cases[4]).standalone_scope.checks[1],
+  ] = [
+    witness(cases[4]).standalone_scope.checks[1],
+    witness(cases[4]).standalone_scope.checks[0],
+  ];
+  witness(cases[5]).standalone_scope.checks[0].evidence_ref.kind = "SERVICE_BINDINGS";
+  witness(cases[6]).standalone_scope.status = "PARTIAL";
+  witness(cases[7]).private_evidence.blob_count = 0;
+  witness(cases[7]).private_evidence.aggregate_byte_count = 1;
+  return cases;
+}
+
+function proveC1SchemaRuntimeIntersection(root) {
+  const schemaProblems = [];
+  const { schemasByFile } = validateSchemas(root, schemaProblems);
+  if (schemaProblems.length > 0) {
+    throw new Error(`schema baseline is invalid: ${schemaProblems.map((problem) => problem.code).join(", ")}`);
+  }
+  const runSchemaFile = path.join(root, "spec/schema/v1/finalized-contract-run.schema.json");
+  const runSchema = schemasByFile.get(runSchemaFile);
+  if (!runSchema) throw new Error("FinalizedContractRun schema is unavailable");
+  const finalizedRun = JSON.parse(fs.readFileSync(
+    path.join(root, "spec/examples/v1/finalized-contract-run.valid.json"),
+    "utf8",
+  ));
+  const corpusHash = crypto.createHash("sha256");
+  const cases = c1SchemaRuntimeOverapproximationCases(finalizedRun).map(({ name, body }) => {
+    const validationErrors = validateInstance(body, runSchema, {
+      currentFile: runSchemaFile,
+      schemasByFile,
+    });
+    if (validationErrors.length > 0) {
+      throw new Error(`${name} is not schema-valid: ${validationErrors.join("; ")}`);
+    }
+    const exact = Buffer.from(p07CanonicalJSON(body), "utf8");
+    corpusHash.update(name).update("\0").update(exact).update("\0");
+    return { name, body_base64: exact.toString("base64") };
+  });
+  const corpusDigest = corpusHash.digest("hex");
+  if (corpusDigest !== C1_SCHEMA_RUNTIME_CORPUS_DIGEST) {
+    throw new Error(`schema/runtime corpus drift: sha256:${corpusDigest} != sha256:${C1_SCHEMA_RUNTIME_CORPUS_DIGEST}`);
+  }
+  const goExecutable = process.env.COUNTERSHAPE_GO ?? "/opt/homebrew/bin/go";
+  if (!path.isAbsolute(goExecutable)) throw new Error("COUNTERSHAPE_GO must be absolute");
+  const inheritedNames = ["HOME", "TMPDIR", "GOTMPDIR", "GOCACHE", "GOPATH", "GOMODCACHE"];
+  const environment = Object.fromEntries(inheritedNames.flatMap((name) =>
+    Object.hasOwn(process.env, name) ? [[name, process.env[name]]] : []));
+  Object.assign(environment, {
+    HOME: environment.HOME ?? "/",
+    TMPDIR: environment.TMPDIR ?? "/tmp",
+    GOENV: "off",
+    GOWORK: "off",
+    GOTOOLCHAIN: "local",
+    GOPROXY: "off",
+    GOSUMDB: "off",
+    GOVCS: "*:off",
+    CGO_ENABLED: "0",
+    GOMAXPROCS: "2",
+    GOFLAGS: "-mod=readonly -buildvcs=false -p=1",
+    LANG: "C",
+    LC_ALL: "C",
+    TZ: "UTC",
+    NO_COLOR: "1",
+    PATH: "/usr/bin:/bin",
+    COUNTERSHAPE_C1_SCHEMA_RUNTIME_PROBE: "1",
+  });
+  const payload = JSON.stringify({
+    schema_version: "countershape/c1-schema-runtime-overapproximation-probe/v1",
+    cases,
+  });
+  environment.COUNTERSHAPE_C1_SCHEMA_RUNTIME_PAYLOAD_BASE64 = Buffer.from(payload, "utf8").toString("base64");
+  const result = spawnSync(goExecutable, [
+    "test", "-mod=readonly", "-buildvcs=false", "-p=1", "-count=1", "-timeout=3m",
+    "-run", "^TestC1SchemaRuntimeOverapproximationProbe$", "-v", "./internal/contractexec/model",
+  ], {
+    cwd: root,
+    encoding: "utf8",
+    env: environment,
+    maxBuffer: 8 * 1024 * 1024,
+    timeout: 180_000,
+  });
+  const marker = `COUNTERSHAPE_C1_SCHEMA_RUNTIME_OVERAPPROXIMATION_V1|${cases.length}|sha256:${corpusDigest}`;
+  const markerPrefix = "COUNTERSHAPE_C1_SCHEMA_RUNTIME_OVERAPPROXIMATION_V1|";
+  const markerLines = (result.stdout ?? "").split(/\r?\n/u).filter((line) => line.startsWith(markerPrefix));
+  if (
+    result.error
+    || result.signal
+    || result.status !== 0
+    || result.stderr !== ""
+    || markerLines.length !== 1
+    || markerLines[0] !== marker
+  ) {
+    throw new Error(`Go semantic probe failed (${result.status ?? result.signal}): ${result.stderr || result.stdout || result.error}`);
+  }
+  return { cases: cases.length, corpusDigest: `sha256:${corpusDigest}` };
+}
+
 function isP07ReceiptNonclaim(pointer, key, value) {
   const fullPointer = `${pointer}/${key}`;
   return (
@@ -1584,26 +1711,85 @@ function validateP07Contracts(root, problems, schemasByFile) {
     );
   }
 
-  const targetSourceSchema = targetSchema?.properties?.source_binding;
+  const exactObjectSchema = (schema, required) => schema?.type === "object"
+    && schema?.additionalProperties === false
+    && jsonEqual(schema?.required, required)
+    && jsonEqual(Object.keys(schema?.properties ?? {}), required);
+  const digestRef = (schema) => schema?.$ref === "common.schema.json#/$defs/Digest";
+  const localRef = (schema, name) => schema?.$ref === `#/$defs/${name}`;
+  const exactTypedRefSchema = (schema, kindSchema) => exactObjectSchema(schema, ["kind", "digest"])
+    && jsonEqual(schema?.properties?.kind, kindSchema)
+    && digestRef(schema?.properties?.digest);
+
+  const targetResidueSchema = targetSchema?.properties?.terminal_residue_binding;
   const targetTreeSchema = targetSchema?.properties?.tree_binding;
-  const pinnedTreeSchema = targetTreeSchema?.properties?.pinned_tree;
   const targetAttemptSchema = targetSchema?.properties?.attempt_binding;
+  const targetBootSchema = targetSchema?.properties?.boot_session_binding;
   const targetRuntimeSchema = targetSchema?.properties?.runtime_binding;
-  const runLifecycleSchema = runSchema?.properties?.lifecycle;
-  const runDispositionSchema = runSchema?.properties?.terminal_disposition;
-  const runObservationSchema = runSchema?.properties?.observation;
-  const runStandaloneSchema = runSchema?.properties?.standalone_scope;
-  const executionResultSchema = executionSchema?.properties?.result;
+  const executableIdentitySchema = targetRuntimeSchema?.properties?.executable_identity;
+  const runEvidenceKindSchema = runSchema?.$defs?.EvidenceKind;
+  const runEvidenceRefSchema = runSchema?.$defs?.EvidenceRef;
+  const runCapturedRefSchema = runSchema?.$defs?.CapturedObservationRef;
+  const runProjectionRefSchema = runSchema?.$defs?.ProjectionResultRef;
+  const runSpawnSchema = runSchema?.$defs?.SpawnObservation;
+  const runProcessSchema = runSchema?.$defs?.ProcessClosure;
+  const runObservationSchema = runSchema?.$defs?.CaptureProjection;
+  const runScopeCheckSchema = runSchema?.$defs?.ScopeCheck;
+  const runStandaloneSchema = runSchema?.$defs?.StandaloneScope;
+  const runPrivateSchema = runSchema?.$defs?.PrivateEvidence;
+  const runWitnessSchema = runSchema?.$defs?.ClosedRunWitness;
   const expectedTargetRequired = [
     "schema_version",
     "kind",
     "target_version",
     "publication_scope",
     "contract_bundle_digest",
-    "source_binding",
+    "terminal_residue_binding",
     "tree_binding",
     "attempt_binding",
+    "boot_session_binding",
     "runtime_binding",
+  ];
+  const expectedResidueRequired = [
+    "profile",
+    "study_id",
+    "head_revision",
+    "head_digest",
+    "lineage_root_digest",
+    "stage",
+    "current_kind",
+    "current_digest",
+  ];
+  const expectedTreeRequired = [
+    "authority",
+    "object_format",
+    "commit_oid",
+    "tree_oid",
+    "tree_identity_digest",
+    "portable_tree_digest",
+    "materialization_policy_digest",
+    "materialization_manifest_digest",
+    "execution_root_scope",
+  ];
+  const expectedAttemptRequired = [
+    "purpose",
+    "attempt_artifact_digest",
+    "instance_nonce",
+    "allocation_profile",
+    "marker_ordering",
+  ];
+  const expectedRuntimeRequired = [
+    "authority",
+    "name",
+    "admitted_executable_path",
+    "measured_process_exec_path",
+    "version",
+    "major",
+    "platform",
+    "architecture",
+    "executable_identity",
+    "probe_program_digest",
+    "child_resolution",
   ];
   const expectedRunRequired = [
     "schema_version",
@@ -1612,286 +1798,259 @@ function validateP07Contracts(root, problems, schemasByFile) {
     "publication_scope",
     "contract_execution_target_digest",
     "attempt_artifact_digest",
-    "lifecycle",
-    "terminal_disposition",
-    "observation",
-    "standalone_scope",
+    "start_claim_ref",
+    "closed_run_witness",
   ];
   const expectedExecutionRequired = [
     "schema_version",
     "kind",
     "execution_version",
     "publication_scope",
+    "classifier_profile",
     "contract_execution_target_digest",
     "finalized_contract_run_digest",
     "result",
-    "historical_execution_evidence_reused",
-    "choicepoint_freshened",
-    "study_head_advanced",
   ];
-  const expectedTreeRequired = [
-    "authority",
-    "pinned_tree",
-    "portable_tree_digest",
-    "materialization_policy_digest",
-    "materialization_manifest_digest",
-    "execution_root_scope",
+  const expectedEvidenceKinds = [
+    "MATERIALIZATION_REVALIDATION",
+    "RUNTIME_REVALIDATION",
+    "PROCESS_RESULT",
+    "WAIT_RESULT",
+    "DRAIN_RESULT",
+    "TEARDOWN_RESULT",
+    "ORPHAN_CHECK",
+    "FINALIZATION_MARKER",
+    "CAPTURED_OBSERVATION",
+    "PROJECTION_RESULT",
+    "TARGET_INVENTORY",
+    "CHILD_BINDINGS",
+    "IMPORT_RESOLUTION",
+    "SERVICE_BINDINGS",
+    "NAMED_PARENT_SECRET_SENTINEL_INHERITANCE",
+    "PRIVATE_EVIDENCE_MANIFEST",
   ];
-  const expectedRuntimeRequired = [
-    "authority",
-    "name",
-    "version",
-    "major",
-    "os",
-    "architecture",
-    "executable_bytes_digest",
-    "probe_program_digest",
-    "child_resolution",
+  const expectedPrimaryReasons = [
+    "NONE",
+    "MATERIALIZATION_ERROR",
+    "START_ERROR",
+    "READINESS_ERROR",
+    "PROBE_TRANSPORT_ERROR",
+    "TIMEOUT",
+    "CANCELLED",
+    "OUTPUT_LIMIT",
+    "PROJECTION_REJECTED",
   ];
-  const expectedLifecycleRequired = [
-    "status",
-    "materialization_revalidation_digest",
-    "process_result_digest",
-    "teardown_result_digest",
-    "orphan_check_digest",
-    "finalization_marker_digest",
+  const expectedScopeDomains = [
+    "TARGET_INVENTORY",
+    "CHILD_BINDINGS",
+    "IMPORT_RESOLUTION",
+    "SERVICE_BINDINGS",
+    "NAMED_PARENT_SECRET_SENTINEL_INHERITANCE",
   ];
-  const expectedStandaloneRequired = [
-    "scope",
-    "target_inventory_digest",
-    "child_bindings_digest",
-    "import_resolution_digest",
-    "service_bindings_digest",
-    "target_inventory_countershape_source_present",
-    "target_inventory_countershape_dependency_present",
-    "target_import_resolution_reached_countershape",
-    "child_path_contains_countershape",
-    "countershape_service_binding_present",
-    "named_parent_secret_sentinels_inherited",
-    "host_wide_absence_established",
-    "network_denial_established",
-    "package_registry_denial_established",
-    "confidentiality_established",
+  const expectedScopeViolations = [
+    "COUNTERSHAPE_SOURCE_PRESENT",
+    "COUNTERSHAPE_DEPENDENCY_PRESENT",
+    "COUNTERSHAPE_SOURCE_AND_DEPENDENCY_PRESENT",
+    "CHILD_BINDING_REACHES_COUNTERSHAPE",
+    "IMPORT_RESOLUTION_REACHES_COUNTERSHAPE",
+    "COUNTERSHAPE_SERVICE_BINDING_PRESENT",
+    "NAMED_PARENT_SECRET_SENTINEL_INHERITED",
   ];
-  const expectedObservationBranches = [
-    {
-      status: "NO_CAPTURE",
-      required: ["status", "control_reason"],
-      references: { control_reason: "common.schema.json#/$defs/ControlReason" },
-    },
-    {
-      status: "CAPTURED_UNPROJECTED",
-      required: ["status", "captured_observation_digest", "control_reason"],
-      references: {
-        captured_observation_digest: "common.schema.json#/$defs/Digest",
-        control_reason: "common.schema.json#/$defs/ControlReason",
-      },
-    },
-    {
-      status: "PROJECTED",
-      required: ["status", "captured_observation_digest", "projection_result_digest", "observed_tuple"],
-      references: {
-        captured_observation_digest: "common.schema.json#/$defs/Digest",
-        projection_result_digest: "common.schema.json#/$defs/Digest",
-        observed_tuple: "common.schema.json#/$defs/ExactTuple",
-      },
-    },
-  ];
-  const observationAuthorityExact = Array.isArray(runObservationSchema?.oneOf)
-    && runObservationSchema.oneOf.length === expectedObservationBranches.length
-    && runObservationSchema.oneOf.every((branch, index) => {
-      const expected = expectedObservationBranches[index];
-      return branch?.type === "object"
-        && branch?.additionalProperties === false
-        && jsonEqual(branch?.required, expected.required)
-        && jsonEqual(Object.keys(branch?.properties ?? {}), expected.required)
-        && branch?.properties?.status?.const === expected.status
-        && Object.entries(expected.references).every(
-          ([field, reference]) => branch?.properties?.[field]?.$ref === reference,
-        );
-    });
-  const eligibleDispositionSchema = runDispositionSchema?.oneOf?.[0];
-  const ineligibleDispositionSchema = runDispositionSchema?.oneOf?.[1];
-  const dispositionAuthorityExact = Array.isArray(runDispositionSchema?.oneOf)
-    && runDispositionSchema.oneOf.length === 2
-    && eligibleDispositionSchema?.type === "object"
-    && eligibleDispositionSchema?.additionalProperties === false
-    && jsonEqual(eligibleDispositionSchema?.required, ["status"])
-    && jsonEqual(Object.keys(eligibleDispositionSchema?.properties ?? {}), ["status"])
-    && eligibleDispositionSchema?.properties?.status?.const === "ELIGIBLE_CLEAN"
-    && ineligibleDispositionSchema?.type === "object"
-    && ineligibleDispositionSchema?.additionalProperties === false
-    && jsonEqual(ineligibleDispositionSchema?.required, ["status", "reason"])
-    && jsonEqual(Object.keys(ineligibleDispositionSchema?.properties ?? {}), ["status", "reason"])
-    && ineligibleDispositionSchema?.properties?.status?.const === "INELIGIBLE_CONTROL"
-    && ineligibleDispositionSchema?.properties?.reason?.$ref === "common.schema.json#/$defs/ControlReason";
-  const eligibleResultSchema = executionResultSchema?.oneOf?.[0];
-  const ineligibleResultSchema = executionResultSchema?.oneOf?.[1];
-  if (
-    targetSchema?.type !== "object"
-    || targetSchema?.additionalProperties !== false
-    || !jsonEqual(targetSchema?.required, expectedTargetRequired)
-    || !jsonEqual(Object.keys(targetSchema?.properties ?? {}), expectedTargetRequired)
-    || targetSchema?.properties?.target_version?.const !== "contract-execution-target/v1"
-    || targetSchema?.properties?.publication_scope?.const !== "IMMUTABLE_NONHEAD_PRESPAWN_AUTHORITY_V1"
-    || targetSchema?.properties?.contract_bundle_digest?.$ref !== "common.schema.json#/$defs/Digest"
-    || targetSourceSchema?.type !== "object"
-    || targetSourceSchema?.additionalProperties !== false
-    || !jsonEqual(
-      targetSourceSchema?.required,
-      ["portable_source_digest", "portable_profile_digest", "source_profile_digest"],
+  const startErrorBranch = runSpawnSchema?.oneOf?.[0];
+  const childPIDBranch = runSpawnSchema?.oneOf?.[1];
+  const noCaptureBranch = runObservationSchema?.oneOf?.[0];
+  const capturedBranch = runObservationSchema?.oneOf?.[1];
+  const projectedBranch = runObservationSchema?.oneOf?.[2];
+  const cleanScopeBranch = runScopeCheckSchema?.oneOf?.[0];
+  const missingScopeBranch = runScopeCheckSchema?.oneOf?.[1];
+  const violatedScopeBranch = runScopeCheckSchema?.oneOf?.[2];
+  const startClaimSchema = runSchema?.properties?.start_claim_ref;
+  const privateManifestSchema = runPrivateSchema?.properties?.manifest_ref;
+  const targetAuthorityExact = exactObjectSchema(targetSchema, expectedTargetRequired)
+    && targetSchema?.properties?.schema_version?.const === "countershape/v1"
+    && targetSchema?.properties?.kind?.const === "ContractExecutionTarget"
+    && targetSchema?.properties?.target_version?.const === "contract-execution-target/v1"
+    && targetSchema?.properties?.publication_scope?.const === "IMMUTABLE_NONHEAD_PRESPAWN_AUTHORITY_V1"
+    && digestRef(targetSchema?.properties?.contract_bundle_digest)
+    && exactObjectSchema(targetResidueSchema, expectedResidueRequired)
+    && targetResidueSchema?.properties?.profile?.const === "EXACT_TERMINAL_RESIDUE_HEAD_V1"
+    && targetResidueSchema?.properties?.study_id?.pattern === "^study:[0-9a-f]{64}$"
+    && targetResidueSchema?.properties?.head_revision?.minimum === 1
+    && targetResidueSchema?.properties?.head_revision?.maximum === 9007199254740991
+    && ["head_digest", "lineage_root_digest", "current_digest"].every(
+      (field) => digestRef(targetResidueSchema?.properties?.[field]),
     )
-    || !jsonEqual(
-      Object.keys(targetSourceSchema?.properties ?? {}),
-      ["portable_source_digest", "portable_profile_digest", "source_profile_digest"],
-    )
-    || Object.values(targetSourceSchema?.properties ?? {}).some(
-      (property) => property?.$ref !== "common.schema.json#/$defs/Digest",
-    )
-    || targetTreeSchema?.type !== "object"
-    || targetTreeSchema?.additionalProperties !== false
-    || !jsonEqual(targetTreeSchema?.required, expectedTreeRequired)
-    || !jsonEqual(Object.keys(targetTreeSchema?.properties ?? {}), expectedTreeRequired)
-    || targetTreeSchema?.properties?.authority?.const !== "GIT_PIN_INSPECT_MATERIALIZE_V1"
-    || targetTreeSchema?.properties?.execution_root_scope?.const !== "PRIVATE_PINNED_MATERIALIZATION_ONLY_V1"
-    || ["portable_tree_digest", "materialization_policy_digest", "materialization_manifest_digest"].some(
-      (field) => targetTreeSchema?.properties?.[field]?.$ref !== "common.schema.json#/$defs/Digest",
-    )
-    || pinnedTreeSchema?.type !== "object"
-    || pinnedTreeSchema?.additionalProperties !== false
-    || !jsonEqual(pinnedTreeSchema?.required, ["object_format", "commit_oid", "tree_oid", "tree_identity_digest"])
-    || !jsonEqual(
-      Object.keys(pinnedTreeSchema?.properties ?? {}),
-      ["object_format", "commit_oid", "tree_oid", "tree_identity_digest"],
-    )
-    || !jsonEqual(pinnedTreeSchema?.properties?.object_format?.enum, ["sha1", "sha256"])
-    || pinnedTreeSchema?.properties?.commit_oid?.pattern !== "^[0-9a-f]{40}(?:[0-9a-f]{24})?$"
-    || pinnedTreeSchema?.properties?.tree_oid?.pattern !== "^[0-9a-f]{40}(?:[0-9a-f]{24})?$"
-    || pinnedTreeSchema?.properties?.tree_identity_digest?.$ref !== "common.schema.json#/$defs/Digest"
-    || pinnedTreeSchema?.allOf?.length !== 2
-    || pinnedTreeSchema.allOf[0]?.if?.properties?.object_format?.const !== "sha1"
-    || pinnedTreeSchema.allOf[0]?.then?.properties?.commit_oid?.pattern !== "^[0-9a-f]{40}$"
-    || pinnedTreeSchema.allOf[0]?.then?.properties?.tree_oid?.pattern !== "^[0-9a-f]{40}$"
-    || pinnedTreeSchema.allOf[1]?.if?.properties?.object_format?.const !== "sha256"
-    || pinnedTreeSchema.allOf[1]?.then?.properties?.commit_oid?.pattern !== "^[0-9a-f]{64}$"
-    || pinnedTreeSchema.allOf[1]?.then?.properties?.tree_oid?.pattern !== "^[0-9a-f]{64}$"
-    || targetAttemptSchema?.type !== "object"
-    || targetAttemptSchema?.additionalProperties !== false
-    || !jsonEqual(
-      targetAttemptSchema?.required,
-      ["purpose", "attempt_artifact_digest", "instance_nonce", "allocation_profile", "marker_ordering"],
-    )
-    || !jsonEqual(
-      Object.keys(targetAttemptSchema?.properties ?? {}),
-      ["purpose", "attempt_artifact_digest", "instance_nonce", "allocation_profile", "marker_ordering"],
-    )
-    || targetAttemptSchema?.properties?.purpose?.const !== "CONFORMANCE"
-    || targetAttemptSchema?.properties?.attempt_artifact_digest?.$ref !== "common.schema.json#/$defs/Digest"
-    || targetAttemptSchema?.properties?.instance_nonce?.pattern !== "^[0-9a-f]{32,128}$"
-    || targetAttemptSchema?.properties?.allocation_profile?.const !== "PRIVATE_FRESH_ROOT_V1"
-    || targetAttemptSchema?.properties?.marker_ordering?.const !== "DURABLE_BEFORE_SPAWN"
-    || targetRuntimeSchema?.type !== "object"
-    || targetRuntimeSchema?.additionalProperties !== false
-    || !jsonEqual(targetRuntimeSchema?.required, expectedRuntimeRequired)
-    || !jsonEqual(Object.keys(targetRuntimeSchema?.properties ?? {}), expectedRuntimeRequired)
-    || targetRuntimeSchema?.properties?.authority?.const !== "ADMITTED_NODE_PROCESS_EXEC_PATH_V1"
-    || targetRuntimeSchema?.properties?.name?.const !== "node"
-    || targetRuntimeSchema?.properties?.version?.pattern
-      !== "^v?[1-9][0-9]*\\.[0-9]+(?:\\.[0-9]+)?(?:[-+][0-9A-Za-z.-]+)?$"
-    || targetRuntimeSchema?.properties?.major?.minimum !== 1
-    || targetRuntimeSchema?.properties?.major?.maximum !== 9007199254740991
-    || !jsonEqual(targetRuntimeSchema?.properties?.os?.enum, ["darwin", "linux", "windows", "other"])
-    || targetRuntimeSchema?.properties?.architecture?.minLength !== 1
-    || targetRuntimeSchema?.properties?.architecture?.maxLength !== 128
-    || targetRuntimeSchema?.properties?.child_resolution?.const !== "PROCESS_EXEC_PATH_EQUALS_ADMITTED_RUNTIME_V1"
-    || targetRuntimeSchema?.properties?.executable_bytes_digest?.$ref !== "common.schema.json#/$defs/Digest"
-    || targetRuntimeSchema?.properties?.probe_program_digest?.$ref !== "common.schema.json#/$defs/Digest"
-    || runSchema?.type !== "object"
-    || runSchema?.additionalProperties !== false
-    || !jsonEqual(runSchema?.required, expectedRunRequired)
-    || !jsonEqual(Object.keys(runSchema?.properties ?? {}), expectedRunRequired)
-    || runSchema?.properties?.run_version?.const !== "finalized-contract-run/v1"
-    || runSchema?.properties?.publication_scope?.const !== "IMMUTABLE_NONHEAD_FINALIZED_RUN_V1"
-    || runSchema?.properties?.contract_execution_target_digest?.$ref !== "common.schema.json#/$defs/Digest"
-    || runSchema?.properties?.attempt_artifact_digest?.$ref !== "common.schema.json#/$defs/Digest"
-    || runLifecycleSchema?.type !== "object"
-    || runLifecycleSchema?.additionalProperties !== false
-    || !jsonEqual(runLifecycleSchema?.required, expectedLifecycleRequired)
-    || !jsonEqual(Object.keys(runLifecycleSchema?.properties ?? {}), expectedLifecycleRequired)
-    || runLifecycleSchema?.properties?.status?.const !== "FINALIZED"
-    || expectedLifecycleRequired.slice(1).some(
-      (field) => runLifecycleSchema?.properties?.[field]?.$ref !== "common.schema.json#/$defs/Digest",
-    )
-    || !dispositionAuthorityExact
-    || !observationAuthorityExact
-    || runSchema?.allOf?.length !== 2
-    || runSchema.allOf[0]?.if?.properties?.terminal_disposition?.properties?.status?.const !== "ELIGIBLE_CLEAN"
-    || !jsonEqual(runSchema.allOf[0]?.if?.properties?.terminal_disposition?.required, ["status"])
-    || !jsonEqual(runSchema.allOf[0]?.if?.required, ["terminal_disposition"])
-    || runSchema.allOf[0]?.then?.properties?.observation?.properties?.status?.const !== "PROJECTED"
-    || !jsonEqual(runSchema.allOf[0]?.then?.properties?.observation?.required, ["status"])
-    || runSchema.allOf[1]?.if?.properties?.terminal_disposition?.properties?.status?.const !== "INELIGIBLE_CONTROL"
-    || !jsonEqual(runSchema.allOf[1]?.if?.properties?.terminal_disposition?.required, ["status"])
-    || !jsonEqual(runSchema.allOf[1]?.if?.required, ["terminal_disposition"])
-    || !jsonEqual(
-      runSchema.allOf[1]?.then?.properties?.observation?.properties?.status?.enum,
-      ["NO_CAPTURE", "CAPTURED_UNPROJECTED"],
-    )
-    || !jsonEqual(runSchema.allOf[1]?.then?.properties?.observation?.required, ["status"])
-    || runStandaloneSchema?.type !== "object"
-    || runStandaloneSchema?.additionalProperties !== false
-    || !jsonEqual(runStandaloneSchema?.required, expectedStandaloneRequired)
-    || !jsonEqual(Object.keys(runStandaloneSchema?.properties ?? {}), expectedStandaloneRequired)
-    || runStandaloneSchema?.properties?.scope?.const !== "ISOLATED_TARGET_INVENTORY_AND_CHILD_BINDINGS_V1"
-    || expectedStandaloneRequired.slice(1, 5).some(
-      (field) => runStandaloneSchema?.properties?.[field]?.$ref !== "common.schema.json#/$defs/Digest",
-    )
-    || expectedStandaloneRequired.slice(5).some(
-      (field) => runStandaloneSchema?.properties?.[field]?.const !== false,
-    )
-    || executionSchema?.type !== "object"
-    || executionSchema?.additionalProperties !== false
-    || !jsonEqual(executionSchema?.required, expectedExecutionRequired)
-    || !jsonEqual(Object.keys(executionSchema?.properties ?? {}), expectedExecutionRequired)
-    || executionSchema?.properties?.execution_version?.const !== "contract-execution/v1"
-    || executionSchema?.properties?.publication_scope?.const !== "IMMUTABLE_NONHEAD_EVIDENCE_V1"
-    || executionSchema?.properties?.contract_execution_target_digest?.$ref !== "common.schema.json#/$defs/Digest"
-    || executionSchema?.properties?.finalized_contract_run_digest?.$ref !== "common.schema.json#/$defs/Digest"
-    || eligibleResultSchema?.type !== "object"
-    || eligibleResultSchema?.additionalProperties !== false
-    || !jsonEqual(eligibleResultSchema?.required, ["execution_class", "conformance"])
-    || !jsonEqual(
-      Object.keys(eligibleResultSchema?.properties ?? {}),
-      ["execution_class", "conformance"],
-    )
-    || eligibleResultSchema?.properties?.execution_class?.const !== "ELIGIBLE_OBSERVATION"
-    || !jsonEqual(eligibleResultSchema?.properties?.conformance?.enum, ["CONFORMS", "CONTRADICTS"])
-    || ineligibleResultSchema?.type !== "object"
-    || ineligibleResultSchema?.additionalProperties !== false
-    || !jsonEqual(ineligibleResultSchema?.required, ["execution_class"])
-    || !jsonEqual(Object.keys(ineligibleResultSchema?.properties ?? {}), ["execution_class"])
-    || ineligibleResultSchema?.properties?.execution_class?.const !== "INELIGIBLE_EXECUTION"
-    || executionSchema?.properties?.historical_execution_evidence_reused?.const !== false
-    || executionSchema?.properties?.choicepoint_freshened?.const !== false
-    || executionSchema?.properties?.study_head_advanced?.const !== false
-    || [
-      "contract_bundle_digest",
-      "current_tree",
-      "world_instance_digest",
-      "attempt_artifact_digest",
-      "measured_runtime",
-      "finalized_run_digest",
+    && targetResidueSchema?.properties?.stage?.const === "RESIDUE"
+    && targetResidueSchema?.properties?.current_kind?.const === "ContractBundle"
+    && exactObjectSchema(targetTreeSchema, expectedTreeRequired)
+    && targetTreeSchema?.properties?.authority?.const === "GIT_PIN_INSPECT_MATERIALIZE_V1"
+    && jsonEqual(targetTreeSchema?.properties?.object_format?.enum, ["sha1", "sha256"])
+    && targetTreeSchema?.properties?.commit_oid?.pattern === "^[0-9a-f]{40}(?:[0-9a-f]{24})?$"
+    && targetTreeSchema?.properties?.tree_oid?.pattern === "^[0-9a-f]{40}(?:[0-9a-f]{24})?$"
+    && [
+      "tree_identity_digest",
+      "portable_tree_digest",
+      "materialization_policy_digest",
+      "materialization_manifest_digest",
+    ].every((field) => digestRef(targetTreeSchema?.properties?.[field]))
+    && targetTreeSchema?.properties?.execution_root_scope?.const === "PRIVATE_PINNED_MATERIALIZATION_ONLY_V1"
+    && targetTreeSchema?.allOf?.length === 2
+    && targetTreeSchema.allOf[0]?.if?.properties?.object_format?.const === "sha1"
+    && jsonEqual(targetTreeSchema.allOf[0]?.if?.required, ["object_format"])
+    && targetTreeSchema.allOf[0]?.then?.properties?.commit_oid?.pattern === "^[0-9a-f]{40}$"
+    && targetTreeSchema.allOf[0]?.then?.properties?.tree_oid?.pattern === "^[0-9a-f]{40}$"
+    && targetTreeSchema.allOf[1]?.if?.properties?.object_format?.const === "sha256"
+    && jsonEqual(targetTreeSchema.allOf[1]?.if?.required, ["object_format"])
+    && targetTreeSchema.allOf[1]?.then?.properties?.commit_oid?.pattern === "^[0-9a-f]{64}$"
+    && targetTreeSchema.allOf[1]?.then?.properties?.tree_oid?.pattern === "^[0-9a-f]{64}$"
+    && exactObjectSchema(targetAttemptSchema, expectedAttemptRequired)
+    && targetAttemptSchema?.properties?.purpose?.const === "CONFORMANCE"
+    && digestRef(targetAttemptSchema?.properties?.attempt_artifact_digest)
+    && targetAttemptSchema?.properties?.instance_nonce?.pattern === "^[0-9a-f]{64}$"
+    && targetAttemptSchema?.properties?.allocation_profile?.const === "PRIVATE_FRESH_ROOT_V1"
+    && targetAttemptSchema?.properties?.marker_ordering?.const === "DURABLE_BEFORE_SPAWN"
+    && exactObjectSchema(targetBootSchema, ["profile", "identity_digest"])
+    && targetBootSchema?.properties?.profile?.const === "DARWIN_KERN_BOOTTIME_V1"
+    && digestRef(targetBootSchema?.properties?.identity_digest)
+    && exactObjectSchema(targetRuntimeSchema, expectedRuntimeRequired)
+    && targetRuntimeSchema?.properties?.authority?.const === "ADMITTED_NODE_PROCESS_EXEC_PATH_V1"
+    && targetRuntimeSchema?.properties?.name?.const === "node"
+    && ["admitted_executable_path", "measured_process_exec_path"].every((field) => (
+      targetRuntimeSchema?.properties?.[field]?.type === "string"
+      && targetRuntimeSchema?.properties?.[field]?.minLength === 2
+      && targetRuntimeSchema?.properties?.[field]?.maxLength === 4096
+      && targetRuntimeSchema?.properties?.[field]?.pattern === "^/[^\\u0000-\\u001f\\u007f]+$"
+    ))
+    && targetRuntimeSchema?.properties?.version?.maxLength === 128
+    && targetRuntimeSchema?.properties?.version?.pattern
+      === "^v?[1-9][0-9]*\\.[0-9]+(?:\\.[0-9]+)?(?:[-+][0-9A-Za-z.-]+)?$"
+    && targetRuntimeSchema?.properties?.major?.minimum === 1
+    && targetRuntimeSchema?.properties?.major?.maximum === 9007199254740991
+    && targetRuntimeSchema?.properties?.platform?.const === "darwin"
+    && targetRuntimeSchema?.properties?.architecture?.const === "arm64"
+    && exactObjectSchema(executableIdentitySchema, ["bytes_digest", "mode", "byte_count"])
+    && digestRef(executableIdentitySchema?.properties?.bytes_digest)
+    && executableIdentitySchema?.properties?.mode?.pattern === "^100(?:[1357][0-7]{2}|[0-7][1357][0-7]|[0-7]{2}[1357])$"
+    && executableIdentitySchema?.properties?.byte_count?.minimum === 1
+    && executableIdentitySchema?.properties?.byte_count?.maximum === 9007199254740991
+    && digestRef(targetRuntimeSchema?.properties?.probe_program_digest)
+    && targetRuntimeSchema?.properties?.child_resolution?.const === "PROCESS_EXEC_PATH_EQUALS_ADMITTED_RUNTIME_V1";
+
+  const runAuthorityExact = exactObjectSchema(runSchema, expectedRunRequired)
+    && runSchema?.properties?.schema_version?.const === "countershape/v1"
+    && runSchema?.properties?.kind?.const === "FinalizedContractRun"
+    && runSchema?.properties?.run_version?.const === "finalized-contract-run/v1"
+    && runSchema?.properties?.publication_scope?.const === "IMMUTABLE_NONHEAD_FINALIZED_RUN_V1"
+    && digestRef(runSchema?.properties?.contract_execution_target_digest)
+    && digestRef(runSchema?.properties?.attempt_artifact_digest)
+    && exactTypedRefSchema(startClaimSchema, { const: "StartClaim" })
+    && localRef(runSchema?.properties?.closed_run_witness, "ClosedRunWitness")
+    && jsonEqual(runEvidenceKindSchema?.enum, expectedEvidenceKinds)
+    && exactTypedRefSchema(runEvidenceRefSchema, { $ref: "#/$defs/EvidenceKind" })
+    && exactTypedRefSchema(runCapturedRefSchema, { const: "CAPTURED_OBSERVATION" })
+    && exactTypedRefSchema(runProjectionRefSchema, { const: "PROJECTION_RESULT" })
+    && runSpawnSchema?.oneOf?.length === 2
+    && exactObjectSchema(startErrorBranch, ["status", "error_code"])
+    && startErrorBranch?.properties?.status?.const === "START_ERROR"
+    && jsonEqual(startErrorBranch?.properties?.error_code?.enum, [
+      "OS_START_ERROR",
+      "PRESPAWN_MATERIALIZATION_REVALIDATION_FAILED",
+      "PRESPAWN_RUNTIME_REVALIDATION_FAILED",
+    ])
+    && exactObjectSchema(childPIDBranch, ["status", "pid"])
+    && childPIDBranch?.properties?.status?.const === "CHILD_PID_OBSERVED"
+    && childPIDBranch?.properties?.pid?.minimum === 1
+    && childPIDBranch?.properties?.pid?.maximum === 2147483647
+    && exactObjectSchema(runProcessSchema, ["status", "primary_reason", "cleanup_controls", "evidence_refs"])
+    && jsonEqual(runProcessSchema?.properties?.status?.enum, ["PROCESS_CLEAN", "PROCESS_CONTROLLED"])
+    && jsonEqual(runProcessSchema?.properties?.primary_reason?.enum, expectedPrimaryReasons)
+    && runProcessSchema?.properties?.cleanup_controls?.type === "array"
+    && runProcessSchema?.properties?.cleanup_controls?.maxItems === 2
+    && runProcessSchema?.properties?.cleanup_controls?.uniqueItems === true
+    && jsonEqual(runProcessSchema?.properties?.cleanup_controls?.items?.enum, ["TEARDOWN_ERROR", "ORPHAN_RISK"])
+    && runProcessSchema?.properties?.evidence_refs?.type === "array"
+    && runProcessSchema?.properties?.evidence_refs?.minItems === 5
+    && runProcessSchema?.properties?.evidence_refs?.maxItems === 8
+    && runProcessSchema?.properties?.evidence_refs?.uniqueItems === true
+    && localRef(runProcessSchema?.properties?.evidence_refs?.items, "EvidenceRef")
+    && runObservationSchema?.oneOf?.length === 3
+    && exactObjectSchema(noCaptureBranch, ["status"])
+    && noCaptureBranch?.properties?.status?.const === "NO_CAPTURE"
+    && exactObjectSchema(capturedBranch, ["status", "captured_observation_ref"])
+    && capturedBranch?.properties?.status?.const === "CAPTURED_UNPROJECTED"
+    && localRef(capturedBranch?.properties?.captured_observation_ref, "CapturedObservationRef")
+    && exactObjectSchema(projectedBranch, ["status", "captured_observation_ref", "projection_result_ref", "observed_tuple"])
+    && projectedBranch?.properties?.status?.const === "PROJECTED"
+    && localRef(projectedBranch?.properties?.captured_observation_ref, "CapturedObservationRef")
+    && localRef(projectedBranch?.properties?.projection_result_ref, "ProjectionResultRef")
+    && projectedBranch?.properties?.observed_tuple?.$ref === "common.schema.json#/$defs/ExactTuple"
+    && runScopeCheckSchema?.oneOf?.length === 3
+    && exactObjectSchema(cleanScopeBranch, ["domain", "status", "evidence_ref"])
+    && jsonEqual(cleanScopeBranch?.properties?.domain?.enum, expectedScopeDomains)
+    && cleanScopeBranch?.properties?.status?.const === "PRESENT_CLEAN"
+    && localRef(cleanScopeBranch?.properties?.evidence_ref, "EvidenceRef")
+    && exactObjectSchema(missingScopeBranch, ["domain", "status"])
+    && jsonEqual(missingScopeBranch?.properties?.domain?.enum, expectedScopeDomains)
+    && missingScopeBranch?.properties?.status?.const === "MISSING"
+    && exactObjectSchema(violatedScopeBranch, ["domain", "status", "evidence_ref", "violation"])
+    && jsonEqual(violatedScopeBranch?.properties?.domain?.enum, expectedScopeDomains)
+    && violatedScopeBranch?.properties?.status?.const === "PRESENT_VIOLATION"
+    && localRef(violatedScopeBranch?.properties?.evidence_ref, "EvidenceRef")
+    && jsonEqual(violatedScopeBranch?.properties?.violation?.enum, expectedScopeViolations)
+    && exactObjectSchema(runStandaloneSchema, ["status", "checks"])
+    && jsonEqual(runStandaloneSchema?.properties?.status?.enum, ["COMPLETE", "PARTIAL", "VIOLATED"])
+    && runStandaloneSchema?.properties?.checks?.type === "array"
+    && runStandaloneSchema?.properties?.checks?.minItems === 5
+    && runStandaloneSchema?.properties?.checks?.maxItems === 5
+    && runStandaloneSchema?.properties?.checks?.uniqueItems === true
+    && localRef(runStandaloneSchema?.properties?.checks?.items, "ScopeCheck")
+    && exactObjectSchema(runPrivateSchema, [
+      "profile",
+      "manifest_ref",
+      "blob_count",
+      "aggregate_byte_count",
+      "retention_at_finalization",
+      "default_export",
+    ])
+    && runPrivateSchema?.properties?.profile?.const === "PRIVATE_EVIDENCE_MANIFEST_V1"
+    && exactTypedRefSchema(privateManifestSchema, { const: "PRIVATE_EVIDENCE_MANIFEST" })
+    && runPrivateSchema?.properties?.blob_count?.minimum === 0
+    && runPrivateSchema?.properties?.blob_count?.maximum === 16
+    && runPrivateSchema?.properties?.aggregate_byte_count?.minimum === 0
+    && runPrivateSchema?.properties?.aggregate_byte_count?.maximum === 67108864
+    && runPrivateSchema?.properties?.retention_at_finalization?.const === "RETAINED_AT_FINALIZATION"
+    && runPrivateSchema?.properties?.default_export?.const === "OMITTED"
+    && exactObjectSchema(runWitnessSchema, [
+      "witness_version",
+      "spawn_observation",
+      "process_closure",
       "observation",
       "standalone_scope",
-      "runtime_binding",
-    ]
-      .some((field) => Object.hasOwn(executionSchema?.properties ?? {}, field))
-  ) {
+      "private_evidence",
+    ])
+    && runWitnessSchema?.properties?.witness_version?.const === "closed-run-witness/v1"
+    && localRef(runWitnessSchema?.properties?.spawn_observation, "SpawnObservation")
+    && localRef(runWitnessSchema?.properties?.process_closure, "ProcessClosure")
+    && localRef(runWitnessSchema?.properties?.observation, "CaptureProjection")
+    && localRef(runWitnessSchema?.properties?.standalone_scope, "StandaloneScope")
+    && localRef(runWitnessSchema?.properties?.private_evidence, "PrivateEvidence");
+
+  const executionAuthorityExact = exactObjectSchema(executionSchema, expectedExecutionRequired)
+    && executionSchema?.properties?.schema_version?.const === "countershape/v1"
+    && executionSchema?.properties?.kind?.const === "ContractExecution"
+    && executionSchema?.properties?.execution_version?.const === "contract-execution/v1"
+    && executionSchema?.properties?.publication_scope?.const === "IMMUTABLE_NONHEAD_CLASSIFICATION_V1"
+    && executionSchema?.properties?.classifier_profile?.const === "CONTRACT_EXECUTION_EXACT_TUPLE_V1"
+    && digestRef(executionSchema?.properties?.contract_execution_target_digest)
+    && digestRef(executionSchema?.properties?.finalized_contract_run_digest)
+    && jsonEqual(executionSchema?.properties?.result?.enum, ["CONFORMS", "CONTRADICTS", "INELIGIBLE_EXECUTION"]);
+
+  if (!targetAuthorityExact || !runAuthorityExact || !executionAuthorityExact) {
     add(
       problems,
       "P07_EXECUTION_AUTHORITY",
       relative(root, targetSchemaFile),
-      "ContractExecutionTarget, FinalizedContractRun, and ContractExecution must retain exact closed authority and typed target-to-run-to-classification references",
+      "C1 target, finalized-run witness, and derived execution schemas must retain their exact closed inert wire authorities",
     );
   }
   const exactTupleAuthorities = [
@@ -2202,7 +2361,7 @@ function validateP07Contracts(root, problems, schemasByFile) {
     if (Object.hasOwn(target, "artifact_digest")) {
       add(problems, "P07_SELF_DIGEST_FORBIDDEN", relative(root, targetExampleFile), "execution-target example contains a self digest");
     }
-    const pinned = target.tree_binding?.pinned_tree;
+    const pinned = target.tree_binding;
     const oidWidth = pinned?.object_format === "sha1" ? 40 : pinned?.object_format === "sha256" ? 64 : 0;
     const pinnedIdentity = {
       schema_version: "countershape/v1",
@@ -2231,15 +2390,22 @@ function validateP07Contracts(root, problems, schemasByFile) {
     if (
       !bundle
       || target.contract_bundle_digest !== p07TypedDigest("ContractBundle", bundle)
-      || target.source_binding?.portable_source_digest !== bundle.portable_source_digest
-      || target.source_binding?.portable_profile_digest !== bundle.portable_profile_digest
-      || target.source_binding?.source_profile_digest !== p07TypedDigest("ContractSourceProfile", bundle.source_profile)
+      || target.terminal_residue_binding?.profile !== "EXACT_TERMINAL_RESIDUE_HEAD_V1"
+      || target.terminal_residue_binding?.stage !== "RESIDUE"
+      || target.terminal_residue_binding?.current_kind !== "ContractBundle"
+      || target.terminal_residue_binding?.current_digest !== target.contract_bundle_digest
+      || typeof target.terminal_residue_binding?.study_id !== "string"
+      || !/^study:[0-9a-f]{64}$/u.test(target.terminal_residue_binding.study_id)
+      || !Number.isSafeInteger(target.terminal_residue_binding?.head_revision)
+      || target.terminal_residue_binding.head_revision < 1
+      || !/^sha256:[0-9a-f]{64}$/u.test(target.terminal_residue_binding?.head_digest ?? "")
+      || !/^sha256:[0-9a-f]{64}$/u.test(target.terminal_residue_binding?.lineage_root_digest ?? "")
     ) {
       add(
         problems,
         "P07_TARGET_SOURCE_BINDING",
         relative(root, targetExampleFile),
-        "ContractExecutionTarget must bind the exact reopened bundle, PortableSource, portable profile, and complete source profile",
+        "ContractExecutionTarget must bind the exact reopened bundle and exact terminal residue head without a second caller-authored source authority",
       );
     }
     const sourceProfile = bundle?.source_profile;
@@ -2256,15 +2422,42 @@ function validateP07Contracts(root, problems, schemasByFile) {
         "source profile must use the antecedent-backed Node script launch and its adapter-specific start authority",
       );
     }
-    const runtimeVersion = /^v?([1-9][0-9]*)\./u.exec(target.runtime_binding?.version ?? "");
+    const runtime = target.runtime_binding;
+    const runtimeVersion = /^v?([1-9][0-9]*)\./u.exec(runtime?.version ?? "");
+    const validRuntimePath = (value) => {
+      if (typeof value !== "string" || Buffer.byteLength(value, "utf8") < 2 || Buffer.byteLength(value, "utf8") > 4096) {
+        return false;
+      }
+      if (!value.startsWith("/") || /[\u0000-\u001f\u007f]/u.test(value) || value.includes("//")) return false;
+      return value.split("/").slice(1).every((segment) => segment !== "" && segment !== "." && segment !== "..");
+    };
+    const executableMode = runtime?.executable_identity?.mode;
+    const executablePermission = typeof executableMode === "string" && /^100[0-7]{3}$/u.test(executableMode)
+      ? Number.parseInt(executableMode.slice(-3), 8)
+      : 0;
     if (
       target.attempt_binding?.purpose !== "CONFORMANCE"
       || target.attempt_binding?.marker_ordering !== "DURABLE_BEFORE_SPAWN"
+      || target.attempt_binding?.allocation_profile !== "PRIVATE_FRESH_ROOT_V1"
+      || !/^[0-9a-f]{64}$/u.test(target.attempt_binding?.instance_nonce ?? "")
+      || !/^sha256:[0-9a-f]{64}$/u.test(target.attempt_binding?.attempt_artifact_digest ?? "")
+      || target.boot_session_binding?.profile !== "DARWIN_KERN_BOOTTIME_V1"
+      || !/^sha256:[0-9a-f]{64}$/u.test(target.boot_session_binding?.identity_digest ?? "")
       || !runtimeVersion
-      || Number(runtimeVersion[1]) !== target.runtime_binding?.major
-      || target.runtime_binding?.authority !== "ADMITTED_NODE_PROCESS_EXEC_PATH_V1"
-      || typeof target.runtime_binding?.executable_bytes_digest !== "string"
-      || typeof target.runtime_binding?.probe_program_digest !== "string"
+      || Number(runtimeVersion[1]) !== runtime?.major
+      || runtime?.authority !== "ADMITTED_NODE_PROCESS_EXEC_PATH_V1"
+      || runtime?.name !== "node"
+      || runtime?.platform !== "darwin"
+      || runtime?.architecture !== "arm64"
+      || runtime?.child_resolution !== "PROCESS_EXEC_PATH_EQUALS_ADMITTED_RUNTIME_V1"
+      || !validRuntimePath(runtime?.admitted_executable_path)
+      || runtime?.measured_process_exec_path !== runtime?.admitted_executable_path
+      || !/^sha256:[0-9a-f]{64}$/u.test(runtime?.executable_identity?.bytes_digest ?? "")
+      || !Number.isSafeInteger(runtime?.executable_identity?.byte_count)
+      || runtime.executable_identity.byte_count < 1
+      || executablePermission === 0
+      || (executablePermission & 0o111) === 0
+      || !/^sha256:[0-9a-f]{64}$/u.test(runtime?.probe_program_digest ?? "")
     ) {
       add(
         problems,
@@ -2283,7 +2476,8 @@ function validateP07Contracts(root, problems, schemasByFile) {
       !target
       || finalizedRun.contract_execution_target_digest !== p07TypedDigest("ContractExecutionTarget", target)
       || finalizedRun.attempt_artifact_digest !== target.attempt_binding?.attempt_artifact_digest
-      || finalizedRun.lifecycle?.status !== "FINALIZED"
+      || finalizedRun.start_claim_ref?.kind !== "StartClaim"
+      || !/^sha256:[0-9a-f]{64}$/u.test(finalizedRun.start_claim_ref?.digest ?? "")
     ) {
       add(
         problems,
@@ -2292,23 +2486,149 @@ function validateP07Contracts(root, problems, schemasByFile) {
         "FinalizedContractRun must bind the exact paired target and that target's exact fresh attempt before classification",
       );
     }
-    const dispositionStatus = finalizedRun.terminal_disposition?.status;
-    const observationStatus = finalizedRun.observation?.status;
-    if (
-      (dispositionStatus === "ELIGIBLE_CLEAN" && observationStatus !== "PROJECTED")
-      || (
-        dispositionStatus === "INELIGIBLE_CONTROL"
-        && (
-          observationStatus === "PROJECTED"
-          || finalizedRun.terminal_disposition?.reason !== finalizedRun.observation?.control_reason
-        )
-      )
-    ) {
+    const witness = finalizedRun.closed_run_witness;
+    const spawn = witness?.spawn_observation;
+    const process = witness?.process_closure;
+    const observation = witness?.observation;
+    const standalone = witness?.standalone_scope;
+    const privateEvidence = witness?.private_evidence;
+    const cleanup = process?.cleanup_controls;
+    const processEvidence = process?.evidence_refs;
+    const expectedProcessEvidence = spawn?.status === "START_ERROR"
+      ? [
+        "MATERIALIZATION_REVALIDATION",
+        "RUNTIME_REVALIDATION",
+        "TEARDOWN_RESULT",
+        "ORPHAN_CHECK",
+        "FINALIZATION_MARKER",
+      ]
+      : [
+        "MATERIALIZATION_REVALIDATION",
+        "RUNTIME_REVALIDATION",
+        "PROCESS_RESULT",
+        "WAIT_RESULT",
+        "DRAIN_RESULT",
+        "TEARDOWN_RESULT",
+        "ORPHAN_CHECK",
+        "FINALIZATION_MARKER",
+      ];
+    const expectedViolationByDomain = Object.freeze({
+      TARGET_INVENTORY: [
+        "COUNTERSHAPE_SOURCE_PRESENT",
+        "COUNTERSHAPE_DEPENDENCY_PRESENT",
+        "COUNTERSHAPE_SOURCE_AND_DEPENDENCY_PRESENT",
+      ],
+      CHILD_BINDINGS: ["CHILD_BINDING_REACHES_COUNTERSHAPE"],
+      IMPORT_RESOLUTION: ["IMPORT_RESOLUTION_REACHES_COUNTERSHAPE"],
+      SERVICE_BINDINGS: ["COUNTERSHAPE_SERVICE_BINDING_PRESENT"],
+      NAMED_PARENT_SECRET_SENTINEL_INHERITANCE: ["NAMED_PARENT_SECRET_SENTINEL_INHERITED"],
+    });
+    const checks = standalone?.checks;
+    const derivedScope = Array.isArray(checks) && checks.some((check) => check?.status === "PRESENT_VIOLATION")
+      ? "VIOLATED"
+      : Array.isArray(checks) && checks.some((check) => check?.status === "MISSING")
+        ? "PARTIAL"
+        : "COMPLETE";
+    const scopeChecksValid = Array.isArray(checks)
+      && checks.length === expectedScopeDomains.length
+      && checks.every((check, index) => {
+        const expectedDomain = expectedScopeDomains[index];
+        if (check?.domain !== expectedDomain) return false;
+        if (check.status === "MISSING") {
+          return !Object.hasOwn(check, "evidence_ref") && !Object.hasOwn(check, "violation");
+        }
+        if (check?.evidence_ref?.kind !== expectedDomain || !/^sha256:[0-9a-f]{64}$/u.test(check.evidence_ref?.digest ?? "")) {
+          return false;
+        }
+        if (check.status === "PRESENT_CLEAN") return !Object.hasOwn(check, "violation");
+        return check.status === "PRESENT_VIOLATION"
+          && expectedViolationByDomain[expectedDomain].includes(check.violation);
+      });
+    const witnessRefs = [];
+    walk(witness, (node) => {
+      if (
+        node
+        && typeof node === "object"
+        && !Array.isArray(node)
+        && Object.keys(node).length === 2
+        && Object.hasOwn(node, "digest")
+        && Object.hasOwn(node, "kind")
+      ) {
+        witnessRefs.push(node);
+      }
+    });
+    const refKinds = witnessRefs.map((ref) => ref.kind);
+    const referencesValid = witnessRefs.length <= 16
+      && witnessRefs.length === new Set(refKinds).size
+      && witnessRefs.every((ref) => (
+        expectedEvidenceKinds.includes(ref.kind) && /^sha256:[0-9a-f]{64}$/u.test(ref.digest)
+      ));
+    const processIsClean = process?.status === "PROCESS_CLEAN";
+    const processIsControlled = process?.status === "PROCESS_CONTROLLED";
+    const primary = process?.primary_reason;
+    const primaryIsClosed = expectedPrimaryReasons.includes(primary);
+    const cleanupIsClosed = Array.isArray(cleanup)
+      && jsonEqual(cleanup, ["TEARDOWN_ERROR", "ORPHAN_RISK"].filter((control) => cleanup.includes(control)));
+    const processStateValid = primaryIsClosed
+      && cleanupIsClosed
+      && ((processIsClean && primary === "NONE" && cleanup.length === 0)
+        || (processIsControlled && (primary !== "NONE" || cleanup.length > 0)));
+    const spawnRelationValid = (
+      spawn?.status === "START_ERROR"
+      && [
+        "OS_START_ERROR",
+        "PRESPAWN_MATERIALIZATION_REVALIDATION_FAILED",
+        "PRESPAWN_RUNTIME_REVALIDATION_FAILED",
+      ].includes(spawn?.error_code)
+      && processIsControlled
+      && primary === "START_ERROR"
+      && observation?.status === "NO_CAPTURE"
+      && derivedScope !== "COMPLETE"
+    ) || (
+      spawn?.status === "CHILD_PID_OBSERVED"
+      && Number.isInteger(spawn?.pid)
+      && spawn.pid >= 1
+      && spawn.pid <= 2147483647
+      && primary !== "START_ERROR"
+    );
+    const observationValid = observation?.status === "PROJECTED"
+      ? observation?.captured_observation_ref?.kind === "CAPTURED_OBSERVATION"
+        && observation?.projection_result_ref?.kind === "PROJECTION_RESULT"
+        && Array.isArray(observation?.observed_tuple?.fields)
+      : observation?.status === "CAPTURED_UNPROJECTED"
+        ? observation?.captured_observation_ref?.kind === "CAPTURED_OBSERVATION" && primary !== "NONE"
+        : observation?.status === "NO_CAPTURE" && primary !== "NONE";
+    const processEvidenceValid = Array.isArray(processEvidence)
+      && jsonEqual(processEvidence.map((ref) => ref?.kind), expectedProcessEvidence);
+    const privateEvidenceValid = privateEvidence?.profile === "PRIVATE_EVIDENCE_MANIFEST_V1"
+      && privateEvidence?.manifest_ref?.kind === "PRIVATE_EVIDENCE_MANIFEST"
+      && Number.isInteger(privateEvidence?.blob_count)
+      && privateEvidence.blob_count >= 0
+      && privateEvidence.blob_count <= 16
+      && Number.isSafeInteger(privateEvidence?.aggregate_byte_count)
+      && privateEvidence.aggregate_byte_count >= 0
+      && privateEvidence.aggregate_byte_count <= 67108864
+      && ((privateEvidence.blob_count === 0 && privateEvidence.aggregate_byte_count === 0)
+        || (privateEvidence.blob_count > 0 && privateEvidence.aggregate_byte_count >= privateEvidence.blob_count))
+      && privateEvidence?.retention_at_finalization === "RETAINED_AT_FINALIZATION"
+      && privateEvidence?.default_export === "OMITTED";
+    const witnessValid = witness?.witness_version === "closed-run-witness/v1"
+      && Buffer.byteLength(p07CanonicalJSON(witness), "utf8") <= 262144
+      && processStateValid
+      && spawnRelationValid
+      && processEvidenceValid
+      && observationValid
+      && (!processIsClean || observation?.status === "PROJECTED")
+      && scopeChecksValid
+      && standalone?.status === derivedScope
+      && privateEvidenceValid
+      && referencesValid;
+    if (!witnessValid) {
       add(
         problems,
         "P07_RUN_DISPOSITION",
         relative(root, runExampleFile),
-        "FinalizedContractRun must derive one clean projected tuple or one exact control reason from its closed physical-run authority",
+        "FinalizedContractRun must carry one closed spawn/process/capture/scope witness whose disposition is uniquely derivable",
       );
     }
   }
@@ -2317,20 +2637,19 @@ function validateP07Contracts(root, problems, schemasByFile) {
     if (Object.hasOwn(execution, "artifact_digest")) {
       add(problems, "P07_SELF_DIGEST_FORBIDDEN", relative(root, executionExampleFile), "execution example contains a self digest");
     }
-    if (
-      (execution.result?.execution_class === "ELIGIBLE_OBSERVATION"
-        && (
-          finalizedRun?.terminal_disposition?.status !== "ELIGIBLE_CLEAN"
-          || finalizedRun?.observation?.status !== "PROJECTED"
-        ))
-      || (execution.result?.execution_class === "INELIGIBLE_EXECUTION"
-        && finalizedRun?.terminal_disposition?.status !== "INELIGIBLE_CONTROL")
-    ) {
+    const witness = finalizedRun?.closed_run_witness;
+    const process = witness?.process_closure;
+    const observation = witness?.observation;
+    const standalone = witness?.standalone_scope;
+    const eligible = process?.status === "PROCESS_CLEAN"
+      && observation?.status === "PROJECTED"
+      && standalone?.status === "COMPLETE";
+    if ((execution.result === "INELIGIBLE_EXECUTION") === eligible) {
       add(
         problems,
         "P07_EXECUTION_OBSERVATION",
         relative(root, executionExampleFile),
-        "classification must derive from the exact finalized run's closed clean-projected or ineligible-control disposition",
+        "classification eligibility must derive from the exact finalized witness rather than caller-selected result authority",
       );
     }
     if (
@@ -2347,8 +2666,8 @@ function validateP07Contracts(root, problems, schemasByFile) {
         "ContractExecution must address the exact paired target and exact target-bound finalized run by external typed digest",
       );
     }
-    if (execution.result?.execution_class === "ELIGIBLE_OBSERVATION" && Array.isArray(bundle?.predicate?.selected_fields)) {
-      const observedTuple = finalizedRun?.observation?.observed_tuple;
+    if (eligible && Array.isArray(bundle?.predicate?.selected_fields)) {
+      const observedTuple = observation?.observed_tuple;
       const fieldIDs = exactTupleFieldIDs(observedTuple);
       if (
         !jsonEqual(fieldIDs, bundle.predicate.selected_fields)
@@ -2364,8 +2683,9 @@ function validateP07Contracts(root, problems, schemasByFile) {
       const tupleIsAllowed = Array.isArray(bundle.predicate?.allowed_tuples)
         && bundle.predicate.allowed_tuples.some((tuple) => jsonEqual(tuple, observedTuple));
       if (
-        (execution.result.conformance === "CONFORMS" && !tupleIsAllowed)
-        || (execution.result.conformance === "CONTRADICTS" && tupleIsAllowed)
+        (execution.result === "CONFORMS" && !tupleIsAllowed)
+        || (execution.result === "CONTRADICTS" && tupleIsAllowed)
+        || execution.result === "INELIGIBLE_EXECUTION"
       ) {
         add(
           problems,
@@ -2375,11 +2695,19 @@ function validateP07Contracts(root, problems, schemasByFile) {
         );
       }
     }
-    if (execution.publication_scope !== "IMMUTABLE_NONHEAD_EVIDENCE_V1"
-        || execution.study_head_advanced !== false
-        || execution.choicepoint_freshened !== false
-        || execution.historical_execution_evidence_reused !== false) {
-      add(problems, "P07_HEAD_SEPARATION", relative(root, executionExampleFile), "ContractExecution must remain immutable nonhead evidence and must not freshen history");
+    if (
+      execution.publication_scope !== "IMMUTABLE_NONHEAD_CLASSIFICATION_V1"
+      || execution.classifier_profile !== "CONTRACT_EXECUTION_EXACT_TUPLE_V1"
+      || [
+        "study_head_advanced",
+        "choicepoint_freshened",
+        "historical_execution_evidence_reused",
+        "current",
+        "latest",
+        "head",
+      ].some((field) => Object.hasOwn(execution, field))
+    ) {
+      add(problems, "P07_HEAD_SEPARATION", relative(root, executionExampleFile), "ContractExecution must remain immutable nonhead classification evidence with no selector or history mutation claim");
     }
   }
 }
@@ -2893,21 +3221,49 @@ const SELF_TESTS = [
     },
   },
   {
+    id: "p07-c1-nested-required-roster-removal",
+    expectedCode: "P07_EXECUTION_AUTHORITY",
+    mutate(root) {
+      const file = path.join(root, "spec/schema/v1/finalized-contract-run.schema.json");
+      rewriteJsonObject(file, (schema) => {
+        const required = schema.$defs?.ClosedRunWitness?.required;
+        const index = required?.indexOf("private_evidence") ?? -1;
+        if (index < 0) throw new Error("self-test mutation anchor is absent: ClosedRunWitness private_evidence required member");
+        required.splice(index, 1);
+      });
+    },
+  },
+  {
     id: "p07-execution-tuple-reason-authority-resurrection",
     expectedCode: "P07_EXECUTION_AUTHORITY",
     mutate(root) {
       const file = path.join(root, "spec/schema/v1/contract-execution.schema.json");
       rewriteJsonObject(file, (schema) => {
-        const eligible = schema.properties?.result?.oneOf?.[0];
-        const ineligible = schema.properties?.result?.oneOf?.[1];
-        if (
-          Object.hasOwn(eligible?.properties ?? {}, "observed_tuple")
-          || Object.hasOwn(ineligible?.properties ?? {}, "reason")
-        ) {
-          throw new Error("self-test mutation anchor already exists: execution tuple/reason authority");
+        const result = schema.properties?.result;
+        if (!jsonEqual(result?.enum, ["CONFORMS", "CONTRADICTS", "INELIGIBLE_EXECUTION"]) || Object.hasOwn(result, "oneOf")) {
+          throw new Error("self-test mutation anchor is absent: flat derived execution result");
         }
-        eligible.properties.observed_tuple = { $ref: "common.schema.json#/$defs/ExactTuple" };
-        ineligible.properties.reason = { $ref: "common.schema.json#/$defs/ControlReason" };
+        delete result.enum;
+        result.oneOf = [
+          {
+            type: "object",
+            additionalProperties: false,
+            required: ["status", "observed_tuple"],
+            properties: {
+              status: { enum: ["CONFORMS", "CONTRADICTS"] },
+              observed_tuple: { $ref: "common.schema.json#/$defs/ExactTuple" },
+            },
+          },
+          {
+            type: "object",
+            additionalProperties: false,
+            required: ["status", "reason"],
+            properties: {
+              status: { const: "INELIGIBLE_EXECUTION" },
+              reason: { $ref: "common.schema.json#/$defs/ControlReason" },
+            },
+          },
+        ];
       });
     },
   },
@@ -2959,11 +3315,11 @@ const SELF_TESTS = [
     mutate(root) {
       const file = path.join(root, "spec/examples/v1/contract-execution-target.valid.json");
       rewriteJsonObject(file, (target) => {
-        const digest = target.tree_binding?.pinned_tree?.tree_identity_digest;
+        const digest = target.tree_binding?.tree_identity_digest;
         if (typeof digest !== "string") {
           throw new Error("self-test mutation anchor is absent: recomputed pinned tree identity digest");
         }
-        target.tree_binding.pinned_tree.tree_identity_digest = "sha256:abababababababababababababababababababababababababababababababab";
+        target.tree_binding.tree_identity_digest = "sha256:abababababababababababababababababababababababababababababababab";
       });
     },
   },
@@ -3019,7 +3375,7 @@ const SELF_TESTS = [
         rewriteJsonObject(exampleFile, (value) => {
           const tuple = name.startsWith("contract-bundle")
             ? value.predicate?.allowed_tuples?.[0]
-            : value.observation?.observed_tuple;
+            : value.closed_run_witness?.observation?.observed_tuple;
           if (!tuple || Object.hasOwn(tuple, "tuple_digest")) {
             throw new Error(`self-test mutation anchor is absent: fields-only tuple in ${name}`);
           }
@@ -3241,30 +3597,28 @@ const SELF_TESTS = [
     },
   },
   {
-    id: "p07-target-source-profile-substitution",
+    id: "p07-target-residue-current-substitution",
     expectedCode: "P07_TARGET_SOURCE_BINDING",
     mutate(root) {
       const file = path.join(root, "spec/examples/v1/contract-execution-target.valid.json");
       rewriteJsonObject(file, (target) => {
-        if (typeof target.source_binding?.source_profile_digest !== "string") {
-          throw new Error("self-test mutation anchor is absent: source-profile digest");
+        if (target.terminal_residue_binding?.current_digest !== target.contract_bundle_digest) {
+          throw new Error("self-test mutation anchor is absent: residue current bundle binding");
         }
-        target.source_binding.source_profile_digest = "sha256:abababababababababababababababababababababababababababababababab";
+        target.terminal_residue_binding.current_digest = "sha256:abababababababababababababababababababababababababababababababab";
       });
     },
   },
   {
-    id: "p07-target-source-profile-wrong-domain",
+    id: "p07-target-residue-kind-substitution",
     expectedCode: "P07_TARGET_SOURCE_BINDING",
     mutate(root) {
-      const bundleFile = path.join(root, "spec/examples/v1/contract-bundle.valid.json");
-      const bundle = strictJsonParse(fs.readFileSync(bundleFile, "utf8"), bundleFile).value;
       const file = path.join(root, "spec/examples/v1/contract-execution-target.valid.json");
       rewriteJsonObject(file, (target) => {
-        if (typeof target.source_binding?.source_profile_digest !== "string") {
-          throw new Error("self-test mutation anchor is absent: source-profile digest domain");
+        if (target.terminal_residue_binding?.current_kind !== "ContractBundle") {
+          throw new Error("self-test mutation anchor is absent: residue current kind");
         }
-        target.source_binding.source_profile_digest = p07TypedDigest("SourceProfile", bundle.source_profile);
+        target.terminal_residue_binding.current_kind = "DecisionRecord";
       });
     },
   },
@@ -3360,13 +3714,13 @@ const SELF_TESTS = [
     mutate(root) {
       const schemaFile = path.join(root, "spec/schema/v1/contract-execution-target.schema.json");
       rewriteJsonObject(schemaFile, (schema) => {
-        const runtime = schema.properties?.runtime_binding;
-        const index = runtime?.required?.indexOf("executable_bytes_digest") ?? -1;
-        if (index < 0 || !Object.hasOwn(runtime.properties ?? {}, "executable_bytes_digest")) {
+        const identity = schema.properties?.runtime_binding?.properties?.executable_identity;
+        const index = identity?.required?.indexOf("bytes_digest") ?? -1;
+        if (index < 0 || !Object.hasOwn(identity.properties ?? {}, "bytes_digest")) {
           throw new Error("self-test mutation anchor is absent: runtime executable digest");
         }
-        runtime.required.splice(index, 1);
-        delete runtime.properties.executable_bytes_digest;
+        identity.required.splice(index, 1);
+        delete identity.properties.bytes_digest;
       });
     },
   },
@@ -3376,12 +3730,9 @@ const SELF_TESTS = [
     mutate(root) {
       const runFile = path.join(root, "spec/examples/v1/finalized-contract-run.valid.json");
       rewriteJsonObject(runFile, (finalizedRun) => {
-        const value = finalizedRun.observation?.observed_tuple?.fields?.[0]?.value;
-        if (
-          finalizedRun.terminal_disposition?.status !== "ELIGIBLE_CLEAN"
-          || value?.tag !== "BYTES"
-          || value?.base64 !== "b2sK"
-        ) {
+        const witness = finalizedRun.closed_run_witness;
+        const value = witness?.observation?.observed_tuple?.fields?.[0]?.value;
+        if (witness?.process_closure?.status !== "PROCESS_CLEAN" || value?.tag !== "BYTES" || value?.base64 !== "b2sK") {
           throw new Error("self-test mutation anchor is absent: finalized clean BYTES tuple");
         }
         value.base64 = "bm8K";
@@ -3389,7 +3740,7 @@ const SELF_TESTS = [
       const finalizedRun = strictJsonParse(fs.readFileSync(runFile, "utf8"), runFile).value;
       const executionFile = path.join(root, "spec/examples/v1/contract-execution.valid.json");
       rewriteJsonObject(executionFile, (execution) => {
-        if (execution.result?.conformance !== "CONFORMS") {
+        if (execution.result !== "CONFORMS") {
           throw new Error("self-test mutation anchor is absent: conforming classification");
         }
         execution.finalized_contract_run_digest = p07TypedDigest("FinalizedContractRun", finalizedRun);
@@ -3402,18 +3753,22 @@ const SELF_TESTS = [
     mutate(root) {
       const executionFile = path.join(root, "spec/examples/v1/contract-execution.valid.json");
       const execution = strictJsonParse(fs.readFileSync(executionFile, "utf8"), executionFile).value;
-      if (execution.result?.execution_class !== "ELIGIBLE_OBSERVATION") {
+      if (execution.result !== "CONFORMS") {
         throw new Error("self-test mutation anchor is absent: eligible execution");
       }
       const runFile = path.join(root, "spec/examples/v1/finalized-contract-run.valid.json");
       rewriteJsonObject(runFile, (finalizedRun) => {
-        if (
-          finalizedRun.terminal_disposition?.status !== "ELIGIBLE_CLEAN"
-          || finalizedRun.observation?.status !== "PROJECTED"
-        ) {
+        const witness = finalizedRun.closed_run_witness;
+        const observation = witness?.observation;
+        if (witness?.process_closure?.status !== "PROCESS_CLEAN" || observation?.status !== "PROJECTED") {
           throw new Error("self-test mutation anchor is absent: projected finalized run");
         }
-        finalizedRun.observation = { status: "NO_CAPTURE", control_reason: "START_ERROR" };
+        witness.process_closure.status = "PROCESS_CONTROLLED";
+        witness.process_closure.primary_reason = "PROJECTION_REJECTED";
+        witness.observation = {
+          status: "CAPTURED_UNPROJECTED",
+          captured_observation_ref: observation.captured_observation_ref,
+        };
       });
       const finalizedRun = strictJsonParse(fs.readFileSync(runFile, "utf8"), runFile).value;
       rewriteJsonObject(executionFile, (executionValue) => {
@@ -3427,42 +3782,38 @@ const SELF_TESTS = [
     mutate(root) {
       const runFile = path.join(root, "spec/examples/v1/finalized-contract-run.valid.json");
       rewriteJsonObject(runFile, (finalizedRun) => {
-        if (
-          finalizedRun.terminal_disposition?.status !== "ELIGIBLE_CLEAN"
-          || finalizedRun.observation?.status !== "PROJECTED"
-        ) {
+        const process = finalizedRun.closed_run_witness?.process_closure;
+        const observation = finalizedRun.closed_run_witness?.observation;
+        if (process?.status !== "PROCESS_CLEAN" || process?.primary_reason !== "NONE" || observation?.status !== "PROJECTED") {
           throw new Error("self-test mutation anchor is absent: clean projected finalized run");
         }
-        finalizedRun.terminal_disposition = { status: "INELIGIBLE_CONTROL", reason: "START_ERROR" };
-        finalizedRun.observation = { status: "NO_CAPTURE", control_reason: "TIMEOUT" };
+        process.primary_reason = "TIMEOUT";
       });
       const finalizedRun = strictJsonParse(fs.readFileSync(runFile, "utf8"), runFile).value;
       const executionFile = path.join(root, "spec/examples/v1/contract-execution.valid.json");
       rewriteJsonObject(executionFile, (execution) => {
         execution.finalized_contract_run_digest = p07TypedDigest("FinalizedContractRun", finalizedRun);
-        execution.result = { execution_class: "INELIGIBLE_EXECUTION" };
       });
     },
   },
   {
-    id: "p07-projected-ineligible-smuggling",
-    expectedCode: "P07_RUN_DISPOSITION",
+    id: "p07-projected-controlled-classified-conforming",
+    expectedCode: "P07_EXECUTION_OBSERVATION",
     mutate(root) {
       const runFile = path.join(root, "spec/examples/v1/finalized-contract-run.valid.json");
       rewriteJsonObject(runFile, (finalizedRun) => {
-        if (
-          finalizedRun.terminal_disposition?.status !== "ELIGIBLE_CLEAN"
-          || finalizedRun.observation?.status !== "PROJECTED"
-        ) {
+        const process = finalizedRun.closed_run_witness?.process_closure;
+        const observation = finalizedRun.closed_run_witness?.observation;
+        if (process?.status !== "PROCESS_CLEAN" || process?.primary_reason !== "NONE" || observation?.status !== "PROJECTED") {
           throw new Error("self-test mutation anchor is absent: clean projected finalized run");
         }
-        finalizedRun.terminal_disposition = { status: "INELIGIBLE_CONTROL", reason: "START_ERROR" };
+        process.status = "PROCESS_CONTROLLED";
+        process.primary_reason = "TIMEOUT";
       });
       const finalizedRun = strictJsonParse(fs.readFileSync(runFile, "utf8"), runFile).value;
       const executionFile = path.join(root, "spec/examples/v1/contract-execution.valid.json");
       rewriteJsonObject(executionFile, (execution) => {
         execution.finalized_contract_run_digest = p07TypedDigest("FinalizedContractRun", finalizedRun);
-        execution.result = { execution_class: "INELIGIBLE_EXECUTION" };
       });
     },
   },
@@ -3472,8 +3823,8 @@ const SELF_TESTS = [
     mutate(root) {
       const file = path.join(root, "spec/examples/v1/contract-execution.valid.json");
       rewriteJsonObject(file, (execution) => {
-        if (execution.study_head_advanced !== false) {
-          throw new Error("self-test mutation anchor is absent: nonhead execution");
+        if (Object.hasOwn(execution, "study_head_advanced")) {
+          throw new Error("self-test mutation anchor already exists: nonhead execution selector");
         }
         execution.study_head_advanced = true;
       });
@@ -3702,7 +4053,7 @@ const SELF_TESTS = [
     mutate(root) {
       const file = path.join(root, "spec/examples/v1/finalized-contract-run.valid.json");
       rewriteJsonObject(file, (finalizedRun) => {
-        const field = finalizedRun.observation?.observed_tuple?.fields?.[0];
+        const field = finalizedRun.closed_run_witness?.observation?.observed_tuple?.fields?.[0];
         if (field?.value?.tag !== "BYTES" || field.value.base64 !== "b2sK") {
           throw new Error("self-test mutation anchor is absent: executable example BYTES value");
         }
@@ -3716,7 +4067,7 @@ const SELF_TESTS = [
     mutate(root) {
       const file = path.join(root, "spec/examples/v1/finalized-contract-run.valid.json");
       rewriteJsonObject(file, (finalizedRun) => {
-        const field = finalizedRun.observation?.observed_tuple?.fields?.[0];
+        const field = finalizedRun.closed_run_witness?.observation?.observed_tuple?.fields?.[0];
         if (field?.value?.tag !== "BYTES" || field.value.base64 !== "b2sK") {
           throw new Error("self-test mutation anchor is absent: executable example BYTES value");
         }
@@ -3773,12 +4124,11 @@ const SELF_TESTS = [
     mutate(root) {
       const file = path.join(root, "spec/schema/v1/contract-execution.schema.json");
       rewriteJsonObject(file, (schema) => {
-        const authority = schema.properties?.result?.oneOf?.[1]?.properties?.execution_class;
-        if (authority?.const !== "INELIGIBLE_EXECUTION" || Object.hasOwn(authority, "enum")) {
-          throw new Error("self-test mutation anchor is absent: contract execution authority const");
+        const authority = schema.properties?.result;
+        if (!jsonEqual(authority?.enum, ["CONFORMS", "CONTRADICTS", "INELIGIBLE_EXECUTION"]) || Object.hasOwn(authority, "const")) {
+          throw new Error("self-test mutation anchor is absent: flat contract execution authority enum");
         }
         authority.const = false;
-        authority.enum = ["INELIGIBLE_EXECUTION"];
       });
     },
   },
@@ -3788,11 +4138,11 @@ const SELF_TESTS = [
     mutate(root) {
       const file = path.join(root, "spec/schema/v1/contract-execution.schema.json");
       rewriteJsonObject(file, (schema) => {
-        const authority = schema.properties?.result?.oneOf?.[1]?.properties?.execution_class;
-        if (authority?.const !== "INELIGIBLE_EXECUTION" || Object.hasOwn(authority, "enum")) {
-          throw new Error("self-test mutation anchor is absent: unique contract execution authority const");
+        const authority = schema.properties?.result;
+        if (!jsonEqual(authority?.enum, ["CONFORMS", "CONTRADICTS", "INELIGIBLE_EXECUTION"]) || Object.hasOwn(authority, "const")) {
+          throw new Error("self-test mutation anchor is absent: unique flat contract execution authority enum");
         }
-        authority.enum = ["INELIGIBLE_EXECUTION"];
+        authority.const = "INELIGIBLE_EXECUTION";
       });
     },
   },
@@ -3971,13 +4321,24 @@ const SELF_TESTS = [
 function runSelfTests(root) {
   const baseline = validate(root);
   if (baseline.problems.length > 0) {
-    return { baseline, failures: ["baseline planning inputs are invalid; mutation results would be meaningless"], detected: [] };
+    return {
+      baseline,
+      failures: ["baseline planning inputs are invalid; mutation results would be meaningless"],
+      detected: [],
+      schemaRuntimeIntersection: undefined,
+    };
   }
 
   const temporary = fs.mkdtempSync(path.join(os.tmpdir(), "countershape-planning-validator-"));
   const failures = [];
   const detected = [];
+  let schemaRuntimeIntersection;
   try {
+    try {
+      schemaRuntimeIntersection = proveC1SchemaRuntimeIntersection(root);
+    } catch (error) {
+      failures.push(`c1-schema-runtime-intersection: ${error instanceof Error ? error.message : String(error)}`);
+    }
     for (const test of SELF_TESTS) {
       const testRoot = path.join(temporary, test.id);
       copyRelevantInputs(root, testRoot);
@@ -3999,7 +4360,7 @@ function runSelfTests(root) {
   } finally {
     fs.rmSync(temporary, { recursive: true, force: true });
   }
-  return { baseline, failures, detected };
+  return { baseline, failures, detected, schemaRuntimeIntersection };
 }
 
 function printProblems(result) {
@@ -4026,7 +4387,11 @@ function main() {
       process.exitCode = 1;
       return;
     }
-    process.stdout.write(`planning validator self-test: ok (${result.detected.length}/${SELF_TESTS.length} mutations detected)\n`);
+    process.stdout.write(
+      `planning validator self-test: ok (${result.detected.length}/${SELF_TESTS.length} mutations detected; `
+      + `${result.schemaRuntimeIntersection.cases} schema-valid/runtime-invalid cases proven; `
+      + `${result.schemaRuntimeIntersection.corpusDigest})\n`,
+    );
     return;
   }
 

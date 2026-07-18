@@ -11,13 +11,14 @@ import { validateSpecification } from "./check-p07b-c-unit-scope.mjs";
 
 export const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
-const legacyPlanningDigests = Object.freeze({
-	"spec/schema/v1/contract-execution-target.schema.json": "87b53957021049510902f87fa4464ca68ceca69e177c77bf0eb128c33cc4327e",
-	"spec/schema/v1/finalized-contract-run.schema.json": "9dcfe2cd7ae89037ce759a3d3761bf1cc641739accad14f4b2e5bcb658117399",
-	"spec/schema/v1/contract-execution.schema.json": "f273c4385cf732b11b2138c2d27ae2a1ef5dc7ad75d8778e85a112338fe4ded7",
-	"spec/examples/v1/contract-execution-target.valid.json": "accd602e97a88dc3889aa274279d1fdd17ebeeb78b044c5af206403375875544",
-	"spec/examples/v1/finalized-contract-run.valid.json": "192c786b4d357eb7a93065c6e6c907ccb19efd6d52cd3811643a8c2170ba210c",
-	"spec/examples/v1/contract-execution.valid.json": "c9063f424a29d3c3efb8acfb7b68c23a9d95579ec8d5383cb6362956ea404ce6",
+const c1PlanningPaths = Object.freeze({
+	targetSchema: "spec/schema/v1/contract-execution-target.schema.json",
+	runSchema: "spec/schema/v1/finalized-contract-run.schema.json",
+	executionSchema: "spec/schema/v1/contract-execution.schema.json",
+	bundleExample: "spec/examples/v1/contract-bundle.valid.json",
+	targetExample: "spec/examples/v1/contract-execution-target.valid.json",
+	runExample: "spec/examples/v1/finalized-contract-run.valid.json",
+	executionExample: "spec/examples/v1/contract-execution.valid.json",
 });
 
 const researchShape = Object.freeze({
@@ -47,6 +48,16 @@ const promptHeadings = Object.freeze([
 const authorityDeclarationPath = "spec/verification/p07b-c-c0-authority.json";
 const receiptDeclarationPath = "spec/verification/p07b-c-c0-receipt.json";
 const statusPath = "docs/status/P07B-C-C0-AUTHORITY.md";
+const c1MaintenanceStatusPath = "docs/status/P07B-C-C1-CUMULATIVE-MAINTENANCE.md";
+const c1StatusPath = "docs/status/P07B-C-C1-SEMANTICS.md";
+const sealedC0AIdentity = Object.freeze({
+	commit: "1c6d9fdef339314bfcb99d7d53f3a7c5040e5020",
+	tree: "97574c4ef3f967a1194b2ebdeed246a77efabfc7",
+});
+const sealedC0BIdentity = Object.freeze({
+	commit: "47044e95f405b7252959415adb1aa0dbea8045ab",
+	tree: "d0b30300c6dd80eea95583e9b97cd819a6481f4a",
+});
 const c0ClaimLabels = Object.freeze([
 	"P07B C0 authority plan coherence",
 	"P07B C0 plan checker self-test",
@@ -56,6 +67,51 @@ const c0ClaimLabels = Object.freeze([
 	"P07B C0 exact staged scope and diff",
 	"P07B C0 scoped staged credential scan",
 	"P07B C0 didrun chain intact",
+]);
+const c1ClaimLabels = Object.freeze([
+	"P07B C1 inert semantic model",
+	"P07B C1 exhaustive algebra",
+	"P07B C1 schema runtime example intersection",
+	"P07B C1 target parser bounded fuzz",
+	"P07B C1 finalized-run parser bounded fuzz",
+	"P07B C1 execution parser bounded fuzz",
+	"P07B C1 architecture boundary",
+	"P07B C1 architecture checker self-test",
+	"P07B C1 predecessor architecture compatibility",
+	"P07B C1 predecessor architecture self-test",
+	"P07B C1 planning generator parity",
+	"P07B C1 planning validator compatibility",
+	"P07B C1 evolved plan coherence",
+	"P07B C1 plan checker self-test",
+	"P07B C1 cumulative verifier self-test",
+	"P07B C1 exact staged scope and diff",
+	"P07B C1 scoped staged credential scan",
+	"P07B C1 cumulative verification",
+	"P07B C1 didrun chain intact",
+]);
+const c1MaintenanceIdentity = Object.freeze({
+	sourceCommit: "fa3d0c12b4c599744b666b2848e38a2499f33a89",
+	sourceTree: "c908c4e580144aa481f646090a1a21d92c86e1cf",
+	receiptCommit: "3f31370a70979c4c5fe3a523be19e05f84271e96",
+	receiptTree: "29c5708b05c562984a0b7b66d6cfe3ac6e19c626",
+});
+const c1MaintenanceSourceClaims = Object.freeze([
+	"P07B-C C1 maintenance exact output caps stable 50x",
+	"P07B-C C1 maintenance independent limit mutation guard stable 20x",
+	"P07B-C C1 maintenance simultaneous overflow lifecycle stable 20x",
+	"P07B-C C1 maintenance world package",
+	"P07B-C C1 maintenance cumulative verifier",
+	"P07B-C C1 maintenance staged diff clean",
+	"P07B-C C1 maintenance exact three-path scope",
+	"P07B-C C1 maintenance exact commit structured credential scan",
+]);
+const c1MaintenanceReceiptClaims = Object.freeze([
+	"P07B-C C1 maintenance receipt reconciliation",
+	"P07B-C C1 maintenance receipt cumulative verifier",
+	"P07B-C C1 maintenance receipt staged diff clean",
+	"P07B-C C1 maintenance receipt exact one-path scope",
+	"P07B-C C1 maintenance receipt staged credential scan",
+	"P07B-C C1 maintenance receipt didrun chain intact",
 ]);
 const expectedAuthorityDeclaration = Object.freeze({
 	schema_version: "countershape/p07b-c-c0-authority/v1",
@@ -90,7 +146,7 @@ const expectedAuthorityDeclaration = Object.freeze({
 
 const requiredText = Object.freeze({
 	"docs/SEMANTICS.md": [
-		"legacy planning fixtures superseded by the C0 rulings",
+		"For P07B-C C1, `internal/contractexec/model` is the semantic authority",
 		"store-private `ExecutionInterlock`",
 		"Only the C4 contract runner may acquire it from an opaque C3-issued official-target capability",
 		"fresh target alone is insufficient",
@@ -98,6 +154,7 @@ const requiredText = Object.freeze({
 	],
 	"docs/ARCHITECTURE.md": [
 		"sole mutable operational exception to the nonhead model",
+		"C1's entire production topology is `internal/contractexec/model`",
 		"internal/processmechanics/",
 		"private interlock may only block spawn and carries no result/discovery authority",
 	],
@@ -109,13 +166,14 @@ const requiredText = Object.freeze({
 		"-> CONTRACT_EXECUTION (immutable nonhead)",
 	],
 	"docs/THREAT_MODEL.md": [
+		"Schema-only acceptance therefore grants nothing",
 		"C2 storage mechanics cannot issue this authority",
 		"Low-level process mechanics never sees that permit or semantic body",
 		"It establishes no host-wide absence, network/registry denial, listener ownership, containment, or confidentiality",
 	],
 	"docs/CONCEPT_BRIEF.md": [
 		"classifier-profile-bound conformance/contradiction or ineligible conclusion",
-		"A1/A2/B sealed; C0 design locked; C1 next",
+		"C0 authority sealed; C1 owns inert canonical semantics",
 		"private interlock is the sole mutable operational exception",
 	],
 	"docs/CLAIM_VOCABULARY.md": [
@@ -127,6 +185,8 @@ const requiredText = Object.freeze({
 	"docs/PROMPT_PACK.md": [
 		"prompts/P07B-C-TARGET-RUN-EXECUTION.md",
 		"Only the higher contract runner may consume official target/admission authority",
+		"C1 inert-semantics source current",
+		"C1 must seal/strict-clean before C2",
 	],
 	"docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md": [
 		"C0 → C1 → C2 → C3 → C4 → C5 → C6",
@@ -205,16 +265,20 @@ const requiredText = Object.freeze({
 		"UNRECEIPTED",
 	],
 	"docs/HANDOFF_MODE_C.md": [
-		"P07B-C C0 deep-dive/scope-lock files are the current working unit",
-		"P07B-C C0 research/authority scope lock only",
+		"C1 now implements strict inert target/run/execution construction",
+		"P07B-C C1 inert canonical target/run/execution semantics only",
 		"one private boot-session interlock with no result authority",
 	],
 	[statusPath]: [
 		"Machine-readable authority summary: `spec/verification/p07b-c-c0-authority.json`.",
 		"C0 implements no C runtime type",
+		"C0b reconciliation commit `47044e95f405b7252959415adb1aa0dbea8045ab`",
+		"C0 is complete. C1's inert semantic source boundary is current",
 	],
 	"docs/VERIFICATION.md": [
-		"P07B-C C0 exact authority-declaration/plan and machine-readable staged-unit-scope mutation self-tests",
+		"P07B-C C1 inert-model architecture checker",
+		"Composition is one-way (`B -> C1`)",
+		"eight byte-exact schema-valid/runtime-invalid cases",
 		"GOFLAGS=-mod=readonly -buildvcs=false -p=1",
 	],
 	"spec/verification/p07b-c-unit-paths.json": [
@@ -283,6 +347,51 @@ const requiredC0APaths = Object.freeze([
 	authorityDeclarationPath,
 	"tools/check-p07b-c-plan.mjs",
 ]);
+const requiredC1Paths = Object.freeze([
+	"docs/ARCHITECTURE.md",
+	"docs/CLAIM_VOCABULARY.md",
+	"docs/CONCEPT_BRIEF.md",
+	"docs/HANDOFF_MODE_C.md",
+	"docs/PROMPT_PACK.md",
+	"docs/SEMANTICS.md",
+	"docs/STATE_MACHINES.md",
+	"docs/THREAT_MODEL.md",
+	"docs/VERIFICATION.md",
+	"docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md",
+	"docs/status/P07B-C-C0-AUTHORITY.md",
+	"docs/status/P07B-C-C1-CUMULATIVE-MAINTENANCE.md",
+	"docs/status/P07B-C-C1-SEMANTICS.md",
+	"internal/contractexec/model/algebra_test.go",
+	"internal/contractexec/model/codec.go",
+	"internal/contractexec/model/codec_test.go",
+	"internal/contractexec/model/doc.go",
+	"internal/contractexec/model/errors.go",
+	"internal/contractexec/model/execution.go",
+	"internal/contractexec/model/fuzz_test.go",
+	"internal/contractexec/model/model_test.go",
+	"internal/contractexec/model/run.go",
+	"internal/contractexec/model/run_parse.go",
+	"internal/contractexec/model/schema_parity_test.go",
+	"internal/contractexec/model/target.go",
+	"internal/contractexec/model/tuple_parse.go",
+	"internal/contractexec/model/types.go",
+	"spec/examples/v1/contract-execution-target.valid.json",
+	"spec/examples/v1/contract-execution.valid.json",
+	"spec/examples/v1/finalized-contract-run.valid.json",
+	"spec/schema/v1/contract-execution-target.schema.json",
+	"spec/schema/v1/contract-execution.schema.json",
+	"spec/schema/v1/finalized-contract-run.schema.json",
+	"spec/verification/p07b-c-unit-paths.json",
+	"tools/check-p07b-b-architecture-selftest.mjs",
+	"tools/check-p07b-b-architecture.mjs",
+	"tools/check-p07b-c-architecture-selftest.mjs",
+	"tools/check-p07b-c-architecture.mjs",
+	"tools/check-p07b-c-plan.mjs",
+	"tools/generate-p07-planning-example.mjs",
+	"tools/validate-planning.mjs",
+	"tools/verify-current-selftest.mjs",
+	"tools/verify-current.mjs",
+]);
 
 async function readBytes(root, path, overrides) {
 	if (overrides.has(path)) {
@@ -294,6 +403,118 @@ async function readBytes(root, path, overrides) {
 
 async function readText(root, path, overrides) {
 	return (await readBytes(root, path, overrides)).toString("utf8");
+}
+
+function canonicalJSON(value) {
+	if (value === null || typeof value === "boolean" || typeof value === "string") return JSON.stringify(value);
+	if (typeof value === "number") {
+		if (!Number.isSafeInteger(value) || Object.is(value, -0)) throw new Error("unsafe canonical number");
+		return String(value);
+	}
+	if (Array.isArray(value)) return `[${value.map(canonicalJSON).join(",")}]`;
+	if (!value || typeof value !== "object") throw new Error(`unsupported canonical value ${typeof value}`);
+	const keys = Object.keys(value).sort((left, right) => Buffer.compare(Buffer.from(left), Buffer.from(right)));
+	return `{${keys.map((key) => `${JSON.stringify(key)}:${canonicalJSON(value[key])}`).join(",")}}`;
+}
+
+function typedDigest(kind, body) {
+	return `sha256:${createHash("sha256").update(`countershape/v1/${kind}\0`).update(canonicalJSON(body)).digest("hex")}`;
+}
+
+function closedObjectRequiredRostersExact(schema) {
+	let exact = true;
+	const visit = (node) => {
+		if (!node || typeof node !== "object" || Array.isArray(node)) return;
+		if (node.type === "object" && node.additionalProperties === false && node.properties && typeof node.properties === "object") {
+			const properties = Object.keys(node.properties).sort();
+			const required = Array.isArray(node.required) ? [...node.required].sort() : [];
+			exact &&= new Set(required).size === required.length
+				&& required.every((member) => typeof member === "string")
+				&& isDeepStrictEqual(required, properties);
+		}
+		for (const value of Object.values(node)) {
+			if (Array.isArray(value)) value.forEach(visit);
+			else visit(value);
+		}
+	};
+	visit(schema);
+	return exact;
+}
+
+async function checkC1PlanningProjection(root, overrides, errors) {
+	let values;
+	try {
+		values = Object.fromEntries(await Promise.all(Object.entries(c1PlanningPaths).map(async ([name, path]) => [
+			name,
+			JSON.parse(await readText(root, path, overrides)),
+		])));
+	} catch (error) {
+		errors.push(`P07B-C C1 planning projection unreadable: ${error.message}`);
+		return;
+	}
+	const { targetSchema, runSchema, executionSchema, bundleExample, targetExample, runExample, executionExample } = values;
+	const targetRoot = [
+		"schema_version", "kind", "target_version", "publication_scope", "contract_bundle_digest",
+		"terminal_residue_binding", "tree_binding", "attempt_binding", "boot_session_binding", "runtime_binding",
+	];
+	const runRoot = [
+		"schema_version", "kind", "run_version", "publication_scope", "contract_execution_target_digest",
+		"attempt_artifact_digest", "start_claim_ref", "closed_run_witness",
+	];
+	const executionRoot = [
+		"schema_version", "kind", "execution_version", "publication_scope", "classifier_profile",
+		"contract_execution_target_digest", "finalized_contract_run_digest", "result",
+	];
+	const evidenceKinds = [
+		"MATERIALIZATION_REVALIDATION", "RUNTIME_REVALIDATION", "PROCESS_RESULT", "WAIT_RESULT",
+		"DRAIN_RESULT", "TEARDOWN_RESULT", "ORPHAN_CHECK", "FINALIZATION_MARKER", "CAPTURED_OBSERVATION",
+		"PROJECTION_RESULT", "TARGET_INVENTORY", "CHILD_BINDINGS", "IMPORT_RESOLUTION", "SERVICE_BINDINGS",
+		"NAMED_PARENT_SECRET_SENTINEL_INHERITANCE", "PRIVATE_EVIDENCE_MANIFEST",
+	];
+	const scopeDomains = expectedAuthorityDeclaration.scope_domains;
+	const schemaProjectionValid = isDeepStrictEqual(Object.keys(targetSchema.properties ?? {}), targetRoot)
+		&& isDeepStrictEqual(Object.keys(runSchema.properties ?? {}), runRoot)
+		&& isDeepStrictEqual(Object.keys(executionSchema.properties ?? {}), executionRoot)
+		&& closedObjectRequiredRostersExact(targetSchema)
+		&& closedObjectRequiredRostersExact(runSchema)
+		&& closedObjectRequiredRostersExact(executionSchema)
+		&& targetSchema.additionalProperties === false
+		&& runSchema.additionalProperties === false
+		&& executionSchema.additionalProperties === false
+		&& targetSchema.properties?.terminal_residue_binding?.properties?.current_kind?.const === "ContractBundle"
+		&& targetSchema.properties?.tree_binding?.properties?.tree_identity_digest?.$ref === "common.schema.json#/$defs/Digest"
+		&& targetSchema.properties?.runtime_binding?.properties?.executable_identity?.properties?.bytes_digest?.$ref
+			=== "common.schema.json#/$defs/Digest"
+		&& runSchema.properties?.start_claim_ref?.properties?.kind?.const === "StartClaim"
+		&& runSchema.properties?.closed_run_witness?.$ref === "#/$defs/ClosedRunWitness"
+		&& !Object.hasOwn(runSchema.properties ?? {}, "terminal_disposition")
+		&& isDeepStrictEqual(runSchema.$defs?.EvidenceKind?.enum, evidenceKinds)
+		&& isDeepStrictEqual(runSchema.$defs?.ScopeCheck?.oneOf?.[0]?.properties?.domain?.enum, scopeDomains)
+		&& isDeepStrictEqual(executionSchema.properties?.result?.enum, ["CONFORMS", "CONTRADICTS", "INELIGIBLE_EXECUTION"])
+		&& executionSchema.properties?.classifier_profile?.const === "CONTRACT_EXECUTION_EXACT_TUPLE_V1";
+	if (!schemaProjectionValid) errors.push("P07B-C C1 planning projection mismatch: schema authority");
+
+	let graphValid = false;
+	try {
+		const targetDigest = typedDigest("ContractExecutionTarget", targetExample);
+		const runDigest = typedDigest("FinalizedContractRun", runExample);
+		graphValid = targetExample.contract_bundle_digest === typedDigest("ContractBundle", bundleExample)
+			&& targetExample.terminal_residue_binding?.current_digest === targetExample.contract_bundle_digest
+			&& runExample.contract_execution_target_digest === targetDigest
+			&& runExample.attempt_artifact_digest === targetExample.attempt_binding?.attempt_artifact_digest
+			&& runExample.start_claim_ref?.kind === "StartClaim"
+			&& executionExample.contract_execution_target_digest === targetDigest
+			&& executionExample.finalized_contract_run_digest === runDigest
+			&& executionExample.classifier_profile === "CONTRACT_EXECUTION_EXACT_TUPLE_V1"
+			&& executionExample.result === "CONFORMS"
+			&& isDeepStrictEqual(
+				runExample.closed_run_witness?.standalone_scope?.checks?.map((check) => check.domain),
+				scopeDomains,
+			);
+	} catch {
+		graphValid = false;
+	}
+	if (!graphValid) errors.push("P07B-C C1 planning projection mismatch: example graph");
 }
 
 function checkOrderedPromptHeadings(body, errors) {
@@ -458,13 +679,11 @@ async function checkStatusPhase(root, overrides, status, handoff, errors, inject
 	for (const error of authorityErrors) errors.push(`${receiptDeclarationPath}: Git/didrun authority mismatch (${error})`);
 	if (authorityErrors.length > 0) return;
 
-	requireExactlyOnce(
-		status,
-		`**State:** C0b reconciled receipt document for source commit \`${receipt.source_commit}\`, tree \`${receipt.source_tree}\`.`,
-		statusPath,
-		"C0B reconciled state",
-		errors,
-	);
+	const sealedHistoricalState = `**State:** historical sealed C0 authority boundary. C0a source commit \`${sealedC0AIdentity.commit}\`, tree \`${sealedC0AIdentity.tree}\`, and C0b reconciliation commit \`${sealedC0BIdentity.commit}\`, tree \`${sealedC0BIdentity.tree}\`, are note-present and strict-clean.`;
+	const expectedState = receipt.source_commit === sealedC0AIdentity.commit && receipt.source_tree === sealedC0AIdentity.tree
+		? sealedHistoricalState
+		: `**State:** C0b reconciled receipt document for source commit \`${receipt.source_commit}\`, tree \`${receipt.source_tree}\`.`;
+	requireExactlyOnce(status, expectedState, statusPath, "C0B reconciled state", errors);
 	requireExactlyOnce(status, "## C0a receipt map", statusPath, "C0B receipt heading", errors);
 	requireExactlyOnce(status, "- C0a strict exit: `0`", statusPath, "C0B strict result", errors);
 	requireExactlyOnce(
@@ -516,6 +735,57 @@ export async function checkPlan(root = repositoryRoot, overrides = new Map(), re
 		}
 	}
 
+	try {
+		const maintenanceStatus = await readText(root, c1MaintenanceStatusPath, overrides);
+		for (const fixed of [
+			c1MaintenanceIdentity.sourceCommit,
+			c1MaintenanceIdentity.sourceTree,
+			c1MaintenanceIdentity.receiptCommit,
+			c1MaintenanceIdentity.receiptTree,
+			"8/8 claims recorded-exact",
+			"6/6 claims recorded-exact",
+			".didrun-history/2026-07-18-p07b-c-c1-output-cap-maintenance/.didrun/",
+			".didrun-history/2026-07-18-p07b-c-c1-output-cap-maintenance-receipt/.didrun/",
+			"P07B-C C1 remains `UNRECEIPTED`",
+		]) {
+			if (!maintenanceStatus.includes(fixed)) {
+				errors.push(`${c1MaintenanceStatusPath}: missing sealed maintenance authority: ${JSON.stringify(fixed)}`);
+			}
+		}
+		for (const label of [...c1MaintenanceSourceClaims, ...c1MaintenanceReceiptClaims]) {
+			requireExactlyOnce(
+				maintenanceStatus,
+				`| \`${label}\` | \`TREE-EXACT\` |`,
+				c1MaintenanceStatusPath,
+				"maintenance receipt map",
+				errors,
+			);
+		}
+	} catch (error) {
+		errors.push(`${c1MaintenanceStatusPath}: unreadable (${error.message})`);
+	}
+
+	try {
+		const c1Status = await readText(root, c1StatusPath, overrides);
+		for (const snippet of [
+			"C1 implements the strict, inert canonical algebra",
+			"The three JSON Schemas are closed syntax projections",
+			"Target runtime facts are checkpointed path/content identity",
+			"physical evidence content and chronology",
+			"sha256:78f5a2c76d38dc2de96b11cf0439f33f73427160fc441ba89f9f39897dab6d4b",
+			"prefixes are empty",
+			"sha256:6755b26a51dc71c4565fb1c600ba6282e63f44bff3521cecc1c8ba463c2882fe",
+			"go test -json",
+		]) {
+			if (!c1Status.includes(snippet)) errors.push(`${c1StatusPath}: missing required C1 boundary: ${JSON.stringify(snippet)}`);
+		}
+		for (const label of c1ClaimLabels) {
+			requireExactlyOnce(c1Status, `\`${label}\` | \`UNRECEIPTED\``, c1StatusPath, "C1 source receipt map", errors);
+		}
+	} catch (error) {
+		errors.push(`${c1StatusPath}: unreadable (${error.message})`);
+	}
+
 	const status = bodies.get(statusPath);
 	const handoff = bodies.get("docs/HANDOFF_MODE_C.md");
 	if (status !== undefined && handoff !== undefined) {
@@ -543,17 +813,7 @@ export async function checkPlan(root = repositoryRoot, overrides = new Map(), re
 		if (Buffer.byteLength(body, "utf8") < 1500) errors.push(`${path}: evidence file is not substantive (under 1500 bytes)`);
 	}
 
-	for (const [path, expected] of Object.entries(legacyPlanningDigests)) {
-		let body;
-		try {
-			body = await readBytes(root, path, overrides);
-		} catch (error) {
-			errors.push(`${path}: unreadable legacy planning fixture (${error.message})`);
-			continue;
-		}
-		const actual = createHash("sha256").update(body).digest("hex");
-		if (actual !== expected) errors.push(`${path}: C0 must not alter legacy planning fixture; expected ${expected}, got ${actual}`);
-	}
+	await checkC1PlanningProjection(root, overrides, errors);
 
 	try {
 		const declaration = JSON.parse(await readText(root, authorityDeclarationPath, overrides));
@@ -569,6 +829,12 @@ export async function checkPlan(root = repositoryRoot, overrides = new Map(), re
 		for (const path of requiredC0APaths) {
 			if (!specification.units.C0A.exact.includes(path)) errors.push(`spec/verification/p07b-c-unit-paths.json: C0A omits required path ${path}`);
 		}
+		if (!isDeepStrictEqual(specification.units.C1.exact, requiredC1Paths)) {
+			errors.push("spec/verification/p07b-c-unit-paths.json: C1 exact path roster mismatch");
+		}
+		if (!isDeepStrictEqual(specification.units.C1.prefixes, [])) {
+			errors.push("spec/verification/p07b-c-unit-paths.json: C1 prefix roster mismatch");
+		}
 	} catch (error) {
 		errors.push(`spec/verification/p07b-c-unit-paths.json: invalid (${error.message})`);
 	}
@@ -582,7 +848,7 @@ async function mutatedText(path, transform) {
 
 async function runSelfTest() {
 	const baseline = await checkPlan();
-	if (baseline.length > 0) throw new Error(`P07B-C C0 plan checker self-test baseline failed:\n${baseline.join("\n")}`);
+	if (baseline.length > 0) throw new Error(`P07B-C C1 evolved plan checker self-test baseline failed:\n${baseline.join("\n")}`);
 
 	const promptPath = "docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md";
 	const prompt = await readText(repositoryRoot, promptPath, new Map());
@@ -593,7 +859,8 @@ async function runSelfTest() {
 		return `${JSON.stringify(candidate, null, 2)}\n`;
 	};
 	const configPath = "spec/verification/p07b-c-unit-paths.json";
-	const configuration = JSON.parse(await readText(repositoryRoot, configPath, new Map()));
+	const currentConfiguration = JSON.parse(await readText(repositoryRoot, configPath, new Map()));
+	const configuration = structuredClone(currentConfiguration);
 	delete configuration.units.C6B;
 	const syntheticReceipt = {
 		schema_version: "countershape/p07b-c-c0-receipt/v1",
@@ -646,6 +913,10 @@ async function runSelfTest() {
 		"<!-- P07B-C-C0A-RECEIPTS:END -->",
 	].join("\n");
 	const currentHandoff = await readText(repositoryRoot, "docs/HANDOFF_MODE_C.md", new Map());
+	const currentC1MaintenanceStatus = await readText(repositoryRoot, c1MaintenanceStatusPath, new Map());
+	const currentC1Status = await readText(repositoryRoot, c1StatusPath, new Map());
+	const currentPromptPack = await readText(repositoryRoot, "docs/PROMPT_PACK.md", new Map());
+	const currentVerification = await readText(repositoryRoot, "docs/VERIFICATION.md", new Map());
 	const syntheticHandoff = `${currentHandoff.replace(
 		/\n?<!-- P07B-C-C0A-RECEIPTS:START -->[\s\S]*?<!-- P07B-C-C0A-RECEIPTS:END -->\n?/u,
 		"\n",
@@ -685,6 +956,37 @@ async function runSelfTest() {
 	};
 	const cases = [
 		{
+			name: "C1 maintenance receipt-grade regression", path: c1MaintenanceStatusPath,
+			value: currentC1MaintenanceStatus.replace(
+				`| \`${c1MaintenanceReceiptClaims[0]}\` | \`TREE-EXACT\` |`,
+				`| \`${c1MaintenanceReceiptClaims[0]}\` | \`UNRECEIPTED\` |`,
+			),
+			expect: "maintenance receipt map",
+		},
+		{
+			name: "C1 source receipt inflation", path: c1StatusPath,
+			value: currentC1Status.replace(
+				`\`${c1ClaimLabels[0]}\` | \`UNRECEIPTED\``,
+				`\`${c1ClaimLabels[0]}\` | \`TREE-EXACT\``,
+			),
+			expect: "C1 source receipt map",
+		},
+		{
+			name: "C1 prompt-pack current-phase removal", path: "docs/PROMPT_PACK.md",
+			value: currentPromptPack.replace("C1 must seal/strict-clean before C2", "C1 gate omitted"),
+			expect: "missing required C0 ruling",
+		},
+		{
+			name: "C1 verification-roster removal", path: "docs/VERIFICATION.md",
+			value: currentVerification.replace("P07B-C C1 inert-model architecture checker", "P07B-C checker omitted"),
+			expect: "missing required C0 ruling",
+		},
+		{
+			name: "sealed C0 successor regression", path: statusPath,
+			value: currentStatus.replace("C0 is complete. C1's inert semantic source boundary is current", "C0 successor omitted"),
+			expect: "missing required C0 ruling",
+		},
+		{
 			name: "required interlock authority edge", path: promptPath,
 			value: prompt.replace("`ExecutionInterlock` is one store-private, store-wide operational CAS", "Interlock omitted"),
 			expect: "missing required C0 ruling",
@@ -695,9 +997,24 @@ async function runSelfTest() {
 			expect: "contains superseded or overbroad ruling",
 		},
 		{
-			name: "legacy fixture mutation", path: "spec/schema/v1/contract-execution.schema.json",
-			value: `${await readText(repositoryRoot, "spec/schema/v1/contract-execution.schema.json", new Map())}\n`,
-			expect: "C0 must not alter legacy planning fixture",
+			name: "C1 derived result roster widening", path: "spec/schema/v1/contract-execution.schema.json",
+			value: await mutatedText("spec/schema/v1/contract-execution.schema.json", (body) => {
+				const schema = JSON.parse(body);
+				schema.properties.result.enum.push("UNKNOWN");
+				return `${JSON.stringify(schema, null, 2)}\n`;
+			}),
+			expect: "C1 planning projection mismatch: schema authority",
+		},
+		{
+			name: "C1 required result roster weakening", path: "spec/schema/v1/contract-execution.schema.json",
+			value: await mutatedText("spec/schema/v1/contract-execution.schema.json", (body) => {
+				const schema = JSON.parse(body);
+				const index = schema.required?.indexOf("result") ?? -1;
+				if (index < 0) throw new Error("C1 required result mutation anchor absent");
+				schema.required.splice(index, 1);
+				return `${JSON.stringify(schema, null, 2)}\n`;
+			}),
+			expect: "C1 planning projection mismatch: schema authority",
 		},
 		{
 			name: "evidence content deletion", path: "research/deep-dive/p07b-c/08-different-model-red-team.md",
@@ -718,6 +1035,69 @@ async function runSelfTest() {
 			name: "unit allowlist roster", path: configPath,
 			value: `${JSON.stringify(configuration, null, 2)}\n`,
 			expect: "invalid",
+		},
+		{
+			name: "C1 allowlist expansion", path: configPath,
+			value: (() => {
+				const candidate = structuredClone(currentConfiguration);
+				candidate.units.C1.exact.push("tools/z-c1-self-authorized.mjs");
+				candidate.units.C1.exact.sort();
+				return `${JSON.stringify(candidate, null, 2)}\n`;
+			})(),
+			expect: "C1 exact path roster mismatch",
+		},
+		{
+			name: "C1 exact model-test removal", path: configPath,
+			value: (() => {
+				const candidate = structuredClone(currentConfiguration);
+				candidate.units.C1.exact = candidate.units.C1.exact.filter(
+					(path) => path !== "internal/contractexec/model/schema_parity_test.go",
+				);
+				return `${JSON.stringify(candidate, null, 2)}\n`;
+			})(),
+			expect: "C1 exact path roster mismatch",
+		},
+		{
+			name: "C1 maintenance reconciliation removal", path: configPath,
+			value: (() => {
+				const candidate = structuredClone(currentConfiguration);
+				candidate.units.C1.exact = candidate.units.C1.exact.filter(
+					(path) => path !== c1MaintenanceStatusPath,
+				);
+				return `${JSON.stringify(candidate, null, 2)}\n`;
+			})(),
+			expect: "C1 exact path roster mismatch",
+		},
+		{
+			name: "C1 broad model-prefix restoration", path: configPath,
+			value: (() => {
+				const candidate = structuredClone(currentConfiguration);
+				candidate.units.C1.prefixes = ["internal/contractexec/model/"];
+				return `${JSON.stringify(candidate, null, 2)}\n`;
+			})(),
+			expect: "invalid",
+		},
+		{
+			name: "C1 architecture enrollment removal", path: configPath,
+			value: (() => {
+				const candidate = structuredClone(currentConfiguration);
+				candidate.units.C1.exact = candidate.units.C1.exact.filter(
+					(path) => path !== "tools/check-p07b-c-architecture.mjs",
+				);
+				return `${JSON.stringify(candidate, null, 2)}\n`;
+			})(),
+			expect: "C1 exact path roster mismatch",
+		},
+		{
+			name: "C1 predecessor architecture repair removal", path: configPath,
+			value: (() => {
+				const candidate = structuredClone(currentConfiguration);
+				candidate.units.C1.exact = candidate.units.C1.exact.filter(
+					(path) => path !== "tools/check-p07b-b-architecture.mjs",
+				);
+				return `${JSON.stringify(candidate, null, 2)}\n`;
+			})(),
+			expect: "C1 exact path roster mismatch",
 		},
 		{
 			name: "fourth semantic object", path: authorityDeclarationPath,
@@ -808,11 +1188,11 @@ async function runSelfTest() {
 		const overrides = testCase.overrides ?? new Map([[testCase.path, testCase.value]]);
 		const errors = await checkPlan(repositoryRoot, overrides, testCase.receiptAuthority);
 		if (!errors.some((error) => error.includes(testCase.expect))) {
-			throw new Error(`P07B-C C0 plan checker self-test false negative: ${testCase.name}`);
+			throw new Error(`P07B-C C1 evolved plan checker self-test false negative: ${testCase.name}`);
 		}
 	}
 
-	console.log(`P07B-C C0 plan checker self-test passed: ${cases.length} authority, structure, evidence, digest, and allowlist mutations rejected`);
+	console.log(`P07B-C C1 evolved plan checker self-test passed: ${cases.length} authority, structure, evidence, semantic-projection, and allowlist mutations rejected`);
 }
 
 async function main() {
@@ -826,13 +1206,13 @@ async function main() {
 
 	const errors = await checkPlan();
 	if (errors.length > 0) {
-		console.error("P07B-C C0 plan check failed:");
+		console.error("P07B-C C1 evolved plan check failed:");
 		for (const error of errors) console.error(`- ${error}`);
 		process.exitCode = 1;
 		return;
 	}
 
-	console.log("P07B-C C0 plan check passed: documents contain the locked three-object/interlock/scope/classification rulings; runtime remains UNRECEIPTED");
+	console.log("P07B-C C1 evolved plan check passed: C0 authority/receipts and the inert model/schema/example projection remain coherent; this gate confers no store or runtime authority");
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

@@ -1,11 +1,15 @@
 # P07B-C C0 authority-lock status
 
-**State:** C0b reconciled receipt document for source commit `1c6d9fdef339314bfcb99d7d53f3a7c5040e5020`, tree `97574c4ef3f967a1194b2ebdeed246a77efabfc7`. C0a is sealed, note-present, and strict-clean; this C0b document remains unreceipted until its own commit/seal/note/strict boundary.
+**State:** historical sealed C0 authority boundary. C0a source commit `1c6d9fdef339314bfcb99d7d53f3a7c5040e5020`, tree `97574c4ef3f967a1194b2ebdeed246a77efabfc7`, and C0b reconciliation commit `47044e95f405b7252959415adb1aa0dbea8045ab`, tree `d0b30300c6dd80eea95583e9b97cd819a6481f4a`, are note-present and strict-clean.
 
 - C0a strict exit: `0`
 - C0a strict claims: `8/8 claims recorded-exact`
 - C0a seal disclosure: `sealed with --allow-secrets (redacted export)` after the plain seal stopped on four aggregate high-entropy findings
 - C0a ledger archive: `.didrun-history/2026-07-18-p07b-c-c0a-source/.didrun/`
+- C0b reconciliation commit `47044e95f405b7252959415adb1aa0dbea8045ab`; tree `d0b30300c6dd80eea95583e9b97cd819a6481f4a`
+- C0b strict exit: `0`
+- C0b strict claims: `6/6 claims recorded-exact`, all verbatim `TREE-EXACT`
+- C0b ledger archive: `.didrun-history/2026-07-18-p07b-c-c0b-receipt/.didrun/`
 
 ## Sealed predecessor
 
@@ -66,6 +70,6 @@ The six lanes did not rubber-stamp the initial plan. Synthesis first removed per
 
 C0 implements no C runtime type, schema replacement, store layout, target issuer, Git materializer, boot-session admission, Node admission, interlock, StartClaim, RunPermit, SpawnObservation, process mechanics, standalone detector, FCR, classification, product CLI, server, dashboard, or report. It validates no runtime capability. Linux, Windows, other Node/platform tuples, host-wide absence, network/registry denial, listener ownership, containment, confidentiality, hostile same-user resistance, descriptor-bound execution, security review, production readiness, comprehension, adoption, and maintainership remain `UNRECEIPTED` human/engineering tail.
 
-## Next boundary
+## Current successor boundary
 
-Finish C0b only: run the reconciled plan/self-test, C0B staged-scope/diff, scoped credential scan, cumulative verifier, and ledger-chain check through a fresh serialized didrun ledger; claim each final success immediately. Commit `docs: receipt P07B-C C0 authority lock`, seal, require the Git note, and loop strict until exit `0`. Only then begin C1.
+C0 is complete. C1's inert semantic source boundary is current and remains `UNRECEIPTED` until its exact final ledger, commit, seal, Git note, and strict exit `0`. C2 must not begin before that gate; this historical C0 status grants no C1 runtime or persistence authority.

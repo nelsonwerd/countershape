@@ -12,11 +12,11 @@
 
 ## Current state
 
-- **Pipeline phase:** U0–U6, P07A/U6b, P07B-A1, P07B-A2.1, cumulative-verification maintenance, accepted corrected P07B-A2.2, the complete P07B-B boundary, and P07B-C C0a source are sealed and strict-clean. P07B-C C0 deep-dive/scope-lock files are the current working unit; within that unit, C0b receipt reconciliation is current and remains unreceipted until its own commit, seal, note check, and strict exit `0`.
-- **Git:** repository is on `codex/countershape-autopilot`. Final B handoff commit `464e47adbf7f4497dfafa89938a9539239ffd41b`, tree `c7e80d6e6819d4e2c54aaedeb4dc3ef730de58c6`, remains independently `5/5 TREE-EXACT`; its exact HTML is `.countershape/evidence/p07b-b-final-464e47adbf7f.html`, SHA-256 `c7e7c66bdc2d8a608dcc2a1dfc3ba6ef90e2373071c3f9ac841b7d72fdd1a62c`. C0a source commit `1c6d9fdef339314bfcb99d7d53f3a7c5040e5020`, tree `97574c4ef3f967a1194b2ebdeed246a77efabfc7`, is note-present and strict-clean with `8/8` claims; every verbatim grade is `TREE-EXACT`. The current dirty tree is C0b receipt documentation only.
-- **didrun:** installed globally and unchanged. The C0a eight-event serialized ledger is preserved under ignored `.didrun-history/2026-07-18-p07b-c-c0a-source/.didrun/`; restore it to reproduce C0a strict. Its plain seal stopped on four aggregate high-entropy findings after the exact staged scope and named credential-pattern scan passed; the logged redacted-export override then sealed and strict exited `0`. This is not secret absence. C0b starts with a fresh live ledger. Earlier B ledgers remain preserved separately.
-- **Current baseline:** from a fresh repository-root shell, run `/opt/homebrew/bin/node tools/verify-current.mjs`. The evolved 24-step roster uses Go `-p=1`, builds, vets, runs the complete suite, self-tests its orchestration, checks/exercises generated artifacts, fresh-process recovery, deterministic human capture, every current architecture checker/self-test through P07B-B, and the C0 plan/scope self-tests; it labels every historical-only gate without running it and fails on Finder artifacts. Read `docs/VERIFICATION.md`; a direct pass is not a didrun grade.
-- **Build:** A2.2's accepted compiler and sealed P07B-B terminal publication/materialization remain unchanged. P07B-C still implements no pinned target, admitted runtime, interlock/start admission, finalized run, classification, product CLI, server, dashboard, or report. C0 only locks the corrected future authority: three immutable semantic objects; typed official publication; one private boot-session `ExecutionInterlock`; intent-only StartClaim plus C4-runner-only process-local RunPermit; separate SpawnObservation; bounded process/scope witness; no semantic execution head.
+- **Pipeline phase:** U0–U6, P07A/U6b, P07B-A1, P07B-A2.1, cumulative-verification maintenance, accepted corrected P07B-A2.2, the complete P07B-B boundary, both P07B-C C0 boundaries, and the narrow C1 output-cap cumulative maintenance are sealed and strict-clean. P07B-C C1 inert semantic algebra is the current source unit and remains `UNRECEIPTED` until its own commit, seal, note check, and strict exit `0`.
+- **Git:** repository is on `codex/countershape-autopilot`. Final B handoff commit `464e47adbf7f4497dfafa89938a9539239ffd41b`, tree `c7e80d6e6819d4e2c54aaedeb4dc3ef730de58c6`, remains independently `5/5 TREE-EXACT`; its exact HTML is `.countershape/evidence/p07b-b-final-464e47adbf7f.html`, SHA-256 `c7e7c66bdc2d8a608dcc2a1dfc3ba6ef90e2373071c3f9ac841b7d72fdd1a62c`. C0a source commit `1c6d9fdef339314bfcb99d7d53f3a7c5040e5020`, tree `97574c4ef3f967a1194b2ebdeed246a77efabfc7`, is note-present and strict-clean with `8/8` claims; C0b reconciliation commit `47044e95f405b7252959415adb1aa0dbea8045ab`, tree `d0b30300c6dd80eea95583e9b97cd819a6481f4a`, is note-present and strict-clean with `6/6` claims. Every C0 grade is `TREE-EXACT`. C1 maintenance source `fa3d0c12b4c599744b666b2848e38a2499f33a89`, tree `c908c4e580144aa481f646090a1a21d92c86e1cf`, is strict-clean with `8/8 TREE-EXACT`; immediate receipt predecessor `3f31370a70979c4c5fe3a523be19e05f84271e96`, tree `29c5708b05c562984a0b7b66d6cfe3ac6e19c626`, is note-present and strict-clean with `6/6 TREE-EXACT`. The current dirty tree is limited to the C1 allowlist.
+- **didrun:** installed globally and unchanged. The C0a, C0b, C1 output-cap-maintenance source, maintenance receipt, and 100-event C1 development ledgers are preserved under ignored `.didrun-history/2026-07-18-p07b-c-c0a-source/.didrun/`, `.didrun-history/2026-07-18-p07b-c-c0b-receipt/.didrun/`, `.didrun-history/2026-07-18-p07b-c-c1-output-cap-maintenance/.didrun/`, `.didrun-history/2026-07-18-p07b-c-c1-output-cap-maintenance-receipt/.didrun/`, and `.didrun-history/2026-07-18-p07b-c-c1-build-loop/.didrun/`; restore the matching ledger only to reproduce that exact historical result. Final C1 receipt work uses a distinct fresh ledger and must restart from event zero if its source snapshot changes. The maintenance source ledger preserves an unclaimed empty-index scan, an unclaimed wrong-full-hash failure, and the corrected exact-commit scan. Plain seals stopped on aggregate high-entropy findings after exact scope and named credential-pattern scans passed; logged redacted-export overrides then sealed and strict exited `0`. This is not secret absence.
+- **Current baseline:** from a fresh repository-root shell, run `/opt/homebrew/bin/node tools/verify-current.mjs`. The evolved roster uses Go `-p=1`, builds, vets, runs the complete suite, self-tests its orchestration, checks/exercises generated artifacts, fresh-process recovery, deterministic human capture, every current architecture checker/self-test through P07B-C C1, the schema/Go intersection probe, and the evolved C0/C1 plan plus staged-scope self-tests; it labels every historical-only gate without running it and fails on Finder artifacts. Read `docs/VERIFICATION.md`; a direct pass is not a didrun grade.
+- **Build:** A2.2's accepted compiler and sealed P07B-B terminal publication/materialization remain unchanged. C1 now implements strict inert target/run/execution construction, canonical parsing, derived classification, checked schema/example projection, exhaustive algebra, and parser properties in `internal/contractexec/model`. The cumulative rehearsal correctly exposed B's former phase-specific total-absence C check; the current repair preserves every B invariant, admits C names only inside the exact inert model prefix after the complete C1 gate passes, and keeps every foreign C surface forbidden. A later rehearsal exposed a pre-existing scheduler-sensitive Darwin test: the stdout-first fixture could be terminated on overflow before its later stderr write, while the assertion required that write. The separately sealed maintenance unit made the sibling write causally prior without changing runtime control or weakening assertions. C1's staged scope itself is stricter: 43 individually named paths, no prefix allowance, exact nine-production/five-test topology, exact test imports, and 22 pinned top-level test/fuzz symbols. The forty-third path is the maintenance status C1 must reconcile; keeping it outside C1 would leave the live authority one receipt phase behind. Targeted receipts require positive Go-JSON run/pass evidence. C1 implements no store, official target, Git/runtime admission, interlock/start admission, physical finalized run, publication, product CLI, server, dashboard, or report. Runtime facts are checkpointed path/content identity only; start-error physical evidence and chronology remain C4 work.
 - **External APIs:** none used in the product. The A2.2 UX pass used a different internal model over sanitized captures; its qualitative verdict is `UNRECEIPTED` and has no semantic authority. Any real external model/API integration remains human-gated and must never be faked.
 
 <!-- P07B-C-C0A-RECEIPTS:START -->
@@ -36,6 +36,52 @@ C0a strict claims: `8/8 claims recorded-exact`; strict exit: `0`.
 | `P07B C0 scoped staged credential scan` | `TREE-EXACT` |
 | `P07B C0 didrun chain intact` | `TREE-EXACT` |
 <!-- P07B-C-C0A-RECEIPTS:END -->
+
+<!-- P07B-C-C0B-RECEIPTS:START -->
+### P07B-C C0b receipt map
+
+C0b reconciliation commit `47044e95f405b7252959415adb1aa0dbea8045ab`, tree `d0b30300c6dd80eea95583e9b97cd819a6481f4a`.
+C0b strict claims: `6/6 claims recorded-exact`; strict exit: `0`.
+
+| Claim label | Verbatim grade |
+| --- | --- |
+| `P07B C0B reconciled receipt authority` | `TREE-EXACT` |
+| `P07B C0B plan checker self-test` | `TREE-EXACT` |
+| `P07B C0B exact staged scope and diff` | `TREE-EXACT` |
+| `P07B C0B scoped staged credential scan` | `TREE-EXACT` |
+| `P07B C0B cumulative verification` | `TREE-EXACT` |
+| `P07B C0B didrun chain intact` | `TREE-EXACT` |
+<!-- P07B-C-C0B-RECEIPTS:END -->
+
+<!-- P07B-C-C1-MAINTENANCE-RECEIPTS:START -->
+### P07B-C C1 cumulative output-cap maintenance receipt map
+
+Maintenance commit `fa3d0c12b4c599744b666b2848e38a2499f33a89`, tree `c908c4e580144aa481f646090a1a21d92c86e1cf`.
+Strict claims: `8/8 claims recorded-exact`; strict exit: `0`; seal disclosure: `sealed with --allow-secrets (redacted export)`.
+
+| Claim label | Verbatim grade |
+| --- | --- |
+| `P07B-C C1 maintenance exact output caps stable 50x` | `TREE-EXACT` |
+| `P07B-C C1 maintenance independent limit mutation guard stable 20x` | `TREE-EXACT` |
+| `P07B-C C1 maintenance simultaneous overflow lifecycle stable 20x` | `TREE-EXACT` |
+| `P07B-C C1 maintenance world package` | `TREE-EXACT` |
+| `P07B-C C1 maintenance cumulative verifier` | `TREE-EXACT` |
+| `P07B-C C1 maintenance staged diff clean` | `TREE-EXACT` |
+| `P07B-C C1 maintenance exact three-path scope` | `TREE-EXACT` |
+| `P07B-C C1 maintenance exact commit structured credential scan` | `TREE-EXACT` |
+
+Receipt reconciliation commit `3f31370a70979c4c5fe3a523be19e05f84271e96`, tree `29c5708b05c562984a0b7b66d6cfe3ac6e19c626`.
+Receipt strict claims: `6/6 claims recorded-exact`; strict exit: `0`; seal disclosure: `sealed with --allow-secrets (redacted export)`.
+
+| Receipt claim label | Verbatim grade |
+| --- | --- |
+| `P07B-C C1 maintenance receipt reconciliation` | `TREE-EXACT` |
+| `P07B-C C1 maintenance receipt cumulative verifier` | `TREE-EXACT` |
+| `P07B-C C1 maintenance receipt staged diff clean` | `TREE-EXACT` |
+| `P07B-C C1 maintenance receipt exact one-path scope` | `TREE-EXACT` |
+| `P07B-C C1 maintenance receipt staged credential scan` | `TREE-EXACT` |
+| `P07B-C C1 maintenance receipt didrun chain intact` | `TREE-EXACT` |
+<!-- P07B-C-C1-MAINTENANCE-RECEIPTS:END -->
 
 ## Read first, in order
 
@@ -82,7 +128,8 @@ C0a strict claims: `8/8 claims recorded-exact`; strict exit: `0`.
 41. `spec/verification/p07b-c-c0-authority.json`
 42. `spec/verification/p07b-c-unit-paths.json`
 43. `docs/status/P07B-C-C0-AUTHORITY.md`
-44. this handoff
+44. `docs/status/P07B-C-C1-SEMANTICS.md`
+45. this handoff
 
 Read `research/deep-dive/07-SYNTHESIS.md`, `08-RED_TEAM.md`, and the later P07 implementation-time correction immediately after the semantic contracts and before the ideation files.
 
@@ -354,7 +401,7 @@ A2.1 establishes only construction-time current-ruling/source/Choicepoint/confir
 
 The maintenance commit is the commit containing `docs/status/CUMULATIVE-VERIFICATION-MAINTENANCE.md`; resolve its hash and tree locally. It is accepted only when its serialized didrun chain is intact, the Git note exists, and strict exits `0`. Its test-only canonical temp-root repair keeps production ancestor/no-follow policy unchanged and makes the stock macOS suite pass twice consecutively without a `TMPDIR` override.
 
-The current architecture chain is `P07B-B -> P07B-A2.2 -> P07B-A1 -> U6/P07A-B -> U5`; the evolved A2.2 checker retains A2.1 closure internally rather than exposing a duplicate top-level row that points at the same file. U1–U4 architecture gates and every real frozen mutation gate are explicit historical sealed-unit contracts: the one-command baseline prints them as `HISTORICAL-ONLY NOT-RUN`, does not spawn them, and never calls them passed on today's tree. The proposed A2.2 source-rewrite driver never became a checked-in executable and remains `UNRECEIPTED`, so it appears in neither executable roster. The B defensive self-test uses cloned metadata/topology negatives rather than rewritten production sources and makes no mutation-completeness claim. U5's typed adapter reducer providers and P07A/U6's later test-fixture/production-lattice split remain recorded boundary evolution, not weakened historical checkers.
+The sealed predecessor architecture chain is `P07B-B -> P07B-A2.2 -> P07B-A1 -> U6/P07A-B -> U5`; the evolved A2.2 checker retains A2.1 closure internally rather than exposing a duplicate top-level row that points at the same file. The current B gate also invokes the complete C1 inert-model checker through a separate one-way `B -> C1` compatibility edge; C1 never invokes B. U1–U4 architecture gates and every real frozen mutation gate are explicit historical sealed-unit contracts: the one-command baseline prints them as `HISTORICAL-ONLY NOT-RUN`, does not spawn them, and never calls them passed on today's tree. The proposed A2.2 source-rewrite driver never became a checked-in executable and remains `UNRECEIPTED`, so it appears in neither executable roster. The B defensive self-test uses cloned metadata/topology negatives rather than rewritten production sources and makes no mutation-completeness claim. U5's typed adapter reducer providers and P07A/U6's later test-fixture/production-lattice split remain recorded boundary evolution, not weakened historical checkers.
 
 | Claimed capability | didrun claim label | Verbatim grade |
 | --- | --- | --- |
@@ -465,9 +512,10 @@ collision coverage, plus explicit cancellation before and after the exclusive
 rename boundary. The source Git note exists, strict verification exits `0`, and
 all 16 named grades below are copied verbatim. Receipt-document commit
 `b4ac17bd66c6260fd4b12b9277ab5259659c55e1` is separately sealed and strict-
-clean with its witness ledger live. Under the later post-spec user requirement,
-generate an HTML report outside Git for the exact final B commit as a closure
-artifact, not as a substitute receipt claim.
+clean with its witness ledger live. The later post-spec HTML requirement is also
+complete for final B handoff `464e47adbf7f4497dfafa89938a9539239ffd41b` at
+`.countershape/evidence/p07b-b-final-464e47adbf7f.html`; it is a closure artifact,
+not a substitute receipt claim.
 
 ### P07B-B source receipts
 
@@ -550,12 +598,12 @@ separate reviewed boundary.
 
 ## Exact next actions if this task resumes elsewhere
 
-1. Run `git status --short --branch`; confirm branch `codex/countershape-autopilot` and sealed final B commit `464e47adbf7f4497dfafa89938a9539239ffd41b`. No `.didrun` path may be staged/tracked.
-2. If reproducing B strict, restore its exact preserved ledger. Do not use the archived B ledger for C0 events. Start C0 with a fresh `.didrun` only after the B ledger is safely preserved.
-3. Read the complete P07B-C research package and controlling prompt. Preserve the final corrected spine: three persisted semantic objects; typed official publication; one private boot-session interlock with no result authority; C3-only official target issuer; C4-runner-only StartClaim/RunPermit consumption; separate SpawnObservation; process plus COMPLETE/PARTIAL/VIOLATED scope axes; classifier-profile-bound immutable execution; no semantic execution head.
-4. Finish only C0b. Reopen the actual C0a ancestor commit/tree and didrun Git note through the already-enrolled reconciled-state checker; require all eight source rows, status, handoff, and the machine receipt to agree.
-5. Run every load-bearing C0b check through a fresh serialized didrun ledger and claim each final success immediately. Stage only `C0B`, commit `docs: receipt P07B-C C0 authority lock`, seal, require the Git note, and loop `NO_COLOR=1 didrun verify --strict` until exit `0`.
-6. Only after C0b is sealed/strict-clean begin C1 strict inert semantics. Do not edit the legacy C schemas/examples during C0; they are explicitly superseded planning fixtures until C1 evolves the C0 checker, replaces the fixtures, and receipts runtime/schema/example intersection.
+1. Run `git status --short --branch`; confirm branch `codex/countershape-autopilot`, sealed final B commit `464e47adbf7f4497dfafa89938a9539239ffd41b`, sealed C0a source `1c6d9fdef339314bfcb99d7d53f3a7c5040e5020`, sealed C0b reconciliation `47044e95f405b7252959415adb1aa0dbea8045ab`, sealed C1 output-cap maintenance source `fa3d0c12b4c599744b666b2848e38a2499f33a89`, and immediate sealed maintenance receipt `3f31370a70979c4c5fe3a523be19e05f84271e96`. No `.didrun` path may be staged/tracked.
+2. Preserve each historical ledger with its matching commit only. The 100-event C1 development ledger, including expected diagnostic failures and successful multi-pass evidence, is already archived intact at `.didrun-history/2026-07-18-p07b-c-c1-build-loop/.didrun/`. Preserve any fresh receipt attempt whose source snapshot is superseded, then restart its final ledger from event zero.
+3. Read the complete P07B-C research package and controlling prompt. Preserve the final corrected future authority spine: three semantic object jurisdictions are inert in C1; C2 adds persistence mechanics but no production issuer, C3 alone officially publishes targets, and C4 publishes finalized runs/executions. Keep one private boot-session interlock with no result authority; C4-runner-only StartClaim/RunPermit consumption; separate SpawnObservation; process plus COMPLETE/PARTIAL/VIOLATED scope axes; classifier-profile-bound immutable execution; no semantic execution head.
+4. Finish only C1: reconcile the strict Go model, schemas, checked examples, generator/validator, architecture gates, evolved plan checker, cumulative verifier, and controlling docs. Preserve the claim ceiling: inert canonical semantics only.
+5. Run the full C1 multi-pass gate through didrun. Include exact package tests, exhaustive algebra, checked schema/runtime/example intersection, each bounded parser fuzz target, architecture/checker self-tests, planning compatibility, exact staged scope/diff, scoped credential scan, cumulative verification, and ledger-chain integrity. Model, algebra, and fuzz events must pass through their exact `go test -json` assertion profiles; fuzz uses `-parallel=1` with `-fuzztime=10000x`.
+6. After every final successful command, declare only its narrow claim. Run the cross-language validator self-test as separate events for the schema/runtime and validator-compatibility claims. Stage exactly the 43 individually named C1 paths with no prefixes and require sorted roster digest `sha256:6755b26a51dc71c4565fb1c600ba6282e63f44bff3521cecc1c8ba463c2882fe`. Commit `feat: define P07B-C execution semantics`, seal, require the Git note, and loop `NO_COLOR=1 didrun verify --strict` until exit `0`. A nonzero gate means C1 is unfinished; repair and repeat without weakening any test or claim.
 7. Keep the root as sole writer and didrun/Git/seal operator. Parallel agents remain bounded read-only critics. No external provider is needed; any future real call remains human-gated.
 8. Preserve the adoption, comprehension, production-hardening, independent-security-review, cross-platform, release, and maintainership tail.
 
@@ -566,7 +614,7 @@ Before editing, reply in your working notes with:
 1. the one product verb;
 2. the three distinct truth authorities (Git, Choicepoint observations/ruling, didrun receipts);
 3. two things the system must never claim;
-4. the maintenance and A2.1 commits, P07B-A1 source prerequisite `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`, A2.2 checkpoint `32efaaf2f6d9fc58389d48d18219ce03995a2805`, accepted corrected source `6bf33350944dcdd56a4ceaa70f1d0836203ffb1f`, B0 scope lock `7f04b2a5129dcbee2fc991453aefdd6713281b86`, and the eventual sealed B implementation/receipt-document commits, with their exact receipt maps and nonclaims; and
-5. the current bounded shippable unit: P07B-C C0 research/authority scope lock only, specifically C0b receipt reconciliation; every C runtime capability and all product UI remain excluded and `UNRECEIPTED`.
+4. the maintenance and A2.1 commits, P07B-A1 source prerequisite `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`, A2.2 checkpoint `32efaaf2f6d9fc58389d48d18219ce03995a2805`, accepted corrected source `6bf33350944dcdd56a4ceaa70f1d0836203ffb1f`, B0 scope lock `7f04b2a5129dcbee2fc991453aefdd6713281b86`, sealed B source `eb06bdcf18f8e14db1257e73733afdc05cac045e`, sealed B receipt document `b4ac17bd66c6260fd4b12b9277ab5259659c55e1`, and sealed final B handoff `464e47adbf7f4497dfafa89938a9539239ffd41b`, with their exact receipt maps and nonclaims; and
+5. the current bounded shippable unit: P07B-C C1 inert canonical target/run/execution semantics only; store, Git/runtime, physical process, publication, product UI, and every unrun capability remain excluded and `UNRECEIPTED`.
 
 If any answer is missing, read the files above again. Do not infer a didrun grade from this handoff; run strict verification locally.

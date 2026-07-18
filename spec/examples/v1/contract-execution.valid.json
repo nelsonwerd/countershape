@@ -1,15 +1,10 @@
 {
-  "schema_version": "countershape/v1",
-  "kind": "ContractExecution",
+  "classifier_profile": "CONTRACT_EXECUTION_EXACT_TUPLE_V1",
+  "contract_execution_target_digest": "sha256:46ab7870fd14b1b6b6215029dcf4ae450b3e8595a817627c35975a48479da6b9",
   "execution_version": "contract-execution/v1",
-  "publication_scope": "IMMUTABLE_NONHEAD_EVIDENCE_V1",
-  "contract_execution_target_digest": "sha256:3434053936edc6d7cea5666f1c3a24b5445a5f9db30fa292baf415481c377a93",
-  "finalized_contract_run_digest": "sha256:89b167d8ee16e4e87d34a9861c6bfc03898c595dc2541f7a6d3ecc929e1300c7",
-  "result": {
-    "execution_class": "ELIGIBLE_OBSERVATION",
-    "conformance": "CONFORMS"
-  },
-  "historical_execution_evidence_reused": false,
-  "choicepoint_freshened": false,
-  "study_head_advanced": false
+  "finalized_contract_run_digest": "sha256:79a8620f220c223e57f0dd435c05c8f36197b049415f8e3f225e8b222a632a2f",
+  "kind": "ContractExecution",
+  "publication_scope": "IMMUTABLE_NONHEAD_CLASSIFICATION_V1",
+  "result": "CONFORMS",
+  "schema_version": "countershape/v1"
 }

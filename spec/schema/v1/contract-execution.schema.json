@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://countershape.dev/spec/schema/v1/contract-execution.schema.json",
   "title": "Countershape ContractExecution v1",
-  "description": "Derived exact-target conformance classification published as an immutable nonhead object. It references one separately published ContractExecutionTarget and one matching FinalizedContractRun; the exact tuple or control reason lives only in that finalized run. Its domain-separated artifact digest is external to this canonical body. It never rewrites or freshens historical Choicepoint evidence.",
+  "description": "Inert immutable nonhead classification body derived from one exact target, its matching finalized run, and the literal exact-tuple classifier profile. It contains no tuple, process reason, scope reason, self digest, current selector, or receipt.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -10,43 +10,19 @@
     "kind",
     "execution_version",
     "publication_scope",
+    "classifier_profile",
     "contract_execution_target_digest",
     "finalized_contract_run_digest",
-    "result",
-    "historical_execution_evidence_reused",
-    "choicepoint_freshened",
-    "study_head_advanced"
+    "result"
   ],
   "properties": {
     "schema_version": { "const": "countershape/v1" },
     "kind": { "const": "ContractExecution" },
     "execution_version": { "const": "contract-execution/v1" },
-    "publication_scope": { "const": "IMMUTABLE_NONHEAD_EVIDENCE_V1" },
+    "publication_scope": { "const": "IMMUTABLE_NONHEAD_CLASSIFICATION_V1" },
+    "classifier_profile": { "const": "CONTRACT_EXECUTION_EXACT_TUPLE_V1" },
     "contract_execution_target_digest": { "$ref": "common.schema.json#/$defs/Digest" },
     "finalized_contract_run_digest": { "$ref": "common.schema.json#/$defs/Digest" },
-    "result": {
-      "oneOf": [
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["execution_class", "conformance"],
-          "properties": {
-            "execution_class": { "const": "ELIGIBLE_OBSERVATION" },
-            "conformance": { "enum": ["CONFORMS", "CONTRADICTS"] }
-          }
-        },
-        {
-          "type": "object",
-          "additionalProperties": false,
-          "required": ["execution_class"],
-          "properties": {
-            "execution_class": { "const": "INELIGIBLE_EXECUTION" }
-          }
-        }
-      ]
-    },
-    "historical_execution_evidence_reused": { "const": false },
-    "choicepoint_freshened": { "const": false },
-    "study_head_advanced": { "const": false }
+    "result": { "enum": ["CONFORMS", "CONTRADICTS", "INELIGIBLE_EXECUTION"] }
   }
 }

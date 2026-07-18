@@ -49,11 +49,29 @@
         "docs/CLAIM_VOCABULARY.md",
         "docs/CONCEPT_BRIEF.md",
         "docs/HANDOFF_MODE_C.md",
+        "docs/PROMPT_PACK.md",
         "docs/SEMANTICS.md",
         "docs/STATE_MACHINES.md",
         "docs/THREAT_MODEL.md",
+        "docs/VERIFICATION.md",
         "docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md",
+        "docs/status/P07B-C-C0-AUTHORITY.md",
+        "docs/status/P07B-C-C1-CUMULATIVE-MAINTENANCE.md",
         "docs/status/P07B-C-C1-SEMANTICS.md",
+        "internal/contractexec/model/algebra_test.go",
+        "internal/contractexec/model/codec.go",
+        "internal/contractexec/model/codec_test.go",
+        "internal/contractexec/model/doc.go",
+        "internal/contractexec/model/errors.go",
+        "internal/contractexec/model/execution.go",
+        "internal/contractexec/model/fuzz_test.go",
+        "internal/contractexec/model/model_test.go",
+        "internal/contractexec/model/run.go",
+        "internal/contractexec/model/run_parse.go",
+        "internal/contractexec/model/schema_parity_test.go",
+        "internal/contractexec/model/target.go",
+        "internal/contractexec/model/tuple_parse.go",
+        "internal/contractexec/model/types.go",
         "spec/examples/v1/contract-execution-target.valid.json",
         "spec/examples/v1/contract-execution.valid.json",
         "spec/examples/v1/finalized-contract-run.valid.json",
@@ -61,6 +79,8 @@
         "spec/schema/v1/contract-execution.schema.json",
         "spec/schema/v1/finalized-contract-run.schema.json",
         "spec/verification/p07b-c-unit-paths.json",
+        "tools/check-p07b-b-architecture-selftest.mjs",
+        "tools/check-p07b-b-architecture.mjs",
         "tools/check-p07b-c-architecture-selftest.mjs",
         "tools/check-p07b-c-architecture.mjs",
         "tools/check-p07b-c-plan.mjs",
@@ -69,9 +89,7 @@
         "tools/verify-current-selftest.mjs",
         "tools/verify-current.mjs"
       ],
-      "prefixes": [
-        "internal/contractexec/model/"
-      ]
+      "prefixes": []
     },
     "C2": {
       "exact": [

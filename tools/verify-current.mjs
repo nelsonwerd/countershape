@@ -48,12 +48,12 @@ export const currentSteps = Object.freeze([
 		args: Object.freeze(["--check"]), marker: "P07B A2.2 runtime ContractBundle example exact (",
 	}),
 	Object.freeze({
-		id: "planning-example-p07b-a2-2", tool: "node", tools: Object.freeze(["node"]), path: "tools/generate-p07-planning-example.mjs",
+		id: "planning-example-p07b-a2-2", tool: "node", tools: Object.freeze(["node", "go"]), path: "tools/generate-p07-planning-example.mjs",
 		args: Object.freeze(["--exercise"]),
 		marker: "P07 planning example: real A2.2 bundle conformed and intact entrypoint refused companion tamper before harness load",
 	}),
 	Object.freeze({
-		id: "planning-validator-selftest", tool: "node", tools: Object.freeze(["node"]), path: "tools/validate-planning.mjs",
+		id: "planning-validator-selftest", tool: "node", tools: Object.freeze(["node", "go"]), path: "tools/validate-planning.mjs",
 		args: Object.freeze(["--self-test"]), marker: "planning validator self-test: ok (",
 	}),
 	Object.freeze({
@@ -72,9 +72,11 @@ export const currentSteps = Object.freeze([
 	Object.freeze({ id: "architecture-p07b-a2-2-selftest", tool: "node", tools: Object.freeze(["node", "go", "cc", "cxx"]), path: "tools/check-p07b-a2-architecture-selftest.mjs", marker: "P07B A2.2 architecture defensive self-test OK" }),
 	Object.freeze({ id: "architecture-p07b-b", tool: "node", tools: Object.freeze(["node", "go", "cc", "cxx"]), path: "tools/check-p07b-b-architecture.mjs", marker: "P07B B architecture boundary OK" }),
 	Object.freeze({ id: "architecture-p07b-b-selftest", tool: "node", tools: Object.freeze(["node", "go", "cc", "cxx"]), path: "tools/check-p07b-b-architecture-selftest.mjs", marker: "P07B B architecture defensive self-test OK" }),
+	Object.freeze({ id: "architecture-p07b-c-c1", tool: "node", tools: Object.freeze(["node", "go"]), path: "tools/check-p07b-c-architecture.mjs", marker: "P07B-C C1 architecture boundary OK" }),
+	Object.freeze({ id: "architecture-p07b-c-c1-selftest", tool: "node", tools: Object.freeze(["node", "go"]), path: "tools/check-p07b-c-architecture-selftest.mjs", marker: "P07B-C C1 architecture defensive self-test OK" }),
 	Object.freeze({
 		id: "architecture-p07b-c-plan-selftest", tool: "node", tools: Object.freeze(["node", "git"]), path: "tools/check-p07b-c-plan.mjs",
-		args: Object.freeze(["--self-test"]), marker: "P07B-C C0 plan checker self-test passed:",
+		args: Object.freeze(["--self-test"]), marker: "P07B-C C1 evolved plan checker self-test passed:",
 	}),
 	Object.freeze({
 		id: "architecture-p07b-c-unit-scope-selftest", tool: "node", tools: Object.freeze(["node"]), path: "tools/check-p07b-c-unit-scope.mjs",

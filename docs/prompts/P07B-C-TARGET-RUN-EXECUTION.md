@@ -94,11 +94,19 @@ Wake integration is an immutable-ref handoff only. Countershape may receive a di
 - `internal/domain/transitions.go` — existing process/control reason roster; standalone failures must not enter it.
 - `internal/portablevalue/value.go` — exact tuple limits and canonical selected-field values.
 - `internal/adapters/{cli,http}` — authoritative capture/projection components, never TAP parsing.
-- `spec/schema/v1/contract-execution-target.schema.json` — current planning target shape, replaced in C1.
-- `spec/schema/v1/finalized-contract-run.schema.json` — current false-green scope/reason shape, replaced in C1.
-- `spec/schema/v1/contract-execution.schema.json` — current planning classification shape, narrowed in C1.
-- `tools/validate-planning.mjs` — current fixture-graph checks, not runtime authority.
+- `internal/contractexec/model/` — C1's sole inert semantic authority for exact target/run/execution bodies; no store, Git, runtime, process, publication, or spawn edge.
+- `spec/schema/v1/contract-execution-target.schema.json` — C1 closed target syntax projection; Go owns cross-field meaning.
+- `spec/schema/v1/finalized-contract-run.schema.json` — C1 closed finalized-run syntax projection; Go owns process/scope/evidence correlations.
+- `spec/schema/v1/contract-execution.schema.json` — C1 closed derived-classification syntax projection.
+- `tools/validate-planning.mjs` — schema/example graph compatibility checks, not semantic or runtime authority.
 - `tools/verify-current.mjs` — cumulative roster; C0 repairs all direct and inherited Go package parallelism to `-p=1`, and every later unit enrolls its own gate before sealing.
+
+### C1 wire-resolution rulings
+
+- The exact JSON spellings in the three C schemas and checked examples are frozen by C1. The Go constructors/parsers remain semantic authority; the schemas intentionally overapproximate cross-field and recursive rules, so schema-only acceptance grants no capability.
+- `classifier_profile` is the literal `CONTRACT_EXECUTION_EXACT_TUPLE_V1`. `ClassifierProfileDigest()` derives the future C2 link key from the canonical schema/kind/literal-profile declaration. That digest is not serialized in `ContractExecution`, accepts no caller input, and commits no implementation bytes.
+- The target's admitted absolute path, executable-byte digest, mode/count, measured `process.execPath`, version/major/platform/architecture, and probe facts establish checkpointed path/content identity only. They do not prove a later spawn consumed the same inode or descriptor and do not close coordinated replacement. C3/C4 own live revalidation and retain the residual risk.
+- C1 validates the closed start-error codes and typed witness structure only. C4 owns whether referenced evidence has the asserted physical content and was recorded in the required chronology.
 
 ## Locked v1 semantic tables
 
@@ -211,7 +219,7 @@ Receipt reconciliation: `docs: receipt P07B-C C0 authority lock`
 # C1 — implement strict inert semantic algebra
 
 **Risk:** high. Canonical bytes become the identity contract for later physical objects.
-**Files:** `internal/contractexec/model/**`, the three C schemas/examples, planning generator/validator, architecture checker, semantic docs/tests.
+**Files:** `internal/contractexec/model/**`, the three C schemas/examples, planning generator/validator, the new C1 architecture checker, the inherited P07B-B architecture checker/self-test compatibility repair, semantic docs/tests.
 
 ## Goal
 
@@ -224,7 +232,13 @@ Implement strict codecs and constructors for the corrected target, finalized-run
 - Typed refs, exact rosters, bounds, canonical ordering, and defensive copies.
 - Literal classifier profile and exact truth table.
 - Parsed values remain inert and cannot reach publication or spawn.
+- The classifier-profile digest is a derived future relationship key, not an execution-body field or implementation digest.
+- Checked examples must parse and rebuild byte-for-byte through the Go authority; schema-valid/runtime-invalid overapproximations must be explicit refusal tests.
+- All three start-error codes receive exact wire round-trip coverage, while physical evidence content/chronology remains a C4 nonclaim.
+- Runtime facts are documented as checkpointed path/content identity rather than inode- or descriptor-bound execution proof.
 - Evolve the enrolled C0 plan gate before changing legacy fixture hashes: retain document/authority checks, replace C0-only pins with exact schema/runtime/example intersection, add the C1 architecture checker plus hostile self-test, and enroll both in `verify-current` before sealing.
+- Evolve—not retire—the current P07B-B architecture gate. It must preserve every sealed B digest/import/API/publication/materialization invariant, admit C symbols only under the exact inert `internal/contractexec/model/` prefix, require the complete C1 architecture gate to pass, and continue rejecting every C surface elsewhere. Extend its in-memory defensive self-test for missing C1 closure, exact-prefix versus lookalike-prefix partitioning, and foreign C-surface injection. Composition is one-way `B -> C1`; C1 must never invoke B.
+- Enumerate all nine production and five test files as exact C1 paths with no directory prefix allowance. Pin the exact test-import and top-level test/fuzz symbol rosters, and reject extra, missing, or renamed test topology.
 
 ## MUST NOT change
 
@@ -236,6 +250,8 @@ Implement strict codecs and constructors for the corrected target, finalized-run
 - Canonical goldens/runtime-schema intersection; invalid kind/profile/roster/order/duplicate/bound vectors.
 - Properties and bounded fuzz for round-trip, typed-kind separation, tuple ordering, and mutation resistance.
 - Architecture negative gate: C1 cannot import store/Git/world/process/CLI.
+- Inherited-boundary compatibility: the full B gate and its self-test remain current, all B invariants still pass, and only the separately validated inert C1 package is removed from the former phase-specific “premature C” prohibition.
+- Final targeted Go receipts consume `go test -json` through the C1 assertion profiles so a missing `-run` match or fuzz target fails instead of receiving a claim; fuzz uses `-parallel=1` and a fixed count budget.
 
 ## Gate
 

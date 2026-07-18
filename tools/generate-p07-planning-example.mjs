@@ -75,116 +75,54 @@ function readRuntimeBundle() {
   return bundle;
 }
 
+function runModelProbe() {
+  const go = process.env.COUNTERSHAPE_GO || "/opt/homebrew/bin/go";
+  assert.equal(path.isAbsolute(go), true, "COUNTERSHAPE_GO must be absolute");
+  const probe = spawnSync(go, [
+    "test", "-mod=readonly", "-buildvcs=false", "-p=1", "-count=1", "-run", "^TestC1ExampleProbe$", "-v",
+    "./internal/contractexec/model",
+  ], {
+    cwd: ROOT,
+    encoding: "utf8",
+    env: { ...process.env, COUNTERSHAPE_C1_EXAMPLE_PROBE: "1", GOMAXPROCS: "2" },
+    timeout: 120_000,
+    maxBuffer: 8 << 20,
+  });
+  assert.equal(probe.error, undefined, `C1 Go model probe could not run: ${probe.error?.message ?? "unknown"}`);
+  assert.equal(probe.signal, null, `C1 Go model probe was signalled: ${probe.signal}`);
+  assert.equal(probe.status, 0, `C1 Go model probe failed:\n${probe.stdout}\n${probe.stderr}`);
+  assert.equal(probe.stderr, "", "C1 Go model probe wrote stderr");
+  const frames = probe.stdout.split("\n").filter((line) => line.startsWith("COUNTERSHAPE_C1_MODEL_V1|"));
+  assert.equal(frames.length, 1, "C1 Go model probe must emit exactly one frame");
+  const parts = frames[0].split("|");
+  assert.equal(parts.length, 7, "C1 Go model frame roster differs");
+  const decode = (encoded, kind, digest) => {
+    const exact = Buffer.from(encoded, "base64");
+    assert.equal(exact.toString("base64"), encoded, `${kind} probe frame uses noncanonical base64`);
+    const value = JSON.parse(exact.toString("utf8"));
+    assert.equal(canonicalJSON(value), exact.toString("utf8"), `${kind} probe frame is not exact canonical JSON`);
+    assert.equal(typedDigest(kind, value), digest, `${kind} probe digest differs`);
+    return { exact, value, digest };
+  };
+  return {
+    target: decode(parts[1], "ContractExecutionTarget", parts[2]),
+    run: decode(parts[3], "FinalizedContractRun", parts[4]),
+    execution: decode(parts[5], "ContractExecution", parts[6]),
+  };
+}
+
 function buildExamples() {
   const bundle = readRuntimeBundle();
-  const exactTuple = bundle.predicate.allowed_tuples[0];
-  const pinnedTreeIdentity = {
-    schema_version: "countershape/v1",
-    kind: "PinnedTreeIdentity",
-    object_format: "sha1",
-    commit_oid: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
-    tree_oid: "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
-  };
-  const target = {
-    schema_version: "countershape/v1",
-    kind: "ContractExecutionTarget",
-    target_version: "contract-execution-target/v1",
-    publication_scope: "IMMUTABLE_NONHEAD_PRESPAWN_AUTHORITY_V1",
-    contract_bundle_digest: typedDigest("ContractBundle", bundle),
-    source_binding: {
-      portable_source_digest: bundle.portable_source_digest,
-      portable_profile_digest: bundle.portable_profile_digest,
-      source_profile_digest: typedDigest("ContractSourceProfile", bundle.source_profile),
-    },
-    tree_binding: {
-      authority: "GIT_PIN_INSPECT_MATERIALIZE_V1",
-      pinned_tree: {
-        object_format: pinnedTreeIdentity.object_format,
-        commit_oid: pinnedTreeIdentity.commit_oid,
-        tree_oid: pinnedTreeIdentity.tree_oid,
-        tree_identity_digest: typedDigest("PinnedTreeIdentity", pinnedTreeIdentity),
-      },
-      portable_tree_digest: "sha256:c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2c2",
-      materialization_policy_digest: "sha256:c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3c3",
-      materialization_manifest_digest: "sha256:c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4c4",
-      execution_root_scope: "PRIVATE_PINNED_MATERIALIZATION_ONLY_V1",
-    },
-    attempt_binding: {
-      purpose: "CONFORMANCE",
-      attempt_artifact_digest: "sha256:e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5",
-      instance_nonce: "0123456789abcdef0123456789abcdef",
-      allocation_profile: "PRIVATE_FRESH_ROOT_V1",
-      marker_ordering: "DURABLE_BEFORE_SPAWN",
-    },
-    runtime_binding: {
-      authority: "ADMITTED_NODE_PROCESS_EXEC_PATH_V1",
-      name: "node",
-      version: "25.2.1",
-      major: 25,
-      os: "darwin",
-      architecture: "arm64",
-      executable_bytes_digest: "sha256:e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8e8",
-      probe_program_digest: "sha256:e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9e9",
-      child_resolution: "PROCESS_EXEC_PATH_EQUALS_ADMITTED_RUNTIME_V1",
-    },
-  };
-  const finalizedRun = {
-    schema_version: "countershape/v1",
-    kind: "FinalizedContractRun",
-    run_version: "finalized-contract-run/v1",
-    publication_scope: "IMMUTABLE_NONHEAD_FINALIZED_RUN_V1",
-    contract_execution_target_digest: typedDigest("ContractExecutionTarget", target),
-    attempt_artifact_digest: target.attempt_binding.attempt_artifact_digest,
-    lifecycle: {
-      status: "FINALIZED",
-      materialization_revalidation_digest: "sha256:f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2f2",
-      process_result_digest: "sha256:f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3f3",
-      teardown_result_digest: "sha256:f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4f4",
-      orphan_check_digest: "sha256:f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5f5",
-      finalization_marker_digest: "sha256:f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6f6",
-    },
-    terminal_disposition: {
-      status: "ELIGIBLE_CLEAN",
-    },
-    observation: {
-      status: "PROJECTED",
-      captured_observation_digest: "sha256:e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6e6",
-      projection_result_digest: "sha256:e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7e7",
-      observed_tuple: exactTuple,
-    },
-    standalone_scope: {
-      scope: "ISOLATED_TARGET_INVENTORY_AND_CHILD_BINDINGS_V1",
-      target_inventory_digest: "sha256:f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7f7",
-      child_bindings_digest: "sha256:f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8f8",
-      import_resolution_digest: "sha256:f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9f9",
-      service_bindings_digest: "sha256:fafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafafa",
-      target_inventory_countershape_source_present: false,
-      target_inventory_countershape_dependency_present: false,
-      target_import_resolution_reached_countershape: false,
-      child_path_contains_countershape: false,
-      countershape_service_binding_present: false,
-      named_parent_secret_sentinels_inherited: false,
-      host_wide_absence_established: false,
-      network_denial_established: false,
-      package_registry_denial_established: false,
-      confidentiality_established: false,
-    },
-  };
-  const execution = {
-    schema_version: "countershape/v1",
-    kind: "ContractExecution",
-    execution_version: "contract-execution/v1",
-    publication_scope: "IMMUTABLE_NONHEAD_EVIDENCE_V1",
-    contract_execution_target_digest: typedDigest("ContractExecutionTarget", target),
-    finalized_contract_run_digest: typedDigest("FinalizedContractRun", finalizedRun),
-    result: {
-      execution_class: "ELIGIBLE_OBSERVATION",
-      conformance: "CONFORMS",
-    },
-    historical_execution_evidence_reused: false,
-    choicepoint_freshened: false,
-    study_head_advanced: false,
-  };
+  const model = runModelProbe();
+  const target = model.target.value;
+  const finalizedRun = model.run.value;
+  const execution = model.execution.value;
+  assert.equal(target.contract_bundle_digest, typedDigest("ContractBundle", bundle), "target bundle join differs");
+  assert.equal(finalizedRun.contract_execution_target_digest, model.target.digest, "run target join differs");
+  assert.equal(finalizedRun.attempt_artifact_digest, target.attempt_binding.attempt_artifact_digest, "run attempt join differs");
+  assert.equal(execution.contract_execution_target_digest, model.target.digest, "execution target join differs");
+  assert.equal(execution.finalized_contract_run_digest, model.run.digest, "execution run join differs");
+  assert.equal(execution.result, "CONFORMS", "positive C1 model example must derive CONFORMS");
   return {
     bundle,
     target,
@@ -202,13 +140,13 @@ function checkOrWrite(mode) {
     fs.writeFileSync(TARGET_FILE, built.targetBytes);
     fs.writeFileSync(RUN_FILE, built.finalizedRunBytes);
     fs.writeFileSync(EXECUTION_FILE, built.executionBytes);
-    process.stdout.write(`P07 planning examples written; target ${built.execution.contract_execution_target_digest}\n`);
+    process.stdout.write(`P07 C1 semantic examples written; target ${built.execution.contract_execution_target_digest}\n`);
     return;
   }
-  assert.deepEqual(fs.readFileSync(TARGET_FILE), built.targetBytes, "ContractExecutionTarget example drifted from its deterministic generator");
-  assert.deepEqual(fs.readFileSync(RUN_FILE), built.finalizedRunBytes, "FinalizedContractRun example drifted from its deterministic generator");
-  assert.deepEqual(fs.readFileSync(EXECUTION_FILE), built.executionBytes, "ContractExecution example drifted from its deterministic generator");
-  process.stdout.write(`P07 planning examples: exact (${built.execution.contract_execution_target_digest})\n`);
+  assert.deepEqual(fs.readFileSync(TARGET_FILE), built.targetBytes, "ContractExecutionTarget example drifted from the Go model");
+  assert.deepEqual(fs.readFileSync(RUN_FILE), built.finalizedRunBytes, "FinalizedContractRun example drifted from the Go model");
+  assert.deepEqual(fs.readFileSync(EXECUTION_FILE), built.executionBytes, "ContractExecution example drifted from the Go model");
+  process.stdout.write(`P07 C1 semantic examples: Go-model exact (${built.execution.contract_execution_target_digest})\n`);
 }
 
 function materialize(root, bundle) {

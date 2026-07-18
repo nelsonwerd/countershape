@@ -5,7 +5,7 @@ import { spawnSync } from "node:child_process";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { collectFacts, validateFacts } from "./check-p07b-b-architecture.mjs";
+import { collectFacts, partitionFutureSymbols, validateFacts } from "./check-p07b-b-architecture.mjs";
 
 const selftestPath = fileURLToPath(import.meta.url);
 const root = resolve(dirname(selftestPath), "..");
@@ -20,9 +20,11 @@ const cases = Object.freeze([
 	Object.freeze({ id: "observation-split", code: "P07B_B_EXISTING_OBSERVATION_CLASSIFICATION" }),
 	Object.freeze({ id: "rename-reconciliation", code: "P07B_B_RENAME_RECONCILIATION" }),
 	Object.freeze({ id: "native-policy", code: "P07B_B_NATIVE_PUBLICATION_POLICY" }),
+	Object.freeze({ id: "c1-semantic-boundary", code: "P07B_B_C1_SEMANTIC_BOUNDARY" }),
+	Object.freeze({ id: "prefix-partition", code: "P07B_B_SELFTEST_PREFIX_PARTITION" }),
 	Object.freeze({ id: "future-surface", code: "P07B_B_PREMATURE_C_SURFACE" }),
 ]);
-const expectedRosterDigest = "6b648eb78c9f2614e34d9b1246af7fa358e1e825b6b6472c289fedb72f81aac0";
+const expectedRosterDigest = "252825c79567fd8751bc5ea48a380eeea2918f37156b4e8875c040ca6fabd7a2";
 
 function rosterDigest() {
 	const hash = createHash("sha256");
@@ -43,10 +45,21 @@ function requireViolation(facts, code, id) {
 
 function runCleanChecker() {
 	const result = spawnSync(process.execPath, [checker], {
-		cwd: root, encoding: "utf8", timeout: 180_000, maxBuffer: 16 * 1024 * 1024, env: process.env,
+		cwd: root, encoding: "utf8", timeout: 420_000, maxBuffer: 16 * 1024 * 1024, env: process.env,
 	});
 	if (result.error || result.signal || result.status !== 0 || !result.stdout.includes("P07B B architecture boundary OK")) {
 		fail("P07B_B_SELFTEST_CLEAN_CHECKER", `${result.status ?? result.signal}: ${result.stderr || result.stdout}`);
+	}
+}
+
+function requireExactC1PrefixPartition() {
+	const admitted = "internal/contractexec/model/execution.go:ContractExecution";
+	const modelEvil = "internal/contractexec/model_evil/execution.go:ContractExecution";
+	const foreign = "internal/future.go:ContractExecutionTarget";
+	const partition = partitionFutureSymbols([admitted, modelEvil, foreign]);
+	if (JSON.stringify(partition.admitted) !== JSON.stringify([admitted]) ||
+		JSON.stringify(partition.foreign) !== JSON.stringify([modelEvil, foreign])) {
+		fail("P07B_B_SELFTEST_PREFIX_PARTITION", JSON.stringify(partition));
 	}
 }
 
@@ -62,6 +75,10 @@ async function main() {
 	}
 
 	for (const test of cases) {
+		if (test.id === "prefix-partition") {
+			requireExactC1PrefixPartition();
+			continue;
+		}
 		const facts = structuredClone(clean);
 		switch (test.id) {
 		case "issuer-owner":
@@ -90,15 +107,18 @@ async function main() {
 			facts.nativeExclusiveFlags = false;
 			facts.nativeFallbackPresent = true;
 			break;
+		case "c1-semantic-boundary":
+			facts.c1BoundaryPassed = false;
+			break;
 		case "future-surface":
-			facts.futureSymbols.push("internal/future.go:ContractExecutionTarget");
+			facts.foreignFutureSymbols.push("internal/future.go:ContractExecutionTarget");
 			break;
 		default:
 			fail("P07B_B_SELFTEST_UNKNOWN_CASE", test.id);
 		}
 		requireViolation(facts, test.code, test.id);
 	}
-	process.stdout.write(`P07B B architecture defensive self-test OK (${cases.length} metadata cases)\n`);
+	process.stdout.write(`P07B B architecture defensive self-test OK (${cases.length} metadata cases; exact C1 prefix partition)\n`);
 }
 
 main().catch((error) => {

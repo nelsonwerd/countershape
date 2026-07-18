@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 const checkerPath = fileURLToPath(import.meta.url);
 const repositoryRoot = resolve(dirname(checkerPath), "..");
 const modulePrefix = "github.com/nelsonwerd/countershape/";
+const c1SemanticPrefix = "internal/contractexec/model/";
 
 const reviewedFiles = Object.freeze([
 	"internal/emit/node/internal/publication/authority.go",
@@ -156,6 +157,16 @@ function sha256(bytes) { return createHash("sha256").update(bytes).digest("hex")
 function sorted(values) { return [...values].sort(); }
 function exact(left, right) { return JSON.stringify(sorted(left)) === JSON.stringify(sorted(right)); }
 function count(source, expression) { return source.match(expression)?.length ?? 0; }
+
+export function partitionFutureSymbols(values) {
+	const admitted = [];
+	const foreign = [];
+	for (const value of values) {
+		if (value.startsWith(c1SemanticPrefix)) admitted.push(value);
+		else foreign.push(value);
+	}
+	return Object.freeze({ admitted: Object.freeze(admitted), foreign: Object.freeze(foreign) });
+}
 
 async function readReviewedFile(relativePath) {
 	const absolute = resolve(repositoryRoot, relativePath);
@@ -326,8 +337,19 @@ function runInheritedA2() {
 	}
 }
 
+function runInheritedC1() {
+	const result = spawnSync(process.execPath, [resolve(repositoryRoot, "tools/check-p07b-c-architecture.mjs")], {
+		cwd: repositoryRoot, encoding: "utf8", timeout: 180_000, maxBuffer: 32 * 1024 * 1024, env: process.env,
+	});
+	if (result.error || result.signal || result.status !== 0 || result.stderr !== "" || result.stdout.trim() !== "P07B-C C1 architecture boundary OK") {
+		throw new ArchitectureError("P07B_B_INHERITED_C1_FAILED", `${result.status ?? result.signal}: ${result.stderr || result.stdout || result.error}`);
+	}
+	return true;
+}
+
 export async function collectFacts() {
 	await inspectTopology();
+	const c1BoundaryPassed = runInheritedC1();
 	const entries = await Promise.all(reviewedFiles.map(readReviewedFile));
 	const byPath = new Map(entries.map((entry) => [entry.path, entry]));
 	const productionPaths = [];
@@ -354,6 +376,7 @@ export async function collectFacts() {
 	const futureSymbols = productionEntries.flatMap((entry) =>
 		["ContractExecutionTarget", "FinalizedContractRun", "ContractExecution"].filter((symbol) => entry.source.includes(symbol))
 			.map((symbol) => `${entry.path}:${symbol}`));
+	const futureSymbolPartition = partitionFutureSymbols(futureSymbols);
 	const issueCallers = productionEntries.filter((entry) => entry.source.includes("internalpublication.Issue("))
 		.map((entry) => entry.path);
 	const api = {};
@@ -445,7 +468,8 @@ export async function collectFacts() {
 				imported === "os/exec" || imported === "runtime" || imported === "plugin" || imported === "net" || imported.startsWith("net/") ||
 				imported === `${modulePrefix}internal/gitobj` || imported.startsWith(`${modulePrefix}internal/git`) ||
 				imported.startsWith(`${modulePrefix}internal/server`) || imported.startsWith(`${modulePrefix}internal/studio`))),
-		futureSymbols,
+		c1BoundaryPassed,
+		foreignFutureSymbols: futureSymbolPartition.foreign,
 		tests,
 		cliEvidence: [
 			"cancelled CLI terminal publication changed durable state", "runCLIP07BBPublicationRace",
@@ -511,7 +535,8 @@ export function validateFacts(facts) {
 		"P07B_B_PARENT_TRUST_POLICY", "effective-user ownership and repeated parent trust");
 	add(!facts.renameReconciliationShape, "P07B_B_RENAME_RECONCILIATION", "exact destination, retained stage, or ambiguity");
 	add(facts.forbiddenMaterializerImport, "P07B_B_MATERIALIZER_CAPABILITY", "forbidden production import");
-	add(facts.futureSymbols.length !== 0, "P07B_B_PREMATURE_C_SURFACE", facts.futureSymbols.join(","));
+	add(!facts.c1BoundaryPassed, "P07B_B_C1_SEMANTIC_BOUNDARY", "inert C1 architecture gate did not pass");
+	add(facts.foreignFutureSymbols.length !== 0, "P07B_B_PREMATURE_C_SURFACE", facts.foreignFutureSymbols.join(","));
 	for (const [path, expected] of Object.entries(requiredTests)) {
 		add(expected.some((name) => !facts.tests[path].includes(name)), "P07B_B_REQUIRED_TEST_MISSING",
 			`${path}:${expected.filter((name) => !facts.tests[path].includes(name)).join(",")}`);
