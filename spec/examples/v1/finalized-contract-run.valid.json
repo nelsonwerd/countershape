@@ -3,7 +3,7 @@
   "kind": "FinalizedContractRun",
   "run_version": "finalized-contract-run/v1",
   "publication_scope": "IMMUTABLE_NONHEAD_FINALIZED_RUN_V1",
-  "contract_execution_target_digest": "sha256:e806e748d276f2a22cb0ae961f83ae0e249545c34908db6f21d2cf52dd80ea49",
+  "contract_execution_target_digest": "sha256:3434053936edc6d7cea5666f1c3a24b5445a5f9db30fa292baf415481c377a93",
   "attempt_artifact_digest": "sha256:e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5e5",
   "lifecycle": {
     "status": "FINALIZED",

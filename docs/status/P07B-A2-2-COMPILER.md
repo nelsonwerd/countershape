@@ -27,7 +27,7 @@ authority.
 
 ## Exact runtime and human-surface scope
 
-- The exercised local tuple is Node `v25.2.1`, Go `1.26.5`, Darwin `26.5.2`, arm64. Other tuples remain `UNRECEIPTED`.
+- The exercised local tuple is Node `v25.2.1`, Go `1.26.5`, macOS `26.5.2`, Darwin kernel `25.5.0`, arm64. Other tuples remain `UNRECEIPTED`.
 - The checked-in capture's conforming, contradicting, and timeout-ineligible records run the intact generated program assets. Its malformed-data record uses repinned altered decision data, its tamper record uses an intact entrypoint over an unrepinned companion change, and its harness-failure record uses a repinned explicitly instrumented harness. The latter records are deterministic mapping/UX evidence, not a claim that an intact production asset naturally generated those injected conditions.
 - README rendering is deterministic at 60, 80, and 120 Unicode-code-point columns under `countershape-terminal-capture/v1`; TAP records normalize only the closed stable fields under `countershape-node-tap-normalization/v1`.
 - The README places the full-user-authority and host-network warning before invocation, states that confidentiality is not established, requires a separately prepared target root, fail-closes the quoted `cd` with `&&`, and says direct invocation establishes no Git target identity.

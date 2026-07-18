@@ -3,8 +3,8 @@
   "kind": "ContractExecution",
   "execution_version": "contract-execution/v1",
   "publication_scope": "IMMUTABLE_NONHEAD_EVIDENCE_V1",
-  "contract_execution_target_digest": "sha256:e806e748d276f2a22cb0ae961f83ae0e249545c34908db6f21d2cf52dd80ea49",
-  "finalized_contract_run_digest": "sha256:d09df0ccbabb61f0a521200abec43f43108f5533bcfec1230a95747b50016e36",
+  "contract_execution_target_digest": "sha256:3434053936edc6d7cea5666f1c3a24b5445a5f9db30fa292baf415481c377a93",
+  "finalized_contract_run_digest": "sha256:89b167d8ee16e4e87d34a9861c6bfc03898c595dc2541f7a6d3ecc929e1300c7",
   "result": {
     "execution_class": "ELIGIBLE_OBSERVATION",
     "conformance": "CONFORMS"

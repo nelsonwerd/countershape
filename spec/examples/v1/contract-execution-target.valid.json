@@ -3,7 +3,7 @@
   "kind": "ContractExecutionTarget",
   "target_version": "contract-execution-target/v1",
   "publication_scope": "IMMUTABLE_NONHEAD_PRESPAWN_AUTHORITY_V1",
-  "contract_bundle_digest": "sha256:f0886a4689bbf8e5a9fba802bb3595099836304c5342deab7f61f3abfb48ca0e",
+  "contract_bundle_digest": "sha256:29fe7db464de802f4ac268e8c0a93562d7fc5078753ff6f69d1d77b0d937f763",
   "source_binding": {
     "portable_source_digest": "sha256:44708ca00a256d55eeb228efd04ff762d73b64b2e503e2324e0cc1e19e50b2a5",
     "portable_profile_digest": "sha256:43e2a5459bdcb880376f3b3e31ffc54ce0e9ead13590b72ee91cd4bb2830609e",

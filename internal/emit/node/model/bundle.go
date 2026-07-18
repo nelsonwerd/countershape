@@ -500,7 +500,7 @@ func RenderREADME(action string, source contractsource.PortableSource, predicate
 	output.WriteString("- Use only supported regular-file modes.\n")
 	output.WriteString("- Remain distinct from and non-nested with the bundle directory.\n\n")
 	output.WriteString("Use an existing reviewed source-export process. If you cannot make and inspect that copy, stop: this bundle does not provide a safe preparation command.\n\n")
-	output.WriteString("This release has been exercised only on local Darwin/arm64 Node. Other platforms may report `INELIGIBLE_EXECUTION|ENVIRONMENT_INVALID`; a conforming run does not prove portability.\n\n")
+	output.WriteString("Portability is not established. Environments without every required runtime, filesystem, watcher, and process-group facility report `INELIGIBLE_EXECUTION|ENVIRONMENT_INVALID`; a conforming run does not prove portability.\n\n")
 	output.WriteString("## Run it\n\n")
 	output.WriteString("Run these commands from a shell after preparing the separate target copy:\n\n")
 	output.WriteString("```text\ncd \"<absolute-prepared-target-root>\" &&\n\"<absolute-node-executable>\" --test \\\n  --test-reporter=tap \\\n  \"<absolute-bundle-root>/contract.test.mjs\"\n```\n\n")

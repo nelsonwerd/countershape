@@ -1141,12 +1141,12 @@ const P07_FILE_ROSTER = Object.freeze([
 
 const P07_JSON_FILE_ROSTER = Object.freeze(["decision.json", "fixture.json", "manifest.json"]);
 const P07_RUNTIME_SOURCE_SHA256 = Object.freeze({
-  "README.md": "sha256:dfbdd892d81f9abf40457ead95bb8221409592b39eaaea8e456bff3349049d17",
+  "README.md": "sha256:40fb600a59fddd7ea6a5648e249c11ecd4e439ddd250c8ae09a40b31ec58a8b9",
   "contract.test.mjs": "sha256:0ded06ad24d9b218fef7776835b26124483d788f2eb49f69d0ffb9806c85e021",
   "decision.json": "sha256:8ff677acdf129ff10c862c96542903f5c5b0e1c94884ce75aa8b5bc4d1bb6a53",
   "fixture.json": "sha256:e4474fa48d41662d2ac7e188f19afa20196de4530ae1edceaed03bdde3801fba",
   "harness.mjs": "sha256:51eb70171f044cd77776d36dceed8101e45c774c3b5f70327fe144061b08bb34",
-  "manifest.json": "sha256:37914f4acca282906f4966500190c162625de9a1027784044ab3b6b59b7fef41",
+  "manifest.json": "sha256:35bb1bb0103f95b4449754640fc30667d726d01240b9f521b922115228d0b3f3",
 });
 const P07_SAFE_INTEGER_PATTERN = "^(?:0|-?(?:[1-9][0-9]{0,14}|[1-8][0-9]{15}|900[0-6][0-9]{12}|90070[0-9]{11}|90071[0-8][0-9]{10}|900719[0-8][0-9]{9}|9007199[01][0-9]{8}|90071992[0-4][0-9]{7}|900719925[0-3][0-9]{6}|9007199254[0-6][0-9]{5}|90071992547[0-3][0-9]{4}|9007199254740[0-8][0-9]{2}|90071992547409[0-8][0-9]|900719925474099[01]))$";
 const P07_SAFE_INTEGER_LIMIT = 9007199254740991n;
