@@ -12,11 +12,11 @@
 
 ## Current state
 
-- **Pipeline phase:** U0–U6, P07A/U6b, P07B-A1 source/process, P07B-A2.1 current-ruling compilation authority, and cumulative-verification maintenance are sealed and strict-clean. P07B-A2.2 is implemented in the working tree but remains an unsealed candidate: every provisional receipt row in `docs/status/P07B-A2-2-COMPILER.md` is `UNRECEIPTED` until its final source commit and follow-up receipt-document commit are independently sealed and strict-clean.
-- **Git:** repository is on `codex/countershape-autopilot`; the last sealed checkpoint is maintenance commit `eb3e073b1abe812157c98c2907e4f68edc311f6a`, tree `a5cd432e60b827b1cdfadc2d0bf5f9c0f04a2b51`. P07B-A1 remains sealed at source commit `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`, tree `da0e13f37aacd0e7fb2b52b3aeac628f5558c11e`. Resolve the A2.1 implementation commit locally from its status file. The A2.2 working tree must not be treated as a committed capability.
-- **didrun:** installed globally. Two ledgers broke under concurrent writers and remain preserved under `.didrun-history/`; the P07A-A mixed-generation ledger also remains as strict-red negative history. A2.1's chain-intact pre-seal development ledger is preserved whole at `.didrun-history/2026-07-16-p07b-a2-1-preseal-mixed/.didrun/` because it had no seal watermark and spanned superseded trees; it supports no sealed capability. S6-10 records a live A2.1 seal that returned zero and advanced local state after sandbox denial prevented Git-note publication; the false state is preserved, and all seals in this managed environment require explicit Git-note write authority plus note existence and strict exit `0`. Every didrun operation is serialized by the primary agent, and final claims are made immediately after their successful command. See `docs/status/DIDRUN_BUGS.md` before recording evidence.
+- **Pipeline phase:** U0–U6, P07A/U6b, P07B-A1 source/process, P07B-A2.1 current-ruling compilation authority, cumulative-verification maintenance, and the accepted P07B-A2.2 corrected source are sealed and strict-clean. This handoff/status reconciliation becomes the final A2.2 documentation boundary only when the commit containing it is also sealed, Git-note-present, and strict-clean.
+- **Git:** repository is on `codex/countershape-autopilot`. P07B-A2.2 has implementation checkpoint `32efaaf2f6d9fc58389d48d18219ce03995a2805`, tree `d01848700be32bc7f9458f6002e0f4b81673ca11`, and accepted corrected source `6bf33350944dcdd56a4ceaa70f1d0836203ffb1f`, tree `d394b8a9af3f92521a13a00868109fdfe234de26`; both notes exist and both strict checks exit `0`. P07B-A1 remains sealed at `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`, tree `da0e13f37aacd0e7fb2b52b3aeac628f5558c11e`. Resolve A2.1 and maintenance locally from their status files.
+- **didrun:** installed globally. Broken concurrent, mixed-generation, failed-note-publication, source-development, and correction-development ledgers remain preserved under ignored `.didrun-history/` paths and support no capability. A2.2 used one root writer for every final event, immediate claim, Git action, seal, note check, and strict check. Its 20-claim checkpoint and 11-claim corrected source both remained chain-intact and every recorded grade is `TREE-EXACT`. Plain seals were blocked by aggregate high-entropy heuristics and completed only after exact staged inventories plus scoped full-index structured credential-pattern scans, with `secrets_override: true` preserved in both notes. See `docs/status/DIDRUN_BUGS.md` before recording evidence.
 - **Current baseline:** from a fresh repository-root shell, run `/opt/homebrew/bin/node tools/verify-current.mjs`. The evolved 20-step roster builds, vets, runs the complete suite, self-tests its orchestration, checks/exercises generated artifacts, fresh-process recovery, deterministic human capture, every current architecture checker/self-test, labels every historical-only gate without running it, and fails on Finder artifacts. Read `docs/VERIFICATION.md`; a direct pass is not a didrun grade.
-- **Build:** U5 through P07B-A2.1 retain their sealed meanings. The unsealed P07B-A2.2 candidate adds a pure partial compiler, strict recoverable six-file `ContractBundle`, fixed Node-core entrypoint/harness, exact direct TAP diagnostic, Go/Node semantic corpus and oracle-separation properties, distinct pure-selector, intact generated CLI/child-bind HTTP, and copied/instrumented mapping evidence, fresh-process recovery, bounded parser/corpus fuzz targets, a layered 117-case architecture self-test, and deterministic 60/80/120-column human-surface capture. It still implements no residue publication, product materializer, pinned execution target, finalized run/classification, product CLI, server, dashboard, or report.
+- **Build:** U5 through P07B-A2.1 retain their sealed meanings. The accepted P07B-A2.2 source adds a pure partial compiler, strict recoverable six-file `ContractBundle`, fixed Node-core entrypoint/harness, exact direct TAP diagnostic, Go/Node semantic corpus and oracle-separation properties, distinct pure-selector, intact generated CLI/child-bind HTTP and copied/instrumented mapping evidence, fresh-process recovery, bounded parser/corpus fuzz targets, a layered 117-case architecture self-test, and deterministic 60/80/120-column human-surface capture. Its generated README is runtime-generic; the exercised local tuple exists only in receipt documentation. It still implements no residue publication, product materializer, pinned execution target, finalized run/classification, product CLI, server, dashboard, or report.
 - **External APIs:** none used in the product. The A2.2 UX pass used a different internal model over sanitized captures; its qualitative verdict is `UNRECEIPTED` and has no semantic authority. Any real external model/API integration remains human-gated and must never be faked.
 
 ## Read first, in order
@@ -330,16 +330,62 @@ The current architecture chain is `P07B-A2.2 -> P07B-A1 -> U6/P07A-B -> U5`; the
 
 The baseline command is `/opt/homebrew/bin/node tools/verify-current.mjs`; its complete environment and output contract are in `docs/VERIFICATION.md`. It is not a receipt system and does not establish current-tree compatibility for historical gates, mutation completeness, cross-platform behavior, security, production readiness, adoption, or maintainership.
 
-## P07B-A2.2 recoverable-compiler candidate boundary
+## P07B-A2.2 recoverable-compiler sealed boundary
 
-The working tree implements the pure recoverable six-file compiler, strict
+Accepted corrected source `6bf33350944dcdd56a4ceaa70f1d0836203ffb1f`
+(tree `d394b8a9af3f92521a13a00868109fdfe234de26`) implements the pure
+recoverable six-file compiler, strict
 parser/model, fixed Node-core direct contract, Go/Node corpus, a distinct pure
 result-selector matrix, intact generated CLI/HTTP physical checks, separately
 labeled copied/instrumented mapping checks, process recovery, bounded fuzz targets, layered A2.2
 architecture closure, and deterministic human-surface capture described in
-`docs/status/P07B-A2-2-COMPILER.md`. Until the source commit is created, sealed,
-and strict-clean, every provisional receipt row remains `UNRECEIPTED` and this
-section supports no capability claim.
+`docs/status/P07B-A2-2-COMPILER.md`. Its Git note exists and strict verification
+exits `0` with `11/11` correction claims recorded-exact. Its parent
+implementation checkpoint `32efaaf2f6d9fc58389d48d18219ce03995a2805`
+(tree `d01848700be32bc7f9458f6002e0f4b81673ca11`) likewise has a Git note and
+strict exit `0` with `20/20` claims recorded-exact. The accepted capability is
+the corrected descendant, not the checkpoint alone.
+
+### Implementation-checkpoint receipts
+
+| Claimed capability | didrun claim label | Verbatim grade |
+| --- | --- | --- |
+| Go formatting and Node syntax | `P07B A2.2 formatting and Node syntax` | `TREE-EXACT` |
+| Compiler/model/parser suites | `P07B A2.2 focused compiler model parser suites` | `TREE-EXACT` |
+| Go/Node parity and oracle separation | `P07B A2.2 Go Node parity and oracle separation` | `TREE-EXACT` |
+| Exhaustive pure result selector | `P07B A2.2 pure result selector exhaustive matrix` | `TREE-EXACT` |
+| Intact generated CLI/HTTP matrix | `P07B A2.2 intact generated CLI HTTP physical matrix` | `TREE-EXACT` |
+| Instrumented fault mapping | `P07B A2.2 instrumented fault mapping matrix` | `TREE-EXACT` |
+| Deterministic compile/recovery/tamper matrix | `P07B A2.2 deterministic compile recovery and tamper matrix` | `TREE-EXACT` |
+| Schema/runtime/planning parity | `P07B A2.2 schema runtime example and planning parity` | `TREE-EXACT` |
+| Deterministic human-surface capture | `P07B A2.2 human surface deterministic capture` | `TREE-EXACT` |
+| Complete Go repository suite | `P07B A2.2 complete Go repository suite` | `TREE-EXACT` |
+| Complete Go vet | `P07B A2.2 complete Go vet` | `TREE-EXACT` |
+| Focused race suite | `P07B A2.2 focused race suite` | `TREE-EXACT` |
+| Bundle-parser fuzz, 10,000 iterations | `P07B A2.2 bundle parser fuzz 10000 iterations` | `TREE-EXACT` |
+| Corpus-parser fuzz, 10,000 iterations | `P07B A2.2 corpus parser fuzz 10000 iterations` | `TREE-EXACT` |
+| Exact architecture boundary | `P07B A2.2 exact architecture boundary` | `TREE-EXACT` |
+| Architecture 117-case self-test | `P07B A2.2 architecture 117 case defensive self-test` | `TREE-EXACT` |
+| Cumulative baseline | `P07B A2.2 cumulative verification baseline` | `TREE-EXACT` |
+| Exact staged inventory/diff | `P07B A2.2 exact staged inventory and diff check` | `TREE-EXACT` |
+| Scoped structured credential-pattern scan | `P07B A2.2 scoped staged structured credential-pattern scan` | `TREE-EXACT` |
+| Serialized didrun chain | `P07B A2.2 didrun chain intact` | `TREE-EXACT` |
+
+### Corrected-descendant receipts
+
+| Claimed capability | didrun claim label | Verbatim grade |
+| --- | --- | --- |
+| Correction formatting and syntax | `P07B A2.2 correction formatting and syntax` | `TREE-EXACT` |
+| Regenerated artifact chain | `P07B A2.2 corrected generated artifact chain exact` | `TREE-EXACT` |
+| Runtime-generic README and receipt-only platform tuple | `P07B A2.2 runtime generic README and platform receipt separation` | `TREE-EXACT` |
+| Corrected compiler/model/parity/runtime suites | `P07B A2.2 corrected compiler model parity and runtime suites` | `TREE-EXACT` |
+| Planning validator 76-case self-test | `P07B A2.2 planning validator 76 case self-test` | `TREE-EXACT` |
+| Corrected exact architecture boundary | `P07B A2.2 corrected exact architecture boundary` | `TREE-EXACT` |
+| Corrected architecture 117-case self-test | `P07B A2.2 corrected architecture 117 case defensive self-test` | `TREE-EXACT` |
+| Corrected cumulative baseline | `P07B A2.2 corrected cumulative verification baseline` | `TREE-EXACT` |
+| Correction exact staged inventory/diff | `P07B A2.2 correction exact staged inventory and diff check` | `TREE-EXACT` |
+| Correction scoped structured credential-pattern scan | `P07B A2.2 correction scoped staged structured credential-pattern scan` | `TREE-EXACT` |
+| Correction serialized didrun chain | `P07B A2.2 correction didrun chain intact` | `TREE-EXACT` |
 
 The proposed source-rewrite driver was never completed or checked in. It is
 `UNRECEIPTED` design history, appears in no executable roster, and is replaced
@@ -353,6 +399,15 @@ contradiction, and timeout use intact generated program assets; malformed data
 and companion tamper alter only their named contract inputs; the harness-failure
 record uses a repinned instrumented harness and proves mapping/UX behavior, not
 natural intact-asset failure.
+
+The final read-only audit rejected the checkpoint's host-specific README line
+and corrected a macOS/Darwin version conflation. The accepted descendant keeps
+generated bytes runtime-generic, places Node `v25.2.1`, Go `1.26.5`, macOS
+`26.5.2`, Darwin kernel `25.5.0`, and arm64 only in receipt documentation,
+regenerates the full digest chain, and reruns the 76- and 117-case defensive
+matrices plus the cumulative baseline. Both source notes record
+`secrets_override: true`; this is a redacted-export disclosure, not a secret-
+absence claim or publication authorization.
 
 ### Pre-A2 planning-wire correction
 
@@ -386,15 +441,14 @@ separate reviewed boundary.
 
 ## Exact next actions if this task resumes elsewhere
 
-1. Run `git status --short --branch`; confirm HEAD is the sealed maintenance checkpoint `eb3e073b1abe812157c98c2907e4f68edc311f6a` unless an A2.2 source commit is already present, and confirm no `.didrun` path is staged or tracked. Preserve old failed commits and archived ledgers as negative history; never reseal or rewrite them.
-2. Read `docs/status/P07B-A2-2-COMPILER.md` first. If its source identity/receipt rows are still provisional, finish the frozen A2.2 tree through a fresh serialized didrun ledger, commit, seal, confirm the Git note, and loop strict verification to exit `0` before changing the grades.
-3. After the source commit is strict-clean, create the narrow receipt-document reconciliation commit: copy the actual source commit/tree, strict verdict, event map, and verbatim grades into the status and this handoff; run its own documentation/current-baseline gates through a fresh ledger; commit, seal, and loop strict verification to exit `0`.
-4. Only after both A2.2 commits are sealed and strict-clean begin P07B-B terminal publication plus retryable materialization. P07B-C target/run/execution remains a later independent unit. Do not start the product CLI/server/studio until all P07B authority units are sealed and strict-clean.
-5. Wrap every load-bearing verification command in `didrun run --` and claim each final success immediately before another event is recorded. Any nonzero command or mutant survivor is a real unfinished result: repair, rerun, preserve failed history, and never weaken or relabel the gate.
-6. At each shippable boundary, declare only successful final-tree claims, stage exact intended paths, commit, run every `didrun seal` with Git-note write authority, confirm the note exists, and loop `NO_COLOR=1 didrun verify --strict` until exit `0`.
-7. Keep the root as sole writer and sole didrun/claim/Git/seal operator. Parallel agents may perform bounded read-only audits only; never allow parallel didrun writers or parallelize two didrun calls inside one tool orchestration.
-8. A2.2's generated README/CLI completed deterministic 60/80/120-column capture, functional result-flow review, and a sanitized different-internal-model critique. The deterministic capture commands may receive didrun grades; the manual visual judgment and critic remain `UNRECEIPTED` qualitative observations. Any external-provider call remains human-gated. U8 still requires at least three full viewport/accessibility loops.
-9. Before final delivery, run the human-cleared S6 disposable real-agent protocol, produce strict plus HTML didrun reports, map every claim to its verbatim grade, and disclose the adoption, production-hardening, security-review, cross-platform, and maintainership tail.
+1. Run `git status --short --branch`; confirm the commit containing this reconciliation is sealed, its didrun Git note exists, strict exits `0`, and no `.didrun` path is staged or tracked. Preserve old failed commits and archived ledgers as negative history; never reseal or rewrite them.
+2. Confirm accepted A2.2 source `6bf33350944dcdd56a4ceaa70f1d0836203ffb1f` is an ancestor and its note still reports `11/11` recorded-exact; confirm checkpoint `32efaaf2f6d9fc58389d48d18219ce03995a2805` remains preserved with `20/20` recorded-exact. Read `docs/status/P07B-A2-2-COMPILER.md` for the exact receipt ceiling and nonclaims.
+3. Begin only P07B-B terminal publication plus retryable materialization. P07B-C target/run/execution remains a later independent unit. Do not start the product CLI/server/studio until all P07B authority units are sealed and strict-clean.
+4. Wrap every load-bearing verification command in `didrun run --` and claim each final success immediately before another event is recorded. Any nonzero command or mutant survivor is a real unfinished result: repair, rerun, preserve failed history, and never weaken or relabel the gate.
+5. At each shippable boundary, declare only successful final-tree claims, stage exact intended paths, commit, seal, confirm the note exists, and loop `NO_COLOR=1 didrun verify --strict` until exit `0`.
+6. Keep the root as sole writer and sole didrun/claim/Git/seal operator. Parallel agents may perform bounded read-only audits only; never allow parallel didrun writers or parallelize two didrun calls inside one tool orchestration.
+7. A2.2's generated README/CLI completed deterministic 60/80/120-column capture, functional result-flow review, and a sanitized different-internal-model critique. The deterministic capture has didrun evidence; manual visual judgment and the critic remain `UNRECEIPTED` qualitative observations. Any external-provider call remains human-gated. U8 still requires at least three full viewport/accessibility loops.
+8. Preserve the final strict HTML report outside Git, map every claimed capability to its verbatim grade, and disclose the adoption, production-hardening, security-review, cross-platform, and maintainership tail.
 
 ## Orientation handshake for a fresh agent/chat
 
@@ -403,7 +457,7 @@ Before editing, reply in your working notes with:
 1. the one product verb;
 2. the three distinct truth authorities (Git, Choicepoint observations/ruling, didrun receipts);
 3. two things the system must never claim;
-4. the maintenance and A2.1 commits, P07B-A1 source prerequisite `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`, and—once created—the independently strict-clean A2.2 source plus receipt-document commits, with their exact receipt maps and nonclaims; and
-5. the current bounded shippable unit: finish A2.2 evidence sealing if its status is provisional, otherwise P07B-B terminal publication/retryable materialization, with P07B-C execution and all product UI still excluded.
+4. the maintenance and A2.1 commits, P07B-A1 source prerequisite `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`, A2.2 checkpoint `32efaaf2f6d9fc58389d48d18219ce03995a2805`, accepted corrected source `6bf33350944dcdd56a4ceaa70f1d0836203ffb1f`, and the sealed receipt-document commit containing this handoff, with their exact receipt maps and nonclaims; and
+5. the current bounded shippable unit: P07B-B terminal publication/retryable materialization, with P07B-C execution and all product UI still excluded.
 
 If any answer is missing, read the files above again. Do not infer a didrun grade from this handoff; run strict verification locally.
