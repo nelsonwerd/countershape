@@ -41,6 +41,7 @@ func TestStudyHeadExportedTransitionsAreTypedAndClosed(t *testing.T) {
 		"AdvanceConfirmation": "github.com/nelsonwerd/countershape/internal/confirmation/internal/publication",
 		"AdvanceChoicepoint":  "github.com/nelsonwerd/countershape/internal/choice/promotion/internal/publication",
 		"AdvanceRuling":       "github.com/nelsonwerd/countershape/internal/choice/promotion/internal/publication",
+		"AdvanceResidue":      "github.com/nelsonwerd/countershape/internal/emit/node/internal/publication",
 	}
 	for name, authorityPackage := range expected {
 		method, present := objectStore.MethodByName(name)
@@ -48,7 +49,7 @@ func TestStudyHeadExportedTransitionsAreTypedAndClosed(t *testing.T) {
 			t.Fatalf("%s input authority = %v, want package %s", name, method.Type, authorityPackage)
 		}
 	}
-	for _, forbidden := range []string{"AdvanceHead", "AdvanceResidue", "ReplaceHead", "ForceHead"} {
+	for _, forbidden := range []string{"AdvanceHead", "ReplaceHead", "ForceHead"} {
 		if _, exposed := objectStore.MethodByName(forbidden); exposed {
 			t.Fatalf("unsafe head mutation surface %s is exported", forbidden)
 		}

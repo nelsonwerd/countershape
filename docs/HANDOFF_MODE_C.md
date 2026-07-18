@@ -12,11 +12,11 @@
 
 ## Current state
 
-- **Pipeline phase:** U0–U6, P07A/U6b, P07B-A1 source/process, P07B-A2.1 current-ruling compilation authority, cumulative-verification maintenance, and the accepted P07B-A2.2 corrected source are sealed and strict-clean. This handoff/status reconciliation becomes the final A2.2 documentation boundary only when the commit containing it is also sealed, Git-note-present, and strict-clean.
-- **Git:** repository is on `codex/countershape-autopilot`. P07B-A2.2 has implementation checkpoint `32efaaf2f6d9fc58389d48d18219ce03995a2805`, tree `d01848700be32bc7f9458f6002e0f4b81673ca11`, and accepted corrected source `6bf33350944dcdd56a4ceaa70f1d0836203ffb1f`, tree `d394b8a9af3f92521a13a00868109fdfe234de26`; both notes exist and both strict checks exit `0`. P07B-A1 remains sealed at `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`, tree `da0e13f37aacd0e7fb2b52b3aeac628f5558c11e`. Resolve A2.1 and maintenance locally from their status files.
-- **didrun:** installed globally. Broken concurrent, mixed-generation, failed-note-publication, source-development, and correction-development ledgers remain preserved under ignored `.didrun-history/` paths and support no capability. A2.2 used one root writer for every final event, immediate claim, Git action, seal, note check, and strict check. Its 20-claim checkpoint and 11-claim corrected source both remained chain-intact and every recorded grade is `TREE-EXACT`. Plain seals were blocked by aggregate high-entropy heuristics and completed only after exact staged inventories plus scoped full-index structured credential-pattern scans, with `secrets_override: true` preserved in both notes. See `docs/status/DIDRUN_BUGS.md` before recording evidence.
-- **Current baseline:** from a fresh repository-root shell, run `/opt/homebrew/bin/node tools/verify-current.mjs`. The evolved 20-step roster builds, vets, runs the complete suite, self-tests its orchestration, checks/exercises generated artifacts, fresh-process recovery, deterministic human capture, every current architecture checker/self-test, labels every historical-only gate without running it, and fails on Finder artifacts. Read `docs/VERIFICATION.md`; a direct pass is not a didrun grade.
-- **Build:** U5 through P07B-A2.1 retain their sealed meanings. The accepted P07B-A2.2 source adds a pure partial compiler, strict recoverable six-file `ContractBundle`, fixed Node-core entrypoint/harness, exact direct TAP diagnostic, Go/Node semantic corpus and oracle-separation properties, distinct pure-selector, intact generated CLI/child-bind HTTP and copied/instrumented mapping evidence, fresh-process recovery, bounded parser/corpus fuzz targets, a layered 117-case architecture self-test, and deterministic 60/80/120-column human-surface capture. Its generated README is runtime-generic; the exercised local tuple exists only in receipt documentation. It still implements no residue publication, product materializer, pinned execution target, finalized run/classification, product CLI, server, dashboard, or report.
+- **Pipeline phase:** U0–U6, P07A/U6b, P07B-A1, P07B-A2.1, cumulative-verification maintenance, and the accepted corrected P07B-A2.2 compiler are sealed and strict-clean. P07B-B terminal publication/retryable materialization is implemented on the working tree; its final fresh-ledger qualification and implementation commit/seal/strict loop are pending, followed by a separate receipt-document commit/seal/strict loop and exact-final-boundary HTML report.
+- **Git:** repository is on `codex/countershape-autopilot` at sealed B0 scope-lock commit `7f04b2a5129dcbee2fc991453aefdd6713281b86`. The uncommitted P07B-B candidate is intentionally provisional. Accepted A2.2 source is `6bf33350944dcdd56a4ceaa70f1d0836203ffb1f`, followed by receipt-document boundary `8f7663e2d29b63b1bb3ddca0a18bd5cfcf0fe4b1` at tree `e30957e807c9e8145a286cbb97f7cec309f7897c`; P07B-A1 remains sealed at `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`.
+- **didrun:** installed globally and unchanged during this unit. The current development ledger contains honest failed/stale events and successful events from superseded working trees; none supports a final claim. Before qualification, preserve it whole under ignored `.didrun-history/`, then use one fresh serialized ledger with the root as the only didrun/claim/Git/seal operator. Plain-seal entropy behavior and any override must be disclosed exactly; see `docs/status/DIDRUN_BUGS.md`.
+- **Current baseline:** from a fresh repository-root shell, run `/opt/homebrew/bin/node tools/verify-current.mjs`. The evolved 22-step roster builds, vets, runs the complete suite, self-tests its orchestration, checks/exercises generated artifacts, fresh-process recovery, deterministic human capture, every current architecture checker/self-test through P07B-B, labels every historical-only gate without running it, and fails on Finder artifacts. Read `docs/VERIFICATION.md`; a direct pass is not a didrun grade.
+- **Build:** A2.2's accepted pure compiler remains byte-stable. P07B-B adds opaque node-issued terminal publication, full-token CAS-before-object creation, durable exact `RESIDUE` reopen with complete predecessor reconstruction, and an optional Darwin/arm64/cgo materializer that freshly reopens store-bound residue, performs descriptor-relative no-follow exact six-file publication, converges exact retries, and refuses mismatched existing output. The candidate still implements no pinned execution target, admitted runtime, finalized run/classification, product CLI, server, dashboard, or report.
 - **External APIs:** none used in the product. The A2.2 UX pass used a different internal model over sanitized captures; its qualitative verdict is `UNRECEIPTED` and has no semantic authority. Any real external model/API integration remains human-gated and must never be faked.
 
 ## Read first, in order
@@ -26,23 +26,25 @@
 3. `docs/SEMANTICS.md`
 4. `docs/PROJECTION_ALGEBRA.md`
 5. `research/deep-dive/11-p07-implementation-red-team.md`
-6. `docs/status/P07B-A2-2-COMPILER.md`
-7. `docs/status/P07B-A2-1-AUTHORITY.md`
-8. `docs/VERIFICATION.md`
-9. `docs/status/CUMULATIVE-VERIFICATION-MAINTENANCE.md`
-10. `docs/prompts/P07B-A2-COMPILATION-PLAN.md`
-11. `docs/prompts/P07B-A2-2-RECOVERABLE-COMPILER.md`
-12. `docs/status/P07B-A1-SOURCE.md`
-13. `docs/status/P07A-RULING.md`
-14. `docs/status/P07-PLANNING.md`
-15. `docs/status/P07A-TRANSLATOR.md`
-16. `research/ideation/07-divergence-and-selection.md`
-17. `research/ideation/06-founder-falsification.md`
-18. `research/ideation/05-counterfactual-prior-art.md`
-19. `research/ideation/04-finalist-duel.md`
-20. `research/ideation/02-wake-overlap-audit.md`
-21. `research/grounding/00-last30days-synthesis.md`
-22. this handoff
+6. `docs/prompts/P07B-B-TERMINAL-PUBLICATION.md`
+7. `docs/status/P07B-B-TERMINAL-PUBLICATION.md`
+8. `docs/status/P07B-A2-2-COMPILER.md`
+9. `docs/status/P07B-A2-1-AUTHORITY.md`
+10. `docs/VERIFICATION.md`
+11. `docs/status/CUMULATIVE-VERIFICATION-MAINTENANCE.md`
+12. `docs/prompts/P07B-A2-COMPILATION-PLAN.md`
+13. `docs/prompts/P07B-A2-2-RECOVERABLE-COMPILER.md`
+14. `docs/status/P07B-A1-SOURCE.md`
+15. `docs/status/P07A-RULING.md`
+16. `docs/status/P07-PLANNING.md`
+17. `docs/status/P07A-TRANSLATOR.md`
+18. `research/ideation/07-divergence-and-selection.md`
+19. `research/ideation/06-founder-falsification.md`
+20. `research/ideation/05-counterfactual-prior-art.md`
+21. `research/ideation/04-finalist-duel.md`
+22. `research/ideation/02-wake-overlap-audit.md`
+23. `research/grounding/00-last30days-synthesis.md`
+24. this handoff
 
 Read `research/deep-dive/07-SYNTHESIS.md`, `08-RED_TEAM.md`, and the later P07 implementation-time correction immediately after the semantic contracts and before the ideation files.
 
@@ -314,7 +316,7 @@ A2.1 establishes only construction-time current-ruling/source/Choicepoint/confir
 
 The maintenance commit is the commit containing `docs/status/CUMULATIVE-VERIFICATION-MAINTENANCE.md`; resolve its hash and tree locally. It is accepted only when its serialized didrun chain is intact, the Git note exists, and strict exits `0`. Its test-only canonical temp-root repair keeps production ancestor/no-follow policy unchanged and makes the stock macOS suite pass twice consecutively without a `TMPDIR` override.
 
-The current architecture chain is `P07B-A2.2 -> P07B-A1 -> U6/P07A-B -> U5`; the evolved A2.2 checker retains A2.1 closure internally rather than exposing a duplicate top-level row that points at the same file. U1–U4 architecture gates and every real frozen mutation gate are explicit historical sealed-unit contracts: the one-command baseline prints them as `HISTORICAL-ONLY NOT-RUN`, does not spawn them, and never calls them passed on today's tree. The proposed A2.2 source-rewrite driver never became a checked-in executable and remains `UNRECEIPTED`, so it appears in neither executable roster. U5's typed adapter reducer providers and P07A/U6's later test-fixture/production-lattice split remain recorded boundary evolution, not weakened historical checkers.
+The current architecture chain is `P07B-B -> P07B-A2.2 -> P07B-A1 -> U6/P07A-B -> U5`; the evolved A2.2 checker retains A2.1 closure internally rather than exposing a duplicate top-level row that points at the same file. U1–U4 architecture gates and every real frozen mutation gate are explicit historical sealed-unit contracts: the one-command baseline prints them as `HISTORICAL-ONLY NOT-RUN`, does not spawn them, and never calls them passed on today's tree. The proposed A2.2 source-rewrite driver never became a checked-in executable and remains `UNRECEIPTED`, so it appears in neither executable roster. The B defensive self-test uses cloned metadata/topology negatives rather than rewritten production sources and makes no mutation-completeness claim. U5's typed adapter reducer providers and P07A/U6's later test-fixture/production-lattice split remain recorded boundary evolution, not weakened historical checkers.
 
 | Claimed capability | didrun claim label | Verbatim grade |
 | --- | --- | --- |
@@ -409,6 +411,25 @@ matrices plus the cumulative baseline. Both source notes record
 `secrets_override: true`; this is a redacted-export disclosure, not a secret-
 absence claim or publication authorization.
 
+## P07B-B current implementation boundary
+
+The uncommitted candidate described in
+`docs/status/P07B-B-TERMINAL-PUBLICATION.md` adds the sole construction-safe
+terminal `RESIDUE` edge plus retryable exact Darwin/arm64/cgo six-file
+publication. It keeps parsed/copyable bundle data inert, reconstructs the full
+predecessor chain on restart, publishes no directory before terminal residue,
+and gives P07B-C no execution authority. The implementation-time B red team
+added direct store-transition/confirmation closure, stable ambiguity
+normalization, effective-UID/final-parent trust checks, nonblocking special-file
+opens, existing-observation versus physical-mismatch classification,
+rename-outcome reconciliation, and genuine different-residue destination
+collision coverage. These are working-tree facts, not grades. Every B receipt row remains
+`UNRECEIPTED` until the exact implementation commit is sealed, Git-note-
+present, and strict-clean. A separately sealed receipt-document boundary must
+then copy the source note's exact commit/tree and verbatim grades. Under the
+later post-spec user requirement, generate an HTML report outside Git for that
+exact final B commit as a closure artifact, not as a substitute receipt claim.
+
 ### Pre-A2 planning-wire correction
 
 Before any runtime bundle codec or compiler existed, the follow-up prompt-pack
@@ -432,7 +453,7 @@ separate reviewed boundary.
 ### U6 operational facts that P07A/P07B must preserve
 
 - **Store/layout:** closed `countershape/v1` canonical payloads live under `objects/sha256/<prefix>/<digest>`; mutable heads live under `studies/<derived-study-id>/head.json`; private capture material has a separate private directory. This is a local Darwin reference layout, not a stable public migration format.
-- **Head spine:** `SOURCE_PLAN -> BASELINE -> DIVERGENCE -> REDUCTION -> CONFIRMATION -> CHOICEPOINT_READY -> RULING`. U6a and P07A expose no `RESIDUE` transition, branching lineage, archived history, partial resume, or cancelled resume. P07B may add one terminal ContractBundle residue; ContractExecutionTarget, FinalizedContractRun, and ContractExecution remain separate immutable nonhead objects.
+- **Head spine:** `SOURCE_PLAN -> BASELINE -> DIVERGENCE -> REDUCTION -> CONFIRMATION -> CHOICEPOINT_READY -> RULING`. U6a and P07A expose no `RESIDUE` transition; P07B-B is the sole construction-safe terminal ContractBundle `RESIDUE` edge on this tree, subject to its independent receipt gate. No unit adds branching lineage, archived history, partial resume, or cancelled resume. ContractExecutionTarget, FinalizedContractRun, and ContractExecution remain separate immutable nonhead objects.
 - **Freshness:** confirmation creates a fresh 32-byte challenge, derives an exact ordinal nonce, requires finalized `CONFIRMATION` process-edge facts, and enforces current-run plus discovery/reduction evidence disjointness. This is relative physical-fixture evidence, not hostile-process attestation or timestamp truth.
 - **Blind kernel:** the closed DTO omits system-supplied candidate/ref/producer identity, support counts, total candidate count, source order, and reveal data; fingerprint-only aliases/order ignore support. Caller-authored scenario or behavior content may still reveal identity, and U6 says nothing about DOM/accessibility/CSS behavior.
 - **Attribution:** a DecisionRecord says `LOCAL_CALLER_ASSERTED_OPERATOR` and `AUTHENTICITY_NOT_ESTABLISHED_IN_U6`. Review-surface markers prove recorded presentation only, not comprehension or debiasing.
@@ -441,14 +462,14 @@ separate reviewed boundary.
 
 ## Exact next actions if this task resumes elsewhere
 
-1. Run `git status --short --branch`; confirm the commit containing this reconciliation is sealed, its didrun Git note exists, strict exits `0`, and no `.didrun` path is staged or tracked. Preserve old failed commits and archived ledgers as negative history; never reseal or rewrite them.
-2. Confirm accepted A2.2 source `6bf33350944dcdd56a4ceaa70f1d0836203ffb1f` is an ancestor and its note still reports `11/11` recorded-exact; confirm checkpoint `32efaaf2f6d9fc58389d48d18219ce03995a2805` remains preserved with `20/20` recorded-exact. Read `docs/status/P07B-A2-2-COMPILER.md` for the exact receipt ceiling and nonclaims.
-3. Begin only P07B-B terminal publication plus retryable materialization. P07B-C target/run/execution remains a later independent unit. Do not start the product CLI/server/studio until all P07B authority units are sealed and strict-clean.
+1. Run `git status --short --branch`; confirm branch `codex/countershape-autopilot` still descends from sealed B0 commit `7f04b2a5129dcbee2fc991453aefdd6713281b86`, no `.didrun` path is staged/tracked, and the current P07B-B candidate matches `docs/status/P07B-B-TERMINAL-PUBLICATION.md`.
+2. Preserve the mixed development ledger whole under ignored `.didrun-history/`; it supports no final capability. Start one fresh serialized ledger only after every B source, test, checker, and implementation-status doc is stable.
+3. Finish the complete B matrix, claim each successful final event immediately, stage only the exact intended roster, commit, seal, independently confirm the Git note, and loop `NO_COLOR=1 didrun verify --strict` until exit `0`. Nonzero leaves B unfinished.
 4. Wrap every load-bearing verification command in `didrun run --` and claim each final success immediately before another event is recorded. Any nonzero command or mutant survivor is a real unfinished result: repair, rerun, preserve failed history, and never weaken or relabel the gate.
 5. At each shippable boundary, declare only successful final-tree claims, stage exact intended paths, commit, seal, confirm the note exists, and loop `NO_COLOR=1 didrun verify --strict` until exit `0`.
 6. Keep the root as sole writer and sole didrun/claim/Git/seal operator. Parallel agents may perform bounded read-only audits only; never allow parallel didrun writers or parallelize two didrun calls inside one tool orchestration.
 7. A2.2's generated README/CLI completed deterministic 60/80/120-column capture, functional result-flow review, and a sanitized different-internal-model critique. The deterministic capture has didrun evidence; manual visual judgment and the critic remain `UNRECEIPTED` qualitative observations. Any external-provider call remains human-gated. U8 still requires at least three full viewport/accessibility loops.
-8. Preserve the final strict HTML report outside Git, map every claimed capability to its verbatim grade, and disclose the adoption, production-hardening, security-review, cross-platform, and maintainership tail.
+8. After the source commit is strict-clean, create a separate receipt reconciliation that copies its exact commit/tree and verbatim grades, seal that docs boundary independently, and generate the required strict HTML report for the exact final B commit outside Git. Only then may P07B-C begin. Preserve the adoption, production-hardening, security-review, cross-platform, and maintainership tail.
 
 ## Orientation handshake for a fresh agent/chat
 
@@ -457,7 +478,7 @@ Before editing, reply in your working notes with:
 1. the one product verb;
 2. the three distinct truth authorities (Git, Choicepoint observations/ruling, didrun receipts);
 3. two things the system must never claim;
-4. the maintenance and A2.1 commits, P07B-A1 source prerequisite `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`, A2.2 checkpoint `32efaaf2f6d9fc58389d48d18219ce03995a2805`, accepted corrected source `6bf33350944dcdd56a4ceaa70f1d0836203ffb1f`, and the sealed receipt-document commit containing this handoff, with their exact receipt maps and nonclaims; and
+4. the maintenance and A2.1 commits, P07B-A1 source prerequisite `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`, A2.2 checkpoint `32efaaf2f6d9fc58389d48d18219ce03995a2805`, accepted corrected source `6bf33350944dcdd56a4ceaa70f1d0836203ffb1f`, B0 scope lock `7f04b2a5129dcbee2fc991453aefdd6713281b86`, and the eventual sealed B implementation/receipt-document commits, with their exact receipt maps and nonclaims; and
 5. the current bounded shippable unit: P07B-B terminal publication/retryable materialization, with P07B-C execution and all product UI still excluded.
 
 If any answer is missing, read the files above again. Do not infer a didrun grade from this handoff; run strict verification locally.

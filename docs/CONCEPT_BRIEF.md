@@ -2,8 +2,8 @@
 
 - **Working name:** Countershape (package, domain, trademark, and legal clearance not performed)
 - **Mode:** open-source-first experimental infrastructure
-- **State:** deep dive and adversarial red team complete; U1–U6, P07A, P07B-A1, and P07B-A2.1 current-ruling compilation authority are sealed and strict-clean; the pure recoverable A2.2 compiler is next
-- **Last updated:** 2026-07-16
+- **State:** deep dive and adversarial red team complete; U1–U6, P07A, P07B-A1, P07B-A2.1, and the corrected pure recoverable P07B-A2.2 compiler are sealed and strict-clean; P07B-B terminal publication/retryable materialization is implemented and undergoing final qualification
+- **Last updated:** 2026-07-17
 - **Founder persona:** Soren Vale
 - **Confidence:** 8/10 in the truth kernel; 6/10 in the bounded reference instrument; 3/10 in review compression; 3/10 in adoption
 - **Semantic authority:** `docs/SEMANTICS.md` and `docs/PROJECTION_ALGEBRA.md` control structural identity, measurement/admission, and preservation semantics
@@ -254,15 +254,15 @@ Fresh Choicepoints retain the existing 27-member body but use `ADAPTER_BOUND_POR
 
 The portable value profile is closed to tagged missing, null, Boolean, safe canonical integer, exact string, exact bytes, ordered string list, and strict canonical JSON. The HTTP ordered list preserves duplicates and order. The CLI/HTTP historical wire formats remain different and unchanged; the translator freezes both exact compatibility codecs instead of normalizing fingerprints.
 
-## P07B/U6c standalone contract boundary (A1 substrate sealed; A2/B/C future)
+## P07B/U6c standalone contract boundary (A1/A2 sealed; B in qualification; C future)
 
 `DecisionRecord`, `ContractBundle`, `ContractExecutionTarget`, `FinalizedContractRun`, and `ContractExecution` are separate truth objects.
 
 Sealed P07B-A1 now provides one byte-complete live `PortableSource`. Closed adapter constructors reparse and exact-match their supplied WorldPlan, projection binding/definition, adapter, minimized-stimulus canonical bytes/digest, portable profile, logical-Node runner, start/readiness/capture authorities, and reconstructed execution binding. They retain exact bounded stdin/body/fixture/seed bytes where the supported profile requires them. Missing source returns `PORTABLE_SOURCE_REQUIRED` with no stronger authority.
 
-A1 does not compare that self-consistent source with the current store-bound P07A ruling, Choicepoint, or FreshConfirmation. P07B-A2 must open and revalidate those current objects, require the source execution binding to equal every retained confirmation binding, independently retranslate reopened confirmation proofs under the source-matched profile, and require exact equality with the ruling tuple partition before any file byte exists. Source contains no proof or ruling tuple bytes. A ruling alone cannot manufacture stdin, body, fixture, or seed bytes retained historically only by digest.
+A1 does not compare that self-consistent source with the current store-bound P07A ruling, Choicepoint, or FreshConfirmation. Sealed P07B-A2.1 now opens and revalidates those objects, requires the source execution binding to equal every retained confirmation binding, independently retranslates reopened confirmation proofs under the source-matched profile, and requires exact equality with the ruling tuple partition before any file byte exists. Sealed P07B-A2.2 then consumes only that private prepared authority to produce the deterministic recoverable six-file bundle and checked-in Go/Node semantic parity surface. Source contains no proof or ruling tuple bytes, and a ruling alone still cannot manufacture stdin, body, fixture, or seed bytes retained historically only by digest.
 
-The existing inherited-listener HTTP profile remains nonemittable. A1 adds `NODE_LOOPBACK_CHILD_BIND_PIPE_READY_V1` and physically exercises a child-reported FD3 readiness frame through an HTTP `Observation`. It has not yet created the required FreshConfirmation, portable Choicepoint, or selected-field ruling under that lineage. The future compiler emits raw HTTP/1.1 with `node:net`; it never treats Node's normalizing high-level HTTP API as equivalent to the sealed Go wire parser. `child_reported_port` is a process-tree report subsequently used by the request, not kernel listener-ownership evidence; arbitrary trusted code could report a decoy loopback service.
+The existing inherited-listener HTTP profile remains nonemittable. A1 adds `NODE_LOOPBACK_CHILD_BIND_PIPE_READY_V1` and physically exercises a child-reported FD3 readiness frame through an HTTP `Observation`; A2.1's physical authority matrix constructs the required FreshConfirmation, portable Choicepoint, and selected-field ruling under that lineage. The sealed compiler emits raw HTTP/1.1 with `node:net`; it never treats Node's normalizing high-level HTTP API as equivalent to the sealed Go wire parser. `child_reported_port` is a process-tree report subsequently used by the request, not kernel listener-ownership evidence; arbitrary trusted code could report a decoy loopback service.
 
 The reference emitter produces a deterministic directory containing:
 
@@ -281,7 +281,7 @@ Standalone means an isolated target inventory can invoke the test with Countersh
 
 The vendored Node harness is a second semantic implementation. A single normative corpus must drive Go and Node through strict parsing, field selection, missing/empty distinctions, raw HTTP/CLI capture, projection, eligible/ineligible taxonomy, and selected-field mutations. Standalone is unclaimed until those bytes/results agree for the exercised profile. Artifact hashes establish byte integrity, not authorship.
 
-Publication revalidates the complete expected `RULING` token under the store transition before creating an object or temporary file. A stale loser publishes nothing. The bundle object becomes durable before the head advances to terminal `RESIDUE`; a crash between those operations may leave an unreachable immutable object, never a head that names a missing object. No executable directory exists before residue. Materialization then reconstructs from the committed bundle through a private sibling temporary directory, exact reopen/hash checks, and create-new rename. A post-residue export failure is explicitly retryable and does not pretend the durable transition was rolled back.
+The P07B-B implementation revalidates the complete expected `RULING` token under the store transition before creating an object or temporary file. A stale loser publishes nothing. The bundle object becomes durable before the head advances to terminal `RESIDUE`; a crash between those operations may leave an unreachable immutable object, never a head that names a missing object. No executable directory exists before residue. Materialization reconstructs from the committed bundle through a private same-parent stage, descriptor-relative no-follow operations, repeated exact reopen/hash/roster checks, and Darwin exclusive no-follow rename. A post-residue export failure is explicitly retryable and does not pretend the durable transition was rolled back. This paragraph becomes receipted only at the exact sealed B commit; other platforms and hostile same-user replacement remain nonclaims.
 
 Later checks begin by publishing and reopening an independent immutable `ContractExecutionTarget`. The target is constructed only from the exact reopened bundle/source profile, a live Git-issued single-target capability whose once-pinned object was inspected and verified into a private materialization, a fresh durably allocated `CONFORMANCE` attempt, and a measured/revalidated explicit Node runtime. It never reuses the historical 2–4-candidate `WorldInstance` authority; copied OIDs/digests, a parsed target, or dirty working-tree bytes cannot substitute. The initial CLI profile is only logical `node` plus one exact clean repository-relative JavaScript entrypoint; arbitrary repository executables require a new physically confirmed lineage.
 
@@ -315,7 +315,7 @@ Original/derivation, Captured-to-Projection operations, nonasserted fields, and 
 
 ## Reference architecture
 
-The Go core owns identity and behavior state. `contractsource` and `runnerprofile` are implemented A1 substrate; the emitter, server, report, and web paths remain future P07/U8/U9 targets until their own sealed receipts exist:
+The Go core owns identity and behavior state. `contractsource` and `runnerprofile` are implemented A1 substrate, the node emitter/compiler is sealed A2.2 source, and terminal publication/materialization is the P07B-B qualification boundary. Execution, server, report, and web paths remain future P07B-C/U8/U9 targets until their own sealed receipts exist:
 
 ```text
 cmd/countershape/
@@ -336,7 +336,8 @@ internal/projectiontranslate/ strict unchanged CLI/HTTP projection-wire translat
 internal/choice/        immutable lineage and ruling validation
 internal/contractsource/ implemented byte-complete runnable-source reconstruction
 internal/runnerprofile/  implemented closed logical-Node runner profile
-internal/emit/node/     deterministic standalone source
+internal/emit/node/     deterministic standalone source and terminal residue application
+internal/contractmaterialize/ retryable exact six-file native publication
 internal/contractexec/  future immutable nonhead current execution evidence
 internal/store/         content-addressed artifacts and atomic heads
 internal/server/        authenticated loopback API
@@ -393,7 +394,7 @@ SOURCE_SPEC -> COMPILED_PLAN -> MATERIALIZED_CANDIDATE_SET
 CONTRACT_BUNDLE -> CONTRACT_EXECUTION_EVIDENCE (immutable nonhead object)
 ```
 
-The full product target above remains an immutable successor-study model. U6a implements only the public typed spine `SOURCE_PLAN -> BASELINE -> DIVERGENCE -> REDUCTION -> CONFIRMATION -> CHOICEPOINT_READY -> RULING`. Its internal stage table reserves terminal `RESIDUE`; P07A repairs portable ruling authority without advancing it, and P07B owns the first public construction-safe residue transition. ContractExecutionTarget, FinalizedContractRun, and ContractExecution are never stages. U6a does not implement durable successor branches, `STALE`/`INVALIDATED` status objects, deferred-session reopening, or archived head history. `CANCELLED` and `PARTIAL` remain nonadvancing evidence concepts. Future work must add new objects rather than edit historical Choicepoint bytes.
+The full product target above remains an immutable successor-study model. U6a implements the public typed spine `SOURCE_PLAN -> BASELINE -> DIVERGENCE -> REDUCTION -> CONFIRMATION -> CHOICEPOINT_READY -> RULING`; P07B-B adds the first construction-safe terminal `RESIDUE` transition while preserving the U6a meanings. ContractExecutionTarget, FinalizedContractRun, and ContractExecution are never stages. U6a/P07B-B do not implement durable successor branches, `STALE`/`INVALIDATED` status objects, deferred-session reopening, or archived head history. `CANCELLED` and `PARTIAL` remain nonadvancing evidence concepts. Future work must add new objects rather than edit historical Choicepoint bytes.
 
 ### Execution attempt
 
@@ -408,7 +409,7 @@ Each state can terminate in a typed control result. Only eligible `FINALIZED` ev
 
 - Future study-presentation target: `EMPTY`, `PREPARING`, `ACTIVE`, `PARTIAL`, `ERROR`, `COMPLETED`; these are not U6 durable objects.
 - Candidate eligibility: `OBSERVED_STABLE(k/k)`, `UNSTABLE`, `UNCOMPARABLE`, `INCOMPLETE`.
-- U6a public durable head: `SOURCE_PLAN`, `BASELINE`, `DIVERGENCE`, `REDUCTION`, `CONFIRMATION`, `CHOICEPOINT_READY`, and `RULING`; `RESIDUE` is reserved internally for P07B and has no U6a/P07A public transition.
+- U6a durable head: `SOURCE_PLAN`, `BASELINE`, `DIVERGENCE`, `REDUCTION`, `CONFIRMATION`, `CHOICEPOINT_READY`, and `RULING`; P07B-B adds only terminal `RESIDUE` through its typed node-issued publication edge.
 - U6 decision session: `BLIND_OPEN`, `PROVISIONAL_RECORDED`, `REVEALED`, `POST_REVEAL_RECORDED`, `FINALIZED`.
 - Future presentation/status target: `DISCOVERED`, derived `RESOLVED`/`DEFERRED`, successor-relative `STALE`, and explicit `INVALIDATED`; these are not current Choicepoint wire fields.
 
@@ -428,10 +429,12 @@ Each unit is separately verified, claimed, committed, sealed, and gated on `NO_C
 8. **U6b/P07A — portable ruling authority (sealed):** unchanged historical projection bytes, strict adapter-bound translators, portable exact tuples, real selectable/differing fields, selected-only custom expectations, and legacy nonemittable preservation.
 9. **U6c/P07B-A1 — source/process substrate (sealed):** byte-complete self-consistent source reconstruction, closed logical-Node runner profile, portable HTTP child-bind/readiness grammar, and physical Observation; no current-ruling join or compiler.
 10. **U6c/P07B-A2.1 — compilation authority (sealed):** current-revalidated ruling snapshot, exact source/Choicepoint/confirmation/proof joins, selected-tuple partition revalidation, and one sealed preparation with a private authority-narrowed input; no generated files or store writes.
-11. **U6c/P07B-A2.2/B/C — standalone residue (next):** Go/Node raw-wire corpus, deterministic recoverable six-file bundle, stale-safe terminal publication, retryable materialization, target-inventory absence checks, and immutable nonhead current execution.
-12. **U7 — complete CLI and reference studies:** safe next actions, both end-to-end proofs, allow-many, custom none-conforms, reject/defer, three clean reproductions, named-machine timings.
-13. **U8 — secure decision bench:** authenticated loopback API, complete state renderer, 1440/375 flows, at least three full visual passes, Playwright/axe/manual checks, and a real different-model screenshot critic.
-14. **U9 — local export, packaging, and hardening:** minimized evidence export, embedded assets/single binary, docs/license/contributor path, adversarial suite, performance/limitations ledger, final strict verify, didrun HTML evidence, receipts handoff.
+11. **U6c/P07B-A2.2 — recoverable compiler (sealed):** deterministic recoverable six-file bundle, strict parser, fixed Node-core runtime assets, Go/Node raw-wire corpus, physical generated-contract evidence, and bounded recovery/fuzz/architecture gates; no residue or product materializer.
+12. **U6c/P07B-B — terminal publication/materialization (in qualification):** opaque node-issued publication, stale-safe terminal residue, full predecessor restart, and retryable exact Darwin/arm64/cgo six-file publication; no execution target or classification.
+13. **U6c/P07B-C — standalone execution (next after B):** target-inventory absence checks, admitted runtime, immutable target and finalized run, and derived immutable nonhead current execution.
+14. **U7 — complete CLI and reference studies:** safe next actions, both end-to-end proofs, allow-many, custom none-conforms, reject/defer, three clean reproductions, named-machine timings.
+15. **U8 — secure decision bench:** authenticated loopback API, complete state renderer, 1440/375 flows, at least three full visual passes, Playwright/axe/manual checks, and a real different-model screenshot critic.
+16. **U9 — local export, packaging, and hardening:** minimized evidence export, embedded assets/single binary, docs/license/contributor path, adversarial suite, performance/limitations ledger, final strict verify, didrun HTML evidence, receipts handoff.
 
 Honest fallback milestones are allowed: truth-kernel prototype, observation-only instrument, one-domain instrument, DecisionRecord-only residue, or CLI-only surface. None inherits the full-system claim.
 
@@ -490,11 +493,11 @@ didrun references remain opaque verbatim receipt grades associated with their ex
 - Strict Go canonicalization, typed maps, and refusal states have sealed U1 receipts.
 - Regular/executable Git-object materialization and fresh Darwin fixture attempts have sealed U2 receipts for the named platform and fixtures.
 - The shared typed truth kernel has sealed CLI and HTTP adapter receipts from U3 and U4 without HTTP coercion into generic comparison semantics.
+- Sealed A1/A2 receipts cover byte-complete source reconstruction, exact current-ruling/source/confirmation joins, a deterministic recoverable six-file bundle, and Go/Node agreement for the exercised semantic corpus and runtime matrix.
 
 ### Strong engineering inferences still to test
 
-- A byte-complete source preimage can reconstruct the exact minimized adapter stimulus without entering the historical DecisionRecord.
-- A constrained Node harness can match the Go semantic profile under one normative corpus.
+- The P07B-B implementation can preserve full-token publication and descriptor-relative retry semantics across the exercised fault and concurrency matrix; its final sealed qualification is still pending.
 - A designed human-facing blind-first selected-field UX can make the now-implemented semantic session comprehensible without leaking candidate identity.
 
 ### Unvalidated technical/product/market bets
@@ -512,4 +515,4 @@ didrun references remain opaque verbatim receipt grades associated with their ex
 
 ## Handoff state
 
-**U0–U6, P07A portable selected-field ruling authority, P07B-A1 source/process reconstruction, and P07B-A2.1 current-ruling compilation authority are sealed and strict-clean. P07B-A2.2's pure recoverable compiler is next.** A1 source commit `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`, tree `da0e13f37aacd0e7fb2b52b3aeac628f5558c11e`, remains the source/process prerequisite. A2.1 reopens current ruling authority, exact-joins the source/Choicepoint/confirmation bindings, independently retranslates proof records, revalidates the selected-tuple partition, and returns a sealed wrapper with privately retained original authority plus a separate authority-narrowed input. Its exact receipt boundary and nonclaims live in `docs/status/P07B-A2-1-AUTHORITY.md`. A2.1 emits no program, file, bundle, residue, or store transition. A2.2 may now build only the pure recoverable compiler. `REFINE` remains a valid semantic noncompilable DecisionRecord but durable promotion refuses it without object publication or head mutation.
+**U0–U6, P07A, P07B-A1, P07B-A2.1, and the accepted corrected P07B-A2.2 compiler are sealed and strict-clean. P07B-B terminal publication/retryable materialization is implemented and undergoing final fresh-ledger qualification.** A1 source commit `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3` remains the source/process prerequisite; accepted A2.2 source is `6bf33350944dcdd56a4ceaa70f1d0836203ffb1f`, followed by receipt-document boundary `8f7663e2d29b63b1bb3ddca0a18bd5cfcf0fe4b1` at tree `e30957e807c9e8145a286cbb97f7cec309f7897c`. The exact provisional B scope, evidence plan, and nonclaims live in `docs/status/P07B-B-TERMINAL-PUBLICATION.md`. P07B-C target/run/execution remains the sole next feature boundary only after B is committed, sealed, Git-note-present, and strict-clean. `REFINE` remains a valid semantic noncompilable DecisionRecord but durable promotion refuses it without object publication or head mutation.

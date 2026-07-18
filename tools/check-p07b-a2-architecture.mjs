@@ -952,7 +952,7 @@ async function manifest() {
 	const promotionProduction = (await readdir(resolve(sourceRoot, "internal/choice/promotion"), { withFileTypes: true }))
 		.filter((entry) => entry.name.endsWith(".go") && !entry.name.endsWith("_test.go"));
 	if (promotionProduction.some((entry) => !entry.isFile() || entry.isSymbolicLink()) ||
-		JSON.stringify(promotionProduction.map((entry) => entry.name).sort()) !== JSON.stringify(["service.go"])) {
+		JSON.stringify(promotionProduction.map((entry) => entry.name).sort()) !== JSON.stringify(["residue.go", "service.go"])) {
 		throw new ArchitectureError(
 			"P07B_A2_PROMOTION_PRODUCTION_MAP_DRIFT",
 			promotionProduction.map((entry) => entry.name).sort().join(","),
@@ -963,11 +963,17 @@ async function manifest() {
 		["internal/emit/node/cmd/p07b-a2-compiler-probe", ["main.go"]],
 		["internal/emit/node/cmd/p07b-a2-parser-probe", ["main.go"]],
 		["internal/emit/node/model", ["bundle.go", "predicate.go", "predicate_test.go", "result.go", "source_profile.go"]],
+		["internal/emit/node/authority", ["authority.go"]],
+		["internal/emit/node/internal", ["compilation", "publication"]],
 		["internal/emit/node/internal/compilation", ["input.go"]],
+		["internal/emit/node/internal/publication", ["authority.go", "authority_test.go"]],
 		["internal/emit/node/compiler", ["compiler.go", "compiler_test.go", "runtime_darwin_test.go"]],
 		["internal/emit/node/program/v1", ["assets.go", "assets_test.go", "contract.test.mjs", "harness.mjs", "lifecycle_darwin_test.go"]],
 		["internal/emit/node/parity", ["corpus_bounds_test.go", "corpus_test.go", "entrypoint_manifest_test.go", "evaluator_test.go", "framing_test.go", "operations.go", "runner.mjs", "selector_exhaustive_test.go", "types.go"]],
-		["internal/emit/node", ["cmd", "compiler", "internal", "model", "parity", "program", "service.go"]],
+		["internal/emit/node", [
+			"authority", "cmd", "compiler", "internal", "model", "parity", "program",
+			"publication.go", "publication_store_darwin_test.go", "service.go",
+		]],
 		["internal/observe/eligibilitycore", ["eligibility.go"]],
 		["testkit/contracts", ["fixtures.go"]],
 	]);
@@ -1114,7 +1120,8 @@ function runGoDirectImportRosters(go, environment) {
 		[`${modulePrefix}internal/emit/node`, [
 			"bytes", "context", "errors", "fmt", `${modulePrefix}internal/choice`, `${modulePrefix}internal/choice/promotion`,
 			`${modulePrefix}internal/compare`, `${modulePrefix}internal/contractsource`, `${modulePrefix}internal/domain`,
-			`${modulePrefix}internal/emit/node/compiler`, `${modulePrefix}internal/emit/node/internal/compilation`, `${modulePrefix}internal/emit/node/model`,
+			`${modulePrefix}internal/emit/node/compiler`, `${modulePrefix}internal/emit/node/internal/compilation`,
+			`${modulePrefix}internal/emit/node/internal/publication`, `${modulePrefix}internal/emit/node/model`,
 			`${modulePrefix}internal/portablevalue`, `${modulePrefix}internal/projectiontranslate`, `${modulePrefix}internal/store`,
 		].sort()],
 		[`${modulePrefix}internal/emit/node/compiler`, [
@@ -1269,7 +1276,7 @@ function inspect(input, publicAPI) {
 		[cliProjection, "sha256:49ef9e1ca3e4b959b8b8e115118bd36393624086187a95180e871f23ffd7a53d", "P07B_A2_CLI_PROJECTION_AST_DRIFT"],
 		[choicepointEntry, "sha256:ff63d0c86eaa421d3a53a977a1684a00b7b9803001b8a850904328698d6b6791", "P07B_A2_CHOICE_AST_DRIFT"],
 		[confirmationEntry, "sha256:afa19ed2e9cbccb4e38f6164aef7342435bc3aa299cc3f10b1614089bb1bbc17", "P07B_A2_CONFIRMATION_AST_DRIFT"],
-		[promotionEntry, "sha256:8d838c8c6da6aa7a0cd9241d46c26a7b92acfc76e352fe6907ed5a5aaac03ce6", "P07B_A2_PROMOTION_AST_DRIFT"],
+		[promotionEntry, "sha256:86b5d2f78422c4882b9679d76b4a98cabd306c4a9449d9d4af1dc014c9990ad7", "P07B_A2_PROMOTION_AST_DRIFT"],
 		[worldEntry, "sha256:93295e3eea7706fc7efb558db513618b0797394e58b5f9f18e0256be49ddf943", "P07B_A2_WORLD_AST_DRIFT"],
 		[at("internal/domain/world.go"), "sha256:5c83df7c28163fb78ba7c01fe7099a0b44e93dae1cc50dc760b332fec17ee735", "P07B_A2_DOMAIN_AST_DRIFT"],
 		[compiler, "sha256:f32e38b05a7d175205790d817431c931dee03fc6fc860d919d11c919e814fa78", "P07B_A2_COMPILER_AST_DRIFT"],
@@ -1297,8 +1304,8 @@ function inspect(input, publicAPI) {
 		["internal/emit/node/model/predicate_test.go", "sha256:b42fb2979b259868a1e55eb40bbbdb62f8e4ce2cf120ff495967a59cc3299b29"],
 		["internal/emit/node/program/v1/lifecycle_darwin_test.go", "sha256:ec8d07309cc19d1e2827e3ec083e3599ef31c7af51ca441f5baa58dc44db895b"],
 		["testkit/studies/cli_precedence/study_darwin_test.go", "sha256:86ef88170329de110283b1f779713e56978225ffa3c365942a6db1afc62f879e"],
-		["testkit/studies/cli_precedence/reduction_darwin_test.go", "sha256:27010a72c523ff08469e76afbf29b5fc690b71c5391d4b6464f1da917cfdd69b"],
-		["testkit/studies/http_invoices/reduction_darwin_test.go", "sha256:311a4f497da7fed8705840569465d0516d5ff1664d07444fd349d9734df63fc6"],
+		["testkit/studies/cli_precedence/reduction_darwin_test.go", "sha256:f7e6a5d912b03adadcfea641a26c2bbe75914fc0a4d3a785c477a52820ee075c"],
+		["testkit/studies/http_invoices/reduction_darwin_test.go", "sha256:df56c3dd3e6c52d90d97366a445d5e72b4d43ef80f9a312b257c4132e33aa61b"],
 	]) add(api(path).fileDigest !== expected, "P07B_A2_TEST_AST_DRIFT", `${path}:${api(path).fileDigest}`);
 	for (const [path, required] of [
 		["internal/emit/node/compiler/compiler_test.go", [
@@ -1410,7 +1417,8 @@ function inspect(input, publicAPI) {
 		"P07B_A2_SNAPSHOT_PUBLIC_API_DRIFT", "snapshot type reference roster changed");
 	const exactPromotionFunctions = [
 		"Finalize", "OpenConfirmation", "OpenPortableCompilationSnapshot", "OpenReady", "OpenRuling",
-		"PersistConfirmation", "PreparePortableRuling", "Promote", "ValidatePortableRulingPreparation",
+		"PersistConfirmation", "PreparePortableRuling", "Promote", "ValidatePortableRulingPredecessor",
+		"ValidatePortableRulingPreparation",
 	].sort();
 	const promotionFunctions = api(promotionEntry.path).exportedFuncs;
 	add(JSON.stringify(promotionFunctions) !== JSON.stringify(exactPromotionFunctions),

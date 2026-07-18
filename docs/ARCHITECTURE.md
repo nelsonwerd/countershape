@@ -2,7 +2,7 @@
 
 - **Contract version:** U0 / `architecture-v1`
 - **Target:** narrowed Darwin reference instrument
-- **Status:** controlling design; U1–U6 and P07A receipts are enumerated without reinterpretation in their status files; P07B-A1 source reconstruction/portable child-bind Observation and P07B-A2.1 current-ruling compilation preparation are sealed in their status files; the A2.2 compiler, residue, materializer, target, execution, and product surfaces remain future
+- **Status:** controlling design; U1–U6, P07A, P07B-A1, P07B-A2.1, and accepted P07B-A2.2 receipts are enumerated without reinterpretation in their status files; P07B-B terminal publication/retryable native materialization is implemented on the working tree but remains unreceipted until its independent commit/seal/strict gate; target, execution, and product surfaces remain future
 - **Authority order:** `CONCEPT_BRIEF.md`, `SEMANTICS.md`, `PROJECTION_ALGEBRA.md`, then the implementation-time correction in `research/deep-dive/11-p07-implementation-red-team.md`, then the earlier `research/deep-dive/08-RED_TEAM.md`, then this document
 
 Countershape is a repository-scale operational composition for resolving one witnessed behavioral disagreement among exact repository candidates. It is not an agent runtime, candidate ranker, generalized workflow runner, correctness oracle, or new disambiguation algorithm. The reference instrument accepts trusted local code from a curated Git repository, performs finite fresh executions, compares exact projected bytes, records a local-caller-attributed selected-field ruling, and may preserve that ruling as standalone Node source only when a separate exact source preimage reconstructs the witnessed run.
@@ -236,7 +236,7 @@ P07B-A1 also implements `NODE_LOOPBACK_CHILD_BIND_PIPE_READY_V1`: the child repo
 
 Sealed P07B-A2.1 separately opens and revalidates the current ruling/Choicepoint/FreshConfirmation, requires the source execution binding to equal every retained confirmation binding, independently retranslates reopened projection proofs under the source-matched profile, and revalidates the selected-tuple partition before compiler bytes exist. It returns only a sealed preparation with a private authority-narrowed input. Source retains no proof or ruling tuple bytes. A current ruling alone cannot recover raw fixture, seed, stdin, or body bytes retained historically only by digest.
 
-The historical inherited-listener HTTP profile remains nonemittable. A1 exercised the new child-bind profile through a physical Observation; A2.1 now exercises its fresh confirmation, portable Choicepoint, selected-field ruling, and compilation join. The future generated HTTP harness uses raw `node:net` bytes and the exact Go HTTP/1.1 grammar; high-level normalizing HTTP calls are outside the profile.
+The historical inherited-listener HTTP profile remains nonemittable. A1 exercised the new child-bind profile through a physical Observation; A2.1 exercises its fresh confirmation, portable Choicepoint, selected-field ruling, and compilation join. Accepted A2.2's generated HTTP harness uses raw `node:net` bytes and the exact Go HTTP/1.1 grammar; high-level normalizing HTTP calls are outside the profile.
 
 The deterministic output directory contains exactly:
 
@@ -298,7 +298,9 @@ didrun references are opaque strings associated with their exact external comman
 | U6b / P07A | unchanged historical projection wires, strict adapter-bound portable interpretation, selected-field Choicepoint/ruling, and legacy nonportable preservation | selected-field semantic authority only; no runnable source or residue claim |
 | U6c / P07B-A1 | byte-complete self-consistent source reconstruction and portable HTTP child-bind Observation substrate | sealed source/process substrate only; no current-ruling join, compiler, confirmation/ruling under the new lineage, residue, or execution claim |
 | U6c / P07B-A2.1 | current-revalidated portable-ruling snapshot, exact source/Choicepoint/confirmation/proof join, pure exact predicate/profile model, and sealed authority-narrowed compilation input | current-ruling compilation preparation only; no generated files, compiler output, store writes, residue, materialization, or execution |
-| U6c / P07B-A2.2/B/C | recoverable compiler and Go/Node corpus, bundle publication, retryable materialization, target-inventory absence, and immutable nonhead current execution | remains future until its independent parity, stale-publication, recovery, runtime, and absence gates pass |
+| U6c / P07B-A2.2 | pure recoverable six-file compiler, strict bundle parser, fixed Node-core runtime assets, and Go/Node semantic corpus | sealed compiler/source boundary only; no residue, product materializer, target, or current execution |
+| U6c / P07B-B | opaque node-issued terminal publication, complete predecessor restart, and retryable exact native six-file materialization | current working-tree candidate; `UNRECEIPTED`; no target-inventory, runtime, run, classification, or product claim |
+| U6c / P07B-C | capability-only execution target, admitted runtime, finalized run, target-inventory absence, and immutable nonhead current execution | remains future until its independent runtime, absence, lifecycle, and classification gates pass |
 | U7 | complete CLI and both reference studies, repeated clean runs and timing | narrowed Darwin reference studies only |
 | U8 | authenticated decision bench, blind-first flow, visual/accessibility loops | studio-complete only if every security and evidence-parity gate passes |
 | U9 | minimized export, packaging, adversarial hardening, final evidence and handoff | only the capabilities mapped to verbatim receipts |

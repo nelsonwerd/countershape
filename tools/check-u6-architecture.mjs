@@ -410,7 +410,7 @@ const exactInternalImports = Object.freeze(new Map([
   ["internal/observe/eligibilitycore", ["internal/domain"]],
   ["internal/reduce", ["internal/canon", "internal/compare", "internal/domain"]],
   ["internal/reduction", ["internal/canon", "internal/domain", "internal/reduce", "internal/store"]],
-  ["internal/store", ["internal/canon", "internal/choice/promotion/authority", "internal/compare", "internal/confirmation/authority", "internal/domain", "internal/reduce"]],
+  ["internal/store", ["internal/canon", "internal/choice/promotion/authority", "internal/compare", "internal/confirmation/authority", "internal/domain", "internal/emit/node/authority", "internal/reduce"]],
   ["internal/confirmation", ["internal/canon", "internal/compare", "internal/confirmation/authority", "internal/confirmation/internal/publication", "internal/domain", "internal/observe", "internal/reduce", "internal/reduction", "internal/world"]],
   ["internal/confirmation/authority", ["internal/confirmation/internal/publication"]],
   ["internal/confirmation/internal/publication", ["internal/canon", "internal/domain"]],
@@ -1122,7 +1122,7 @@ function inspectPortableRulingBoundaries(manifest, violations) {
   }
   const inspectionReferences = productionEntries(manifest).filter((entry) => /\bInspectPortableRuling\b/u.test(entry.lexical.code));
   const inspectionCount = inspectionReferences.reduce((total, entry) => total + (entry.lexical.code.match(/\bInspectPortableRuling\b/gu) ?? []).length, 0);
-	if (inspectionCount !== 4 || !exactSet(inspectionReferences.map((entry) => entry.path), ["internal/choice/portable.go", "internal/choice/promotion/service.go"])) {
+	if (inspectionCount !== 5 || !exactSet(inspectionReferences.map((entry) => entry.path), ["internal/choice/portable.go", "internal/choice/promotion/service.go"])) {
     violations.push(["U6_PORTABLE_INSPECTION_REFERENCE_SURFACE_NOT_EXACT", inspectionReferences.map((entry) => entry.path).join(",")]);
   }
   const preparationBodies = topLevelStructBodies(promotion, "PortableRulingPreparation");
@@ -1135,8 +1135,19 @@ function inspectPortableRulingBoundaries(manifest, violations) {
   }
   for (const entry of productionEntries(manifest)) {
     const packageDirectory = entry.path.slice(0, entry.path.lastIndexOf("/"));
-    if (packageDirectory === "internal/choice/promotion" && entry.path !== "internal/choice/promotion/service.go" &&
-        /\b(?:PortableRulingPreparation|portableRulingPreparationSeal)\b/u.test(entry.lexical.code)) {
+    if (packageDirectory !== "internal/choice/promotion" || entry.path === "internal/choice/promotion/service.go") continue;
+    const preparationReferences = entry.lexical.code.match(/\bPortableRulingPreparation\b/gu) ?? [];
+    const sealReferences = entry.lexical.code.match(/\bportableRulingPreparationSeal\b/gu) ?? [];
+    if (entry.path === "internal/choice/promotion/residue.go") {
+      const studyBody = functionBody(
+        entry.lexical.code,
+        /\bfunc\s*\(p\s+PortableRulingPreparation\)\s+StudyID\s*\(/u,
+      ) ?? "";
+      const expectedStudyBody = "if !p.Valid() { return store.StudyID{} } return p.ruling.StudyID()";
+      if (preparationReferences.length !== 1 || sealReferences.length !== 0 || compactCode(studyBody) !== expectedStudyBody) {
+        violations.push(["U6_PORTABLE_PREPARATION_CONSTRUCTION_OUTSIDE_OWNER", entry.path]);
+      }
+    } else if (preparationReferences.length !== 0 || sealReferences.length !== 0) {
       violations.push(["U6_PORTABLE_PREPARATION_CONSTRUCTION_OUTSIDE_OWNER", entry.path]);
     }
   }
@@ -1181,10 +1192,12 @@ function inspectTypedPublication(manifest, violations) {
     "func (s *ObjectStore) AdvanceConfirmation(",
     "func (s *ObjectStore) AdvanceChoicepoint(",
     "func (s *ObjectStore) AdvanceRuling(",
+    "func (s *ObjectStore) AdvanceResidue(",
     "func (s *ObjectStore) advanceHead(",
     "authority confirmationauthority.Publication",
     "authority choicepromotionauthority.Choicepoint",
     "authority choicepromotionauthority.Ruling",
+    "authority nodeauthority.Publication",
   ]) requireIncludes(violations, head, anchor, "U6_TYPED_HEAD_API_MISSING", anchor);
 
   for (const entry of productionEntries(manifest)) {
@@ -1201,6 +1214,7 @@ function inspectTypedPublication(manifest, violations) {
     ["AdvanceConfirmation", "StageConfirmation"],
     ["AdvanceChoicepoint", "StageChoicepointReady"],
     ["AdvanceRuling", "StageRuling"],
+    ["AdvanceResidue", "StageResidue"],
   ]);
   for (const [method, stage] of typedTransitions) {
     const body = functionBody(head, new RegExp(`\\bfunc\\s*\\(s\\s+\\*ObjectStore\\)\\s+${method}\\s*\\(`, "u")) ?? "";
@@ -1209,7 +1223,7 @@ function inspectTypedPublication(manifest, violations) {
       violations.push(["U6_TYPED_TRANSITION_RAW_CALL_NOT_EXACT", method]);
     }
   }
-  // One declaration plus the six typed transition calls above. This also
+  // One declaration plus the seven typed transition calls above. This also
   // closes method-value exports and extra wrappers inside the raw owner file.
   if ((head.match(/\badvanceHead\b/gu) ?? []).length !== typedTransitions.size + 1) {
     violations.push(["U6_RAW_HEAD_REFERENCE_SURFACE_NOT_EXACT", "internal/store/head.go"]);
@@ -1227,17 +1241,17 @@ function inspectTypedPublication(manifest, violations) {
   requireIncludes(violations, advance, "currentToken := s.token(expected.study, current)", "U6_CAS_CURRENT_TOKEN_DERIVATION", "internal/store/head.go");
 
   const tokenBody = functionBody(head, /\bfunc\s+sameHeadToken\s*\(/u) ?? "";
-  for (const field of ["study.text", "revision", "stage", "currentKind", "currentDigest", "previousObject", "lineageRoot", "headDigest"]) {
+  for (const field of ["study.text", "revision", "stage", "currentKind", "currentDigest", "previousHead", "previousObject", "lineageRoot", "headDigest"]) {
     const escaped = field.replaceAll(".", "\\.");
     const equality = new RegExp(`\\bleft\\.${escaped}\\s*==\\s*right\\.${escaped}\\b`, "u");
     if (!equality.test(tokenBody)) violations.push(["U6_CAS_TOKEN_EXACT_EQUALITY_MISSING", field]);
   }
-  if ((tokenBody.match(/==/gu) ?? []).length !== 8 || tokenBody.includes("||") || /\.Valid\s*\(/u.test(tokenBody)) {
+  if ((tokenBody.match(/==/gu) ?? []).length !== 9 || tokenBody.includes("||") || /\.Valid\s*\(/u.test(tokenBody)) {
     violations.push(["U6_CAS_TOKEN_COMPARISON_NOT_EXACT", "sameHeadToken"]);
   }
   const exactTokenBody = "return left.study.text == right.study.text && left.revision == right.revision && left.stage == right.stage && " +
-    "left.currentKind == right.currentKind && left.currentDigest == right.currentDigest && left.previousObject == right.previousObject && " +
-    "left.lineageRoot == right.lineageRoot && left.headDigest == right.headDigest";
+    "left.currentKind == right.currentKind && left.currentDigest == right.currentDigest && left.previousHead == right.previousHead && " +
+    "left.previousObject == right.previousObject && left.lineageRoot == right.lineageRoot && left.headDigest == right.headDigest";
   if (compactCode(tokenBody) !== exactTokenBody) {
     violations.push(["U6_CAS_TOKEN_BODY_NOT_EXACT", "sameHeadToken"]);
   }

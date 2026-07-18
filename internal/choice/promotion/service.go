@@ -441,19 +441,7 @@ func openRulingAtHead(ctx context.Context, objectStore *store.ObjectStore, head 
 }
 
 func validateRuling(ctx context.Context, objectStore *store.ObjectStore, ruling Ruling) error {
-	if ruling.seal == nil || ruling.seal.marker != 1 || !ruling.record.Valid() || !ruling.choicepoint.Valid() ||
-		ruling.object.Kind() != "DecisionRecord" || ruling.object.Digest() != ruling.record.Digest() ||
-		ruling.choicepointObject.Kind() != "Choicepoint" || ruling.choicepointObject.Digest() != ruling.choicepoint.Digest() ||
-		ruling.record.ChoicepointDigest() != ruling.choicepoint.Digest() {
-		return refuse("INVALID_STORED_RULING", "ruling capability is incomplete", nil)
-	}
-	if err := objectStore.Validate(ctx, ruling.object, ruling.authority); err != nil {
-		return err
-	}
-	if err := objectStore.Validate(ctx, ruling.choicepointObject, ruling.choicepointAuthority); err != nil {
-		return err
-	}
-	if err := objectStore.Validate(ctx, ruling.confirmationObject, ruling.confirmationAuthority); err != nil {
+	if err := validateRulingPredecessor(ctx, objectStore, ruling); err != nil {
 		return err
 	}
 	current, err := objectStore.OpenHead(ctx, ruling.head.StudyID())
@@ -463,6 +451,31 @@ func validateRuling(ctx context.Context, objectStore *store.ObjectStore, ruling 
 	if !sameHead(current, ruling.head) || current.Stage() != store.StageRuling ||
 		current.CurrentKind() != "DecisionRecord" || current.CurrentDigest() != ruling.record.Digest() {
 		return refuse("RULING_NOT_CURRENT", "ruling capability was superseded", nil)
+	}
+	return nil
+}
+
+func validateRulingPredecessor(ctx context.Context, objectStore *store.ObjectStore, ruling Ruling) error {
+	if ruling.seal == nil || ruling.seal.marker != 1 || !ruling.record.Valid() || !ruling.choicepoint.Valid() ||
+		ruling.object.Kind() != "DecisionRecord" || ruling.object.Digest() != ruling.record.Digest() ||
+		ruling.choicepointObject.Kind() != "Choicepoint" || ruling.choicepointObject.Digest() != ruling.choicepoint.Digest() ||
+		ruling.record.ChoicepointDigest() != ruling.choicepoint.Digest() || ruling.head.Stage() != store.StageRuling ||
+		ruling.head.CurrentKind() != "DecisionRecord" || ruling.head.CurrentDigest() != ruling.record.Digest() ||
+		ruling.head.LineageRootDigest() != ruling.choicepoint.WorldPlan().Digest() {
+		return refuse("INVALID_STORED_RULING", "ruling capability is incomplete", nil)
+	}
+	previous, hasPrevious := ruling.head.PreviousObjectDigest()
+	if !hasPrevious || previous != ruling.choicepoint.Digest() {
+		return refuse("INVALID_STORED_RULING", "ruling head does not bind its exact Choicepoint", nil)
+	}
+	if err := objectStore.Validate(ctx, ruling.object, ruling.authority); err != nil {
+		return err
+	}
+	if err := objectStore.Validate(ctx, ruling.choicepointObject, ruling.choicepointAuthority); err != nil {
+		return err
+	}
+	if err := objectStore.Validate(ctx, ruling.confirmationObject, ruling.confirmationAuthority); err != nil {
+		return err
 	}
 	return nil
 }
@@ -699,6 +712,31 @@ func ValidatePortableRulingPreparation(
 	return nil
 }
 
+// ValidatePortableRulingPredecessor proves that a retained preparation and
+// every strict semantic object behind it belong to the supplied store
+// instance. Unlike ValidatePortableRulingPreparation it does not claim that
+// the RULING head is still current, so exact terminal replay can validate its
+// predecessor authority without recreating currentness.
+func ValidatePortableRulingPredecessor(
+	ctx context.Context,
+	objectStore *store.ObjectStore,
+	preparation PortableRulingPreparation,
+) error {
+	if ctx == nil || objectStore == nil || !preparation.Valid() {
+		return refuse("INVALID_PORTABLE_RULING_PREPARATION", "sealed portable preparation is required", nil)
+	}
+	if err := validateRulingPredecessor(ctx, objectStore, preparation.ruling); err != nil {
+		return err
+	}
+	inspection, err := choice.InspectPortableRuling(preparation.ruling.record)
+	if err != nil || inspection.DecisionDigest() != preparation.inspection.DecisionDigest() ||
+		inspection.ProfileDigest() != preparation.inspection.ProfileDigest() ||
+		!equalStrings(inspection.SelectedFields(), preparation.inspection.SelectedFields()) {
+		return refuse("INVALID_PORTABLE_RULING_PREPARATION", "portable predecessor differs from its retained ruling", err)
+	}
+	return nil
+}
+
 func equalStrings(left, right []string) bool {
 	if len(left) != len(right) {
 		return false
@@ -712,10 +750,13 @@ func equalStrings(left, right []string) bool {
 }
 
 func sameHead(left, right store.HeadToken) bool {
+	leftPreviousHead, leftHasPreviousHead := left.PreviousHeadDigest()
+	rightPreviousHead, rightHasPreviousHead := right.PreviousHeadDigest()
 	leftPrevious, leftHasPrevious := left.PreviousObjectDigest()
 	rightPrevious, rightHasPrevious := right.PreviousObjectDigest()
 	return left.StudyID().String() == right.StudyID().String() && left.Revision() == right.Revision() &&
 		left.Stage() == right.Stage() && left.CurrentKind() == right.CurrentKind() &&
 		left.CurrentDigest() == right.CurrentDigest() && left.LineageRootDigest() == right.LineageRootDigest() &&
-		left.HeadDigest() == right.HeadDigest() && leftHasPrevious == rightHasPrevious && leftPrevious == rightPrevious
+		left.HeadDigest() == right.HeadDigest() && leftHasPreviousHead == rightHasPreviousHead &&
+		leftPreviousHead == rightPreviousHead && leftHasPrevious == rightHasPrevious && leftPrevious == rightPrevious
 }

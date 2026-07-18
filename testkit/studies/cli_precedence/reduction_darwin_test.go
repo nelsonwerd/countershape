@@ -17,6 +17,7 @@ import (
 	"reflect"
 	"slices"
 	"sort"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -28,6 +29,7 @@ import (
 	"github.com/nelsonwerd/countershape/internal/choice/promotion"
 	"github.com/nelsonwerd/countershape/internal/compare"
 	"github.com/nelsonwerd/countershape/internal/confirmation"
+	"github.com/nelsonwerd/countershape/internal/contractmaterialize"
 	"github.com/nelsonwerd/countershape/internal/contractsource"
 	"github.com/nelsonwerd/countershape/internal/domain"
 	nodeemit "github.com/nelsonwerd/countershape/internal/emit/node"
@@ -44,6 +46,10 @@ const (
 	cliA21RestartSchema = "countershape/a2.1/restart/v1"
 	cliA21RequestLimit  = 8 << 10
 	cliA21ResultLimit   = 2 << 20
+	cliP07BEnv          = "COUNTERSHAPE_P07B_CLI_PUBLICATION_REQUEST"
+	cliP07BSchema       = "countershape/p07b/cli-publication/v1"
+	cliP07BModePublish  = "PUBLISH"
+	cliP07BModeOpen     = "OPEN_RESIDUE"
 )
 
 type cliA21RestartRequest struct {
@@ -63,6 +69,24 @@ type cliA21RestartResult struct {
 	Action                  string   `json:"action"`
 	SelectedFields          []string `json:"selected_fields"`
 	AllowedTupleCanonical64 []string `json:"allowed_tuple_canonical_base64"`
+}
+
+type cliP07BRequest struct {
+	Schema     string `json:"schema"`
+	Mode       string `json:"mode"`
+	StoreRoot  string `json:"store_root"`
+	SourcePath string `json:"source_path"`
+	GatePath   string `json:"gate_path"`
+	ReadyPath  string `json:"ready_path"`
+	ResultPath string `json:"result_path"`
+}
+
+type cliP07BResult struct {
+	Schema       string `json:"schema"`
+	Disposition  string `json:"disposition"`
+	StudyID      string `json:"study_id"`
+	BundleDigest string `json:"bundle_digest"`
+	HeadDigest   string `json:"head_digest"`
 }
 
 type cliA21PreparedDiagnostic struct {
@@ -251,6 +275,532 @@ func cliA21StoreInventory(t *testing.T, root string) []string {
 	}
 	sort.Strings(entries)
 	return entries
+}
+
+func runCLIP07BBPublicationRace(
+	t *testing.T,
+	storeRoot string,
+	source contractsource.PortableSource,
+	prepared nodeemit.PreparedBundle,
+) []cliP07BResult {
+	t.Helper()
+	protocolRoot := cliA21ResolvedStoreTempDir(t)
+	sourcePath := filepath.Join(protocolRoot, "portable-source.json")
+	gatePath := filepath.Join(protocolRoot, "publish.go")
+	if err := cliA21WriteExclusive(sourcePath, source.CanonicalBytes(), contractsource.MaxSourceCanonicalBytes); err != nil {
+		t.Fatalf("write CLI P07B source: %v", err)
+	}
+	executable, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Minute)
+	defer cancel()
+	commands := make([]*exec.Cmd, 2)
+	outputs := make([]cliA21BoundedOutput, 2)
+	requests := make([]cliP07BRequest, 2)
+	for index := range commands {
+		childCWD := filepath.Join(protocolRoot, fmt.Sprintf("child-%d", index))
+		if err := os.Mkdir(childCWD, 0o700); err != nil {
+			t.Fatal(err)
+		}
+		requestPath := filepath.Join(protocolRoot, fmt.Sprintf("request-%d.json", index))
+		requests[index] = cliP07BRequest{
+			Schema: cliP07BSchema, Mode: cliP07BModePublish, StoreRoot: storeRoot, SourcePath: sourcePath,
+			GatePath: gatePath, ReadyPath: filepath.Join(protocolRoot, fmt.Sprintf("ready-%d", index)),
+			ResultPath: filepath.Join(protocolRoot, fmt.Sprintf("result-%d.json", index)),
+		}
+		requestBody, err := json.Marshal(requests[index])
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := cliA21WriteExclusive(requestPath, requestBody, cliA21RequestLimit); err != nil {
+			t.Fatal(err)
+		}
+		commands[index] = exec.CommandContext(
+			ctx, executable, "-test.run=^TestCLIP07BBPublicationHelper$", "-test.count=1", "-test.timeout=90s",
+		)
+		commands[index].Dir = childCWD
+		commands[index].Env = []string{cliP07BEnv + "=" + requestPath}
+		commands[index].Stdout = &outputs[index]
+		commands[index].Stderr = &outputs[index]
+		if err := commands[index].Start(); err != nil {
+			t.Fatalf("start CLI P07B publisher %d: %v", index, err)
+		}
+	}
+	readyDeadline := time.Now().Add(45 * time.Second)
+	for {
+		ready := 0
+		for _, request := range requests {
+			if info, err := os.Lstat(request.ReadyPath); err == nil && info.Mode().IsRegular() && info.Mode().Perm() == 0o600 {
+				ready++
+			}
+		}
+		if ready == len(requests) {
+			break
+		}
+		if time.Now().After(readyDeadline) || ctx.Err() != nil {
+			for _, command := range commands {
+				_ = command.Process.Kill()
+			}
+			t.Fatalf("CLI P07B publishers did not reach the compilation barrier: %v", ctx.Err())
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+	if err := cliA21WriteExclusive(gatePath, []byte("publish\n"), 64); err != nil {
+		t.Fatal(err)
+	}
+	results := make([]cliP07BResult, len(commands))
+	for index, command := range commands {
+		if err := command.Wait(); err != nil {
+			if ctx.Err() != nil {
+				t.Fatalf("CLI P07B publisher %d timed out: %v; %s", index, ctx.Err(), outputs[index].String())
+			}
+			t.Fatalf("CLI P07B publisher %d failed: %v; %s", index, err, outputs[index].String())
+		}
+		body, err := cliA21ReadPrivateRegular(requests[index].ResultPath, cliA21ResultLimit)
+		if err != nil {
+			t.Fatalf("read CLI P07B publisher %d result: %v", index, err)
+		}
+		if decodeErr := cliA21DecodeStrict(body, &results[index]); decodeErr != nil {
+			t.Fatalf("decode CLI P07B publisher %d result: %v", index, decodeErr)
+		}
+		if results[index].Schema != cliP07BSchema || results[index].StudyID == "" ||
+			results[index].BundleDigest != prepared.BundleDigest().String() || results[index].HeadDigest == "" {
+			t.Fatalf("CLI P07B publisher %d result differs: %#v", index, results[index])
+		}
+	}
+	return results
+}
+
+func runCLIP07BBFreshProcessOpen(
+	t *testing.T,
+	storeRoot string,
+	wantBundle domain.Digest,
+	wantHead domain.Digest,
+) {
+	t.Helper()
+	protocolRoot := cliA21ResolvedStoreTempDir(t)
+	requestPath := filepath.Join(protocolRoot, "request.json")
+	resultPath := filepath.Join(protocolRoot, "result.json")
+	requestBody, err := json.Marshal(cliP07BRequest{
+		Schema: cliP07BSchema, Mode: cliP07BModeOpen, StoreRoot: storeRoot, ResultPath: resultPath,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := cliA21WriteExclusive(requestPath, requestBody, cliA21RequestLimit); err != nil {
+		t.Fatal(err)
+	}
+	childCWD := filepath.Join(protocolRoot, "child")
+	if err := os.Mkdir(childCWD, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	executable, err := os.Executable()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+	command := exec.CommandContext(
+		ctx, executable, "-test.run=^TestCLIP07BBPublicationHelper$", "-test.count=1", "-test.timeout=60s",
+	)
+	command.Dir = childCWD
+	command.Env = []string{cliP07BEnv + "=" + requestPath}
+	var output cliA21BoundedOutput
+	command.Stdout = &output
+	command.Stderr = &output
+	if err := command.Run(); err != nil {
+		t.Fatalf("fresh-process CLI residue open failed: %v; %s", err, output.String())
+	}
+	body, err := cliA21ReadPrivateRegular(resultPath, cliA21ResultLimit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var result cliP07BResult
+	if err := cliA21DecodeStrict(body, &result); err != nil || result.Schema != cliP07BSchema ||
+		result.Disposition != "OPENED" || result.BundleDigest != wantBundle.String() || result.HeadDigest != wantHead.String() {
+		t.Fatalf("fresh-process CLI residue result differs: %#v, %v", result, err)
+	}
+}
+
+func TestCLIP07BBPublicationHelper(t *testing.T) {
+	requestPath := os.Getenv(cliP07BEnv)
+	if requestPath == "" {
+		return
+	}
+	if !cliA21CleanAbsolute(requestPath) {
+		t.Fatal("CLI P07B request path is not clean and absolute")
+	}
+	body, err := cliA21ReadPrivateRegular(requestPath, cliA21RequestLimit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var request cliP07BRequest
+	if err := cliA21DecodeStrict(body, &request); err != nil || request.Schema != cliP07BSchema ||
+		!cliA21CleanAbsolute(request.StoreRoot) || !cliA21CleanAbsolute(request.ResultPath) {
+		t.Fatalf("invalid CLI P07B request: %#v, %v", request, err)
+	}
+	objectStore, err := store.OpenObjectStore(request.StoreRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	studyID, err := store.NewStudyID(cliA21StudyLabel)
+	if err != nil {
+		t.Fatal(err)
+	}
+	result := cliP07BResult{Schema: cliP07BSchema, StudyID: studyID.String()}
+	switch request.Mode {
+	case cliP07BModePublish:
+		if !cliA21CleanAbsolute(request.SourcePath) || !cliA21CleanAbsolute(request.GatePath) ||
+			!cliA21CleanAbsolute(request.ReadyPath) {
+			t.Fatal("CLI P07B publication paths are not clean and absolute")
+		}
+		sourceBody, err := cliA21ReadPrivateRegular(request.SourcePath, contractsource.MaxSourceCanonicalBytes)
+		if err != nil {
+			t.Fatal(err)
+		}
+		source, err := contractsource.Parse(sourceBody)
+		if err != nil {
+			t.Fatal(err)
+		}
+		ruling, err := promotion.OpenRuling(context.Background(), objectStore, studyID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		preparation, err := promotion.PreparePortableRuling(context.Background(), objectStore, ruling)
+		if err != nil {
+			t.Fatal(err)
+		}
+		prepared, err := nodeemit.PrepareCompilation(context.Background(), objectStore, preparation, source)
+		if err != nil {
+			t.Fatal(err)
+		}
+		bundle, err := nodeemit.CompilePrepared(prepared)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if err := cliA21WriteExclusive(request.ReadyPath, []byte("ready\n"), 64); err != nil {
+			t.Fatal(err)
+		}
+		deadline := time.Now().Add(45 * time.Second)
+		for {
+			info, gateErr := os.Lstat(request.GatePath)
+			if gateErr == nil && info.Mode().IsRegular() && info.Mode().Perm() == 0o600 {
+				break
+			}
+			if gateErr != nil && !errors.Is(gateErr, os.ErrNotExist) {
+				t.Fatal(gateErr)
+			}
+			if time.Now().After(deadline) {
+				t.Fatal("CLI P07B publication gate timed out")
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+		publishContext, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+		publication, err := nodeemit.PublishPrepared(publishContext, objectStore, bundle)
+		cancel()
+		if err != nil || !publication.Residue.Valid() {
+			t.Fatalf("CLI P07B child publication failed: %#v, %v", publication, err)
+		}
+		result.Disposition = string(publication.Disposition)
+		result.BundleDigest = publication.Residue.BundleDigest().String()
+		result.HeadDigest = publication.Residue.HeadDigest().String()
+	case cliP07BModeOpen:
+		if request.SourcePath != "" || request.GatePath != "" || request.ReadyPath != "" {
+			t.Fatal("CLI P07B restart-open request carried compiler or barrier inputs")
+		}
+		residue, err := nodeemit.OpenResidue(context.Background(), objectStore, studyID)
+		if err != nil || !residue.Valid() {
+			t.Fatalf("CLI P07B child residue open failed: %#v, %v", residue, err)
+		}
+		result.Disposition = "OPENED"
+		result.BundleDigest = residue.BundleDigest().String()
+		result.HeadDigest = residue.HeadDigest().String()
+	default:
+		t.Fatalf("unknown CLI P07B helper mode %q", request.Mode)
+	}
+	resultBody, err := json.Marshal(result)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := cliA21WriteExclusive(request.ResultPath, resultBody, cliA21ResultLimit); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func exerciseCLIP07BBPublication(
+	t *testing.T,
+	storeRoot string,
+	correctStore *store.ObjectStore,
+	wrongStore *store.ObjectStore,
+	studyID store.StudyID,
+	prepared nodeemit.PreparedCompilation,
+	source contractsource.PortableSource,
+) {
+	t.Helper()
+	bundle, err := nodeemit.CompilePrepared(prepared)
+	if err != nil || !bundle.Valid() {
+		t.Fatalf("compile real CLI terminal bundle: valid %t, %v", bundle.Valid(), err)
+	}
+	headBefore, err := correctStore.OpenHead(context.Background(), studyID)
+	if err != nil || headBefore.Stage() != store.StageRuling {
+		t.Fatalf("open exact CLI ruling before terminal publication: %v", err)
+	}
+	inventoryBefore := cliA21StoreInventory(t, storeRoot)
+	refused, err := nodeemit.PublishPrepared(context.Background(), wrongStore, bundle)
+	if !cliA21StoreAuthorityRefused(err) || refused.Residue.Valid() || refused.Disposition != "" ||
+		!reflect.DeepEqual(cliA21StoreInventory(t, storeRoot), inventoryBefore) {
+		t.Fatalf("CLI terminal authority crossed store instance: %#v, %v", refused, err)
+	}
+	cancelled, cancel := context.WithCancel(context.Background())
+	cancel()
+	cancelledResult, cancelledErr := nodeemit.PublishPrepared(cancelled, correctStore, bundle)
+	if cancelledErr == nil || cancelledResult.Residue.Valid() || cancelledResult.Disposition != "" ||
+		!reflect.DeepEqual(cliA21StoreInventory(t, storeRoot), inventoryBefore) {
+		t.Fatalf("cancelled CLI terminal publication changed durable state: %#v, %v", cancelledResult, cancelledErr)
+	}
+	mutatedView := bundle.Bundle().CanonicalBytes()
+	mutatedView[0] ^= 0xff
+	if !bundle.Valid() || bytes.Equal(mutatedView, bundle.Bundle().CanonicalBytes()) {
+		t.Fatal("caller mutation of inert bundle getter altered prepared publication authority")
+	}
+
+	results := runCLIP07BBPublicationRace(t, storeRoot, source, bundle)
+	created := 0
+	already := 0
+	for _, result := range results {
+		switch result.Disposition {
+		case string(nodeemit.PublicationCreated):
+			created++
+		case string(nodeemit.PublicationAlreadyCurrent):
+			already++
+		default:
+			t.Fatalf("unknown CLI terminal publication disposition %q", result.Disposition)
+		}
+	}
+	if created != 1 || already != 1 || results[0].BundleDigest != results[1].BundleDigest ||
+		results[0].HeadDigest != results[1].HeadDigest {
+		t.Fatalf("CLI terminal race did not converge: created=%d already=%d", created, already)
+	}
+	terminal, err := correctStore.OpenHead(context.Background(), studyID)
+	if err != nil || terminal.Stage() != store.StageResidue || terminal.Revision() != 8 ||
+		terminal.CurrentDigest() != bundle.BundleDigest() {
+		t.Fatalf("CLI terminal head differs after publication: %#v, %v", terminal, err)
+	}
+	runCLIP07BBFreshProcessOpen(t, storeRoot, bundle.BundleDigest(), terminal.HeadDigest())
+	inventoryAfter := cliA21StoreInventory(t, storeRoot)
+	for _, entry := range inventoryAfter {
+		if strings.Contains(entry, ".object-") || strings.Contains(entry, ".head-") {
+			t.Fatalf("CLI terminal publication left a temporary store entry: %q", entry)
+		}
+	}
+	replay, err := nodeemit.PublishPrepared(context.Background(), correctStore, bundle)
+	if err != nil || replay.Disposition != nodeemit.PublicationAlreadyCurrent || !replay.Residue.Valid() ||
+		replay.Residue.HeadDigest() != terminal.HeadDigest() ||
+		!reflect.DeepEqual(cliA21StoreInventory(t, storeRoot), inventoryAfter) {
+		t.Fatalf("CLI terminal replay changed durable state: %#v, %v", replay, err)
+	}
+	wrongReplay, err := nodeemit.PublishPrepared(context.Background(), wrongStore, bundle)
+	if !cliA21StoreAuthorityRefused(err) || wrongReplay.Residue.Valid() || wrongReplay.Disposition != "" ||
+		!reflect.DeepEqual(cliA21StoreInventory(t, storeRoot), inventoryAfter) {
+		t.Fatalf("CLI terminal replay crossed retained store authority: %#v, %v", wrongReplay, err)
+	}
+	restartedStore, err := store.OpenObjectStore(storeRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	restartedResidue, err := nodeemit.OpenResidue(context.Background(), restartedStore, studyID)
+	if err != nil || !restartedResidue.Valid() || restartedResidue.BundleDigest() != bundle.BundleDigest() ||
+		restartedResidue.HeadDigest() != terminal.HeadDigest() {
+		t.Fatalf("CLI terminal residue did not reconstruct after restart: %#v, %v", restartedResidue, err)
+	}
+
+	outputParent := cliA21ResolvedStoreTempDir(t)
+	firstDestination := filepath.Join(outputParent, "cli-contract")
+	first, err := contractmaterialize.Materialize(
+		context.Background(), restartedStore, restartedResidue, firstDestination,
+	)
+	if err != nil || !first.Valid() || first.Disposition() != contractmaterialize.Created ||
+		first.State() != contractmaterialize.StateCreated || first.Destination() != firstDestination ||
+		first.BundleDigest() != restartedResidue.BundleDigest() ||
+		first.ResidueHeadDigest() != restartedResidue.HeadDigest() {
+		t.Fatalf("create exact CLI contract output: %#v, %v", first, err)
+	}
+	assertCLIP07BBOutput(t, firstDestination, bundle)
+	if !reflect.DeepEqual(cliA21StoreInventory(t, storeRoot), inventoryAfter) {
+		t.Fatal("CLI materialization changed the terminal object store")
+	}
+	outputBefore := cliA21StoreInventory(t, firstDestination)
+	second, err := contractmaterialize.Materialize(
+		context.Background(), restartedStore, restartedResidue, firstDestination,
+	)
+	if err != nil || !second.Valid() || second.Disposition() != contractmaterialize.AlreadyExact ||
+		second.State() != contractmaterialize.StateAlreadyExact ||
+		!reflect.DeepEqual(cliA21StoreInventory(t, firstDestination), outputBefore) {
+		t.Fatalf("idempotent CLI contract reopen rewrote output: %#v, %v", second, err)
+	}
+	assertCLIP07BBOutput(t, firstDestination, bundle)
+	if !reflect.DeepEqual(cliA21StoreInventory(t, storeRoot), inventoryAfter) {
+		t.Fatal("CLI exact-existing retry changed the terminal object store")
+	}
+	secondDestination := filepath.Join(outputParent, "cli-contract-copy")
+	if copied, err := contractmaterialize.Materialize(
+		context.Background(), restartedStore, restartedResidue, secondDestination,
+	); err != nil || !copied.Valid() || copied.Disposition() != contractmaterialize.Created {
+		t.Fatalf("materialize CLI residue at independent destination: %#v, %v", copied, err)
+	}
+	assertCLIP07BBOutput(t, secondDestination, bundle)
+	if !reflect.DeepEqual(cliA21StoreInventory(t, storeRoot), inventoryAfter) {
+		t.Fatal("CLI second-destination materialization changed the terminal object store")
+	}
+	for _, file := range bundle.Bundle().Files() {
+		firstBody, firstErr := os.ReadFile(filepath.Join(firstDestination, file.Path()))
+		secondBody, secondErr := os.ReadFile(filepath.Join(secondDestination, file.Path()))
+		if firstErr != nil || secondErr != nil || !bytes.Equal(firstBody, file.Content()) || !bytes.Equal(secondBody, file.Content()) {
+			t.Fatalf("CLI materialized file %s differs: %v, %v", file.Path(), firstErr, secondErr)
+		}
+	}
+	tamperedPath := filepath.Join(firstDestination, "README.md")
+	tampered := []byte("changed test-owned output\n")
+	if err := os.WriteFile(tamperedPath, tampered, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if invalid, err := contractmaterialize.Materialize(
+		context.Background(), restartedStore, restartedResidue, firstDestination,
+	); !contractmaterialize.IsCode(err, contractmaterialize.CodeExportIncomplete) || invalid.Valid() {
+		t.Fatalf("changed CLI output was repaired or accepted: %#v, %v", invalid, err)
+	}
+	if body, err := os.ReadFile(tamperedPath); err != nil || !bytes.Equal(body, tampered) {
+		t.Fatalf("changed CLI output was overwritten: %q, %v", body, err)
+	}
+	if !reflect.DeepEqual(cliA21StoreInventory(t, storeRoot), inventoryAfter) {
+		t.Fatal("CLI changed-output refusal changed the terminal object store")
+	}
+	assertCLIP07BBMissingPredecessorsRefuse(t, storeRoot, studyID, restartedStore, restartedResidue)
+}
+
+func assertCLIP07BBOutput(t *testing.T, destination string, prepared nodeemit.PreparedBundle) {
+	t.Helper()
+	bundle := prepared.Bundle()
+	root, err := os.Lstat(destination)
+	if err != nil || !root.IsDir() || root.Mode()&os.ModeSymlink != 0 || root.Mode().Perm() != 0o700 ||
+		root.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0 {
+		t.Fatalf("CLI contract root facts differ: %v, %v", root, err)
+	}
+	entries, err := os.ReadDir(destination)
+	if err != nil || len(entries) != len(bundle.Files()) {
+		t.Fatalf("CLI contract roster count differs: %d, %v", len(entries), err)
+	}
+	wantNames := make([]string, len(bundle.Files()))
+	for index, file := range bundle.Files() {
+		wantNames[index] = file.Path()
+	}
+	sort.Strings(wantNames)
+	actualNames := make([]string, len(entries))
+	for index, entry := range entries {
+		actualNames[index] = entry.Name()
+	}
+	sort.Strings(actualNames)
+	if !slices.Equal(actualNames, wantNames) {
+		t.Fatalf("CLI contract roster = %v, want %v", actualNames, wantNames)
+	}
+	for _, file := range bundle.Files() {
+		path := filepath.Join(destination, file.Path())
+		info, statErr := os.Lstat(path)
+		if statErr != nil {
+			t.Fatalf("CLI contract member %s stat failed: %v", file.Path(), statErr)
+		}
+		stat, statOK := info.Sys().(*syscall.Stat_t)
+		body, readErr := os.ReadFile(path)
+		digest := sha256.Sum256(body)
+		if statErr != nil || readErr != nil || !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 ||
+			info.Mode().Perm() != 0o644 || info.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0 ||
+			!statOK || stat.Nlink != 1 || int64(file.ByteCount()) != info.Size() ||
+			file.ByteSHA256().String() != fmt.Sprintf("sha256:%x", digest) || !bytes.Equal(body, file.Content()) {
+			t.Fatalf("CLI contract member %s facts differ: %v, %v", file.Path(), statErr, readErr)
+		}
+	}
+}
+
+func assertCLIP07BBMissingPredecessorsRefuse(
+	t *testing.T,
+	storeRoot string,
+	studyID store.StudyID,
+	objectStore *store.ObjectStore,
+	residue nodeemit.Residue,
+) {
+	t.Helper()
+	choicepointObject, _, err := objectStore.Read(context.Background(), "Choicepoint", residue.ChoicepointDigest())
+	if err != nil {
+		t.Fatal(err)
+	}
+	choicepoint, err := choice.ParseChoicepointRecord(choicepointObject.CanonicalBytes())
+	if err != nil {
+		t.Fatal(err)
+	}
+	objects := []struct {
+		name   string
+		digest domain.Digest
+	}{
+		{"bundle", residue.BundleDigest()},
+		{"decision", residue.DecisionRecordDigest()},
+		{"choicepoint", residue.ChoicepointDigest()},
+		{"confirmation", choicepoint.ConfirmationDigest()},
+	}
+	for _, object := range objects {
+		t.Run("missing-"+object.name, func(t *testing.T) {
+			copyRoot := copyCLIP07BPrivateTree(t, storeRoot)
+			hexDigest := strings.TrimPrefix(object.digest.String(), "sha256:")
+			path := filepath.Join(copyRoot, "objects", "sha256", hexDigest[:2], hexDigest)
+			if err := os.Remove(path); err != nil {
+				t.Fatal(err)
+			}
+			copiedStore, err := store.OpenObjectStore(copyRoot)
+			if err != nil {
+				t.Fatal(err)
+			}
+			opened, err := nodeemit.OpenResidue(context.Background(), copiedStore, studyID)
+			if err == nil || opened.Valid() {
+				t.Fatalf("terminal residue opened without %s: %#v, %v", object.name, opened, err)
+			}
+		})
+	}
+}
+
+func copyCLIP07BPrivateTree(t *testing.T, source string) string {
+	t.Helper()
+	parent := cliA21ResolvedStoreTempDir(t)
+	destination := filepath.Join(parent, "store-copy")
+	err := filepath.WalkDir(source, func(path string, entry os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		relative, err := filepath.Rel(source, path)
+		if err != nil {
+			return err
+		}
+		target := filepath.Join(destination, relative)
+		info, err := entry.Info()
+		if err != nil {
+			return err
+		}
+		if entry.IsDir() {
+			return os.Mkdir(target, info.Mode().Perm())
+		}
+		if !entry.Type().IsRegular() {
+			return fmt.Errorf("cannot copy non-regular store entry %s", relative)
+		}
+		body, err := os.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		return os.WriteFile(target, body, info.Mode().Perm())
+	})
+	if err != nil {
+		t.Fatalf("copy terminal CLI store: %v", err)
+	}
+	return destination
 }
 
 func assertCLICompilationFreshProcessRestart(
@@ -1312,6 +1862,9 @@ func TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence(t *test
 	if _, _, err := restartedStore.Read(context.Background(), "DecisionRecord", rejectedDecision.Digest()); err == nil {
 		t.Fatal("losing stale DecisionRecord was published before the head compare-and-swap")
 	}
+	exerciseCLIP07BBPublication(
+		t, promotionRoot, foreignStore, rulingRestart, studyID, restartedPreparation, parsedSource,
+	)
 }
 
 func TestCLIPhysicalReducerBudgetFenceRetainsOnlyBestKnown(t *testing.T) {

@@ -14,6 +14,7 @@ const copyPaths = Object.freeze([
 	"internal/adapters/http/model",
 	"internal/canon",
 	"internal/choice/choicepoint.go",
+	"internal/choice/promotion/residue.go",
 	"internal/choice/promotion/service.go",
 	"internal/choice/session_roundtrip_test.go",
 	"internal/confirmation/service_test.go",

@@ -345,6 +345,104 @@ func (s *ObjectStore) Validate(ctx context.Context, object SemanticObject, autho
 	return storeContextRefusal(ctx, codeObjectAuthorityRefused)
 }
 
+// ValidateExternalPublicationPath is a narrow refusal edge for downstream
+// physical publishers. It proves only that one clean absolute path does not
+// contain, equal, or sit inside this store's owned namespace. It deliberately
+// exposes neither the store root nor a path-construction capability.
+func (s *ObjectStore) ValidateExternalPublicationPath(ctx context.Context, path string) error {
+	if s == nil || s.instance == nil {
+		return refuse(codeInvalidObjectStore, "store is zero or uninitialized", nil)
+	}
+	s.instance.mu.Lock()
+	defer s.instance.mu.Unlock()
+	if err := storeContextRefusal(ctx, codeObjectAuthorityRefused); err != nil {
+		return err
+	}
+	if err := s.assertReady(); err != nil {
+		return err
+	}
+	if path == "" || !filepath.IsAbs(path) || filepath.Clean(path) != path {
+		return refuse(codeInvalidObjectStore, "external publication path must be clean and absolute", nil)
+	}
+	physicalOverlap, err := physicalPathOverlapsRoot(s.root, s.rootInfo, path)
+	if err != nil {
+		return refuse(codeInvalidObjectStore, "external publication path could not be proven disjoint", err)
+	}
+	if filesystemPathsOverlap(s.root, path) || physicalOverlap {
+		return refuse(codeInvalidObjectStore, "external publication path overlaps the owned store namespace", nil)
+	}
+	if err := s.assertReady(); err != nil {
+		return err
+	}
+	return storeContextRefusal(ctx, codeObjectAuthorityRefused)
+}
+
+func physicalPathOverlapsRoot(root string, rootInfo os.FileInfo, candidate string) (bool, error) {
+	existing := candidate
+	candidateExists := true
+	var candidateInfo os.FileInfo
+	for {
+		info, err := os.Stat(existing)
+		if err == nil {
+			if existing == candidate {
+				candidateInfo = info
+			}
+			break
+		}
+		if !errors.Is(err, os.ErrNotExist) {
+			return false, err
+		}
+		candidateExists = false
+		parent := filepath.Dir(existing)
+		if parent == existing {
+			return false, err
+		}
+		existing = parent
+	}
+	resolved, err := filepath.EvalSymlinks(existing)
+	if err != nil {
+		return false, err
+	}
+	for current := resolved; ; current = filepath.Dir(current) {
+		info, statErr := os.Stat(current)
+		if statErr != nil {
+			return false, statErr
+		}
+		if os.SameFile(rootInfo, info) {
+			return true, nil
+		}
+		if filepath.Dir(current) == current {
+			break
+		}
+	}
+	if candidateExists {
+		for current := root; ; current = filepath.Dir(current) {
+			info, statErr := os.Stat(current)
+			if statErr != nil {
+				return false, statErr
+			}
+			if os.SameFile(candidateInfo, info) {
+				return true, nil
+			}
+			if filepath.Dir(current) == current {
+				break
+			}
+		}
+	}
+	return false, nil
+}
+
+func filesystemPathsOverlap(left, right string) bool {
+	contains := func(parent, child string) bool {
+		relative, err := filepath.Rel(parent, child)
+		if err != nil {
+			return true
+		}
+		return relative == "." || (relative != ".." && !strings.HasPrefix(relative, ".."+string(filepath.Separator)))
+	}
+	return contains(left, right) || contains(right, left)
+}
+
 func (s *ObjectStore) openAtLocked(ctx context.Context, object SemanticObject, path, shard string) (ObjectAuthority, error) {
 	if err := storeContextRefusal(ctx, codeObjectAuthorityRefused); err != nil {
 		return ObjectAuthority{}, err

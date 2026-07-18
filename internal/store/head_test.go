@@ -297,22 +297,32 @@ func TestStudyHeadCASBindsEveryExpectedTokenFieldBeforePublication(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
+	priorHead := head
 	head, err = value.advanceHead(
-		context.Background(), head, StageBaseline, semanticObjectForTest(t, "CandidateOutcomeMap", "baseline"),
+		context.Background(), priorHead, StageBaseline, semanticObjectForTest(t, "CandidateOutcomeMap", "baseline"),
 	)
 	if err != nil {
 		t.Fatal(err)
+	}
+	previousHead, hasPreviousHead := head.PreviousHeadDigest()
+	if !hasPreviousHead || previousHead != priorHead.HeadDigest() {
+		t.Fatalf("baseline previous head = %v/%v, want %s", previousHead, hasPreviousHead, priorHead.HeadDigest())
 	}
 	otherStudy, _ := NewStudyID("field exact CAS other existing study")
 	otherHead, err := value.createStudyObject(context.Background(), otherStudy, semanticObjectForTest(t, "WorldPlan", "other plan"))
 	if err != nil {
 		t.Fatal(err)
 	}
+	otherPriorHead := otherHead
 	otherHead, err = value.advanceHead(
-		context.Background(), otherHead, StageBaseline, semanticObjectForTest(t, "CandidateOutcomeMap", "other baseline"),
+		context.Background(), otherPriorHead, StageBaseline, semanticObjectForTest(t, "CandidateOutcomeMap", "other baseline"),
 	)
 	if err != nil {
 		t.Fatal(err)
+	}
+	otherPreviousHead, otherHasPreviousHead := otherHead.PreviousHeadDigest()
+	if !otherHasPreviousHead || otherPreviousHead != otherPriorHead.HeadDigest() {
+		t.Fatalf("other baseline previous head = %v/%v, want %s", otherPreviousHead, otherHasPreviousHead, otherPriorHead.HeadDigest())
 	}
 	mutations := []struct {
 		name   string
@@ -323,6 +333,7 @@ func TestStudyHeadCASBindsEveryExpectedTokenFieldBeforePublication(t *testing.T)
 		{"stage", func(token *HeadToken) { token.stage = StageDivergence }},
 		{"current-kind", func(token *HeadToken) { token.currentKind = "FreshConfirmation" }},
 		{"current-digest", func(token *HeadToken) { token.currentDigest = otherHead.currentDigest }},
+		{"previous-head", func(token *HeadToken) { token.previousHead = otherHead.previousHead }},
 		{"previous-object", func(token *HeadToken) { token.previousObject = otherHead.previousObject }},
 		{"lineage-root", func(token *HeadToken) { token.lineageRoot = otherHead.lineageRoot }},
 		{"head-digest", func(token *HeadToken) { token.headDigest = otherHead.headDigest }},

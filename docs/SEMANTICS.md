@@ -1,7 +1,7 @@
 # Countershape semantic authority contract
 
 - **Contract version:** `semantics-v1`
-- **Status:** controlling model; runtime authority is receipted through P07A, P07B-A1 source/child-bind Observation, and P07B-A2.1 current-ruling compilation preparation; compiler output and standalone publication remain future
+- **Status:** controlling model; runtime authority is receipted through P07A, P07B-A1 source/child-bind Observation, P07B-A2.1 current-ruling compilation preparation, and accepted P07B-A2.2 pure compiler output; P07B-B terminal publication/retryable native materialization is implemented but unreceipted until its independent gate, while execution remains future
 - **Purpose:** separate structural identity, measured facts, comparison assessment, observed behavior, and storage/wire projection
 
 Countershape does not treat a digest-shaped string, a status enum, or a JSON object as evidence merely because it has the right fields. Each stronger state is available only through the operation that can establish it. Some schemas describe exact canonical artifact bodies; others describe external storage or wire envelopes. Production constructors must rebuild the corresponding opaque authority from stricter inputs.
@@ -14,7 +14,7 @@ Some envelopes also carry a separately derived companion digest. In particular, 
 
 Schema acceptance proves only that a wire value has the declared closed shape. It does not prove strict canonical parsing, semantic construction, source provenance, physical freshness, host truth, comparison admission, durability, or current-head authority. Strings and collections may have stricter UTF-8 byte caps in Go than JSON Schema's code-point-oriented `maxLength` can express.
 
-U1 did not supply explicit runtime-to-wire codecs for every target schema. Sealed U6 adds strict runtime codecs, exact canonical body-field sets, and one valid runtime/example intersection for `Choicepoint` and `DecisionRecord`; the exact receipt boundary and grades live in `status/U6.md`. This is not equivalence between the JSON-Schema and strict-Go acceptance languages: schemas intentionally overapproximate some UTF-8 byte caps and semantic authority. Future standalone, studio, and export schemas remain planning authorities until their owning units implement and receipt their named parity gates.
+U1 did not supply explicit runtime-to-wire codecs for every target schema. Sealed U6 adds strict runtime codecs, exact canonical body-field sets, and one valid runtime/example intersection for `Choicepoint` and `DecisionRecord`; the exact receipt boundary and grades live in `status/U6.md`. This is not equivalence between the JSON-Schema and strict-Go acceptance languages: schemas intentionally overapproximate some UTF-8 byte caps and semantic authority. The remaining P07B-C target/run/execution schemas, plus studio and export schemas, remain planning authorities until their owning units implement and receipt their named parity gates.
 
 ## Projection definition and result authority
 
@@ -136,6 +136,8 @@ A DTO Boolean such as a derived `compilable` display field, a string status such
 `ContractBundle` is a canonical semantic body whose external typed digest becomes the terminal `RESIDUE` reference. It embeds the exact recoverable bytes of all six generated files with fixed paths, modes, counts, and raw-byte digests. `manifest.json` covers the other five files and excludes itself; the outer bundle covers all six. Neither the manifest nor a generated file embeds the bundle digest. A didrun receipt or standalone execution fact cannot enter deterministic bundle source because it exists only after that source is built and run.
 
 The store checks the complete expected `RULING` token under the exclusive transition before creating an object or temporary file. It durably publishes and reopens the bundle before advancing the head. A stale loser publishes nothing. A crash after immutable object publication but before head publication may leave an unreachable object; a head must never refer to a missing one. Final output materialization happens only after residue publication and is retryable from the reopened bundle. A post-residue materialization failure reports that durable publication already occurred.
+
+The P07B-B publication/materialization paragraphs describe the current working-tree candidate and remain `UNRECEIPTED` until its independent source and receipt-document boundaries are sealed and strict-clean. The P07B-C target, finalized-run, and execution paragraphs below are future design authority only.
 
 `ContractExecutionTarget` is a separate immutable nonhead pre-spawn authority. It binds one reopened bundle and exact source profile, one explicit Git-pinned inspected and verified private materialization, one fresh durably allocated conformance attempt, and one measured/revalidated Node executable and owned runtime probe. It is constructed only from retained live capabilities; a parsed body, copied OIDs, or copied digests are inert. It does not reuse `WorldInstance`, whose authority remains closed over the historical 2–4-candidate comparison plan. Dirty working-tree bytes are never represented as the pinned target or executed by this edge.
 

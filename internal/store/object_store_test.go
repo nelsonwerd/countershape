@@ -59,6 +59,72 @@ func newObjectStoreForTest(t *testing.T) (*ObjectStore, string) {
 	return value, root
 }
 
+func TestExternalPublicationPathCannotOverlapOwnedStoreNamespace(t *testing.T) {
+	objectStore, root := newObjectStoreForTest(t)
+	sibling := filepath.Join(filepath.Dir(root), "contract-output")
+	if err := objectStore.ValidateExternalPublicationPath(context.Background(), sibling); err != nil {
+		t.Fatalf("disjoint sibling output was refused: %v", err)
+	}
+	for name, path := range map[string]string{
+		"root":       root,
+		"descendant": filepath.Join(root, "output"),
+		"ancestor":   filepath.Dir(root),
+		"relative":   "contract-output",
+		"unclean":    filepath.Join(filepath.Dir(root), ".", "contract-output") + string(filepath.Separator) + "..",
+	} {
+		t.Run(name, func(t *testing.T) {
+			if err := objectStore.ValidateExternalPublicationPath(context.Background(), path); err == nil {
+				t.Fatalf("overlapping or invalid external path %q was accepted", path)
+			}
+		})
+	}
+	caseAlias := strings.Replace(root, string(filepath.Separator)+"Users"+string(filepath.Separator),
+		string(filepath.Separator)+"users"+string(filepath.Separator), 1)
+	if caseAlias != root {
+		aliasInfo, aliasErr := os.Stat(caseAlias)
+		if aliasErr == nil && os.SameFile(objectStore.rootInfo, aliasInfo) {
+			for name, path := range map[string]string{
+				"alias-root":       caseAlias,
+				"alias-descendant": filepath.Join(caseAlias, "output"),
+				"alias-ancestor":   filepath.Dir(caseAlias),
+			} {
+				t.Run(name, func(t *testing.T) {
+					if err := objectStore.ValidateExternalPublicationPath(context.Background(), path); err == nil {
+						t.Fatalf("physical filesystem alias %q was accepted", path)
+					}
+				})
+			}
+		}
+	}
+	symlinkAlias := filepath.Join(filepath.Dir(root), "store-symlink-alias")
+	if err := os.Symlink(root, symlinkAlias); err != nil {
+		t.Fatal(err)
+	}
+	for name, path := range map[string]string{
+		"symlink-alias-root":       symlinkAlias,
+		"symlink-alias-descendant": filepath.Join(symlinkAlias, "output"),
+	} {
+		t.Run(name, func(t *testing.T) {
+			if err := objectStore.ValidateExternalPublicationPath(context.Background(), path); err == nil {
+				t.Fatalf("deterministic physical store alias %q was accepted", path)
+			}
+		})
+	}
+	aliasHost := resolvedStoreTestTempDir(t)
+	parentAlias := filepath.Join(aliasHost, "store-parent-symlink-alias")
+	if err := os.Symlink(filepath.Dir(root), parentAlias); err != nil {
+		t.Fatal(err)
+	}
+	if err := objectStore.ValidateExternalPublicationPath(context.Background(), parentAlias); err == nil {
+		t.Fatalf("deterministic physical store-parent alias %q was accepted", parentAlias)
+	}
+	cancelled, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := objectStore.ValidateExternalPublicationPath(cancelled, sibling); err == nil {
+		t.Fatal("cancelled external-path validation succeeded")
+	}
+}
+
 func TestObjectStoreUsesOneCreateOncePublisherForDistinctSemanticKinds(t *testing.T) {
 	value, root := newObjectStoreForTest(t)
 	objects := []SemanticObject{

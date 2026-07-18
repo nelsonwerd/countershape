@@ -17,6 +17,7 @@ import (
 	"reflect"
 	"slices"
 	"sort"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -28,6 +29,7 @@ import (
 	"github.com/nelsonwerd/countershape/internal/choice/promotion"
 	"github.com/nelsonwerd/countershape/internal/compare"
 	"github.com/nelsonwerd/countershape/internal/confirmation"
+	"github.com/nelsonwerd/countershape/internal/contractmaterialize"
 	"github.com/nelsonwerd/countershape/internal/contractsource"
 	"github.com/nelsonwerd/countershape/internal/domain"
 	nodeemit "github.com/nelsonwerd/countershape/internal/emit/node"
@@ -272,6 +274,333 @@ func httpA21StoreInventory(t *testing.T, root string) []string {
 	}
 	sort.Strings(entries)
 	return entries
+}
+
+func exerciseHTTPP07BBPublication(
+	t *testing.T,
+	storeRoot string,
+	correctStore *store.ObjectStore,
+	wrongStore *store.ObjectStore,
+	studyID store.StudyID,
+	prepared nodeemit.PreparedCompilation,
+	alternateStoreRoot string,
+	alternateStore *store.ObjectStore,
+	alternateStudyID store.StudyID,
+	alternatePrepared nodeemit.PreparedCompilation,
+) {
+	t.Helper()
+	bundle, err := nodeemit.CompilePrepared(prepared)
+	if err != nil || !bundle.Valid() || bundle.Bundle().DecisionAction() != string(choice.ActionCustomExpectation) {
+		t.Fatalf("compile real child-bind HTTP terminal bundle: valid %t, %v", bundle.Valid(), err)
+	}
+	alternateBundle, err := nodeemit.CompilePrepared(alternatePrepared)
+	if err != nil || !alternateBundle.Valid() ||
+		alternateBundle.Bundle().DecisionAction() != string(choice.ActionAllowObserved) ||
+		alternateBundle.BundleDigest() == bundle.BundleDigest() ||
+		bytes.Equal(alternateBundle.Bundle().CanonicalBytes(), bundle.Bundle().CanonicalBytes()) {
+		t.Fatalf("compile distinct observed HTTP terminal bundle: valid %t, %v", alternateBundle.Valid(), err)
+	}
+	headBefore, err := correctStore.OpenHead(context.Background(), studyID)
+	if err != nil || headBefore.Stage() != store.StageRuling {
+		t.Fatalf("open exact HTTP ruling before terminal publication: %v", err)
+	}
+	inventoryBefore := httpA21StoreInventory(t, storeRoot)
+	refused, err := nodeemit.PublishPrepared(context.Background(), wrongStore, bundle)
+	if !httpA21StoreAuthorityRefused(err) || refused.Residue.Valid() || refused.Disposition != "" ||
+		!reflect.DeepEqual(httpA21StoreInventory(t, storeRoot), inventoryBefore) {
+		t.Fatalf("HTTP terminal authority crossed store instance: %#v, %v", refused, err)
+	}
+
+	type outcome struct {
+		result nodeemit.PublicationResult
+		err    error
+	}
+	ready := make(chan struct{}, 2)
+	start := make(chan struct{})
+	finished := make(chan outcome, 2)
+	raceContext, cancelRace := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancelRace()
+	for range 2 {
+		go func() {
+			ready <- struct{}{}
+			<-start
+			result, publishErr := nodeemit.PublishPrepared(raceContext, correctStore, bundle)
+			finished <- outcome{result: result, err: publishErr}
+		}()
+	}
+	<-ready
+	<-ready
+	close(start)
+	outcomes := make([]outcome, 0, 2)
+	for len(outcomes) < 2 {
+		select {
+		case result := <-finished:
+			outcomes = append(outcomes, result)
+		case <-raceContext.Done():
+			t.Fatalf("HTTP terminal publication race did not finish: %v", raceContext.Err())
+		}
+	}
+	created := 0
+	already := 0
+	for index, outcome := range outcomes {
+		if outcome.err != nil || !outcome.result.Residue.Valid() ||
+			outcome.result.Residue.BundleDigest() != bundle.BundleDigest() {
+			t.Fatalf("HTTP terminal publication result %d is invalid: %#v, %v", index, outcome.result, outcome.err)
+		}
+		switch outcome.result.Disposition {
+		case nodeemit.PublicationCreated:
+			created++
+		case nodeemit.PublicationAlreadyCurrent:
+			already++
+		default:
+			t.Fatalf("unknown HTTP terminal publication disposition %q", outcome.result.Disposition)
+		}
+	}
+	if created != 1 || already != 1 || outcomes[0].result.Residue.HeadDigest() != outcomes[1].result.Residue.HeadDigest() {
+		t.Fatalf("HTTP terminal race did not converge: created=%d already=%d", created, already)
+	}
+	terminal, err := correctStore.OpenHead(context.Background(), studyID)
+	if err != nil || terminal.Stage() != store.StageResidue || terminal.Revision() != 8 ||
+		terminal.CurrentDigest() != bundle.BundleDigest() {
+		t.Fatalf("HTTP terminal head differs after publication: %#v, %v", terminal, err)
+	}
+	inventoryAfter := httpA21StoreInventory(t, storeRoot)
+	for _, entry := range inventoryAfter {
+		if strings.Contains(entry, ".object-") || strings.Contains(entry, ".head-") {
+			t.Fatalf("HTTP terminal publication left a temporary store entry: %q", entry)
+		}
+	}
+	replay, err := nodeemit.PublishPrepared(context.Background(), correctStore, bundle)
+	if err != nil || replay.Disposition != nodeemit.PublicationAlreadyCurrent || !replay.Residue.Valid() ||
+		replay.Residue.HeadDigest() != terminal.HeadDigest() ||
+		!reflect.DeepEqual(httpA21StoreInventory(t, storeRoot), inventoryAfter) {
+		t.Fatalf("HTTP terminal replay changed durable state: %#v, %v", replay, err)
+	}
+	wrongReplay, err := nodeemit.PublishPrepared(context.Background(), wrongStore, bundle)
+	if !httpA21StoreAuthorityRefused(err) || wrongReplay.Residue.Valid() || wrongReplay.Disposition != "" ||
+		!reflect.DeepEqual(httpA21StoreInventory(t, storeRoot), inventoryAfter) {
+		t.Fatalf("HTTP terminal replay crossed retained store authority: %#v, %v", wrongReplay, err)
+	}
+	restartedStore, err := store.OpenObjectStore(storeRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	restartedResidue, err := nodeemit.OpenResidue(context.Background(), restartedStore, studyID)
+	if err != nil || !restartedResidue.Valid() || restartedResidue.BundleDigest() != bundle.BundleDigest() ||
+		restartedResidue.HeadDigest() != terminal.HeadDigest() {
+		t.Fatalf("HTTP terminal residue did not reconstruct after restart: %#v, %v", restartedResidue, err)
+	}
+
+	alternatePublished, err := nodeemit.PublishPrepared(context.Background(), alternateStore, alternateBundle)
+	if err != nil || !alternatePublished.Residue.Valid() ||
+		alternatePublished.Disposition != nodeemit.PublicationCreated ||
+		alternatePublished.Residue.BundleDigest() != alternateBundle.BundleDigest() {
+		t.Fatalf("publish distinct observed HTTP residue: %#v, %v", alternatePublished, err)
+	}
+	alternateTerminal, err := alternateStore.OpenHead(context.Background(), alternateStudyID)
+	if err != nil || alternateTerminal.Stage() != store.StageResidue || alternateTerminal.Revision() != 8 ||
+		alternateTerminal.CurrentDigest() != alternateBundle.BundleDigest() {
+		t.Fatalf("distinct observed HTTP terminal head differs: %#v, %v", alternateTerminal, err)
+	}
+	alternateInventoryAfter := httpA21StoreInventory(t, alternateStoreRoot)
+	alternateRestartedStore, err := store.OpenObjectStore(alternateStoreRoot)
+	if err != nil {
+		t.Fatal(err)
+	}
+	alternateRestartedResidue, err := nodeemit.OpenResidue(
+		context.Background(), alternateRestartedStore, alternateStudyID,
+	)
+	if err != nil || !alternateRestartedResidue.Valid() ||
+		alternateRestartedResidue.BundleDigest() != alternateBundle.BundleDigest() ||
+		alternateRestartedResidue.HeadDigest() != alternateTerminal.HeadDigest() {
+		t.Fatalf("distinct observed HTTP residue did not reconstruct after restart: %#v, %v", alternateRestartedResidue, err)
+	}
+
+	outputParent := httpA21ResolvedStoreTempDir(t)
+	destination := filepath.Join(outputParent, "http-contract")
+	first, err := contractmaterialize.Materialize(context.Background(), restartedStore, restartedResidue, destination)
+	if err != nil || !first.Valid() || first.Disposition() != contractmaterialize.Created ||
+		first.State() != contractmaterialize.StateCreated || first.Destination() != destination ||
+		first.BundleDigest() != restartedResidue.BundleDigest() ||
+		first.ResidueHeadDigest() != restartedResidue.HeadDigest() {
+		t.Fatalf("create exact HTTP contract output: %#v, %v", first, err)
+	}
+	assertHTTPP07BBOutput(t, destination, bundle)
+	if !reflect.DeepEqual(httpA21StoreInventory(t, storeRoot), inventoryAfter) {
+		t.Fatal("HTTP materialization changed the terminal object store")
+	}
+	outputBefore := httpA21StoreInventory(t, destination)
+	second, err := contractmaterialize.Materialize(context.Background(), restartedStore, restartedResidue, destination)
+	if err != nil || !second.Valid() || second.Disposition() != contractmaterialize.AlreadyExact ||
+		second.State() != contractmaterialize.StateAlreadyExact ||
+		!reflect.DeepEqual(httpA21StoreInventory(t, destination), outputBefore) {
+		t.Fatalf("idempotent HTTP contract reopen rewrote output: %#v, %v", second, err)
+	}
+	assertHTTPP07BBOutput(t, destination, bundle)
+	if !reflect.DeepEqual(httpA21StoreInventory(t, storeRoot), inventoryAfter) {
+		t.Fatal("HTTP exact-existing retry changed the terminal object store")
+	}
+	for _, file := range bundle.Bundle().Files() {
+		body, readErr := os.ReadFile(filepath.Join(destination, file.Path()))
+		if readErr != nil || !bytes.Equal(body, file.Content()) {
+			t.Fatalf("HTTP materialized file %s differs: %v", file.Path(), readErr)
+		}
+	}
+
+	concurrentDestination := filepath.Join(outputParent, "http-contract-concurrent")
+	type materializationOutcome struct {
+		receipt contractmaterialize.MaterializedContract
+		err     error
+	}
+	materializationStart := make(chan struct{})
+	materializationDone := make(chan materializationOutcome, 2)
+	for range 2 {
+		go func() {
+			<-materializationStart
+			receipt, materializeErr := contractmaterialize.Materialize(
+				context.Background(), restartedStore, restartedResidue, concurrentDestination,
+			)
+			materializationDone <- materializationOutcome{receipt: receipt, err: materializeErr}
+		}()
+	}
+	close(materializationStart)
+	materializedCreated := 0
+	materializedAlready := 0
+	for range 2 {
+		outcome := <-materializationDone
+		if outcome.err != nil || !outcome.receipt.Valid() {
+			t.Fatalf("concurrent HTTP materialization failed: %#v, %v", outcome.receipt, outcome.err)
+		}
+		switch outcome.receipt.Disposition() {
+		case contractmaterialize.Created:
+			materializedCreated++
+		case contractmaterialize.AlreadyExact:
+			materializedAlready++
+		default:
+			t.Fatalf("concurrent HTTP materialization disposition = %q", outcome.receipt.Disposition())
+		}
+	}
+	if materializedCreated != 1 || materializedAlready != 1 {
+		t.Fatalf("concurrent HTTP materialization did not converge: created=%d already=%d", materializedCreated, materializedAlready)
+	}
+	assertHTTPP07BBOutput(t, concurrentDestination, bundle)
+	for _, entry := range httpA21StoreInventory(t, outputParent) {
+		if strings.Contains(entry, ".countershape-contract-stage-") {
+			t.Fatalf("concurrent HTTP materialization left a private stage: %q", entry)
+		}
+	}
+	if !reflect.DeepEqual(httpA21StoreInventory(t, storeRoot), inventoryAfter) {
+		t.Fatal("concurrent HTTP materialization changed the terminal object store")
+	}
+
+	distinctDestination := filepath.Join(outputParent, "http-contract-distinct-content-race")
+	distinctStart := make(chan struct{})
+	distinctDone := make(chan materializationOutcome, 2)
+	distinctContext, cancelDistinct := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancelDistinct()
+	for _, candidate := range []struct {
+		objectStore *store.ObjectStore
+		residue     nodeemit.Residue
+	}{
+		{objectStore: restartedStore, residue: restartedResidue},
+		{objectStore: alternateRestartedStore, residue: alternateRestartedResidue},
+	} {
+		candidate := candidate
+		go func() {
+			<-distinctStart
+			receipt, materializeErr := contractmaterialize.Materialize(
+				distinctContext, candidate.objectStore, candidate.residue, distinctDestination,
+			)
+			distinctDone <- materializationOutcome{receipt: receipt, err: materializeErr}
+		}()
+	}
+	close(distinctStart)
+	distinctCreated := 0
+	distinctRefused := 0
+	createdDigest := domain.Digest("")
+	for range 2 {
+		select {
+		case outcome := <-distinctDone:
+			if outcome.err == nil && outcome.receipt.Valid() &&
+				outcome.receipt.Disposition() == contractmaterialize.Created {
+				distinctCreated++
+				createdDigest = outcome.receipt.BundleDigest()
+				continue
+			}
+			if outcome.receipt == (contractmaterialize.MaterializedContract{}) &&
+				contractmaterialize.IsCode(outcome.err, contractmaterialize.CodeExportIncomplete) &&
+				!contractmaterialize.IsCode(outcome.err, contractmaterialize.CodeExportAmbiguous) {
+				distinctRefused++
+				continue
+			}
+			t.Fatalf("distinct-content materialization outcome = %#v, %v", outcome.receipt, outcome.err)
+		case <-distinctContext.Done():
+			t.Fatalf("distinct-content materialization race did not finish: %v", distinctContext.Err())
+		}
+	}
+	if distinctCreated != 1 || distinctRefused != 1 {
+		t.Fatalf("distinct-content materialization race = created %d, refused %d", distinctCreated, distinctRefused)
+	}
+	switch createdDigest {
+	case bundle.BundleDigest():
+		assertHTTPP07BBOutput(t, distinctDestination, bundle)
+	case alternateBundle.BundleDigest():
+		assertHTTPP07BBOutput(t, distinctDestination, alternateBundle)
+	default:
+		t.Fatalf("distinct-content race created unknown bundle %s", createdDigest)
+	}
+	for _, entry := range httpA21StoreInventory(t, outputParent) {
+		if strings.Contains(entry, ".countershape-contract-stage-") {
+			t.Fatalf("distinct-content materialization left a private stage: %q", entry)
+		}
+	}
+	if !reflect.DeepEqual(httpA21StoreInventory(t, storeRoot), inventoryAfter) ||
+		!reflect.DeepEqual(httpA21StoreInventory(t, alternateStoreRoot), alternateInventoryAfter) {
+		t.Fatal("distinct-content materialization changed a terminal object store")
+	}
+}
+
+func assertHTTPP07BBOutput(t *testing.T, destination string, prepared nodeemit.PreparedBundle) {
+	t.Helper()
+	bundle := prepared.Bundle()
+	root, err := os.Lstat(destination)
+	if err != nil || !root.IsDir() || root.Mode()&os.ModeSymlink != 0 || root.Mode().Perm() != 0o700 ||
+		root.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0 {
+		t.Fatalf("HTTP contract root facts differ: %v, %v", root, err)
+	}
+	entries, err := os.ReadDir(destination)
+	if err != nil || len(entries) != len(bundle.Files()) {
+		t.Fatalf("HTTP contract roster count differs: %d, %v", len(entries), err)
+	}
+	wantNames := make([]string, len(bundle.Files()))
+	for index, file := range bundle.Files() {
+		wantNames[index] = file.Path()
+	}
+	sort.Strings(wantNames)
+	actualNames := make([]string, len(entries))
+	for index, entry := range entries {
+		actualNames[index] = entry.Name()
+	}
+	sort.Strings(actualNames)
+	if !slices.Equal(actualNames, wantNames) {
+		t.Fatalf("HTTP contract roster = %v, want %v", actualNames, wantNames)
+	}
+	for _, file := range bundle.Files() {
+		path := filepath.Join(destination, file.Path())
+		info, statErr := os.Lstat(path)
+		if statErr != nil {
+			t.Fatalf("HTTP contract member %s stat failed: %v", file.Path(), statErr)
+		}
+		stat, statOK := info.Sys().(*syscall.Stat_t)
+		body, readErr := os.ReadFile(path)
+		digest := sha256.Sum256(body)
+		if readErr != nil || !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 ||
+			info.Mode().Perm() != 0o644 || info.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0 ||
+			!statOK || stat.Nlink != 1 || int64(file.ByteCount()) != info.Size() ||
+			file.ByteSHA256().String() != fmt.Sprintf("sha256:%x", digest) || !bytes.Equal(body, file.Content()) {
+			t.Fatalf("HTTP contract member %s facts differ: %v", file.Path(), readErr)
+		}
+	}
 }
 
 func assertHTTPCompilationFreshProcessRestart(
@@ -1282,6 +1611,10 @@ func TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence(t *testing.T)
 		}) || !reflect.DeepEqual(allowPrepared.AllowedTupleCanonicalBytes(), [][]byte{wantAllowTuple}) {
 		t.Fatalf("child-bind HTTP allow-observed compilation preparation = %#v, %v", httpA21DescribePrepared(allowPrepared), err)
 	}
+	exerciseHTTPP07BBPublication(
+		t, promotionRoot, reopenedStore, rulingRestart, studyID, restartedPrepared,
+		allowRoot, allowStore, allowStudyID, allowPrepared,
+	)
 }
 
 func httpPhysicalReductionConfig(t *testing.T) Config {

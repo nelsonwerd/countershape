@@ -29,7 +29,7 @@ import {
 
 const selftestPath = fileURLToPath(import.meta.url);
 const verifierPath = resolve(dirname(selftestPath), "verify-current.mjs");
-const expectedRosterDigest = "24e5a82e7f391581a90cccb1329b30fd659501f43d301050da520afbd4995f59";
+const expectedRosterDigest = "054443d6a665505f3a55703b7f3f795b2a72d30c11c84c07c985ab175641ff55";
 
 function fail(code, detail) {
 	throw new Error(`${code}: ${detail}`);
@@ -106,7 +106,7 @@ function inspectEnvironment() {
 		CC: admitted.cc.path, CXX: admitted.cxx.path, GOMAXPROCS: "2", LANG: "C", LC_ALL: "C", TZ: "UTC",
 		NO_COLOR: "1", PATH: `${roots.authorityBin}:/usr/bin:/bin`, COUNTERSHAPE_GO: admitted.go.path,
 		COUNTERSHAPE_NODE: admitted.node.path, COUNTERSHAPE_GIT: admitted.git.path, COUNTERSHAPE_SH: admitted.sh.path,
-		COUNTERSHAPE_CC: admitted.cc.path,
+		COUNTERSHAPE_CC: admitted.cc.path, COUNTERSHAPE_CXX: admitted.cxx.path,
 	};
 	expect(JSON.stringify(environment) === JSON.stringify(expected), "VERIFY_SELFTEST_CHILD_ENVIRONMENT_DRIFT", JSON.stringify(environment));
 }

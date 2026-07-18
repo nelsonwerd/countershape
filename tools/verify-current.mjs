@@ -70,6 +70,8 @@ export const currentSteps = Object.freeze([
 	}),
 	Object.freeze({ id: "architecture-p07b-a2-2", tool: "node", tools: Object.freeze(["node", "go", "cc", "cxx"]), path: "tools/check-p07b-a2-architecture.mjs", marker: "P07B A2.2 architecture boundary OK" }),
 	Object.freeze({ id: "architecture-p07b-a2-2-selftest", tool: "node", tools: Object.freeze(["node", "go", "cc", "cxx"]), path: "tools/check-p07b-a2-architecture-selftest.mjs", marker: "P07B A2.2 architecture defensive self-test OK" }),
+	Object.freeze({ id: "architecture-p07b-b", tool: "node", tools: Object.freeze(["node", "go", "cc", "cxx"]), path: "tools/check-p07b-b-architecture.mjs", marker: "P07B B architecture boundary OK" }),
+	Object.freeze({ id: "architecture-p07b-b-selftest", tool: "node", tools: Object.freeze(["node", "go", "cc", "cxx"]), path: "tools/check-p07b-b-architecture-selftest.mjs", marker: "P07B B architecture defensive self-test OK" }),
 	Object.freeze({ id: "authority-revalidation", kind: "authority-guard" }),
 ]);
 
@@ -331,6 +333,7 @@ export function buildChildEnvironment(admitted, roots) {
 		COUNTERSHAPE_GIT: admitted.git.path,
 		COUNTERSHAPE_SH: admitted.sh.path,
 		COUNTERSHAPE_CC: admitted.cc.path,
+		COUNTERSHAPE_CXX: admitted.cxx.path,
 	});
 }
 

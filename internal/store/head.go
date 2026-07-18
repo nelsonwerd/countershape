@@ -19,6 +19,7 @@ import (
 	"github.com/nelsonwerd/countershape/internal/compare"
 	confirmationauthority "github.com/nelsonwerd/countershape/internal/confirmation/authority"
 	"github.com/nelsonwerd/countershape/internal/domain"
+	nodeauthority "github.com/nelsonwerd/countershape/internal/emit/node/authority"
 	"github.com/nelsonwerd/countershape/internal/reduce"
 )
 
@@ -128,6 +129,7 @@ type HeadToken struct {
 	stage          LineageStage
 	currentKind    string
 	currentDigest  domain.Digest
+	previousHead   domain.Digest
 	previousObject domain.Digest
 	lineageRoot    domain.Digest
 	headDigest     domain.Digest
@@ -138,6 +140,9 @@ func (h HeadToken) Revision() int64              { return h.revision }
 func (h HeadToken) Stage() LineageStage          { return h.stage }
 func (h HeadToken) CurrentKind() string          { return h.currentKind }
 func (h HeadToken) CurrentDigest() domain.Digest { return h.currentDigest }
+func (h HeadToken) PreviousHeadDigest() (domain.Digest, bool) {
+	return h.previousHead, h.revision > 1 && h.previousHead.Valid()
+}
 func (h HeadToken) PreviousObjectDigest() (domain.Digest, bool) {
 	return h.previousObject, h.revision > 1 && h.previousObject.Valid()
 }
@@ -147,7 +152,8 @@ func (h HeadToken) HeadDigest() domain.Digest        { return h.headDigest }
 func (h HeadToken) validFor(s *ObjectStore) bool {
 	return s != nil && s.instance != nil && h.storeInstance == s.instance && h.study.Valid() && h.revision >= 1 &&
 		h.stage.valid() && h.currentKind != "" && h.currentDigest.Valid() && h.lineageRoot.Valid() && h.headDigest.Valid() &&
-		((h.revision == 1 && !h.previousObject.Valid()) || (h.revision > 1 && h.previousObject.Valid()))
+		((h.revision == 1 && !h.previousHead.Valid() && !h.previousObject.Valid()) ||
+			(h.revision > 1 && h.previousHead.Valid() && h.previousObject.Valid()))
 }
 
 // CreateStudy admits only a live, exactly reconstructible WorldPlan. The
@@ -386,6 +392,89 @@ func (s *ObjectStore) AdvanceRuling(
 	return s.advanceHead(ctx, expected, StageRuling, object)
 }
 
+// AdvanceResidue accepts only a node-emitter-issued capability over one exact
+// prepared ContractBundle. The shared raw owner compares every expected-head
+// field under transition exclusion before it creates a successor object or
+// temporary file.
+func (s *ObjectStore) AdvanceResidue(
+	ctx context.Context,
+	expected HeadToken,
+	authority nodeauthority.Publication,
+) (HeadToken, error) {
+	choicepoint, hasChoicepoint := expected.PreviousObjectDigest()
+	if !authority.Valid() || !expected.validFor(s) || expected.Stage() != StageRuling ||
+		expected.CurrentKind() != "DecisionRecord" || expected.StudyID().String() != authority.StudyID() ||
+		expected.HeadDigest() != authority.ExpectedHeadDigest() || expected.CurrentDigest() != authority.Predecessor() ||
+		!hasChoicepoint || choicepoint != authority.Choicepoint() ||
+		expected.LineageRootDigest() != authority.LineageRoot() {
+		return HeadToken{}, refuse(codeIllegalLineage, "residue publication authority does not bind the current ruling", nil)
+	}
+	object, err := NewSemanticObject("ContractBundle", authority.Digest(), authority.CanonicalBytes())
+	if err != nil {
+		return HeadToken{}, refuse(codeIllegalLineage, "residue publication authority does not contain one exact ContractBundle", err)
+	}
+	return s.advanceHead(ctx, expected, StageResidue, object)
+}
+
+// ConfirmResiduePublication turns a visible exact terminal successor into a
+// durable local fact only after taking the study exclusion, syncing its head
+// directory, and reopening the exact head and referenced object. It performs
+// no mutation and is the sole reconciliation path for post-head ambiguity.
+func (s *ObjectStore) ConfirmResiduePublication(
+	ctx context.Context,
+	expected HeadToken,
+	authority nodeauthority.Publication,
+) (HeadToken, error) {
+	previousHead, hasPreviousHead := expected.PreviousHeadDigest()
+	previousObject, hasPreviousObject := expected.PreviousObjectDigest()
+	if s == nil || s.instance == nil || !expected.validFor(s) || !authority.Valid() ||
+		expected.Stage() != StageResidue || expected.CurrentKind() != "ContractBundle" ||
+		expected.StudyID().String() != authority.StudyID() || expected.CurrentDigest() != authority.Digest() ||
+		!hasPreviousHead || previousHead != authority.ExpectedHeadDigest() ||
+		!hasPreviousObject || previousObject != authority.Predecessor() ||
+		expected.LineageRootDigest() != authority.LineageRoot() {
+		return HeadToken{}, refuse(codeIllegalLineage, "terminal residue does not bind the exact publication authority", nil)
+	}
+	s.instance.mu.Lock()
+	defer s.instance.mu.Unlock()
+	if err := storeContextRefusal(ctx, codeHeadUpdateAmbiguous); err != nil {
+		return HeadToken{}, err
+	}
+	if err := s.assertReady(); err != nil {
+		return HeadToken{}, refuse(
+			codeHeadUpdateAmbiguous, "object-store identity changed before residue reconciliation", err,
+		)
+	}
+	studyPath, err := s.existingStudyPath(expected.study)
+	if err != nil {
+		return HeadToken{}, refuse(
+			codeHeadUpdateAmbiguous, "study directory changed before residue reconciliation", err,
+		)
+	}
+	lock, err := openAndLockStudy(ctx, filepath.Join(studyPath, studyLockFilename), false)
+	if err != nil {
+		return HeadToken{}, refuse(codeHeadUpdateAmbiguous, "study lock could not be acquired for residue reconciliation", err)
+	}
+	defer lock.release()
+	current, err := s.reopenHeadAndObject(expected.study, studyPath)
+	if err != nil || !sameHeadToken(s.token(expected.study, current), expected) ||
+		current.identity.PreviousHeadDigest != authority.ExpectedHeadDigest().String() {
+		return HeadToken{}, refuse(codeHeadUpdateAmbiguous, "visible residue differs before durability reconciliation", err)
+	}
+	if err := syncDirectory(studyPath); err != nil {
+		return HeadToken{}, refuse(codeHeadUpdateAmbiguous, "terminal residue study-directory sync failed", err)
+	}
+	verified, err := s.reopenHeadAndObject(expected.study, studyPath)
+	if err != nil {
+		return HeadToken{}, refuse(codeHeadUpdateAmbiguous, "terminal residue did not reopen after durability sync", err)
+	}
+	confirmed := s.token(expected.study, verified)
+	if !sameHeadToken(confirmed, expected) || verified.identity.PreviousHeadDigest != authority.ExpectedHeadDigest().String() {
+		return HeadToken{}, refuse(codeHeadUpdateAmbiguous, "terminal residue changed during durability reconciliation", nil)
+	}
+	return confirmed, nil
+}
+
 func (s *ObjectStore) advanceHead(
 	ctx context.Context,
 	expected HeadToken,
@@ -460,18 +549,21 @@ func (s *ObjectStore) advanceHead(
 func (s *ObjectStore) token(study StudyID, head storedHead) HeadToken {
 	current, _ := domain.ParseDigest(head.identity.CurrentDigest)
 	root, _ := domain.ParseDigest(head.identity.LineageRootDigest)
+	previousHead, _ := domain.ParseDigest(head.identity.PreviousHeadDigest)
 	previous, _ := domain.ParseDigest(head.identity.PreviousObjectDigest)
 	return HeadToken{
 		storeInstance: s.instance, study: study, revision: head.identity.Revision,
 		stage: LineageStage(head.identity.Stage), currentKind: head.identity.CurrentKind,
-		currentDigest: current, previousObject: previous, lineageRoot: root, headDigest: head.digest,
+		currentDigest: current, previousHead: previousHead, previousObject: previous,
+		lineageRoot: root, headDigest: head.digest,
 	}
 }
 
 func sameHeadToken(left, right HeadToken) bool {
 	return left.study.text == right.study.text && left.revision == right.revision && left.stage == right.stage &&
 		left.currentKind == right.currentKind && left.currentDigest == right.currentDigest &&
-		left.previousObject == right.previousObject && left.lineageRoot == right.lineageRoot && left.headDigest == right.headDigest
+		left.previousHead == right.previousHead && left.previousObject == right.previousObject &&
+		left.lineageRoot == right.lineageRoot && left.headDigest == right.headDigest
 }
 
 func permittedTransition(current, next LineageStage) bool {
