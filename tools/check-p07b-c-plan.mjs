@@ -3,11 +3,12 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { constants as fsConstants } from "node:fs";
-import { lstat, mkdir, mkdtemp, open, readFile, readdir, realpath, rm, symlink, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, open, opendir, readFile, readdir, realpath, rm, rmdir, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isDeepStrictEqual } from "node:util";
+import { deflateSync, inflateSync } from "node:zlib";
 
 import { validateSpecification } from "./check-p07b-c-unit-scope.mjs";
 import { qualificationCaseIDs, qualificationMatrixDigest } from "./verify-go-test-repetition.mjs";
@@ -54,6 +55,7 @@ const c1ReceiptDeclarationPath = "spec/verification/p07b-c-c1-receipt.json";
 const statusPath = "docs/status/P07B-C-C0-AUTHORITY.md";
 const c1MaintenanceStatusPath = "docs/status/P07B-C-C1-CUMULATIVE-MAINTENANCE.md";
 const c1VerificationStatusPath = "docs/status/P07B-C-VERIFICATION-THROUGHPUT.md";
+const c1EvidenceMaintenanceStatusPath = "docs/status/P07B-C-C1-LOCAL-EVIDENCE-MAINTENANCE.md";
 const c1StatusPath = "docs/status/P07B-C-C1-SEMANTICS.md";
 const c1DidrunBugsPath = "docs/status/DIDRUN_BUGS.md";
 const sealedC0AIdentity = Object.freeze({
@@ -244,7 +246,7 @@ const requiredText = Object.freeze({
 	"docs/PROMPT_PACK.md": [
 		"prompts/P07B-C-TARGET-RUN-EXECUTION.md",
 		"Only the higher contract runner may consume official target/admission authority",
-		"C1 source and C1M sealed; C1V then separate C1B receipt gate",
+		"C1V sealed; C1E then separate C1B receipt gate",
 		"C2 still requires separately sealed/strict-clean C1B",
 	],
 	"docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md": [
@@ -325,7 +327,7 @@ const requiredText = Object.freeze({
 	],
 	"docs/HANDOFF_MODE_C.md": [
 		"C1 now implements strict inert target/run/execution construction",
-		"P07B-C C1V verifier throughput and receipt-profile maintenance only",
+		"C1E local-evidence checker maintenance is the active `SOURCE_FULL` unit",
 		"private boot-session interlock",
 	],
 	[statusPath]: [
@@ -346,10 +348,11 @@ const requiredText = Object.freeze({
 		"`RECEIPT_RECONCILIATION` is admitted only for an exact empty-prefix roster",
 	],
 	"spec/verification/p07b-c-unit-paths.json": [
-		"countershape/p07b-c-unit-paths/v2",
+		"countershape/p07b-c-unit-paths/v3",
 		"\"C0A\"",
 		"\"C1M\"",
 		"\"C1V\"",
+		"\"C1E\"",
 		"\"C6B\"",
 		"\"verification_profile\"",
 		"\"receipt_claims\"",
@@ -624,19 +627,19 @@ const requiredC1VerificationText = Object.freeze({
 		"C1V does not lengthen the deadline or claim that partial aggregate event",
 	],
 	"docs/HANDOFF_MODE_C.md": [
-		"C1V verifier-throughput maintenance is the active `SOURCE_FULL` unit",
-		"The current dirty tree is limited to the C1V eleven-path allowlist.",
+		"C1V commit `88e62acb3023dcd6ee51950c2ad24bbcc2ca8900`, tree `6c98b3c384f01b63d1a00a002303041576896609`",
+		"10/10 claims recorded-exact",
 		".didrun-history/2026-07-18-p07b-c-c1v-build-loop/.didrun/",
 		".didrun-history/2026-07-18-p07b-c-c1v-physical-shard-repair/.didrun/",
-		"The live `.didrun/` is now the unclaimed physical-shard-repair development ledger",
-		"From this freeze onward, any tracked edit invalidates the entire qualifying matrix",
+		".didrun-history/2026-07-18-p07b-c-c1v-final/.didrun/",
+		"event `59`",
+		"secrets_override: true",
 		requiredQualificationMatrixDigest,
-		"every pass must finish in at most `878544 ms`",
-		"The pre-archive scope check is admission evidence only and cannot support a final-tree claim",
-		"every one of the 52 named",
+		"878544",
+		"52 named",
 	],
 	"docs/PROMPT_PACK.md": [
-		"C1V is `SOURCE_FULL`",
+		"C1V was `SOURCE_FULL` and is sealed",
 		"P07B-C C1V throughput ruling",
 	],
 	"tools/verify-go-test-repetition.mjs": [
@@ -653,6 +656,92 @@ const requiredC1VerificationText = Object.freeze({
 		"runRepetition",
 		"Go repetition verifier self-test passed:",
 		"Go repetition verification passed:",
+	],
+});
+const requiredC1EvidenceMaintenancePaths = Object.freeze([
+	"docs/HANDOFF_MODE_C.md",
+	"docs/PROMPT_PACK.md",
+	"docs/VERIFICATION.md",
+	"docs/status/P07B-C-C1-LOCAL-EVIDENCE-MAINTENANCE.md",
+	"spec/verification/p07b-c-unit-paths.json",
+	"tools/check-p07b-c-plan.mjs",
+	"tools/check-p07b-c-unit-scope.mjs",
+]);
+const requiredC1EvidenceMaintenanceDigest = "sha256:9a6422b45c82a44e6171ae9351468df5f6ece2190d6ab47f26aec6f84fd7ccde";
+const requiredC1EvidenceMaintenanceRosterText = requiredC1EvidenceMaintenancePaths
+	.map((path, index) => `${index === requiredC1EvidenceMaintenancePaths.length - 1 ? "and " : ""}\`${path}\``)
+	.join(", ");
+const requiredC1EvidenceMaintenanceDeclaration = `C1E owns exactly these ${requiredC1EvidenceMaintenancePaths.length} paths: ${requiredC1EvidenceMaintenanceRosterText}. Their sorted-newline roster digest is \`${requiredC1EvidenceMaintenanceDigest}\`.`;
+const c1EvidenceMaintenanceClaimLabels = Object.freeze([
+	"P07B-C C1E checker syntax and evolved plan coherence",
+	"P07B-C C1E mixed-namespace local-evidence checker self-test",
+	"P07B-C C1E sealed-C1 local archive object-namespace match",
+	"P07B-C C1E unit-scope defensive self-test",
+	"P07B-C C1E cumulative verification",
+	"P07B-C C1E exact seven-path staged scope and diff integrity",
+	"P07B-C C1E scoped staged credential-pattern scan",
+	"P07B-C C1E preceding didrun chain integrity",
+]);
+const requiredC1EvidenceMaintenanceText = Object.freeze({
+		[c1EvidenceMaintenanceStatusPath]: [
+			"`DEFECT_REPAIR`",
+			"event `0`",
+			"event `3`",
+			".didrun-history/2026-07-18-p07b-c-c1e-build-loop/.didrun/",
+			"20 flat didrun capture blobs",
+		"57 redirected Git loose objects",
+		"77 combined object files",
+			"not a portable didrun-format guarantee",
+			"at most 4 MiB inflated",
+			"three non-overlap files",
+			"^3:spec/verification/p07b-c-c1-receipt.json",
+		"C1B remains unchanged",
+		"`UNRECEIPTED`",
+		requiredC1EvidenceMaintenanceDeclaration,
+		...c1EvidenceMaintenanceClaimLabels.map((label) => `\`${label}\``),
+	],
+		"docs/VERIFICATION.md": [
+			"## Mixed didrun object namespace for C1 local evidence",
+		"`objects/<64-lowercase-hex>`",
+		"`objects/<2-lowercase-hex>/<38-lowercase-hex>`",
+			"--verify-sealed-c1-local-evidence",
+			"resource-bounded before content reads",
+			"requires the C1B receipt declaration to be absent",
+			"All three sealed qualifying runs satisfied that ceiling",
+			"not hostile same-user isolation against concurrent namespace replacement",
+			"never validates one receipt read and consumes a second",
+		requiredC1EvidenceMaintenanceDeclaration,
+	],
+		"docs/HANDOFF_MODE_C.md": [
+		"C1E local-evidence checker maintenance is the active `SOURCE_FULL` unit",
+		"C1B's exact four-path work is preserved",
+			requiredC1EvidenceMaintenanceDigest,
+			"4bf73e5a34bef6cf72b491d654f423cfa317ae84e3ee66852ccb9cbf1790a5dc",
+			"^3:spec/verification/p07b-c-c1-receipt.json",
+			".didrun-history/2026-07-18-p07b-c-c1e-build-loop/.didrun/",
+	],
+		"docs/PROMPT_PACK.md": [
+		"C1V sealed; C1E then separate C1B receipt gate",
+			"P07B-C C1E local-evidence maintenance",
+			"later independently sealed, delimited handoff/receipt descendant",
+	],
+	"spec/verification/p07b-c-unit-paths.json": [
+		"countershape/p07b-c-unit-paths/v3",
+		"\"C1E\"",
+	],
+		"tools/check-p07b-c-plan.mjs": [
+		"CAPTURE_BLOB_SHA256",
+		"GIT_LOOSE_SHA1",
+		"Git loose object trailing compressed data",
+			"local ledger capture blob reference set",
+			"local ledger directory shape does not equal the object inventory closure",
+			"must be absent in sealed-maintenance mode",
+			"gitBlobCanonicalAtTotalBytes",
+			"readC1ReceiptDeclarationSnapshot",
+		"--verify-sealed-c1-local-evidence",
+	],
+	"tools/check-p07b-c-unit-scope.mjs": [
+		"\"C1E\"",
 	],
 });
 const requiredC1BPaths = Object.freeze([
@@ -852,6 +941,63 @@ function sha256(bytes) {
 	return createHash("sha256").update(bytes).digest("hex");
 }
 
+function sha1(bytes) {
+	return createHash("sha1").update(bytes).digest("hex");
+}
+
+const c1GitLooseInflateLimit = 4 * 1024 * 1024;
+const c1ReceiptSnapshotLimit = 256 * 1024;
+
+function gitBlobCanonicalAtTotalBytes(totalBytes) {
+	if (!Number.isSafeInteger(totalBytes) || totalBytes < 8) throw new Error(`invalid Git blob size fixture: ${totalBytes}`);
+	let payloadBytes = totalBytes;
+	for (let attempt = 0; attempt < 8; attempt += 1) {
+		const header = Buffer.from(`blob ${payloadBytes}\0`, "ascii");
+		const nextPayloadBytes = totalBytes - header.length;
+		if (nextPayloadBytes < 0) throw new Error(`Git blob size fixture is too small: ${totalBytes}`);
+		if (nextPayloadBytes === payloadBytes) return Buffer.concat([header, Buffer.alloc(payloadBytes)], totalBytes);
+		payloadBytes = nextPayloadBytes;
+	}
+	throw new Error(`Git blob size fixture did not converge: ${totalBytes}`);
+}
+
+function validateC1LedgerObject(object) {
+	const flat = /^objects\/([0-9a-f]{64})$/u.exec(object.path);
+	if (flat) {
+		return object.digest === flat[1]
+			? Object.freeze({ kind: "CAPTURE_BLOB_SHA256", identity: flat[1] })
+			: `content-addressed capture blob mismatch: ${object.path}`;
+	}
+
+	const loose = /^objects\/([0-9a-f]{2})\/([0-9a-f]{38})$/u.exec(object.path);
+	if (!loose) return `unrecognized didrun object namespace: ${object.path}`;
+	const identity = `${loose[1]}${loose[2]}`;
+	let inflated;
+	try {
+		const result = inflateSync(object.bytes, { info: true, maxOutputLength: c1GitLooseInflateLimit });
+		if (!result?.engine || result.engine.bytesWritten !== object.bytes.length) {
+			return `Git loose object trailing compressed data: ${object.path}`;
+		}
+		inflated = result.buffer;
+	} catch {
+		return `Git loose object bounded inflate mismatch: ${object.path}`;
+	}
+	if (sha1(inflated) !== identity) return `Git loose object identity mismatch: ${object.path}`;
+	const separator = inflated.indexOf(0);
+	if (separator <= 0) return `Git loose object header mismatch: ${object.path}`;
+	const header = inflated.subarray(0, separator).toString("ascii");
+	const match = /^(blob|tree|commit|tag) (0|[1-9][0-9]*)$/u.exec(header);
+	if (!match || !Buffer.from(header, "ascii").equals(inflated.subarray(0, separator))) {
+		return `Git loose object header mismatch: ${object.path}`;
+	}
+	const sizeText = match[2];
+	const payloadBytes = inflated.length - separator - 1;
+	if (sizeText !== String(payloadBytes)) {
+		return `Git loose object declared-size mismatch: ${object.path}`;
+	}
+	return Object.freeze({ kind: "GIT_LOOSE_SHA1", identity });
+}
+
 function admittedLocalPath(root, declaredPath) {
 	const absolute = resolve(root, declaredPath);
 	const relation = relative(root, absolute);
@@ -880,14 +1026,115 @@ async function admittedExistingLocalPath(root, declaredPath) {
 	return absolute;
 }
 
-async function readRegularNoFollow(absolute) {
+async function requireC1ReceiptDeclarationPhase(root, expectedPresent) {
+	const absolute = admittedLocalPath(root, c1ReceiptDeclarationPath);
+	let status;
+	try {
+		status = await lstat(absolute);
+	} catch (error) {
+		if (error.code !== "ENOENT") throw error;
+		if (expectedPresent) throw new Error(`${c1ReceiptDeclarationPath} must be present in declaration-bound mode`);
+		return;
+	}
+	if (!status.isFile() || status.isSymbolicLink()) {
+		throw new Error(`${c1ReceiptDeclarationPath} must be a regular non-symlink file`);
+	}
+	if (!expectedPresent) throw new Error(`${c1ReceiptDeclarationPath} must be absent in sealed-maintenance mode`);
+}
+
+async function readC1ReceiptDeclarationSnapshot(root) {
+	await requireC1ReceiptDeclarationPhase(root, true);
+	const absolute = await admittedExistingLocalPath(root, c1ReceiptDeclarationPath);
+	const bytes = await readRegularNoFollow(absolute, c1ReceiptSnapshotLimit);
+	return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+}
+
+async function readRegularNoFollow(absolute, maxBytes = Number.MAX_SAFE_INTEGER) {
+	if (!Number.isSafeInteger(maxBytes) || maxBytes < 0) throw new Error(`invalid local evidence read ceiling: ${maxBytes}`);
 	const handle = await open(absolute, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
 	try {
-		const status = await handle.stat();
-		if (!status.isFile()) throw new Error(`local evidence is not a regular file: ${absolute}`);
-		return await handle.readFile();
+		const before = await handle.stat();
+		if (!before.isFile()) throw new Error(`local evidence is not a regular file: ${absolute}`);
+		if (!Number.isSafeInteger(before.size) || before.size < 0 || before.size > maxBytes) {
+			throw new Error(`local evidence file exceeds read ceiling: ${absolute}`);
+		}
+		const chunks = [];
+		let total = 0;
+		for (;;) {
+			const remainingWithSentinel = maxBytes - total + 1;
+			if (remainingWithSentinel <= 0) throw new Error(`local evidence file exceeds read ceiling: ${absolute}`);
+			const chunk = Buffer.alloc(Math.min(64 * 1024, remainingWithSentinel));
+			const { bytesRead } = await handle.read(chunk, 0, chunk.length, null);
+			if (bytesRead === 0) break;
+			total += bytesRead;
+			if (total > maxBytes) throw new Error(`local evidence file exceeds read ceiling: ${absolute}`);
+			chunks.push(chunk.subarray(0, bytesRead));
+		}
+		const after = await handle.stat();
+		if (!after.isFile() || before.dev !== after.dev || before.ino !== after.ino || before.mode !== after.mode ||
+			before.size !== after.size || before.mtimeMs !== after.mtimeMs || before.ctimeMs !== after.ctimeMs || total !== after.size) {
+			throw new Error(`local evidence file changed during read: ${absolute}`);
+		}
+		return Buffer.concat(chunks, total);
 	} finally {
 		await handle.close();
+	}
+}
+
+async function collectBoundedRegularFiles(root, { maxFiles, maxStoredBytes, maxDirectoryDepth, maxEntries }) {
+	for (const [name, value] of Object.entries({ maxFiles, maxStoredBytes, maxDirectoryDepth, maxEntries })) {
+		if (!Number.isSafeInteger(value) || value < 0) throw new Error(`invalid local evidence traversal bound ${name}: ${value}`);
+	}
+	const queue = [{ directory: root, depth: 0 }];
+	const files = [];
+	const directories = [];
+	let entriesSeen = 0;
+	let storedBytes = 0;
+	for (let cursor = 0; cursor < queue.length; cursor += 1) {
+		const { directory, depth } = queue[cursor];
+		const opened = await opendir(directory);
+		for await (const entry of opened) {
+			entriesSeen += 1;
+			if (entriesSeen > maxEntries) throw new Error("local evidence traversal entry ceiling exceeded");
+			const absolute = resolve(directory, entry.name);
+			const manifestPath = relative(root, absolute).split(sep).join("/");
+			if (manifestPath.length === 0 || /[\\\u0000-\u001f\u007f]/u.test(manifestPath)) {
+				throw new Error(`local evidence path is not serializable: ${manifestPath}`);
+			}
+			const status = await lstat(absolute);
+			if (status.isSymbolicLink()) throw new Error(`local evidence contains symlink: ${manifestPath}`);
+			if (status.isDirectory()) {
+				if (depth >= maxDirectoryDepth) throw new Error(`local evidence directory depth exceeded: ${manifestPath}`);
+				directories.push(absolute);
+				queue.push({ directory: absolute, depth: depth + 1 });
+				continue;
+			}
+			if (!status.isFile()) throw new Error(`local evidence contains non-regular entry: ${manifestPath}`);
+			files.push(absolute);
+			if (files.length > maxFiles) throw new Error("local evidence file-count ceiling exceeded");
+			if (!Number.isSafeInteger(status.size) || status.size < 0 || status.size > maxStoredBytes - storedBytes) {
+				throw new Error("local evidence stored-byte ceiling exceeded");
+			}
+			storedBytes += status.size;
+		}
+	}
+	return { directories, files, storedBytes };
+}
+
+function validateC1LedgerDirectoryShape(root, directories, files) {
+	const actual = directories
+		.map((absolute) => relative(root, absolute).split(sep).join("/"))
+		.sort((left, right) => Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8")));
+	const expected = new Set(["objects"]);
+	for (const absolute of files) {
+		const path = relative(root, absolute).split(sep).join("/");
+		const loose = /^objects\/([0-9a-f]{2})\/[0-9a-f]{38}$/u.exec(path);
+		if (loose) expected.add(`objects/${loose[1]}`);
+	}
+	const canonical = [...expected]
+		.sort((left, right) => Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8")));
+	if (!isDeepStrictEqual(actual, canonical)) {
+		throw new Error(`local ledger directory shape does not equal the object inventory closure: actual=${JSON.stringify(actual)} expected=${JSON.stringify(canonical)}`);
 	}
 }
 
@@ -927,7 +1174,7 @@ async function verifyC1LocalEvidence(root, receipt) {
 	const errors = [];
 	const html = receipt.evidence.html_report;
 	try {
-		const bytes = await readRegularNoFollow(await admittedExistingLocalPath(root, html.path));
+		const bytes = await readRegularNoFollow(await admittedExistingLocalPath(root, html.path), html.bytes);
 		if (bytes.length !== html.bytes) errors.push("local HTML byte count");
 		if (sha256(bytes) !== html.sha256) errors.push("local HTML digest");
 	} catch (error) {
@@ -939,28 +1186,41 @@ async function verifyC1LocalEvidence(root, receipt) {
 		const archiveRoot = await admittedExistingLocalPath(root, ledger.path);
 		const archiveStat = await lstat(archiveRoot);
 		if (!archiveStat.isDirectory() || archiveStat.isSymbolicLink()) throw new Error("archive root is not a real directory");
-		const files = await collectRegularFiles(archiveRoot);
-		const entries = await Promise.all(files.map(async (absolute) => {
+		const { directories, files, storedBytes } = await collectBoundedRegularFiles(archiveRoot, {
+			maxFiles: ledger.total_file_count,
+			maxStoredBytes: ledger.total_bytes,
+			maxDirectoryDepth: 2,
+			maxEntries: ledger.total_file_count + ledger.object_file_count + 8,
+		});
+		validateC1LedgerDirectoryShape(archiveRoot, directories, files);
+		const entries = [];
+		let readBytes = 0;
+		for (const absolute of files) {
 			const manifestPath = relative(archiveRoot, absolute).split(sep).join("/");
 			if (/[/\\\u0000-\u001f\u007f]/u.test(manifestPath.replaceAll("/", ""))) {
 				throw new Error(`manifest path is not serializable: ${manifestPath}`);
 			}
-			const bytes = await readRegularNoFollow(absolute);
-			return {
+			const bytes = await readRegularNoFollow(absolute, ledger.total_bytes - readBytes);
+			readBytes += bytes.length;
+			entries.push({
 				path: manifestPath,
 				bytes,
 				digest: sha256(bytes),
-			};
-		}));
+			});
+		}
 		entries.sort((left, right) => Buffer.compare(Buffer.from(left.path, "utf8"), Buffer.from(right.path, "utf8")));
 		const objects = entries.filter((entry) => entry.path.startsWith("objects/"));
 		if (entries.length !== ledger.total_file_count) errors.push("local ledger total file count");
 		if (objects.length !== ledger.object_file_count) errors.push("local ledger object file count");
-		if (entries.reduce((total, entry) => total + entry.bytes.length, 0) !== ledger.total_bytes) errors.push("local ledger byte count");
+		if (storedBytes !== ledger.total_bytes || readBytes !== ledger.total_bytes) errors.push("local ledger byte count");
 		if (manifestDigest(entries) !== ledger.all_files_manifest_sha256) errors.push("local ledger all-files manifest digest");
 		if (manifestDigest(objects) !== ledger.objects_manifest_sha256) errors.push("local ledger objects manifest digest");
+		const captureBlobIDs = new Set();
 		for (const object of objects) {
-			if (object.path !== `objects/${object.digest}`) errors.push(`content-addressed object mismatch: ${object.path}`);
+			const authority = validateC1LedgerObject(object);
+			if (typeof authority === "string") errors.push(authority);
+			else if (authority.kind === "CAPTURE_BLOB_SHA256") captureBlobIDs.add(authority.identity);
+			else if (authority.kind !== "GIT_LOOSE_SHA1") errors.push(`unexpected local ledger object authority: ${object.path}`);
 		}
 		const byPath = new Map(entries.map((entry) => [entry.path, entry]));
 		for (const [path, expected] of [
@@ -977,12 +1237,25 @@ async function verifyC1LocalEvidence(root, receipt) {
 		if (sessions.length !== ledger.archive_session_event_count) errors.push("local ledger session event count");
 		if (claims.length !== ledger.claim_count) errors.push("local ledger claim count");
 		if (seals.length !== ledger.seal_count) errors.push("local ledger seal count");
+		const referencedCaptureBlobIDs = new Set();
 		for (let index = 0; index < sessions.length; index += 1) {
 			const entry = sessions[index];
 			const expectedPrev = index === 0 ? "0".repeat(64) : sessions[index - 1]?.entry_hash;
 			if (entry?.index !== index || entry?.prev_hash !== expectedPrev || !/^[0-9a-f]{64}$/u.test(entry?.entry_hash ?? "")) {
 				errors.push(`local ledger session chain entry ${index}`);
 			}
+			for (const field of ["stdout_blob", "stderr_blob", "transcript_blob"]) {
+				const digest = entry?.event?.[field];
+				if (digest === null) continue;
+				if (!/^[0-9a-f]{64}$/u.test(digest ?? "")) {
+					errors.push(`local ledger event blob reference ${index}:${field}`);
+					continue;
+				}
+				referencedCaptureBlobIDs.add(digest);
+			}
+		}
+		if (!isDeepStrictEqual([...referencedCaptureBlobIDs].sort(), [...captureBlobIDs].sort())) {
+			errors.push("local ledger capture blob reference set");
 		}
 		for (let index = 0; index < c1ClaimLabels.length; index += 1) {
 			const claim = claims[index];
@@ -1006,8 +1279,7 @@ async function writeJSONLines(path, values) {
 	await writeFile(path, `${values.map((value) => JSON.stringify(value)).join("\n")}\n`, "utf8");
 }
 
-async function buildLocalEvidenceFixture() {
-	const root = await mkdtemp(resolve(tmpdir(), "countershape-c1-evidence-"));
+async function buildLocalEvidenceFixture(root) {
 	const htmlPath = "evidence/report.html";
 	const archivePath = "archive/.didrun/";
 	const htmlAbsolute = resolve(root, htmlPath);
@@ -1017,13 +1289,21 @@ async function buildLocalEvidenceFixture() {
 	await mkdir(objectsRoot, { recursive: true });
 	const htmlBytes = Buffer.from("<html><body>fixture</body></html>\n", "utf8");
 	await writeFile(htmlAbsolute, htmlBytes);
+	const objectBytes = Buffer.from("fixture-object\n", "utf8");
+	const objectDigest = sha256(objectBytes);
 	const sessions = [];
 	for (let index = 0; index < 20; index += 1) {
 		sessions.push({
 			index,
 			prev_hash: index === 0 ? "0".repeat(64) : sessions[index - 1].entry_hash,
 			entry_hash: sha256(Buffer.from(`fixture-entry-${index}`, "utf8")),
-			event: { coverage: "complete", exit_code: 0 },
+			event: {
+				coverage: "complete",
+				exit_code: 0,
+				stdout_blob: objectDigest,
+				stderr_blob: objectDigest,
+				transcript_blob: null,
+			},
 		});
 	}
 	const claims = c1ClaimLabels.map((label, index) => ({
@@ -1042,9 +1322,29 @@ async function buildLocalEvidenceFixture() {
 	await writeJSONLines(resolve(archiveRoot, "claims.jsonl"), claims);
 	await writeJSONLines(resolve(archiveRoot, "seals.jsonl"), seals);
 	await writeFile(resolve(archiveRoot, ".gitignore"), "*\n!.gitignore\n", "utf8");
-	const objectBytes = Buffer.from("fixture-object\n", "utf8");
-	const objectPath = resolve(objectsRoot, sha256(objectBytes));
+	const objectPath = resolve(objectsRoot, objectDigest);
 	await writeFile(objectPath, objectBytes);
+	const gitPayloadBytes = Buffer.from("fixture-git-payload\n", "utf8");
+	const gitCanonicalBytes = Buffer.concat([
+		Buffer.from(`blob ${gitPayloadBytes.length}\0`, "ascii"),
+		gitPayloadBytes,
+	]);
+	const gitObjectIdentity = sha1(gitCanonicalBytes);
+	const gitObjectBytes = deflateSync(gitCanonicalBytes);
+	const gitObjectPath = resolve(objectsRoot, gitObjectIdentity.slice(0, 2), gitObjectIdentity.slice(2));
+	await mkdir(dirname(gitObjectPath), { recursive: true });
+	await writeFile(gitObjectPath, gitObjectBytes);
+	for (const [type, payload] of [
+		["tree", Buffer.alloc(0)],
+		["commit", Buffer.from(`tree ${"0".repeat(40)}\nauthor Fixture <fixture@example.invalid> 0 +0000\ncommitter Fixture <fixture@example.invalid> 0 +0000\n\nfixture\n`, "ascii")],
+		["tag", Buffer.from(`object ${"0".repeat(40)}\ntype blob\ntag fixture\ntagger Fixture <fixture@example.invalid> 0 +0000\n\nfixture\n`, "ascii")],
+	]) {
+		const canonical = Buffer.concat([Buffer.from(`${type} ${payload.length}\0`, "ascii"), payload]);
+		const identity = sha1(canonical);
+		const path = resolve(objectsRoot, identity.slice(0, 2), identity.slice(2));
+		await mkdir(dirname(path), { recursive: true });
+		await writeFile(path, deflateSync(canonical));
+	}
 	const files = await collectRegularFiles(archiveRoot);
 	const entries = await Promise.all(files.map(async (absolute) => {
 		const bytes = await readRegularNoFollow(absolute);
@@ -1090,10 +1390,14 @@ async function buildLocalEvidenceFixture() {
 	return {
 		root,
 		receipt,
+		archiveRoot,
 		htmlAbsolute,
 		htmlBytes,
 		objectPath,
 		objectBytes,
+		gitObjectPath,
+		gitObjectBytes,
+		gitCanonicalBytes,
 		sessionPath: resolve(archiveRoot, "session.log"),
 		sessions,
 		claimsPath: resolve(archiveRoot, "claims.jsonl"),
@@ -1103,19 +1407,72 @@ async function buildLocalEvidenceFixture() {
 	};
 }
 
+async function refreshLocalEvidenceFixtureDeclaration(fixture) {
+	const files = await collectRegularFiles(fixture.archiveRoot);
+	const entries = await Promise.all(files.map(async (absolute) => {
+		const bytes = await readRegularNoFollow(absolute);
+		return {
+			path: relative(fixture.archiveRoot, absolute).split(sep).join("/"),
+			bytes,
+			digest: sha256(bytes),
+		};
+	}));
+	entries.sort((left, right) => Buffer.compare(Buffer.from(left.path, "utf8"), Buffer.from(right.path, "utf8")));
+	const objects = entries.filter((entry) => entry.path.startsWith("objects/"));
+	const byPath = new Map(entries.map((entry) => [entry.path, entry]));
+	Object.assign(fixture.receipt.evidence.ledger_archive, {
+		object_file_count: objects.length,
+		total_file_count: entries.length,
+		total_bytes: entries.reduce((total, entry) => total + entry.bytes.length, 0),
+		all_files_manifest_sha256: manifestDigest(entries),
+		objects_manifest_sha256: manifestDigest(objects),
+		gitignore_sha256: byPath.get(".gitignore").digest,
+		session_log_sha256: byPath.get("session.log").digest,
+		claims_jsonl_sha256: byPath.get("claims.jsonl").digest,
+		seals_jsonl_sha256: byPath.get("seals.jsonl").digest,
+	});
+}
+
 async function runLocalEvidenceSelfTest() {
-	const fixture = await buildLocalEvidenceFixture();
+	const root = await mkdtemp(resolve(tmpdir(), "countershape-c1-evidence-"));
+	let fixture;
 	let rejected = 0;
 	const expectFailure = async (name, expected) => {
 		const errors = await verifyC1LocalEvidence(fixture.root, fixture.receipt);
 		if (!errors.some((error) => error.includes(expected))) {
-			throw new Error(`P07B-C C1 local-evidence self-test false negative: ${name}`);
+			throw new Error(`P07B-C C1 local-evidence self-test false negative: ${name} (${errors.join("; ")})`);
 		}
 		rejected += 1;
 	};
+	const requireCleanBaseline = async (name) => {
+		const errors = await verifyC1LocalEvidence(fixture.root, fixture.receipt);
+		if (errors.length > 0) throw new Error(`P07B-C C1 local-evidence self-test dirty restore after ${name}: ${errors.join(", ")}`);
+	};
 	try {
+		fixture = await buildLocalEvidenceFixture(root);
 		const baseline = await verifyC1LocalEvidence(fixture.root, fixture.receipt);
 		if (baseline.length > 0) throw new Error(`P07B-C C1 local-evidence self-test baseline failed: ${baseline.join(", ")}`);
+		let activeGitObjectPath = fixture.gitObjectPath;
+		const originalGitIdentity = sha1(fixture.gitCanonicalBytes);
+		const removeActiveGitObject = async () => {
+			const previousParent = dirname(activeGitObjectPath);
+			await rm(activeGitObjectPath, { force: true });
+			if (previousParent !== resolve(fixture.archiveRoot, "objects")) {
+				try {
+					await rmdir(previousParent);
+				} catch (error) {
+					if (!new Set(["ENOENT", "ENOTEMPTY", "EEXIST"]).has(error.code)) throw error;
+				}
+			}
+		};
+		const installGitObject = async (identity, bytes) => {
+			await removeActiveGitObject();
+			activeGitObjectPath = resolve(fixture.archiveRoot, "objects", identity.slice(0, 2), identity.slice(2));
+			await mkdir(dirname(activeGitObjectPath), { recursive: true });
+			await writeFile(activeGitObjectPath, bytes);
+			await refreshLocalEvidenceFixtureDeclaration(fixture);
+		};
+		const restoreGitObject = async () => installGitObject(originalGitIdentity, fixture.gitObjectBytes);
 
 		await writeFile(fixture.htmlAbsolute, Buffer.from("tampered-html\n", "utf8"));
 		await expectFailure("HTML bytes", "local HTML");
@@ -1127,18 +1484,142 @@ async function runLocalEvidenceSelfTest() {
 		await rm(fixture.htmlAbsolute);
 		await writeFile(fixture.htmlAbsolute, fixture.htmlBytes);
 
-		await writeFile(fixture.objectPath, Buffer.from("tampered-object\n", "utf8"));
-		await expectFailure("content-addressed object", "content-addressed object mismatch");
+		const extraLedgerFile = resolve(fixture.archiveRoot, "extra-file");
+		await writeFile(extraLedgerFile, Buffer.alloc(0));
+		await expectFailure("bounded file count", "file-count ceiling exceeded");
+		await rm(extraLedgerFile);
+
+		await writeFile(fixture.objectPath, Buffer.alloc(fixture.receipt.evidence.ledger_archive.total_bytes + 1, 0x61));
+		await expectFailure("bounded stored bytes", "stored-byte ceiling exceeded");
 		await writeFile(fixture.objectPath, fixture.objectBytes);
 
-		const manifest = fixture.receipt.evidence.ledger_archive.all_files_manifest_sha256;
-		fixture.receipt.evidence.ledger_archive.all_files_manifest_sha256 = "f".repeat(64);
-		await expectFailure("manifest digest", "all-files manifest digest");
-		fixture.receipt.evidence.ledger_archive.all_files_manifest_sha256 = manifest;
+		const deepRoot = resolve(fixture.archiveRoot, "deep", "one", "two");
+		await mkdir(deepRoot, { recursive: true });
+		await writeFile(resolve(deepRoot, "file"), Buffer.alloc(0));
+		await expectFailure("bounded directory depth", "directory depth exceeded");
+		await rm(resolve(fixture.archiveRoot, "deep"), { recursive: true, force: true });
+		await requireCleanBaseline("bounded directory depth");
 
-		fixture.receipt.evidence.ledger_archive.total_file_count += 1;
-		await expectFailure("file count", "total file count");
-		fixture.receipt.evidence.ledger_archive.total_file_count -= 1;
+		for (const name of ["pack", "info"]) {
+			const unexpectedDirectory = resolve(fixture.archiveRoot, "objects", name);
+			await mkdir(unexpectedDirectory);
+			await expectFailure(`empty objects/${name} directory`, "directory shape");
+			await rm(unexpectedDirectory, { recursive: true, force: true });
+			await requireCleanBaseline(`empty objects/${name} directory`);
+		}
+
+		const extraDepthDirectory = resolve(fixture.archiveRoot, "objects", "FF", "extra");
+		await mkdir(extraDepthDirectory, { recursive: true });
+		await expectFailure("empty extra-depth object directory", "directory depth exceeded");
+		await rm(resolve(fixture.archiveRoot, "objects", "FF"), { recursive: true, force: true });
+		await requireCleanBaseline("empty extra-depth object directory");
+
+		await writeFile(fixture.objectPath, Buffer.from("tampered-object\n", "utf8"));
+		await refreshLocalEvidenceFixtureDeclaration(fixture);
+		await expectFailure("content-addressed capture blob", "content-addressed capture blob mismatch");
+		await writeFile(fixture.objectPath, fixture.objectBytes);
+		await refreshLocalEvidenceFixtureDeclaration(fixture);
+
+		const alternateGitPayload = Buffer.from("different-valid-git-object\n", "utf8");
+		const alternateGitCanonical = Buffer.concat([
+			Buffer.from(`blob ${alternateGitPayload.length}\0`, "ascii"), alternateGitPayload,
+		]);
+		await installGitObject(originalGitIdentity, deflateSync(alternateGitCanonical));
+		await expectFailure("Git loose identity", "Git loose object identity mismatch");
+		await restoreGitObject();
+
+		await installGitObject(originalGitIdentity, Buffer.from("not-zlib", "ascii"));
+		await expectFailure("Git loose compression", "Git loose object bounded inflate mismatch");
+		await restoreGitObject();
+
+		await installGitObject(originalGitIdentity, Buffer.concat([fixture.gitObjectBytes, Buffer.from([0, 1, 2])]));
+		await expectFailure("Git loose trailing bytes", "Git loose object trailing compressed data");
+		await restoreGitObject();
+
+		const noncanonicalHeader = Buffer.from("blob 01\0x", "ascii");
+		await installGitObject(sha1(noncanonicalHeader), deflateSync(noncanonicalHeader));
+		await expectFailure("Git loose noncanonical header", "Git loose object header mismatch");
+		await restoreGitObject();
+
+		const wrongDeclaredSize = Buffer.from("blob 2\0x", "ascii");
+		await installGitObject(sha1(wrongDeclaredSize), deflateSync(wrongDeclaredSize));
+		await expectFailure("Git loose declared size", "Git loose object declared-size mismatch");
+		await restoreGitObject();
+
+		await removeActiveGitObject();
+		const unknownObjectPath = resolve(fixture.archiveRoot, "objects", "unexpected-object");
+		await writeFile(unknownObjectPath, fixture.gitObjectBytes);
+		activeGitObjectPath = unknownObjectPath;
+		await refreshLocalEvidenceFixtureDeclaration(fixture);
+		await expectFailure("unrecognized object namespace", "unrecognized didrun object namespace");
+		await restoreGitObject();
+
+		for (const totalBytes of [c1GitLooseInflateLimit - 1, c1GitLooseInflateLimit]) {
+			const canonical = gitBlobCanonicalAtTotalBytes(totalBytes);
+			const identity = sha1(canonical);
+			const bytes = deflateSync(canonical);
+			const accepted = validateC1LedgerObject({
+				path: `objects/${identity.slice(0, 2)}/${identity.slice(2)}`,
+				bytes,
+				digest: sha256(bytes),
+			});
+			if (typeof accepted === "string" || accepted.kind !== "GIT_LOOSE_SHA1") {
+				throw new Error(`P07B-C C1 local-evidence self-test rejected ${totalBytes}-byte inflate boundary`);
+			}
+		}
+		const oversizedCanonical = gitBlobCanonicalAtTotalBytes(c1GitLooseInflateLimit + 1);
+		const oversizedIdentity = sha1(oversizedCanonical);
+		const oversizedBytes = deflateSync(oversizedCanonical);
+		const oversizedResult = validateC1LedgerObject({
+			path: `objects/${oversizedIdentity.slice(0, 2)}/${oversizedIdentity.slice(2)}`,
+			bytes: oversizedBytes,
+			digest: sha256(oversizedBytes),
+		});
+		if (typeof oversizedResult !== "string" || !oversizedResult.includes("bounded inflate mismatch")) {
+			throw new Error("P07B-C C1 local-evidence self-test accepted over-limit Git loose object");
+		}
+		rejected += 1;
+
+		const extraBlobBytes = Buffer.from("unreferenced-capture-blob\n", "utf8");
+		const extraBlobPath = resolve(fixture.archiveRoot, "objects", sha256(extraBlobBytes));
+		await writeFile(extraBlobPath, extraBlobBytes);
+		await refreshLocalEvidenceFixtureDeclaration(fixture);
+		await expectFailure("unreferenced capture blob", "local ledger capture blob reference set");
+		await rm(extraBlobPath);
+		await refreshLocalEvidenceFixtureDeclaration(fixture);
+
+		const missingReferenceSessions = structuredClone(fixture.sessions);
+		missingReferenceSessions[0].event.stdout_blob = "f".repeat(64);
+		await writeJSONLines(fixture.sessionPath, missingReferenceSessions);
+		await refreshLocalEvidenceFixtureDeclaration(fixture);
+		await expectFailure("missing capture blob reference", "local ledger capture blob reference set");
+		await writeJSONLines(fixture.sessionPath, fixture.sessions);
+		await refreshLocalEvidenceFixtureDeclaration(fixture);
+
+		const mutateLedgerDeclaration = async (name, field, value, expected) => {
+			const ledger = fixture.receipt.evidence.ledger_archive;
+			const original = ledger[field];
+			ledger[field] = value;
+			await expectFailure(name, expected);
+			ledger[field] = original;
+		};
+		await mutateLedgerDeclaration("all-files manifest digest", "all_files_manifest_sha256", "f".repeat(64), "all-files manifest digest");
+		await mutateLedgerDeclaration("objects manifest digest", "objects_manifest_sha256", "f".repeat(64), "objects manifest digest");
+		await mutateLedgerDeclaration("total file count", "total_file_count", fixture.receipt.evidence.ledger_archive.total_file_count + 1, "total file count");
+		await mutateLedgerDeclaration("object file count", "object_file_count", fixture.receipt.evidence.ledger_archive.object_file_count + 1, "object file count");
+		await mutateLedgerDeclaration("total byte count", "total_bytes", fixture.receipt.evidence.ledger_archive.total_bytes + 1, "byte count");
+		for (const [field, path] of [
+			["gitignore_sha256", ".gitignore"],
+			["session_log_sha256", "session.log"],
+			["claims_jsonl_sha256", "claims.jsonl"],
+			["seals_jsonl_sha256", "seals.jsonl"],
+		]) {
+			await mutateLedgerDeclaration(`${path} core digest`, field, "f".repeat(64), `core digest: ${path}`);
+		}
+		await mutateLedgerDeclaration("session event count", "archive_session_event_count", fixture.receipt.evidence.ledger_archive.archive_session_event_count + 1, "session event count");
+		await mutateLedgerDeclaration("claim count", "claim_count", fixture.receipt.evidence.ledger_archive.claim_count + 1, "claim count");
+		await mutateLedgerDeclaration("seal count", "seal_count", fixture.receipt.evidence.ledger_archive.seal_count + 1, "seal count");
+		await mutateLedgerDeclaration("seal watermark", "sealed_event_count", fixture.receipt.evidence.ledger_archive.sealed_event_count + 1, "seal identity");
 
 		const hostileClaims = structuredClone(fixture.claims);
 		hostileClaims[0].label = "wrong label";
@@ -1157,9 +1638,45 @@ async function runLocalEvidenceSelfTest() {
 		await writeJSONLines(fixture.sealPath, hostileSeals);
 		await expectFailure("seal identity", "local ledger seal identity");
 		await writeJSONLines(fixture.sealPath, fixture.seals);
+		await requireCleanBaseline("final hostile case");
 		return rejected;
 	} finally {
-		await rm(fixture.root, { recursive: true, force: true });
+		await rm(root, { recursive: true, force: true });
+	}
+}
+
+async function runC1ReceiptModePhaseSelfTest() {
+	const root = await mkdtemp(resolve(tmpdir(), "countershape-c1-receipt-phase-"));
+	const absolute = resolve(root, c1ReceiptDeclarationPath);
+	let rejected = 0;
+	const expectFailure = async (name, expectedPresent, expected) => {
+		try {
+			await requireC1ReceiptDeclarationPhase(root, expectedPresent);
+		} catch (error) {
+			if (!error.message.includes(expected)) {
+				throw new Error(`P07B-C C1 receipt-mode phase self-test wrong rejection for ${name}: ${error.message}`);
+			}
+			rejected += 1;
+			return;
+		}
+		throw new Error(`P07B-C C1 receipt-mode phase self-test false negative: ${name}`);
+	};
+	try {
+		await requireC1ReceiptDeclarationPhase(root, false);
+		await expectFailure("declaration-bound mode without declaration", true, "must be present");
+		await mkdir(dirname(absolute), { recursive: true });
+		await writeFile(absolute, "{}\n", "utf8");
+		await requireC1ReceiptDeclarationPhase(root, true);
+		if (await readC1ReceiptDeclarationSnapshot(root) !== "{}\n") {
+			throw new Error("P07B-C C1 receipt-mode phase self-test snapshot mismatch");
+		}
+		await expectFailure("sealed-maintenance mode with declaration", false, "must be absent");
+		await rm(absolute);
+		await symlink(resolve(root, "missing-target"), absolute);
+		await expectFailure("declaration-bound symlink", true, "regular non-symlink");
+		return rejected;
+	} finally {
+		await rm(root, { recursive: true, force: true });
 	}
 }
 
@@ -1608,6 +2125,26 @@ export async function checkPlan(root = repositoryRoot, overrides = new Map(), re
 	if (computedC1VerificationDigest !== requiredC1VerificationDigest) {
 		errors.push(`internal C1V roster digest mismatch: ${computedC1VerificationDigest}`);
 	}
+	for (const [path, snippets] of Object.entries(requiredC1EvidenceMaintenanceText)) {
+		let body;
+		try {
+			body = bodies.get(path) ?? await readText(root, path, overrides);
+			bodies.set(path, body);
+		} catch (error) {
+			errors.push(`${path}: unreadable (${error.message})`);
+			continue;
+		}
+		for (const snippet of snippets) {
+			if (!body.includes(snippet)) {
+				errors.push(`${path}: missing required local-evidence maintenance ruling: ${JSON.stringify(snippet)}`);
+			}
+		}
+	}
+	const computedC1EvidenceMaintenanceDigest = `sha256:${createHash("sha256")
+		.update(`${requiredC1EvidenceMaintenancePaths.join("\n")}\n`, "utf8").digest("hex")}`;
+	if (computedC1EvidenceMaintenanceDigest !== requiredC1EvidenceMaintenanceDigest) {
+		errors.push(`internal C1E roster digest mismatch: ${computedC1EvidenceMaintenanceDigest}`);
+	}
 	if (!isDeepStrictEqual(qualificationCaseIDs, requiredQualificationCaseIDs)) {
 		errors.push("internal C1V Go repetition qualification case roster mismatch");
 	}
@@ -1631,6 +2168,13 @@ export async function checkPlan(root = repositoryRoot, overrides = new Map(), re
 			"verification-throughput scope declaration",
 			errors,
 		);
+		requireExactlyOnce(
+			verificationBody,
+			requiredC1EvidenceMaintenanceDeclaration,
+			"docs/VERIFICATION.md",
+			"local-evidence maintenance scope declaration",
+			errors,
+		);
 	}
 	const verificationStatusBody = bodies.get(c1VerificationStatusPath);
 	if (verificationStatusBody !== undefined) {
@@ -1641,6 +2185,25 @@ export async function checkPlan(root = repositoryRoot, overrides = new Map(), re
 			"verification-throughput scope declaration",
 			errors,
 		);
+	}
+	const evidenceMaintenanceStatusBody = bodies.get(c1EvidenceMaintenanceStatusPath);
+	if (evidenceMaintenanceStatusBody !== undefined) {
+		requireExactlyOnce(
+			evidenceMaintenanceStatusBody,
+			requiredC1EvidenceMaintenanceDeclaration,
+			c1EvidenceMaintenanceStatusPath,
+			"local-evidence maintenance scope declaration",
+			errors,
+		);
+		for (const label of c1EvidenceMaintenanceClaimLabels) {
+			requireExactlyOnce(
+				evidenceMaintenanceStatusBody,
+				`| \`${label}\` |`,
+				c1EvidenceMaintenanceStatusPath,
+				"local-evidence maintenance intended claim map",
+				errors,
+			);
+		}
 	}
 
 	try {
@@ -1765,6 +2328,15 @@ export async function checkPlan(root = repositoryRoot, overrides = new Map(), re
 		if (specification.units.C1V.verification_profile !== "SOURCE_FULL") {
 			errors.push("spec/verification/p07b-c-unit-paths.json: C1V verification profile mismatch");
 		}
+		if (!isDeepStrictEqual(specification.units.C1E.exact, requiredC1EvidenceMaintenancePaths)) {
+			errors.push("spec/verification/p07b-c-unit-paths.json: C1E exact path roster mismatch");
+		}
+		if (!isDeepStrictEqual(specification.units.C1E.prefixes, [])) {
+			errors.push("spec/verification/p07b-c-unit-paths.json: C1E prefix roster mismatch");
+		}
+		if (specification.units.C1E.verification_profile !== "SOURCE_FULL") {
+			errors.push("spec/verification/p07b-c-unit-paths.json: C1E verification profile mismatch");
+		}
 		if (!isDeepStrictEqual(specification.units.C1B.exact, requiredC1BPaths)) {
 			errors.push("spec/verification/p07b-c-unit-paths.json: C1B exact path roster mismatch");
 		}
@@ -1792,6 +2364,7 @@ async function runSelfTest() {
 	const baseline = await checkPlan();
 	if (baseline.length > 0) throw new Error(`P07B-C C1 evolved plan checker self-test baseline failed:\n${baseline.join("\n")}`);
 	const localEvidenceMutations = await runLocalEvidenceSelfTest();
+	const receiptModePhaseMutations = await runC1ReceiptModePhaseSelfTest();
 
 	const promptPath = "docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md";
 	const prompt = await readText(repositoryRoot, promptPath, new Map());
@@ -1858,6 +2431,7 @@ async function runSelfTest() {
 	const currentHandoff = await readText(repositoryRoot, "docs/HANDOFF_MODE_C.md", new Map());
 	const currentC1MaintenanceStatus = await readText(repositoryRoot, c1MaintenanceStatusPath, new Map());
 	const currentC1VerificationStatus = await readText(repositoryRoot, c1VerificationStatusPath, new Map());
+	const currentC1EvidenceMaintenanceStatus = await readText(repositoryRoot, c1EvidenceMaintenanceStatusPath, new Map());
 	const currentC1Status = await readText(repositoryRoot, c1StatusPath, new Map());
 	const currentC1DidrunBugs = await readText(repositoryRoot, c1DidrunBugsPath, new Map());
 	const currentPromptPack = await readText(repositoryRoot, "docs/PROMPT_PACK.md", new Map());
@@ -2108,6 +2682,21 @@ async function runSelfTest() {
 			expect: "missing required verification-throughput ruling",
 		},
 		{
+			name: "C1E verification roster digest substitution", path: "docs/VERIFICATION.md",
+			value: currentVerification.replace(requiredC1EvidenceMaintenanceDigest, `sha256:${"0".repeat(64)}`),
+			expect: "local-evidence maintenance scope declaration",
+		},
+		{
+			name: "C1E status mixed-namespace count substitution", path: c1EvidenceMaintenanceStatusPath,
+			value: currentC1EvidenceMaintenanceStatus.replace("20 flat didrun capture blobs", "19 flat didrun capture blobs"),
+			expect: "missing required local-evidence maintenance ruling",
+		},
+		{
+			name: "C1E verification namespace removal", path: "docs/VERIFICATION.md",
+			value: currentVerification.replace("`objects/<2-lowercase-hex>/<38-lowercase-hex>`", "Git objects omitted"),
+			expect: "missing required local-evidence maintenance ruling",
+		},
+		{
 			name: "C1M lifecycle signal-authority regression", path: "docs/STATE_MACHINES.md",
 			value: (await readText(repositoryRoot, "docs/STATE_MACHINES.md", new Map())).replace(
 				"skip TERM on absence, signal only after clean presence",
@@ -2308,6 +2897,55 @@ async function runSelfTest() {
 			value: (() => {
 				const candidate = structuredClone(currentConfiguration);
 				candidate.units.C1V.verification_profile = "RECEIPT_RECONCILIATION";
+				return `${JSON.stringify(candidate, null, 2)}\n`;
+			})(),
+			expect: "invalid",
+		},
+		{
+			name: "C1E unit omission", path: configPath,
+			value: (() => {
+				const candidate = structuredClone(currentConfiguration);
+				delete candidate.units.C1E;
+				return `${JSON.stringify(candidate, null, 2)}\n`;
+			})(),
+			expect: "invalid",
+		},
+		{
+			name: "C1E exact path deletion", path: configPath,
+			value: (() => {
+				const candidate = structuredClone(currentConfiguration);
+				candidate.units.C1E.exact = candidate.units.C1E.exact.filter(
+					(path) => path !== c1EvidenceMaintenanceStatusPath,
+				);
+				return `${JSON.stringify(candidate, null, 2)}\n`;
+			})(),
+			expect: "C1E exact path roster mismatch",
+		},
+		{
+			name: "C1E exact path substitution", path: configPath,
+			value: (() => {
+				const candidate = structuredClone(currentConfiguration);
+				candidate.units.C1E.exact = candidate.units.C1E.exact.map((path) =>
+					path === c1EvidenceMaintenanceStatusPath ? "docs/status/P07B-C-C1-EVIDENCE-UNREVIEWED.md" : path,
+				).sort();
+				return `${JSON.stringify(candidate, null, 2)}\n`;
+			})(),
+			expect: "C1E exact path roster mismatch",
+		},
+		{
+			name: "C1E prefix introduction", path: configPath,
+			value: (() => {
+				const candidate = structuredClone(currentConfiguration);
+				candidate.units.C1E.prefixes = ["tools/"];
+				return `${JSON.stringify(candidate, null, 2)}\n`;
+			})(),
+			expect: "invalid",
+		},
+		{
+			name: "C1E receipt-profile substitution", path: configPath,
+			value: (() => {
+				const candidate = structuredClone(currentConfiguration);
+				candidate.units.C1E.verification_profile = "RECEIPT_RECONCILIATION";
 				return `${JSON.stringify(candidate, null, 2)}\n`;
 			})(),
 			expect: "invalid",
@@ -2735,23 +3373,42 @@ async function runSelfTest() {
 		}
 	}
 
-	console.log(`P07B-C C1 evolved plan checker self-test passed: ${cases.length + localEvidenceMutations} authority, structure, local-evidence, semantic-projection, and allowlist mutations rejected`);
+	console.log(`P07B-C C1 evolved plan checker self-test passed: ${cases.length + localEvidenceMutations + receiptModePhaseMutations} authority, structure, local-evidence, phase-isolation, semantic-projection, and allowlist mutations rejected`);
 }
 
 async function main() {
 	const mode = process.argv[2];
 	if (mode === "--self-test") {
-		if (process.argv.length !== 3) throw new Error("usage: check-p07b-c-plan.mjs [--self-test|--verify-c1-local-evidence]");
+		if (process.argv.length !== 3) throw new Error("usage: check-p07b-c-plan.mjs [--self-test|--verify-sealed-c1-local-evidence|--verify-c1-local-evidence]");
 		await runSelfTest();
 		return;
 	}
-	if (mode === "--verify-c1-local-evidence") {
-		if (process.argv.length !== 3) throw new Error("usage: check-p07b-c-plan.mjs [--self-test|--verify-c1-local-evidence]");
+	if (mode === "--verify-sealed-c1-local-evidence") {
+		if (process.argv.length !== 3) throw new Error("usage: check-p07b-c-plan.mjs [--self-test|--verify-sealed-c1-local-evidence|--verify-c1-local-evidence]");
+		await requireC1ReceiptDeclarationPhase(repositoryRoot, false);
 		const planErrors = await checkPlan();
+		if (planErrors.length > 0) {
+			throw new Error(`P07B-C sealed C1 local-evidence precondition failed:\n${planErrors.join("\n")}`);
+		}
+		const evidenceErrors = await verifyC1LocalEvidence(repositoryRoot, {
+			source_commit: sealedC1Identity.commit,
+			source_tree: sealedC1Identity.tree,
+			evidence: structuredClone(expectedC1ReceiptEvidence),
+		});
+		if (evidenceErrors.length > 0) {
+			throw new Error(`P07B-C sealed C1 local-evidence verification failed:\n${evidenceErrors.join("\n")}`);
+		}
+		console.log("P07B-C sealed C1 local evidence passed: 20 flat SHA-256 capture blobs plus 57 bounded Git SHA-1 loose objects match the 77-object combined manifest and exact referenced-blob set; this local snapshot is not a portable didrun-format or strict-verification guarantee");
+		return;
+	}
+	if (mode === "--verify-c1-local-evidence") {
+		if (process.argv.length !== 3) throw new Error("usage: check-p07b-c-plan.mjs [--self-test|--verify-sealed-c1-local-evidence|--verify-c1-local-evidence]");
+		const receiptText = await readC1ReceiptDeclarationSnapshot(repositoryRoot);
+		const planErrors = await checkPlan(repositoryRoot, new Map([[c1ReceiptDeclarationPath, receiptText]]));
 		if (planErrors.length > 0) {
 			throw new Error(`P07B-C C1 local-evidence precondition failed:\n${planErrors.join("\n")}`);
 		}
-		const receipt = JSON.parse(await readText(repositoryRoot, c1ReceiptDeclarationPath, new Map()));
+		const receipt = JSON.parse(receiptText);
 		const evidenceErrors = await verifyC1LocalEvidence(repositoryRoot, receipt);
 		if (evidenceErrors.length > 0) {
 			throw new Error(`P07B-C C1 local-evidence verification failed:\n${evidenceErrors.join("\n")}`);
@@ -2759,7 +3416,7 @@ async function main() {
 		console.log("P07B-C C1 local evidence passed: HTML plus the ignored 19-event sealed/20-event archived ledger snapshot match the closed receipt declaration; this local snapshot is not portable strict authority");
 		return;
 	}
-	if (mode !== undefined) throw new Error("usage: check-p07b-c-plan.mjs [--self-test|--verify-c1-local-evidence]");
+	if (mode !== undefined) throw new Error("usage: check-p07b-c-plan.mjs [--self-test|--verify-sealed-c1-local-evidence|--verify-c1-local-evidence]");
 
 	const errors = await checkPlan();
 	if (errors.length > 0) {
