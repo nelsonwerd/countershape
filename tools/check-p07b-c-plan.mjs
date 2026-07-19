@@ -65,6 +65,7 @@ const c1StatusPath = "docs/status/P07B-C-C1-SEMANTICS.md";
 const c2StatusPath = "docs/status/P07B-C-C2-PERSISTENCE.md";
 const c2MaintenanceStatusPath = "docs/status/P07B-C-C2-RECEIPT-PHASE-MAINTENANCE.md";
 const c3pStatusPath = "docs/status/P07B-C-C3P-RUNTIME-EPOCH.md";
+const c3vStatusPath = "docs/status/P07B-C-C3V-VERIFICATION-THROUGHPUT.md";
 const c1DidrunBugsPath = "docs/status/DIDRUN_BUGS.md";
 const sealedC0AIdentity = Object.freeze({
 	commit: "1c6d9fdef339314bfcb99d7d53f3a7c5040e5020",
@@ -90,6 +91,10 @@ const sealedC2Identity = Object.freeze({
 const sealedC2BIdentity = Object.freeze({
 	commit: "ab5e2dd5b66702a1d1cd13eb0047b57a48469487",
 	tree: "02fd396858ca41cff6d0ee561dce7ee65a3f94d0",
+});
+const sealedC3PIdentity = Object.freeze({
+	commit: "f7b6e6bda7a8864969415ab8636c495902e78dd9",
+	tree: "2d5555db63d46c837cf4e12f2dab2d04a41f4654",
 });
 const c0ClaimLabels = Object.freeze([
 	"P07B C0 authority plan coherence",
@@ -368,12 +373,13 @@ const requiredText = Object.freeze({
 		"`RECEIPT_RECONCILIATION` is admitted only for an exact empty-prefix roster",
 	],
 	"spec/verification/p07b-c-unit-paths.json": [
-		"countershape/p07b-c-unit-paths/v4",
+		"countershape/p07b-c-unit-paths/v5",
 		"\"C0A\"",
 		"\"C1M\"",
 		"\"C1V\"",
 		"\"C1E\"",
 		"\"C2M\"",
+		"\"C3V\"",
 		"\"C6B\"",
 		"\"verification_profile\"",
 		"\"receipt_claims\"",
@@ -750,7 +756,7 @@ const requiredC1EvidenceMaintenanceText = Object.freeze({
 			"later independently sealed, delimited handoff/receipt descendant",
 	],
 	"spec/verification/p07b-c-unit-paths.json": [
-		"countershape/p07b-c-unit-paths/v4",
+		"countershape/p07b-c-unit-paths/v5",
 		"\"C1E\"",
 	],
 		"tools/check-p07b-c-plan.mjs": [
@@ -1050,6 +1056,49 @@ const requiredC3PAddedPaths = new Set([
 	"research/deep-dive/p07b-c/11-c3-runtime-epoch-audit.md",
 	"tools/check-p07b-c-c3p-receipt.mjs",
 ]);
+const requiredC3VPaths = Object.freeze([
+	"docs/HANDOFF_MODE_C.md",
+	"docs/PROMPT_PACK.md",
+	"docs/VERIFICATION.md",
+	"docs/status/P07B-C-C3V-VERIFICATION-THROUGHPUT.md",
+	"spec/verification/p07b-c-unit-paths.json",
+	"tools/check-p07b-c-plan.mjs",
+	"tools/check-p07b-c-unit-scope.mjs",
+]);
+const requiredC3VDigest = "sha256:6cc5d8fe929f0f1dfa6ffc223d2e8bcee5ba4596a09caa9dc032103bbb5bafbd";
+const requiredC3VRosterText = requiredC3VPaths
+	.map((path, index) => `${index === requiredC3VPaths.length - 1 ? "and " : ""}\`${path}\``)
+	.join(", ");
+const requiredC3VDeclaration = `C3V owns exactly these ${requiredC3VPaths.length} paths: ${requiredC3VRosterText}. Their sorted-newline roster digest is \`${requiredC3VDigest}\`.`;
+const c3vClaimLabels = Object.freeze([
+	"P07B-C C3V throughput proposal disposition coherence",
+	"P07B-C C3V disposition and frozen-verifier defensive self-test",
+	"P07B-C C3V unit-scope defensive self-test",
+	"P07B-C C3V cumulative verifier self-test",
+	"P07B-C C3V cumulative verification",
+	"P07B-C C3V exact seven-path staged scope and diff integrity",
+	"P07B-C C3V scoped staged credential-pattern scan",
+	"P07B-C C3V preceding didrun chain integrity",
+]);
+const c3vClaimTypes = Object.freeze([
+	...Array(5).fill("tests-pass"),
+	...Array(3).fill("command-succeeded"),
+]);
+const c3vExpectedClaimArgv = Object.freeze([
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--self-test"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--self-test"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current-selftest.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C3V", "--source-final-gate"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C3V", "--credential-scan"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--verify-c3v-preseal-ledger"]),
+]);
+const c3vFrozenVerifierDigests = Object.freeze({
+	"tools/verify-current.mjs": "ce76506d67c8d79b6359f5825dcc85abbc60b87344c8fb4884335faa03babbc3",
+	"tools/verify-current-selftest.mjs": "b18771c16cb85b5a85fdadb0ee0aa39d7357217e302ea3b0b690ba56cfc2d558",
+	"tools/verify-go-test-repetition.mjs": "1321fb1381f1f74d0959b9ceb40b4dcc4abc637bb281ff2af759863ede3bfd5a",
+});
 const requiredC3PBPaths = Object.freeze([
 	"docs/HANDOFF_MODE_C.md",
 	"docs/status/P07B-C-C3P-RUNTIME-EPOCH.md",
@@ -1133,6 +1182,52 @@ const requiredC3PText = Object.freeze({
 	[c3pStatusPath]: [requiredC3PDigest, requiredC3PBDigest, requiredC3Digest, requiredC3BDigest, ...c3pClaimLabels.map((label) => `\`${label}\``)],
 	"research/deep-dive/p07b-c/11-c3-runtime-epoch-audit.md": ["DARWIN_KERN_BOOTSESSIONUUID_V1", "pre-authority semantic correction", "exact forty-path roster"],
 	"tools/check-p07b-c-c3p-receipt.mjs": ["--verify-preseal-ledger", "--verify-local-evidence", "--self-test"],
+});
+const c3vDispositionRows = Object.freeze([
+	"| 1. Persistent content-addressed private `GOCACHE` keyed by admitted Go authority | `DECLINED_WITH_REASON` | Go's cache does not detect imported C-library changes. Countershape has real Darwin/cgo code; a Go-only key omits clang, SDK/header, libSystem, and prior writable-cache authority. `GOCACHE` therefore remains fresh below each mode-`0700` run root and is removed at finalization. |",
+	"| 2. Direct `p=8` general lane plus serialized sensitive lane | `INTENTIONAL; P8_DECLINED_WITH_REASON` | C1V already replaced global package serialization with exact tiering: direct build/vet/general tests use `-p=2`, while six frozen sensitive packages run separately at `-p=1` and every nested command inherits `-p=1`. The `p=4` candidate passed Go packages but caused two permanent later AST-timeout events; `p=8` was therefore declined for this shared host. The accepted `p=2` profile passed the historical 50x/20x matrix and three cumulative ceilings. |",
+	"| 3. Exclusive single-verifier lock | `INTENTIONAL` | The verifier already acquires `.countershape/verify-current/active.lock` with exclusive creation before authority admission or work. A second live/indeterminate owner fails fast. An absent PID produces review-first `VERIFY_STALE_LOCK`; automatic stale deletion remains declined because two recovery contenders can race and remove a new owner's lock. |",
+	"| 4. Narrow docs-only receipt boundary | `INTENTIONAL` | `RECEIPT_RECONCILIATION` already admits only an exact empty-prefix Markdown/receipt-declaration roster with seven machine-declared claims: reconciliation, checker self-test, local snapshot match, receipt-only Go build, exact staged scope/diff, credential scan, and chain integrity. It cannot claim the cumulative suite, runtime, security, or unchanged behavior. Source units remain `SOURCE_FULL`. |",
+]);
+const c3vDidrunInterruptFinding = "`C3V-S6-DIDRUN-INTERRUPT-1`: during an unclaimed development run, operator SIGINT caused didrun to exit `130` with a Python `KeyboardInterrupt` traceback before it appended an event for the in-flight cumulative verifier; process inspection found no surviving verifier child. It left the mode-`0600` lock for PID `84735` in place; review proved the PID absent, no process held the file, and the owner, repository-root digest, and mode matched before one explicit didrun-wrapped recovery event removed only that lock. The interrupted command therefore has no didrun receipt and supports no claim. This is a didrun interruption-capture bug finding, not a verifier failure or a sealed-tree result; final evidence must complete normally in a fresh ledger.";
+const requiredC3VText = Object.freeze({
+	"docs/HANDOFF_MODE_C.md": [
+		"Active C3V throughput-proposal reconciliation",
+		requiredC3VDigest,
+		sealedC3PIdentity.commit,
+		sealedC3PIdentity.tree,
+		"88e62acb3023dcd6ee51950c2ad24bbcc2ca8900",
+		"C3V changes only its seven declared documentation/checker-authority paths",
+		c3vDidrunInterruptFinding,
+	],
+	"docs/PROMPT_PACK.md": [
+		"status/P07B-C-C3V-VERIFICATION-THROUGHPUT.md",
+		requiredC3VDigest,
+		"active no-delta maintenance",
+	],
+	"docs/VERIFICATION.md": [
+		"## C3V verification-throughput proposal reconciliation",
+		requiredC3VDeclaration,
+		"DECLINED_WITH_REASON",
+		"INTENTIONAL; P8_DECLINED_WITH_REASON",
+		"Item 4 is `INTENTIONAL`: exact empty-prefix receipt units already use the explicit seven-claim `RECEIPT_RECONCILIATION` profile",
+		"C3V owns exactly these 7 paths",
+	],
+	[c3vStatusPath]: [
+		"# P07B-C C3V — verification-throughput proposal reconciliation",
+		"active pre-seal `SOURCE_FULL` maintenance; every C3V grade below is `UNRECEIPTED`",
+		requiredC3VDigest,
+		sealedC3PIdentity.commit,
+		sealedC3PIdentity.tree,
+		...c3vDispositionRows,
+		"automatic stale deletion remains declined",
+		"Because C3V changes no execution setting",
+		"may not claim a new qualification or a new performance result",
+		"Its only behavior change is verification-scope/checker authority",
+		c3vDidrunInterruptFinding,
+		...Object.entries(c3vFrozenVerifierDigests).map(([path, digest]) => `\`${path}\` is \`sha256:${digest}\``),
+		...c3vClaimLabels.map((label) => `\`${label}\``),
+	],
 });
 
 async function readBytes(root, path, overrides) {
@@ -3496,12 +3591,34 @@ export async function checkPlan(root = repositoryRoot, overrides = new Map(), re
 			if (!body.includes(snippet)) errors.push(`${path}: missing required C3P ruling: ${JSON.stringify(snippet)}`);
 		}
 	}
+	for (const [path, snippets] of Object.entries(requiredC3VText)) {
+		let body;
+		try {
+			body = bodies.get(path) ?? await readText(root, path, overrides);
+			bodies.set(path, body);
+		} catch (error) {
+			errors.push(`${path}: unreadable (${error.message})`);
+			continue;
+		}
+		for (const snippet of snippets) {
+			if (!body.includes(snippet)) errors.push(`${path}: missing required C3V ruling: ${JSON.stringify(snippet)}`);
+		}
+	}
+	for (const [path, digest] of Object.entries(c3vFrozenVerifierDigests)) {
+		try {
+			const observed = createHash("sha256").update(await readBytes(root, path, overrides)).digest("hex");
+			if (observed !== digest) errors.push(`${path}: C3V frozen verifier digest mismatch: sha256:${observed}`);
+		} catch (error) {
+			errors.push(`${path}: C3V frozen verifier authority unreadable (${error.message})`);
+		}
+	}
 	const computedC2Digest = `sha256:${createHash("sha256").update(`${requiredC2Paths.join("\n")}\n`, "utf8").digest("hex")}`;
 	if (computedC2Digest !== requiredC2Digest) errors.push(`internal C2 roster digest mismatch: ${computedC2Digest}`);
 	const computedC2BDigest = `sha256:${createHash("sha256").update(`${requiredC2BPaths.join("\n")}\n`, "utf8").digest("hex")}`;
 	if (computedC2BDigest !== requiredC2BDigest) errors.push(`internal C2B roster digest mismatch: ${computedC2BDigest}`);
 	for (const [unit, paths, digest] of [
 		["C3P", requiredC3PPaths, requiredC3PDigest],
+		["C3V", requiredC3VPaths, requiredC3VDigest],
 		["C3PB", requiredC3PBPaths, requiredC3PBDigest],
 		["C3", requiredC3Paths, requiredC3Digest],
 		["C3B", requiredC3BPaths, requiredC3BDigest],
@@ -3544,6 +3661,13 @@ export async function checkPlan(root = repositoryRoot, overrides = new Map(), re
 			requiredC2MaintenanceDeclaration,
 			"docs/VERIFICATION.md",
 			"C2 receipt-phase maintenance scope declaration",
+			errors,
+		);
+		requireExactlyOnce(
+			verificationBody,
+			requiredC3VDeclaration,
+			"docs/VERIFICATION.md",
+			"C3V throughput reconciliation scope declaration",
 			errors,
 		);
 	}
@@ -3593,6 +3717,30 @@ export async function checkPlan(root = repositoryRoot, overrides = new Map(), re
 				"C2 receipt-phase maintenance intended claim map",
 				errors,
 			);
+		}
+	}
+	const c3vStatusBody = bodies.get(c3vStatusPath);
+	if (c3vStatusBody !== undefined) {
+		requireExactlyOnce(
+			c3vStatusBody,
+			`- **Scope:** 7 exact mode-\`100644\` paths, no prefixes; sorted-newline roster \`${requiredC3VDigest}\``,
+			c3vStatusPath,
+			"C3V source scope",
+			errors,
+		);
+		requireExactlyOnce(c3vStatusBody, "- **Commit subject:** `docs: reconcile verifier throughput proposal`", c3vStatusPath, "C3V commit subject", errors);
+		for (let index = 0; index < c3vClaimLabels.length; index += 1) {
+			requireExactlyOnce(
+				c3vStatusBody,
+				`| \`${c3vClaimLabels[index]}\` | \`${c3vClaimTypes[index]}\` | \`UNRECEIPTED\` |`,
+				c3vStatusPath,
+				"C3V planned claim map",
+				errors,
+			);
+			requireClaimLabelExactlyOnce(c3vStatusBody, c3vClaimLabels[index], c3vStatusPath, "C3V planned claim map", errors);
+		}
+		if (/\|\s*`P07B-C C3V [^`]+`\s*\|\s*`(?:TREE-EXACT|RECORDED-EXACT)`/u.test(c3vStatusBody)) {
+			errors.push(`${c3vStatusPath}: C3V pre-seal status cannot grade itself`);
 		}
 	}
 
@@ -3796,6 +3944,12 @@ export async function checkPlan(root = repositoryRoot, overrides = new Map(), re
 		if (!isDeepStrictEqual(specification.units.C3P.prefixes, []) || specification.units.C3P.verification_profile !== "SOURCE_FULL") {
 			errors.push("spec/verification/p07b-c-unit-paths.json: C3P source profile mismatch");
 		}
+		if (!isDeepStrictEqual(specification.units.C3V.exact, requiredC3VPaths)) {
+			errors.push("spec/verification/p07b-c-unit-paths.json: C3V exact path roster mismatch");
+		}
+		if (!isDeepStrictEqual(specification.units.C3V.prefixes, []) || specification.units.C3V.verification_profile !== "SOURCE_FULL") {
+			errors.push("spec/verification/p07b-c-unit-paths.json: C3V source profile mismatch");
+		}
 		if (!isDeepStrictEqual(specification.units.C3PB.exact, requiredC3PBPaths)) {
 			errors.push("spec/verification/p07b-c-unit-paths.json: C3PB exact path roster mismatch");
 		}
@@ -3887,7 +4041,13 @@ function replaceFixtureExactlyOnce(body, needle, replacement, name) {
 async function syntheticC2SealedSourcePhaseFixture() {
 	const sourceStatus = readSealedC2StatusFixture();
 	const currentHandoff = await readText(repositoryRoot, "docs/HANDOFF_MODE_C.md", new Map());
-	const sourcePhaseHandoff = withoutC2ReceiptBlock(currentHandoff);
+	const strippedHandoff = withoutC2ReceiptBlock(currentHandoff);
+	const sourcePhaseHandoff = replaceFixtureExactlyOnce(
+		strippedHandoff,
+		`Sealed C2B commit \`${sealedC2BIdentity.commit}\`, tree \`${sealedC2BIdentity.tree}\`, remains`,
+		`Later predecessor identity inputs are \`${sealedC2BIdentity.commit}\` and \`${sealedC2BIdentity.tree}\`; the chain remains`,
+		"later C2B evidence neutralization",
+	);
 	return new Map([
 		[c2StatusPath, sourceStatus],
 		["docs/HANDOFF_MODE_C.md", sourcePhaseHandoff],
@@ -4329,6 +4489,10 @@ async function runSelfTest() {
 	const currentC1DidrunBugs = await readText(repositoryRoot, c1DidrunBugsPath, new Map());
 	const currentPromptPack = await readText(repositoryRoot, "docs/PROMPT_PACK.md", new Map());
 	const currentVerification = await readText(repositoryRoot, "docs/VERIFICATION.md", new Map());
+	const currentC3VStatus = await readText(repositoryRoot, c3vStatusPath, new Map());
+	const currentFrozenVerifierBodies = Object.fromEntries(await Promise.all(
+		Object.keys(c3vFrozenVerifierDigests).map(async (path) => [path, await readText(repositoryRoot, path, new Map())]),
+	));
 	const syntheticHandoff = `${currentHandoff.replace(
 		/\n?<!-- P07B-C-C0A-RECEIPTS:START -->[\s\S]*?<!-- P07B-C-C0A-RECEIPTS:END -->\n?/u,
 		"\n",
@@ -4494,6 +4658,47 @@ async function runSelfTest() {
 		expect: "invalid receipt declaration",
 	};
 	const cases = [
+		{
+			name: "C3V persistent cache acceptance", path: c3vStatusPath,
+			value: currentC3VStatus.replace(c3vDispositionRows[0], c3vDispositionRows[0].replace("`DECLINED_WITH_REASON`", "`INTENTIONAL`")),
+			expect: "missing required C3V ruling",
+		},
+		{
+			name: "C3V p8 acceptance", path: c3vStatusPath,
+			value: currentC3VStatus.replace(c3vDispositionRows[1], c3vDispositionRows[1].replace("`INTENTIONAL; P8_DECLINED_WITH_REASON`", "`INTENTIONAL; P8_ACCEPTED`")),
+			expect: "missing required C3V ruling",
+		},
+		{
+			name: "C3V automatic stale lock deletion", path: c3vStatusPath,
+			value: currentC3VStatus.replace("automatic stale deletion remains declined", "automatic stale deletion is enabled"),
+			expect: "missing required C3V ruling",
+		},
+		{
+			name: "C3V receipt-tier disposition drift", path: c3vStatusPath,
+			value: currentC3VStatus.replace(c3vDispositionRows[3], c3vDispositionRows[3].replace("`RECEIPT_RECONCILIATION` already admits only", "`SOURCE_FULL` now admits")),
+			expect: "missing required C3V ruling",
+		},
+		{
+			name: "C3V new qualification overclaim", path: c3vStatusPath,
+			value: currentC3VStatus.replace("may not claim a new qualification or a new performance result", "claims a new qualification and performance result"),
+			expect: "missing required C3V ruling",
+		},
+		{
+			name: "C3V didrun interrupt finding removal", path: c3vStatusPath,
+			value: currentC3VStatus.replace(c3vDidrunInterruptFinding, "Interrupted commands are fully receipted."),
+			expect: "missing required C3V ruling",
+		},
+		{
+			name: "C3V planned claim label drift", path: c3vStatusPath,
+			value: currentC3VStatus.replace(c3vClaimLabels[0], `${c3vClaimLabels[0]} altered`),
+			expect: "C3V planned claim map",
+		},
+		...Object.entries(currentFrozenVerifierBodies).map(([path, body]) => ({
+			name: `C3V frozen verifier byte drift: ${path}`,
+			path,
+			value: `${body}\n`,
+			expect: "C3V frozen verifier digest mismatch",
+		})),
 		{
 			name: "C1 maintenance receipt-grade regression", path: c1MaintenanceStatusPath,
 			value: currentC1MaintenanceStatus.replace(
@@ -5062,6 +5267,58 @@ async function runSelfTest() {
 				value: (() => {
 					const candidate = structuredClone(currentConfiguration);
 					candidate.units.C3P.prefixes = ["docs/"];
+					return `${JSON.stringify(candidate, null, 2)}\n`;
+				})(),
+				expect: "invalid",
+			},
+			{
+				name: "C3V unit removal", path: configPath,
+				value: (() => {
+					const candidate = structuredClone(currentConfiguration);
+					delete candidate.units.C3V;
+					return `${JSON.stringify(candidate, null, 2)}\n`;
+				})(),
+				expect: "invalid",
+			},
+			{
+				name: "C3V unit order drift", path: configPath,
+				value: (() => {
+					const candidate = structuredClone(currentConfiguration);
+					const entries = Object.entries(candidate.units);
+					const c3v = entries.find(([unit]) => unit === "C3V");
+					candidate.units = Object.fromEntries([
+						...entries.filter(([unit]) => unit !== "C3V" && unit !== "C3PB"),
+						entries.find(([unit]) => unit === "C3PB"),
+						c3v,
+					]);
+					return `${JSON.stringify(candidate, null, 2)}\n`;
+				})(),
+				expect: "invalid",
+			},
+			{
+				name: "C3V exact path removal", path: configPath,
+				value: (() => {
+					const candidate = structuredClone(currentConfiguration);
+					candidate.units.C3V.exact = candidate.units.C3V.exact.filter((path) => path !== c3vStatusPath);
+					return `${JSON.stringify(candidate, null, 2)}\n`;
+				})(),
+				expect: "C3V exact path roster mismatch",
+			},
+			{
+				name: "C3V prefix introduction", path: configPath,
+				value: (() => {
+					const candidate = structuredClone(currentConfiguration);
+					candidate.units.C3V.prefixes = ["docs/"];
+					return `${JSON.stringify(candidate, null, 2)}\n`;
+				})(),
+				expect: "invalid",
+			},
+			{
+				name: "C3V receipt profile substitution", path: configPath,
+				value: (() => {
+					const candidate = structuredClone(currentConfiguration);
+					candidate.units.C3V.verification_profile = "RECEIPT_RECONCILIATION";
+					candidate.units.C3V.receipt_claims = structuredClone(requiredC3PBReceiptClaims);
 					return `${JSON.stringify(candidate, null, 2)}\n`;
 				})(),
 				expect: "invalid",
@@ -5704,6 +5961,15 @@ export async function verifyC3PPresealLedger() {
 	});
 }
 
+export async function verifyC3VPresealLedger() {
+	await verifyLivePresealLedger({
+		phase: "C3V",
+		expectedArgv: c3vExpectedClaimArgv,
+		claims: c3vClaimLabels.map((label, index) => ({ label, type: c3vClaimTypes[index] })),
+		receiptPresent: false,
+	});
+}
+
 export async function verifyC3PBPresealLedger() {
 	await verifyLivePresealLedger({
 		phase: "C3PB",
@@ -5725,7 +5991,7 @@ export async function verifyC3PLocalEvidence() {
 
 async function main() {
 	const mode = process.argv[2];
-	const usage = "usage: check-p07b-c-plan.mjs [--self-test|--verify-sealed-c1-local-evidence|--verify-c1-local-evidence|--verify-c2-local-evidence|--verify-c2m-preseal-ledger|--verify-c2-preseal-ledger]";
+	const usage = "usage: check-p07b-c-plan.mjs [--self-test|--verify-sealed-c1-local-evidence|--verify-c1-local-evidence|--verify-c2-local-evidence|--verify-c2m-preseal-ledger|--verify-c2-preseal-ledger|--verify-c3v-preseal-ledger]";
 	if (mode === "--self-test") {
 		if (process.argv.length !== 3) throw new Error(usage);
 		await runSelfTest();
@@ -5789,6 +6055,11 @@ async function main() {
 		await verifyC2PresealLedger();
 		return;
 	}
+	if (mode === "--verify-c3v-preseal-ledger") {
+		if (process.argv.length !== 3) throw new Error(usage);
+		await verifyC3VPresealLedger();
+		return;
+	}
 	if (mode !== undefined) throw new Error(usage);
 
 	const errors = await checkPlan();
@@ -5799,7 +6070,7 @@ async function main() {
 		return;
 	}
 
-	console.log("P07B-C C3P plan check passed: historical receipts, corrected boot-session model/schema/examples, exact C3P/C3 receipt order, and exact source rosters remain coherent; this gate confers no live host, runtime, Git, target, or process authority");
+	console.log("P07B-C C3V plan check passed: the observer proposal is dispositioned against sealed C1V evidence, verifier bytes remain frozen, and exact C3P/C3V/C3PB/C3 source order remains coherent; this gate confers no new performance, live host, runtime, Git, target, or process authority");
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

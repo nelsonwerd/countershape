@@ -1,5 +1,5 @@
 {
-  "schema_version": "countershape/p07b-c-unit-paths/v4",
+  "schema_version": "countershape/p07b-c-unit-paths/v5",
   "units": {
     "C0A": {
       "exact": [
@@ -293,12 +293,25 @@
         "spec/examples/v1/finalized-contract-run.valid.json",
         "spec/schema/v1/contract-execution-target.schema.json",
         "spec/verification/p07b-c-unit-paths.json",
-      "tools/check-p07b-c-c3p-receipt.mjs",
-      "tools/check-p07b-c-plan.mjs",
-      "tools/check-p07b-c-unit-scope.mjs",
-      "tools/validate-planning.mjs",
-      "tools/verify-current-selftest.mjs",
-      "tools/verify-current.mjs"
+        "tools/check-p07b-c-c3p-receipt.mjs",
+        "tools/check-p07b-c-plan.mjs",
+        "tools/check-p07b-c-unit-scope.mjs",
+        "tools/validate-planning.mjs",
+        "tools/verify-current-selftest.mjs",
+        "tools/verify-current.mjs"
+      ],
+      "prefixes": [],
+      "verification_profile": "SOURCE_FULL"
+    },
+    "C3V": {
+      "exact": [
+        "docs/HANDOFF_MODE_C.md",
+        "docs/PROMPT_PACK.md",
+        "docs/VERIFICATION.md",
+        "docs/status/P07B-C-C3V-VERIFICATION-THROUGHPUT.md",
+        "spec/verification/p07b-c-unit-paths.json",
+        "tools/check-p07b-c-plan.mjs",
+        "tools/check-p07b-c-unit-scope.mjs"
       ],
       "prefixes": [],
       "verification_profile": "SOURCE_FULL"
