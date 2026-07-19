@@ -12,10 +12,10 @@
 
 ## Current state
 
-- **Pipeline phase:** U0–U6, P07A/U6b, every P07B-A/B boundary, both P07B-C C0 boundaries, C1 inert semantics, C1M, C1V, C1E, C1B, and the C2 source are sealed and strict-clean. The tracked C2 source rows remain `UNRECEIPTED` until the separate receipt document closes. C2M receipt-phase checker maintenance is the active `SOURCE_FULL` unit; C2B is preserved and blocked, and C3 remains blocked behind both boundaries.
-- **Git:** repository is on `codex/countershape-autopilot` at sealed C2 source HEAD `19c90786d9832e21ec86daea96ca514cc7304836`, tree `1557f1e26762d717327a2ec770f8153daa0baf3e`. The current dirty tree is limited to C2M's exact seven paths with roster digest `sha256:75dcb6a88a9faec8aa89cfbe67c0870e88d95709a1bf07e2fb494e92362688cd`. Stash objects `1d2c14f160ff42d509d96219512fa413830a9b1d` and `229a60c0630e296b67faa3c81b91fac73f9f63ff` remain retained; address both by full identity.
-- **didrun:** installed globally and unchanged. C1V history remains at `.didrun-history/2026-07-18-p07b-c-c1v-build-loop/.didrun/`, `.didrun-history/2026-07-18-p07b-c-c1v-final-attempt-1-physical-aggregate-timeout/.didrun/`, `.didrun-history/2026-07-18-p07b-c-c1v-physical-shard-repair/.didrun/`, and `.didrun-history/2026-07-18-p07b-c-c1v-final/.didrun/`; C1E/C1B history remains preserved at its named paths. The final C2 source ledger is `.didrun-history/2026-07-19-p07b-c-c2-source/.didrun/`; final attempt 1 remains failed history at its argv-mismatch path. The three-event, zero-claim C2B development ledger is `.didrun-history/2026-07-19-p07b-c-c2b-build-loop-pre-maintenance/.didrun/` and supports nothing. Any live `.didrun/` created now is C2M development evidence only.
-- **Current baseline:** from a fresh repository-root shell, run `/opt/homebrew/bin/node tools/verify-current.mjs`. The sealed C1V throughput policy remains unchanged. C2M advances the unit-scope schema to v4, enrolls its checker-authority unit, and makes the plan self-test exercise both C2 receipt phases on every run; it changes no runtime or verifier resource setting. Read `docs/VERIFICATION.md`; a direct pass is not a didrun grade.
+- **Pipeline phase:** U0–U6, P07A/U6b, every P07B-A/B boundary, both P07B-C C0 boundaries, C1 inert semantics, C1M, C1V, C1E, C1B, the C2 source, and C2M are sealed and strict-clean. The C2 source grades are reconciled in the source-receipt block below. C2B is the active exact three-path, no-prefix `RECEIPT_RECONCILIATION` working unit and remains `UNRECEIPTED`; C3 stays blocked pending its future evidence boundary.
+- **Git:** repository is on `codex/countershape-autopilot` at sealed C2M HEAD `44cd68f623ee0283a51b2367efdf7ecb052298a2`, tree `9a5f20b510565a0e0b600de509dbe17bb18829eb`, with the sealed C2 source as its single parent. The dirty tree is limited to the exact three C2B paths. Stash objects `1d2c14f160ff42d509d96219512fa413830a9b1d` and `229a60c0630e296b67faa3c81b91fac73f9f63ff` remain retained; address both by full identity.
+- **didrun:** installed globally and unchanged. C1V history remains at `.didrun-history/2026-07-18-p07b-c-c1v-build-loop/.didrun/`, `.didrun-history/2026-07-18-p07b-c-c1v-final-attempt-1-physical-aggregate-timeout/.didrun/`, `.didrun-history/2026-07-18-p07b-c-c1v-physical-shard-repair/.didrun/`, and `.didrun-history/2026-07-18-p07b-c-c1v-final/.didrun/`. C2 development evidence remains `.didrun-history/2026-07-19-p07b-c-c2-build-loop/.didrun/`; failed final attempt 1 is `.didrun-history/2026-07-19-p07b-c-c2-source-final-attempt-1-argv-mismatch/.didrun/`; the final source ledger is `.didrun-history/2026-07-19-p07b-c-c2-source/.didrun/`. C2M's zero-claim build loop is `.didrun-history/2026-07-19-p07b-c-c2m-build-loop/.didrun/`; its nine-event final ledger is `.didrun-history/2026-07-19-p07b-c-c2m-final/.didrun/`. C2B's earlier three-event, zero-claim ledger remains `.didrun-history/2026-07-19-p07b-c-c2b-build-loop-pre-maintenance/.didrun/`; its post-maintenance seven-event, zero-claim merge/build loop is `.didrun-history/2026-07-19-p07b-c-c2b-build-loop-post-maintenance/.didrun/`. Both support nothing. Any live `.didrun/` created now is C2B development evidence only.
+- **Current baseline:** from a fresh repository-root shell, run `/opt/homebrew/bin/node tools/verify-current.mjs`. The committed checker now proves both C2 receipt phases through full-plan wiring; the sealed C1V resource policy is unchanged. The active C2B unit is deliberately narrower: its seven declared receipt checks may bind existing source evidence but may not claim a cumulative suite, runtime behavior, security, or unchanged behavior. Read `docs/VERIFICATION.md`; a direct pass is not a didrun grade.
 - **Build:** C1 now implements strict inert target/run/execution construction, canonical parsing, derived classification, checked schema/example projection, exhaustive algebra, and parser properties in `internal/contractexec/model`. C2 adds exact inert nonhead target/run/execution storage records, typed witnesses and three closed relationships, one store-wide interlock plus deterministic StartClaim, receipt-backed CLEAR transitions, bounded private manifests/packs, and logical purge availability. Exact-visible relationship, claim, manifest, receipt, and purge files synchronize and reopen before promotion; retained dynamic parent and fixed-root identities are reasserted at later authority/mutation boundaries. C2 production exports no official target/permit, imports no C1 semantic package, spawns no process, and exposes no list/latest/traversal/status/head-mutation surface. A 46-case hostile architecture self-test, compiler-parsed exact exported-surface and production-import gates, canonical case-spelling and real-parent-replacement refusals, and four exact Go-JSON profiles protect the boundary; C3 still owns live Git/runtime/attempt/boot authority and C4 still owns spawn, physical chronology, FCR semantics, and classification publication.
 - **External APIs:** none used in the product. The A2.2 UX pass used a different internal model over sanitized captures; its qualitative verdict is `UNRECEIPTED` and has no semantic authority. Any real external model/API integration remains human-gated and must never be faked.
 
@@ -32,6 +32,13 @@ The corresponding historical orientation described the bounded unit as “P07B-C
 The phase checker likewise retains the following pre-seal compatibility statement. It is historical evidence only; C1E and C1B are now sealed and C2 is the live unit:
 
 > C1E local-evidence checker maintenance is the active `SOURCE_FULL` unit. C1B's exact four-path work is preserved with sorted-newline roster digest `sha256:f8d1fb96d36f7e0cfde99bb73c7726297763c66bafd21aeb5c1fb1e249bdd119`; its recorded handoff SHA-256 is `4bf73e5a34bef6cf72b491d654f423cfa317ae84e3ee66852ccb9cbf1790a5dc`, and its untracked receipt was preserved at `1d2c14f160ff42d509d96219512fa413830a9b1d^3:spec/verification/p07b-c-c1-receipt.json`. C1E's exact seven-path roster digest is `sha256:9a6422b45c82a44e6171ae9351468df5f6ece2190d6ab47f26aec6f84fd7ccde`; its development evidence remains at `.didrun-history/2026-07-18-p07b-c-c1e-build-loop/.didrun/`.
+
+### Sealed C2M checker-maintenance boundary
+
+The compatibility phrase “C2M receipt-phase checker maintenance is the active `SOURCE_FULL` unit” is historical, not current. C2M's exact seven-path roster digest is `sha256:75dcb6a88a9faec8aa89cfbe67c0870e88d95709a1bf07e2fb494e92362688cd`. It sealed at commit `44cd68f623ee0283a51b2367efdf7ecb052298a2`, tree `9a5f20b510565a0e0b600de509dbe17bb18829eb`, with `8/8 claims recorded-exact`, strict exit `0`, and Git-note blob `f7ced205ec532a0be03b3a2df7d1f2f37925b65f`. Its exact-commit HTML is `.countershape/evidence/p07b-c-c2m-final-44cd68f623ee.html`, SHA-256 `8e6d34fb39f62bc33d23039ee3569d98850a9ee05cf1049685a24305ac8ed385`, 7295 bytes. The seal used didrun's logged high-entropy redaction override; it does not establish secret absence.
+
+The preserved C2B draft remains stash object `229a60c0630e296b67faa3c81b91fac73f9f63ff`. Its earlier development ledger remains `.didrun-history/2026-07-19-p07b-c-c2b-build-loop-pre-maintenance/.didrun/`, with three events, zero claims, and no supporting grade.
+The current live handoff deliberately merges this sealed C2M history with that draft's source-receipt block.
 
 <!-- P07B-C-C0A-RECEIPTS:START -->
 ### P07B-C C0a receipt map
@@ -185,6 +192,46 @@ The C1 Git note blob is `5d990e07d9ad6960de298bdc232818aac838700e` with body SHA
 | `P07B C1 cumulative verification` | `tests-pass` | `TREE-EXACT` |
 | `P07B C1 didrun chain intact` | `command-succeeded` | `TREE-EXACT` |
 <!-- P07B-C-C1-SOURCE-RECEIPTS:END -->
+
+<!-- P07B-C-C2-SOURCE-RECEIPTS:START -->
+### P07B-C C2 source receipt map
+
+C2 source commit `19c90786d9832e21ec86daea96ca514cc7304836`, tree `1557f1e26762d717327a2ec770f8153daa0baf3e`.
+C2 strict claims: `14/14 claims recorded-exact`; strict exit: `0`.
+
+C2 source commit `19c90786d9832e21ec86daea96ca514cc7304836`, tree `1557f1e26762d717327a2ec770f8153daa0baf3e`, is sealed, note-present, and strict-clean with `14/14 claims recorded-exact`.
+
+The C2 seal records `secrets_override: true` after 130 local scanner findings with kinds `high-entropy`; this is not evidence of secret absence.
+
+The separately claimed C2 structured staged credential scan reported `0` findings; its provenance is sealed supporting event `12`, not the Git note alone.
+
+Local ignored C2 ledger archive `.didrun-history/2026-07-19-p07b-c-c2-source/.didrun/` contains `14` sealed events and `15` archived session events; post-seal events, if any, are outside the sealed manifest.
+
+C2 ledger manifests use `sorted-relative-posix-path-tab-size-tab-sha256-newline/v1`; all-files SHA-256 is `4d63558b56a04383f348e972966e05e2fb653d45b81e3cd2a902d4b8a2f2c017` and objects-only SHA-256 is `295870bbd68a312920a50ec3a488d9016dc3ae63a435ddd9e4a04dcae092f61f`.
+
+C2 archive core SHA-256 values are session `3c1ee199346c09162e157bd0a8c42a975c6fe02f4a2834a6ea03382c26b69183`, claims `8bfff82872a82d0bf1acfc0dc0fd87e2bd0483a6fa15a28d72fec2a81bccac63`, seals `f017ac5ae0c08fd8424710611992f0193698b3f49c0064c08756a8233b06495a`, and .gitignore `cdbcae15105d6b781e620813c79c7e868740d4e9cc53ce6f5fcbbc12387adf4b`.
+
+The local C2 HTML snapshot is `.countershape/evidence/p07b-c-c2-final-19c90786d983.html`, SHA-256 `a91395284ae54487d34482c29143893bdb19cebc71afb8a4116ffec7ad3fd00f`, 9063 bytes; it is not a portable strict witness.
+
+The C2 Git note blob is `0e43a1920c7432150167ca3756fbab3cb67e0a00` with body SHA-256 `52f50ced8db8d7873970c83f32537ae118200aa41eca8c6058ec275875489fe4`.
+
+| Claim label | Claim type | Verbatim grade |
+| --- | --- | --- |
+| `P07B C2 exact typed nonhead persistence profile` | `tests-pass` | `TREE-EXACT` |
+| `P07B C2 interlock StartClaim and receipt-backed clear profile` | `tests-pass` | `TREE-EXACT` |
+| `P07B C2 private evidence lifecycle profile` | `tests-pass` | `TREE-EXACT` |
+| `P07B C2 exported authority and discovery absence` | `tests-pass` | `TREE-EXACT` |
+| `P07B C2 focused store race suite` | `tests-pass` | `TREE-EXACT` |
+| `P07B C2 cumulative architecture boundary` | `tests-pass` | `TREE-EXACT` |
+| `P07B C2 cumulative architecture defensive self-test` | `tests-pass` | `TREE-EXACT` |
+| `P07B C2 predecessor B compatibility` | `tests-pass` | `TREE-EXACT` |
+| `P07B C2 predecessor B defensive self-test` | `tests-pass` | `TREE-EXACT` |
+| `P07B C2 cumulative verifier self-test` | `tests-pass` | `TREE-EXACT` |
+| `P07B C2 cumulative verification` | `tests-pass` | `TREE-EXACT` |
+| `P07B C2 exact 26-path staged scope and diff integrity` | `command-succeeded` | `TREE-EXACT` |
+| `P07B C2 scoped staged credential-pattern scan` | `command-succeeded` | `TREE-EXACT` |
+| `P07B C2 preceding didrun chain integrity` | `command-succeeded` | `TREE-EXACT` |
+<!-- P07B-C-C2-SOURCE-RECEIPTS:END -->
 
 ## Read first, in order
 
@@ -703,15 +750,14 @@ separate reviewed boundary.
 
 ## Exact next actions if this task resumes elsewhere
 
-1. Run `git status --short --branch`; confirm branch `codex/countershape-autopilot`, sealed C2 source HEAD `19c90786d9832e21ec86daea96ca514cc7304836`, tree `1557f1e26762d717327a2ec770f8153daa0baf3e`, and changes limited to the seven C2M paths. Retain both stash objects and every failed or superseded ledger. No `.didrun` or `.didrun-history` path may be staged or tracked.
-2. Treat C2 as immutable. Its exact 26-path source roster digest remains `sha256:a463e4e9ad9830cb420bbad1da494c26d55e3f68b983abfd683a0c8cb1c3a522`. C2M may change only the seven paths declared in `docs/status/P07B-C-C2-RECEIPT-PHASE-MAINTENANCE.md`; do not add C2 receipt, runtime, schema, C3, or C4 paths.
-3. Run the plan checker, dual-phase hostile self-test, unit-scope self-test, verifier self-test, and cumulative verifier through an unclaimed development ledger. Obtain independent read-only checker and documentation review. Any failure remains permanent and requires a real repair; no mutation or phase test may be deleted, skipped, or relabeled.
-4. Stage exactly the seven nonzero stage-zero mode-`100644` C2M paths. Require `--unit C2M --source-final-gate`, the adjacent scoped nine-pattern staged credential scan, no unstaged/untracked paths, and the plan-declared exact preceding chain. Archive the complete development ledger before the fresh final ledger begins at event zero.
-5. In the final ledger, run and immediately claim only the eight ordered C2M rows. Every event must use the pinned absolute argv identity and unchanged staged tree. Commit with no AI co-author trailer, seal, independently require the didrun note, loop strict to exit `0`, generate the exact-commit HTML, and archive only after that gate closes.
-6. Revalidate stash `229a60c0630e296b67faa3c81b91fac73f9f63ff` by full identity and exact three-path inventory. Apply without dropping it. Preserve the C2 status and receipt declaration bytes exactly; deliberately merge only `docs/HANDOFF_MODE_C.md` so C2M history remains while the C2 source-receipt block is added.
-7. Resume only C2B's exact three paths. Its sorted-newline roster digest remains `sha256:5e30e009bb29672d585ece9893bd7c8db198915335a73ded3f3c790ad18f665b`; run only its seven narrow receipt-profile claims, then independently commit, seal, note-check, strict-verify, report, and archive that unit. It may reconcile C2 source grades but cannot receipt itself.
-8. Resume C3 only after C2M and C2B are closed. C3 must join inert C2 records to current Git/materialization/runtime/attempt/boot authority; C4 alone may issue the one-shot permit, spawn, establish physical chronology, and publish finalized-run semantics.
-9. Keep root as sole writer and didrun/Git/seal operator; parallel agents remain read-only critics. Preserve the human-gated external-API boundary and the adoption, comprehension, production-hardening, independent-security-review, cross-platform, release, and maintainership tail.
+1. Run `git status --short --branch`; confirm branch `codex/countershape-autopilot`, sealed C2M HEAD `44cd68f623ee0283a51b2367efdf7ecb052298a2`, tree `9a5f20b510565a0e0b600de509dbe17bb18829eb`, and changes limited to `docs/HANDOFF_MODE_C.md`, `docs/status/P07B-C-C2-PERSISTENCE.md`, and `spec/verification/p07b-c-c2-receipt.json`. Retain both stash objects and every failed or superseded ledger. No `.didrun` or `.didrun-history` path may be staged or tracked.
+2. Treat both sealed source prerequisites as immutable. C2's exact 26-path `SOURCE_FULL` roster digest is `sha256:a463e4e9ad9830cb420bbad1da494c26d55e3f68b983abfd683a0c8cb1c3a522`; C2M's exact seven-path digest is `sha256:75dcb6a88a9faec8aa89cfbe67c0870e88d95709a1bf07e2fb494e92362688cd`; the active C2B receipt roster digest is `sha256:5e30e009bb29672d585ece9893bd7c8db198915335a73ded3f3c790ad18f665b`. Do not add C3, C4, product-surface, schema, checker, runtime, or generated-artifact paths.
+3. Exercise the receipt document through a fresh development ledger using only the seven machine-declared narrow checks: plan reconciliation, defensive dual-phase checker self-test, declared local source-evidence match, receipt-only Go build, exact staged scope/diff integrity, scoped staged credential scan, and preceding-chain integrity. Development events may guide repairs but support no final grade.
+4. Stage exactly the three receipt paths as nonzero stage-zero regular mode-`100644` blobs. Require the machine receipt manifest, exact diff integrity, no unstaged tracked changes, no untracked paths, and the scoped nine-pattern staged-blob scan. Archive the complete development ledger before a fresh final ledger starts at event zero.
+5. In that fresh ledger, run and immediately claim only the seven ordered receipt rows from `spec/verification/p07b-c-unit-paths.json`. Every claim must bind to the unchanged staged tree; any failed event remains permanent history, supports nothing, and requires a fresh final ledger.
+6. Commit the exact three-path snapshot without an AI co-author trailer. Seal it, independently require its `refs/notes/didrun` note, and loop `NO_COLOR=1 didrun verify --strict` until exit `0`. Generate the exact-commit HTML report and archive the complete final ledger only after strict succeeds. C2B may reconcile C2 source grades but cannot receipt itself.
+7. Resume C3 only after C2B closes. C3 must join the inert C2 records to current Git/materialization/runtime/attempt/boot authority; C4 alone may issue the one-shot permit, spawn, establish physical chronology, and publish finalized-run semantics. Preserve every C2 nonclaim in the status file.
+8. Keep root as sole writer and didrun/Git/seal operator; parallel agents remain read-only critics. Preserve the human-gated external-API boundary and the adoption, comprehension, production-hardening, independent-security-review, cross-platform, release, and maintainership tail.
 
 ## Orientation handshake for a fresh agent/chat
 
@@ -721,6 +767,6 @@ Before editing, reply in your working notes with:
 2. the three distinct truth authorities (Git, Choicepoint observations/ruling, didrun receipts);
 3. two things the system must never claim;
 4. the maintenance and A2.1 commits, P07B-A1 source prerequisite `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`, A2.2 checkpoint `32efaaf2f6d9fc58389d48d18219ce03995a2805`, accepted corrected source `6bf33350944dcdd56a4ceaa70f1d0836203ffb1f`, B0 scope lock `7f04b2a5129dcbee2fc991453aefdd6713281b86`, sealed B source `eb06bdcf18f8e14db1257e73733afdc05cac045e`, sealed B receipt document `b4ac17bd66c6260fd4b12b9277ab5259659c55e1`, and sealed final B handoff `464e47adbf7f4497dfafa89938a9539239ffd41b`, with their exact receipt maps and nonclaims; and
-5. the current bounded shippable unit: P07B-C C2M's exact seven-path `SOURCE_FULL` receipt-phase checker maintenance only, followed by restoration of the unchanged exact three-path C2B reconciliation; sealed C1/C1M/C1V/C1E/C1B/C2 behavior remains unchanged, every C2M row and tracked C2 source row is still `UNRECEIPTED`, C3 is blocked, and every unrun capability remains excluded and `UNRECEIPTED`.
+5. the current bounded shippable unit: the exact three-path C2B receipt reconciliation only; sealed C2M and all earlier source behavior remain unchanged, the C2 source grades are those admitted by the receipt block above, C2B itself remains `UNRECEIPTED`, C3 is blocked, and every unrun capability remains excluded and `UNRECEIPTED`.
 
 If any answer is missing, read the files above again. Do not infer a didrun grade from this handoff; run strict verification locally.

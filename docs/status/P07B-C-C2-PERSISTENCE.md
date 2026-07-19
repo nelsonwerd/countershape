@@ -1,12 +1,12 @@
 # P07B-C C2 persistence substrate status
 
-- **Unit:** `C2`
-- **Profile:** `SOURCE_FULL`
-- **State:** active pre-seal source boundary; every C2 grade below is `UNRECEIPTED`
+- **Unit:** `C2` source receipt, reconciled by the active `C2B` working unit
+- **Profile:** `RECEIPT_RECONCILIATION` for this working unit; the bound source used `SOURCE_FULL`
+- **Source receipt:** C2 source commit `19c90786d9832e21ec86daea96ca514cc7304836`, tree `1557f1e26762d717327a2ec770f8153daa0baf3e`, is sealed, note-present, and strict-clean; every C2 source grade below is `TREE-EXACT`. This C2B receipt-document working unit binds only that existing source and remains `UNRECEIPTED` until its own commit, seal, note, and strict boundary.
 - **Predecessor:** sealed C1B commit `46c48507fe998ea04e121470d6aa8ba0b38b3dae`, tree `6a6ee49048c2639d102641cecab4e6d99f31377e`
 - **Scope:** 26 exact paths, no prefixes; sorted-newline roster `sha256:a463e4e9ad9830cb420bbad1da494c26d55e3f68b983abfd683a0c8cb1c3a522`
 
-This is a pre-seal source document. It records the intended C2 boundary and its final claim vocabulary, but it does not promote development runs into evidence. The final commit, didrun note, strict verdict, and HTML report do not exist yet.
+This is the separately enrolled receipt-document working unit for the already-existing C2 source boundary. It records only source facts admitted from Git, the didrun note, the exact-commit HTML report, and the ignored local ledger snapshot. It does not grade the working unit that adds this receipt.
 
 ## Sealed prerequisite
 
@@ -72,26 +72,47 @@ The architecture transcript parser requires one run and one pass for every exact
 
 The C2 architecture checker composes `C2 -> B -> C1`. Its C2 hostile self-test has a frozen 46-case metadata roster plus seven Go-JSON parser cases. The inherited B self-test admits only the three exact C2 symbols in `internal/store/nonhead_contract.go`; lookalike names and files remain forbidden. The exported-surface proof and process-capability import refusal are compiler-derived and load-bearing rather than regex-authoritative.
 
-## Intended final receipt map
+## C2 source receipt map
 
-| Claim label | Intended type | Current verbatim grade |
+- C2 source strict exit: `0`
+- C2 source strict claims: `14/14 claims recorded-exact`
+
+This receipt binds only the already-existing C2 source commit. C2B cannot name or grade its own commit, tree, Git note, or strict result.
+
+C2 source commit `19c90786d9832e21ec86daea96ca514cc7304836`, tree `1557f1e26762d717327a2ec770f8153daa0baf3e`, is sealed, note-present, and strict-clean with `14/14 claims recorded-exact`.
+
+The C2 seal records `secrets_override: true` after 130 local scanner findings with kinds `high-entropy`; this is not evidence of secret absence.
+
+The separately claimed C2 structured staged credential scan reported `0` findings; its provenance is sealed supporting event `12`, not the Git note alone.
+
+Local ignored C2 ledger archive `.didrun-history/2026-07-19-p07b-c-c2-source/.didrun/` contains `14` sealed events and `15` archived session events; post-seal events, if any, are outside the sealed manifest.
+
+C2 ledger manifests use `sorted-relative-posix-path-tab-size-tab-sha256-newline/v1`; all-files SHA-256 is `4d63558b56a04383f348e972966e05e2fb653d45b81e3cd2a902d4b8a2f2c017` and objects-only SHA-256 is `295870bbd68a312920a50ec3a488d9016dc3ae63a435ddd9e4a04dcae092f61f`.
+
+C2 archive core SHA-256 values are session `3c1ee199346c09162e157bd0a8c42a975c6fe02f4a2834a6ea03382c26b69183`, claims `8bfff82872a82d0bf1acfc0dc0fd87e2bd0483a6fa15a28d72fec2a81bccac63`, seals `f017ac5ae0c08fd8424710611992f0193698b3f49c0064c08756a8233b06495a`, and .gitignore `cdbcae15105d6b781e620813c79c7e868740d4e9cc53ce6f5fcbbc12387adf4b`.
+
+The local C2 HTML snapshot is `.countershape/evidence/p07b-c-c2-final-19c90786d983.html`, SHA-256 `a91395284ae54487d34482c29143893bdb19cebc71afb8a4116ffec7ad3fd00f`, 9063 bytes; it is not a portable strict witness.
+
+The C2 Git note blob is `0e43a1920c7432150167ca3756fbab3cb67e0a00` with body SHA-256 `52f50ced8db8d7873970c83f32537ae118200aa41eca8c6058ec275875489fe4`.
+
+| Claim label | Claim type | Verbatim source grade |
 | --- | --- | --- |
-| `P07B C2 exact typed nonhead persistence profile` | `tests-pass` | `UNRECEIPTED` |
-| `P07B C2 interlock StartClaim and receipt-backed clear profile` | `tests-pass` | `UNRECEIPTED` |
-| `P07B C2 private evidence lifecycle profile` | `tests-pass` | `UNRECEIPTED` |
-| `P07B C2 exported authority and discovery absence` | `tests-pass` | `UNRECEIPTED` |
-| `P07B C2 focused store race suite` | `tests-pass` | `UNRECEIPTED` |
-| `P07B C2 cumulative architecture boundary` | `tests-pass` | `UNRECEIPTED` |
-| `P07B C2 cumulative architecture defensive self-test` | `tests-pass` | `UNRECEIPTED` |
-| `P07B C2 predecessor B compatibility` | `tests-pass` | `UNRECEIPTED` |
-| `P07B C2 predecessor B defensive self-test` | `tests-pass` | `UNRECEIPTED` |
-| `P07B C2 cumulative verifier self-test` | `tests-pass` | `UNRECEIPTED` |
-| `P07B C2 cumulative verification` | `tests-pass` | `UNRECEIPTED` |
-| `P07B C2 exact 26-path staged scope and diff integrity` | `command-succeeded` | `UNRECEIPTED` |
-| `P07B C2 scoped staged credential-pattern scan` | `command-succeeded` | `UNRECEIPTED` |
-| `P07B C2 preceding didrun chain integrity` | `command-succeeded` | `UNRECEIPTED` |
+| `P07B C2 exact typed nonhead persistence profile` | `tests-pass` | `TREE-EXACT` |
+| `P07B C2 interlock StartClaim and receipt-backed clear profile` | `tests-pass` | `TREE-EXACT` |
+| `P07B C2 private evidence lifecycle profile` | `tests-pass` | `TREE-EXACT` |
+| `P07B C2 exported authority and discovery absence` | `tests-pass` | `TREE-EXACT` |
+| `P07B C2 focused store race suite` | `tests-pass` | `TREE-EXACT` |
+| `P07B C2 cumulative architecture boundary` | `tests-pass` | `TREE-EXACT` |
+| `P07B C2 cumulative architecture defensive self-test` | `tests-pass` | `TREE-EXACT` |
+| `P07B C2 predecessor B compatibility` | `tests-pass` | `TREE-EXACT` |
+| `P07B C2 predecessor B defensive self-test` | `tests-pass` | `TREE-EXACT` |
+| `P07B C2 cumulative verifier self-test` | `tests-pass` | `TREE-EXACT` |
+| `P07B C2 cumulative verification` | `tests-pass` | `TREE-EXACT` |
+| `P07B C2 exact 26-path staged scope and diff integrity` | `command-succeeded` | `TREE-EXACT` |
+| `P07B C2 scoped staged credential-pattern scan` | `command-succeeded` | `TREE-EXACT` |
+| `P07B C2 preceding didrun chain integrity` | `command-succeeded` | `TREE-EXACT` |
 
-Development ledgers contain superseded successes and permanent nonzero events. They are intentionally unclaimed and support none of the rows above. Only final-tree events immediately mapped to these exact labels may be sealed.
+Development ledgers contain superseded successes and permanent nonzero events. They are intentionally unclaimed and support none of the rows above. The grades above come only from the sealed source ledger and Git note declared by this receipt.
 
 ## Separately enrolled C2B receipt boundary
 
