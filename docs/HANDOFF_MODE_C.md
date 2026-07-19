@@ -12,10 +12,10 @@
 
 ## Current state
 
-- **Pipeline phase:** U0–U6, P07A/U6b, every P07B-A/B boundary, and P07B-C through C3V are sealed and strict-clean. C3M receipt-phase checker maintenance is the active `SOURCE_FULL` unit; every C3M grade remains `UNRECEIPTED`. C3PB and C3 stay blocked until C3M closes and the later exact three-path C3PB receipt reconciliation independently closes.
-- **Git:** repository is on `codex/countershape-autopilot` at sealed C3V HEAD `725933fa3c7826a281e84b51f729736cbcfac6ec`, tree `21f0e1bf46e3776e1b496a9c2783f549923c4510`. The dirty tree is limited to the active C3M checker/documentation declaration and must converge to its exact seven-path roster digest `sha256:58e1f6fba95cf3b4312136eea5bb5c64af89a6958711aca84181a1874aa03240`. Stash objects `5eeb848c334ad3a8a44e4cf61fa298e452188ab1`, `229a60c0630e296b67faa3c81b91fac73f9f63ff`, and `1d2c14f160ff42d509d96219512fa413830a9b1d` remain retained; address each by full identity.
-- **didrun:** installed globally and unchanged. C3V development evidence is archived at `.didrun-history/2026-07-19-p07b-c-c3v-build-loop/.didrun/`; its sealed final ledger is `.didrun-history/2026-07-19-p07b-c-c3v-final/.didrun/`. The exact-commit C3V report is `.countershape/evidence/p07b-c-c3v-final-725933fa3c78.html`. C3M must use a zero-claim development ledger and a separate fresh eight-claim final ledger; no C3V event is reused.
-- **Current baseline:** from a fresh repository-root shell, run `/opt/homebrew/bin/node tools/verify-current.mjs`. C3M keeps the verifier implementation byte-for-byte unchanged, repairs the plan/scope checker authority, and must run the complete cumulative profile plus planning/scope self-tests through didrun. A direct pass has no didrun grade. The later C3PB unit remains deliberately narrower and may bind only the already-sealed C3P source evidence after C3M independently seals.
+- **Pipeline phase:** U0–U6, P07A/U6b, every P07B-A/B boundary, and P07B-C through C3M are sealed and strict-clean. C3PB receipt reconciliation is the active exact three-path `RECEIPT_RECONCILIATION` unit and remains `UNRECEIPTED`; C3M is treated as a closed interposed prerequisite in this receipt-present phase. C3 stays blocked until C3PB independently closes. Historical compatibility anchor: the sentence “C3M receipt-phase checker maintenance is the active `SOURCE_FULL` unit” is retained as inert phase history.
+- **Git:** repository is on `codex/countershape-autopilot` at sealed C3M HEAD `c211d0534864e078fd0ea2c15adabca63ca3fe51`, tree `21cc76ed3979d1b6ed6ee24bd9babd9dbc1c6791`. The receipt-present dirty tree is limited to C3PB's exact three-path roster at `sha256:531cbe600cf2747752749890ea9a15c3d0126e498da6838d4f6faeb1a0d7e885`; the closed interposed C3M roster remains `sha256:58e1f6fba95cf3b4312136eea5bb5c64af89a6958711aca84181a1874aa03240`. Stash objects `5eeb848c334ad3a8a44e4cf61fa298e452188ab1`, `229a60c0630e296b67faa3c81b91fac73f9f63ff`, and `1d2c14f160ff42d509d96219512fa413830a9b1d` remain retained; address each by full identity.
+- **didrun:** installed globally and unchanged. C3M development evidence is `.didrun-history/2026-07-19-p07b-c-c3m-build-loop/.didrun/`; its sealed final ledger is `.didrun-history/2026-07-19-p07b-c-c3m-final/.didrun/`; its exact-commit HTML is `.countershape/evidence/p07b-c-c3m-final-c211d0534864.html`. C3PB uses a separate fresh seven-claim receipt ledger; no C3M event is reused. Any live `.didrun/` created now is C3PB development evidence only.
+- **Current baseline:** from a fresh repository-root shell, run `/opt/homebrew/bin/node tools/verify-current.mjs`. C3PB keeps the verifier implementation byte-for-byte unchanged and runs only its explicit narrow receipt gates through didrun. A direct pass has no didrun grade. This receipt-present phase may bind only the already-sealed C3P source evidence after the interposed C3M boundary.
 - **Build:** C1 implements strict inert target/run/execution semantics; C2 adds exact inert nonhead storage, typed relationships, private manifests, and receipt-backed interlock/StartClaim mechanics without an official target or production permit. C3P corrects the future boot binding before any production `OfficialTarget` exists: exact profile `DARWIN_KERN_BOOTSESSIONUUID_V1` parses and lowercases two `kern.bootsessionuuid` samples, compares the canonical values, and forbids clock/process/file/subprocess/PATH fallbacks. This is still inert semantics; C3 owns the bounded live system-call measurement, direct single-target Git materialization, runtime/attempt authority, narrow store bridge, and official-target issuance. C4 still owns admission, spawn, physical chronology, FCR semantics, and classification publication.
 - **External APIs:** none used in the product. The A2.2 UX pass used a different internal model over sanitized captures; its qualitative verdict is `UNRECEIPTED` and has no semantic authority. Any real external model/API integration remains human-gated and must never be faked.
 
@@ -23,11 +23,13 @@
 
 Sealed C2B commit `ab5e2dd5b66702a1d1cd13eb0047b57a48469487`, tree `02fd396858ca41cff6d0ee561dce7ee65a3f94d0`, remains the reconciled C2 prerequisite. The sealed C2 source roster remains `sha256:a463e4e9ad9830cb420bbad1da494c26d55e3f68b983abfd683a0c8cb1c3a522`; its sealed C2B receipt roster remains `sha256:5e30e009bb29672d585ece9893bd7c8db198915335a73ded3f3c790ad18f665b`. C3P owns 25 exact source paths at `sha256:8b047704df047cb96f1c5d19418c4cfe8502e4b4746bb4f24c0851dac8d018c0`; the two added verifier paths make the dedicated receipt checker a cumulative gate instead of an orphan. C3V owns seven exact source paths at `sha256:6cc5d8fe929f0f1dfa6ffc223d2e8bcee5ba4596a09caa9dc032103bbb5bafbd` and changes no verifier behavior. C3M owns seven exact checker/documentation paths at `sha256:58e1f6fba95cf3b4312136eea5bb5c64af89a6958711aca84181a1874aa03240`, ordered after C3V and before C3PB. The later C3PB receipt descendant owns three exact paths at `sha256:531cbe600cf2747752749890ea9a15c3d0126e498da6838d4f6faeb1a0d7e885`. C3 is frozen to forty exact paths and no prefixes at `sha256:c0050817c739e6bf7505105113ebbfd2c2504674f93f14e34daf0609f7fad0fb`; its later C3B receipt descendant owns three exact paths at `sha256:3ef17156a2f3051171da70983f9428de2b9bdb5a179602407a36f34200012a67`. These are scope declarations, not receipts or runtime authority.
 
-### Sealed C3P source boundary — receipt still pending
+### Sealed C3P source boundary — source receipt now reconciled
 
-C3P source commit `f7b6e6bda7a8864969415ab8636c495902e78dd9`, tree `2d5555db63d46c837cf4e12f2dab2d04a41f4654`, is independently sealed and strict-clean with `12/12 claims recorded-exact`; strict exit `0`. Its Git-note blob is `09dd345d428554b84da592841e48bdbcc42304c3`, with body SHA-256 `06237c6d9f60d4d8f9a5c0edd971e6b0bb2bf7c977d45e89119c427b09000d11`. The exact-commit HTML snapshot is `.countershape/evidence/p07b-c-c3p-final-f7b6e6bda7a8.html`, SHA-256 `7ffcf52106b90746638d9df7b3edadf994e667954ebdcde3510938a981fdb148`, 8483 bytes. Its final ledger is `.didrun-history/2026-07-19-p07b-c-c3p-final/.didrun/`. The plain seal stopped on 46 aggregate high-entropy findings; after the exact 25-path staged gate, named nine-pattern scan with zero findings, and manual/red-team review, the logged `--allow-secrets` redacted-export seal succeeded. This is not a secret-free finding or publication authority. These facts do not receipt C3P; every tracked C3P source grade remains `UNRECEIPTED` until C3PB binds the source note and local snapshots in its separately sealed boundary.
+C3P source commit `f7b6e6bda7a8864969415ab8636c495902e78dd9`, tree `2d5555db63d46c837cf4e12f2dab2d04a41f4654`, is independently sealed and strict-clean with `12/12 claims recorded-exact`; strict exit `0`. Its Git-note blob is `09dd345d428554b84da592841e48bdbcc42304c3`, with body SHA-256 `06237c6d9f60d4d8f9a5c0edd971e6b0bb2bf7c977d45e89119c427b09000d11`. The exact-commit HTML snapshot is `.countershape/evidence/p07b-c-c3p-final-f7b6e6bda7a8.html`, SHA-256 `7ffcf52106b90746638d9df7b3edadf994e667954ebdcde3510938a981fdb148`, 8483 bytes. Its final ledger is `.didrun-history/2026-07-19-p07b-c-c3p-final/.didrun/`. The plain seal stopped on 46 aggregate high-entropy findings; after the exact 25-path staged gate, named nine-pattern scan with zero findings, and manual/red-team review, the logged `--allow-secrets` redacted-export seal succeeded. This is not a secret-free finding or publication authority. The declaration and source-receipt block below now reconcile every tracked C3P source grade to its verbatim `TREE-EXACT` value.
 
 ### Sealed C3V boundary — historical anchor: Active C3V throughput-proposal reconciliation
+
+The active C3PB working unit remains `UNRECEIPTED` and cannot grade its own commit, tree, Git note, or strict result.
 
 The phrase “Active C3V throughput-proposal reconciliation” is retained only as a historical checker-compatibility anchor; C3V is not the current unit. C3V routed the observer's four items against sealed C1V commit `88e62acb3023dcd6ee51950c2ad24bbcc2ca8900`, tree `6c98b3c384f01b63d1a00a002303041576896609`, whose `10/10` strict-clean receipt includes the exact 52-case qualification matrix and three cumulative passes at `814384`, `815886`, and `813933` milliseconds. Persistent Go-only cache reuse remains declined for this Darwin/cgo tree; the already-qualified direct `p=2` general plus `p=1` sensitive/nested partition is retained after the `p=4` candidate caused permanent later AST timeouts; the fail-fast O_EXCL lock is already present; and the seven-claim `RECEIPT_RECONCILIATION` profile already supplies the narrow docs-only battery. C3V changes only its seven declared documentation/checker-authority paths and does not edit the verifier or repetition runner.
 
@@ -35,11 +37,13 @@ C3V sealed at commit `725933fa3c7826a281e84b51f729736cbcfac6ec`, tree `21f0e1bf4
 
 `C3V-S6-DIDRUN-INTERRUPT-1`: during an unclaimed development run, operator SIGINT caused didrun to exit `130` with a Python `KeyboardInterrupt` traceback before it appended an event for the in-flight cumulative verifier; process inspection found no surviving verifier child. It left the mode-`0600` lock for PID `84735` in place; review proved the PID absent, no process held the file, and the owner, repository-root digest, and mode matched before one explicit didrun-wrapped recovery event removed only that lock. The interrupted command therefore has no didrun receipt and supports no claim. This is a didrun interruption-capture bug finding, not a verifier failure or a sealed-tree result; final evidence must complete normally in a fresh ledger.
 
-### Active C3M receipt-phase checker maintenance
+### Closed interposed C3M boundary — synthetic C3PB receipt phase
 
-C3M is the exact seven-path `SOURCE_FULL` `DEFECT_REPAIR` after C3V and before unchanged C3PB. The source-receipt-field-validated C3PB draft is safely retained at stash object `5eeb848c334ad3a8a44e4cf61fa298e452188ab1`; it is not globally validated, live, or graded. The defect was found before C3PB staging, ledger creation, or claiming: receipt-present self-testing reconstructed its absent phase with the C3P-era handoff, thereby dropping interposed C3V/C3M authority.
+The heading's word “synthetic” is a sealed C3M checker-compatibility token naming the receipt-present fixture that proved this transition. It does not mean the current work is simulated: C3PB is the live receipt working unit, and C3M is closed.
 
-The repair reopens only the exact-tree-proved sealed C3P status. It derives the absent-phase handoff from the current handoff after removing zero or one canonical C3P source-receipt block. Raw marker counts must be `0/0` or `1/1`; markers must be standalone LF lines in order; nested/duplicate, partial, reversed, inline, trailing-content, externalized-payload, and outside-block residue cases fail. The synthetic receipt-present handoff transitions to C3PB-active state, the full absent-phase plan passes after byte-exact stripping, and carried C3V/C3M anchors are mutated and rejected in both phases. No C3P receipt declaration or C3P source-receipt block is live in C3M. C3PB's exact three-path digest, seven labels/types, and narrow profile remain unchanged.
+C3M source commit `c211d0534864e078fd0ea2c15adabca63ca3fe51`, tree `21cc76ed3979d1b6ed6ee24bd9babd9dbc1c6791`, is sealed and strict-clean with `8/8 claims recorded-exact`; strict exit `0`. Its Git-note blob is `276f011f2bf6e224e763e1a9f03326604e68c921`, with body SHA-256 `870a6ac50df57d7cd43808b8f4f2f115e2faee675ccfa4912c3bcf058bf2290e`. The exact-commit HTML is `.countershape/evidence/p07b-c-c3m-final-c211d0534864.html`, SHA-256 `ef701abc1c1f09abd092de4325efec7ed3e06a5ccd27ce105026a0bca825d58b`, 7295 bytes. Its final ledger is `.didrun-history/2026-07-19-p07b-c-c3m-final/.didrun/`. The seal records the logged redacted `--allow-secrets` override after 4 aggregate high-entropy findings; the separately claimed structured staged credential scan reported zero findings. This closes only the phase-stable checker repair and exact scope authority; it is not a C3M self-receipt, evidence of secret absence, or runtime capability.
+
+C3M's live tree contained no C3P receipt declaration or source-receipt block. This receipt-present phase contains exactly one closed declaration and block; C3PB's exact three-path digest, seven labels/types, and narrow profile remain unchanged.
 
 ### Historical pre-seal C1V snapshot — not current
 
@@ -51,7 +55,7 @@ The corresponding historical orientation described the bounded unit as “P07B-C
 
 ### Historical pre-seal C1E snapshot — not current
 
-The phase checker likewise retains the following pre-seal compatibility statement. It is historical evidence only; C1E, C1B, C2, C2M, C2B, C3P, and C3V later sealed, and C3M is now the live unit:
+The phase checker likewise retains the following pre-seal compatibility statement. It is historical evidence only; C1E, C1B, C2, C2M, C2B, C3P, C3V, and C3M subsequently sealed, and C3PB is now the live unit:
 
 > C1E local-evidence checker maintenance is the active `SOURCE_FULL` unit. C1B's exact four-path work is preserved with sorted-newline roster digest `sha256:f8d1fb96d36f7e0cfde99bb73c7726297763c66bafd21aeb5c1fb1e249bdd119`; its recorded handoff SHA-256 is `4bf73e5a34bef6cf72b491d654f423cfa317ae84e3ee66852ccb9cbf1790a5dc`, and its untracked receipt was preserved at `1d2c14f160ff42d509d96219512fa413830a9b1d^3:spec/verification/p07b-c-c1-receipt.json`. C1E's exact seven-path roster digest is `sha256:9a6422b45c82a44e6171ae9351468df5f6ece2190d6ab47f26aec6f84fd7ccde`; its development evidence remains at `.didrun-history/2026-07-18-p07b-c-c1e-build-loop/.didrun/`.
 
@@ -255,6 +259,44 @@ The C2 Git note blob is `0e43a1920c7432150167ca3756fbab3cb67e0a00` with body SHA
 | `P07B C2 scoped staged credential-pattern scan` | `command-succeeded` | `TREE-EXACT` |
 | `P07B C2 preceding didrun chain integrity` | `command-succeeded` | `TREE-EXACT` |
 <!-- P07B-C-C2-SOURCE-RECEIPTS:END -->
+
+<!-- P07B-C-C3P-SOURCE-RECEIPTS:START -->
+### P07B-C C3P source receipt map
+
+C3P source commit `f7b6e6bda7a8864969415ab8636c495902e78dd9`, tree `2d5555db63d46c837cf4e12f2dab2d04a41f4654`.
+C3P strict claims: `12/12 claims recorded-exact`; strict exit: `0`.
+
+C3P source commit `f7b6e6bda7a8864969415ab8636c495902e78dd9`, tree `2d5555db63d46c837cf4e12f2dab2d04a41f4654`, is sealed, note-present, and strict-clean with `12/12 claims recorded-exact`.
+
+The C3P seal records `secrets_override: true` after 46 local scanner findings with kinds `high-entropy`; this is not evidence of secret absence.
+
+The separately claimed C3P structured staged credential scan reported `0` findings; its provenance is sealed supporting event `10`, not the Git note alone.
+
+Local ignored C3P ledger archive `.didrun-history/2026-07-19-p07b-c-c3p-final/.didrun/` contains `12` sealed events and `12` archived session events; post-seal events, if any, are outside the sealed manifest.
+
+C3P ledger manifests use `sorted-relative-posix-path-tab-size-tab-sha256-newline/v1`; all-files SHA-256 is `ec95dd6e19d5eeaec9786e0c5e8a3d51dd8a18f569324c75ddb58c3e54185dc2` and objects-only SHA-256 is `6926948d1012d1442b01f8b30eb2a946d81dbe51af1db25177db899e19141104`.
+
+C3P archive core SHA-256 values are session `9bbb9ec54885026e6d2fab4d8cb9f0a4c466c2b222e9817a83f043fb4255a2f2`, claims `23d492233f974cabfab1479fe915009f7c0cb4ea4762912ad270848bf980a59c`, seals `f8b9f1fc3f9fbfe76bbb11ce885009414780d1c28bfe5ab16baa892fd4f5e1ab`, and .gitignore `cdbcae15105d6b781e620813c79c7e868740d4e9cc53ce6f5fcbbc12387adf4b`.
+
+The local C3P HTML snapshot is `.countershape/evidence/p07b-c-c3p-final-f7b6e6bda7a8.html`, SHA-256 `7ffcf52106b90746638d9df7b3edadf994e667954ebdcde3510938a981fdb148`, 8483 bytes; it is not a portable strict witness.
+
+The C3P Git note blob is `09dd345d428554b84da592841e48bdbcc42304c3` with body SHA-256 `06237c6d9f60d4d8f9a5c0edd971e6b0bb2bf7c977d45e89119c427b09000d11`.
+
+| Claim label | Claim type | Verbatim grade |
+| --- | --- | --- |
+| `P07B-C C3P planning and scope coherence` | `tests-pass` | `TREE-EXACT` |
+| `P07B-C C3P legacy clock-derived profile refusal` | `tests-pass` | `TREE-EXACT` |
+| `P07B-C C3P joined semantic example regeneration` | `tests-pass` | `TREE-EXACT` |
+| `P07B-C C3P contract model profile` | `tests-pass` | `TREE-EXACT` |
+| `P07B-C C3P cumulative C1 architecture compatibility` | `tests-pass` | `TREE-EXACT` |
+| `P07B-C C3P architecture defensive self-test` | `tests-pass` | `TREE-EXACT` |
+| `P07B-C C3P unit-scope defensive self-test` | `tests-pass` | `TREE-EXACT` |
+| `P07B-C C3P cumulative verifier self-test` | `tests-pass` | `TREE-EXACT` |
+| `P07B-C C3P cumulative verification` | `tests-pass` | `TREE-EXACT` |
+| `P07B-C C3P exact twenty-five-path staged scope and diff integrity` | `command-succeeded` | `TREE-EXACT` |
+| `P07B-C C3P scoped staged credential-pattern scan` | `command-succeeded` | `TREE-EXACT` |
+| `P07B-C C3P preceding didrun chain integrity` | `command-succeeded` | `TREE-EXACT` |
+<!-- P07B-C-C3P-SOURCE-RECEIPTS:END -->
 
 ## Read first, in order
 
@@ -773,13 +815,12 @@ separate reviewed boundary.
 
 ## Exact next actions if this task resumes elsewhere
 
-1. Run `git status --short --branch`; confirm branch `codex/countershape-autopilot`, sealed C3V parent `725933fa3c7826a281e84b51f729736cbcfac6ec`, tree `21f0e1bf46e3776e1b496a9c2783f549923c4510`, and changes limited to the exact C3M seven-path roster at `sha256:58e1f6fba95cf3b4312136eea5bb5c64af89a6958711aca84181a1874aa03240`. Retain all three stash objects by full identity and every failed or superseded ledger. No `.didrun` or `.didrun-history` path may be staged or tracked.
-2. Finish the phase-stable C3P receipt checker repair. Reopen only the sealed C3P status; parse at most one standalone-line canonical block from the current handoff; reject every cardinality/order/inline/payload-residue drift; model C3PB-active receipt state; and retain carried C3V/C3M authority negatives in both phases.
-3. Exercise C3M through a zero-claim multi-pass build loop, stage exactly its seven nonzero stage-zero mode-`100644` blobs, and archive that development ledger. In a fresh final ledger run and immediately claim only the eight declared C3M rows, including the complete cumulative verifier and exact staged source/credential/chain gates.
-4. Commit C3M as `fix: preserve interposed receipt-phase authority` without an AI co-author trailer. Seal it, independently require its Git note, loop `NO_COLOR=1 didrun verify --strict` to exit `0`, generate the exact-commit HTML report, and archive the complete ledger. Its pre-seal status cannot self-grade.
-5. Revalidate stash object `5eeb848c334ad3a8a44e4cf61fa298e452188ab1` and apply it without dropping. Preserve the two non-overlap C3PB paths byte-exact and deliberately merge only `docs/HANDOFF_MODE_C.md` so it retains sealed C3V/C3M history while adding one exact C3P source-receipt block. Then run the unchanged ordered seven narrow claims and commit/seal/strict-close C3PB without grading it from its own text.
-6. Resume C3 only after every intervening prerequisite closes. C3 owns the exact forty-path empty-prefix roster, direct materialization from opaque `InspectedTree`, the narrow compiler-frozen store bridge, live Git/runtime/attempt/UUID authority, and sole `OfficialTarget` issuance. C4 alone may issue the one-shot permit, spawn, establish physical chronology, and publish finalized-run semantics. C3B remains a separate receipt boundary before C4.
-7. Keep root as sole writer and didrun/Git/seal operator; parallel agents remain read-only critics. Preserve the human-gated external-API boundary and the adoption, comprehension, production-hardening, independent-security-review, cross-platform, release, and maintainership tail.
+1. Run `git status --short --branch`; confirm branch `codex/countershape-autopilot`, sealed C3M parent `c211d0534864e078fd0ea2c15adabca63ca3fe51`, tree `21cc76ed3979d1b6ed6ee24bd9babd9dbc1c6791`, and changes limited to the exact three-path C3PB roster at `sha256:531cbe600cf2747752749890ea9a15c3d0126e498da6838d4f6faeb1a0d7e885`. Retain all three stash objects by full identity and every failed or superseded ledger. No `.didrun` or `.didrun-history` path may be staged or tracked.
+2. Revalidate the restored C3P declaration, exact source commit/tree/diff/note authority, local HTML and ledger snapshot, one canonical receipt block, C3PB-active six-field phase tuple, and second byte-identical receipt-present reconstruction. Any mismatch keeps C3PB `UNRECEIPTED`.
+3. Exercise C3PB with a zero-claim development ledger, stage exactly its three nonzero stage-zero mode-`100644` blobs, and archive that ledger. In a fresh final ledger run and immediately claim only the seven declared narrow receipt rows; do not substitute the cumulative source battery or reuse a C3M event.
+4. Commit C3PB as `docs: reconcile C3P source receipts` without an AI co-author trailer. Seal it, independently require its Git note, loop `NO_COLOR=1 didrun verify --strict` to exit `0`, generate the exact-commit HTML report, and archive the complete ledger. C3PB cannot grade its own commit, tree, note, or strict result from tracked text.
+5. Resume C3 only after C3PB closes. C3 owns the exact forty-path empty-prefix roster, direct materialization from opaque `InspectedTree`, the narrow compiler-frozen store bridge, live Git/runtime/attempt/UUID authority, and sole `OfficialTarget` issuance. C4 alone may issue the one-shot permit, spawn, establish physical chronology, and publish finalized-run semantics. C3B remains a separate receipt boundary before C4.
+6. Keep root as sole writer and didrun/Git/seal operator; parallel agents remain read-only critics. Preserve the human-gated external-API boundary and the adoption, comprehension, production-hardening, independent-security-review, cross-platform, release, and maintainership tail.
 
 ## Orientation handshake for a fresh agent/chat
 
@@ -789,6 +830,6 @@ Before editing, reply in your working notes with:
 2. the three distinct truth authorities (Git, Choicepoint observations/ruling, didrun receipts);
 3. two things the system must never claim;
 4. the maintenance and A2.1 commits, P07B-A1 source prerequisite `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`, A2.2 checkpoint `32efaaf2f6d9fc58389d48d18219ce03995a2805`, accepted corrected source `6bf33350944dcdd56a4ceaa70f1d0836203ffb1f`, B0 scope lock `7f04b2a5129dcbee2fc991453aefdd6713281b86`, sealed B source `eb06bdcf18f8e14db1257e73733afdc05cac045e`, sealed B receipt document `b4ac17bd66c6260fd4b12b9277ab5259659c55e1`, and sealed final B handoff `464e47adbf7f4497dfafa89938a9539239ffd41b`, with their exact receipt maps and nonclaims; and
-5. the current bounded shippable unit: exact seven-path C3M receipt-phase checker `DEFECT_REPAIR`; sealed C3V and all earlier source/receipt evidence remain historical and unchanged, every C3M grade is `UNRECEIPTED`, the source-receipt-field-validated but globally ungraded C3PB draft remains at stash object `5eeb848c334ad3a8a44e4cf61fa298e452188ab1`, C3 is blocked on C3M plus later C3PB closure, and every unrun live/runtime capability remains excluded and `UNRECEIPTED`.
+5. the current bounded shippable unit: exact three-path C3PB `RECEIPT_RECONCILIATION`; sealed C3M commit `c211d0534864e078fd0ea2c15adabca63ca3fe51` is the closed interposed prerequisite, the C3P source grades below are receipt-bound to the independently sealed C3P source, C3PB itself remains `UNRECEIPTED`, C3 is blocked on its closure, and every unrun live/runtime capability remains excluded and `UNRECEIPTED`.
 
 If any answer is missing, read the files above again. Do not infer a didrun grade from this handoff; run strict verification locally.

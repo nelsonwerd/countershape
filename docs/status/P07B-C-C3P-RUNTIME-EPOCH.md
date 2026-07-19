@@ -2,11 +2,13 @@
 
 ## State
 
-- **State:** active pre-seal `SOURCE_FULL` prerequisite; every C3P grade below is `UNRECEIPTED`
+- **Unit:** `C3P` source receipt, reconciled by the active `C3PB` working unit
+- **Profile:** `RECEIPT_RECONCILIATION` for this working unit; the bound source used `SOURCE_FULL`
+- **Source receipt:** C3P source commit `f7b6e6bda7a8864969415ab8636c495902e78dd9`, tree `2d5555db63d46c837cf4e12f2dab2d04a41f4654`, is sealed, note-present, and strict-clean; every C3P source grade below is `TREE-EXACT`. This C3PB receipt-document working unit binds only that existing source and remains `UNRECEIPTED` until its own commit, seal, note, and strict boundary.
 - **Parent:** sealed C2B commit `ab5e2dd5b66702a1d1cd13eb0047b57a48469487`, tree `02fd396858ca41cff6d0ee561dce7ee65a3f94d0`
 - **Scope:** 25 exact mode-`100644` paths, no prefixes; sorted-newline roster `sha256:8b047704df047cb96f1c5d19418c4cfe8502e4b4746bb4f24c0851dac8d018c0`
 - **Commit subject:** `fix: use stable Darwin boot-session identity`
-- **Next receipt unit:** C3PB owns exactly three paths with roster `sha256:531cbe600cf2747752749890ea9a15c3d0126e498da6838d4f6faeb1a0d7e885`; it may bind only the already-sealed C3P source evidence and cannot grade itself
+- **Active receipt unit:** C3PB owns exactly three paths with roster `sha256:531cbe600cf2747752749890ea9a15c3d0126e498da6838d4f6faeb1a0d7e885`; it may bind only the already-sealed C3P source evidence and cannot grade itself
 
 ## Defect and correction
 
@@ -24,25 +26,46 @@ This correction does not claim that a changed UUID proves child absence, a physi
 - C3B is declared as a separate exact three-path receipt unit with digest `sha256:3ef17156a2f3051171da70983f9428de2b9bdb5a179602407a36f34200012a67`.
 - The dedicated C3P/C3PB receipt checker is enrolled in the cumulative verifier with both its phase-coherence gate and hostile self-test; the verifier and its self-test therefore belong to this exact source roster.
 
-## Planned source claim map
+## C3P source receipt map
 
-| Claim label | Claim type | Pre-seal grade |
+- C3P source strict exit: `0`
+- C3P source strict claims: `12/12 claims recorded-exact`
+
+This receipt binds only the already-existing C3P source commit. C3PB cannot name or grade its own commit, tree, Git note, or strict result.
+
+C3P source commit `f7b6e6bda7a8864969415ab8636c495902e78dd9`, tree `2d5555db63d46c837cf4e12f2dab2d04a41f4654`, is sealed, note-present, and strict-clean with `12/12 claims recorded-exact`.
+
+The C3P seal records `secrets_override: true` after 46 local scanner findings with kinds `high-entropy`; this is not evidence of secret absence.
+
+The separately claimed C3P structured staged credential scan reported `0` findings; its provenance is sealed supporting event `10`, not the Git note alone.
+
+Local ignored C3P ledger archive `.didrun-history/2026-07-19-p07b-c-c3p-final/.didrun/` contains `12` sealed events and `12` archived session events; post-seal events, if any, are outside the sealed manifest.
+
+C3P ledger manifests use `sorted-relative-posix-path-tab-size-tab-sha256-newline/v1`; all-files SHA-256 is `ec95dd6e19d5eeaec9786e0c5e8a3d51dd8a18f569324c75ddb58c3e54185dc2` and objects-only SHA-256 is `6926948d1012d1442b01f8b30eb2a946d81dbe51af1db25177db899e19141104`.
+
+C3P archive core SHA-256 values are session `9bbb9ec54885026e6d2fab4d8cb9f0a4c466c2b222e9817a83f043fb4255a2f2`, claims `23d492233f974cabfab1479fe915009f7c0cb4ea4762912ad270848bf980a59c`, seals `f8b9f1fc3f9fbfe76bbb11ce885009414780d1c28bfe5ab16baa892fd4f5e1ab`, and .gitignore `cdbcae15105d6b781e620813c79c7e868740d4e9cc53ce6f5fcbbc12387adf4b`.
+
+The local C3P HTML snapshot is `.countershape/evidence/p07b-c-c3p-final-f7b6e6bda7a8.html`, SHA-256 `7ffcf52106b90746638d9df7b3edadf994e667954ebdcde3510938a981fdb148`, 8483 bytes; it is not a portable strict witness.
+
+The C3P Git note blob is `09dd345d428554b84da592841e48bdbcc42304c3` with body SHA-256 `06237c6d9f60d4d8f9a5c0edd971e6b0bb2bf7c977d45e89119c427b09000d11`.
+
+| Claim label | Claim type | Verbatim source grade |
 | --- | --- | --- |
-| `P07B-C C3P planning and scope coherence` | `tests-pass` | `UNRECEIPTED` |
-| `P07B-C C3P legacy clock-derived profile refusal` | `tests-pass` | `UNRECEIPTED` |
-| `P07B-C C3P joined semantic example regeneration` | `tests-pass` | `UNRECEIPTED` |
-| `P07B-C C3P contract model profile` | `tests-pass` | `UNRECEIPTED` |
-| `P07B-C C3P cumulative C1 architecture compatibility` | `tests-pass` | `UNRECEIPTED` |
-| `P07B-C C3P architecture defensive self-test` | `tests-pass` | `UNRECEIPTED` |
-| `P07B-C C3P unit-scope defensive self-test` | `tests-pass` | `UNRECEIPTED` |
-| `P07B-C C3P cumulative verifier self-test` | `tests-pass` | `UNRECEIPTED` |
-| `P07B-C C3P cumulative verification` | `tests-pass` | `UNRECEIPTED` |
-| `P07B-C C3P exact twenty-five-path staged scope and diff integrity` | `command-succeeded` | `UNRECEIPTED` |
-| `P07B-C C3P scoped staged credential-pattern scan` | `command-succeeded` | `UNRECEIPTED` |
-| `P07B-C C3P preceding didrun chain integrity` | `command-succeeded` | `UNRECEIPTED` |
+| `P07B-C C3P planning and scope coherence` | `tests-pass` | `TREE-EXACT` |
+| `P07B-C C3P legacy clock-derived profile refusal` | `tests-pass` | `TREE-EXACT` |
+| `P07B-C C3P joined semantic example regeneration` | `tests-pass` | `TREE-EXACT` |
+| `P07B-C C3P contract model profile` | `tests-pass` | `TREE-EXACT` |
+| `P07B-C C3P cumulative C1 architecture compatibility` | `tests-pass` | `TREE-EXACT` |
+| `P07B-C C3P architecture defensive self-test` | `tests-pass` | `TREE-EXACT` |
+| `P07B-C C3P unit-scope defensive self-test` | `tests-pass` | `TREE-EXACT` |
+| `P07B-C C3P cumulative verifier self-test` | `tests-pass` | `TREE-EXACT` |
+| `P07B-C C3P cumulative verification` | `tests-pass` | `TREE-EXACT` |
+| `P07B-C C3P exact twenty-five-path staged scope and diff integrity` | `command-succeeded` | `TREE-EXACT` |
+| `P07B-C C3P scoped staged credential-pattern scan` | `command-succeeded` | `TREE-EXACT` |
+| `P07B-C C3P preceding didrun chain integrity` | `command-succeeded` | `TREE-EXACT` |
 
 ## Gate
 
-C3P is complete only after the exact source roster passes every planned command through didrun, the commit seals, its Git note is present, and `NO_COLOR=1 didrun verify --strict` exits `0`. Its own status remains pre-seal and cannot name or grade its future commit. At that boundary, the queued verifier-throughput proposal is routed in a separately scoped maintenance unit whose name and roster are intentionally undecided until C3P closes; it may not mutate this unit mid-seal. C3 remains blocked until that maintenance closes and a later C3PB receipt declaration independently binds the C3P source note, status, handoff, HTML snapshot, and ignored ledger, then itself commits, seals, and verifies strictly.
+The C3P source and intervening C3V and C3M maintenance boundaries are already sealed and strict-clean. This active C3PB working unit is complete only after its seven narrow receipt commands run through didrun on one exact staged tree, its three paths commit, the commit seals, its Git note is independently readable, and `NO_COLOR=1 didrun verify --strict` exits `0`. The source grades above come only from the sealed C3P source note and evidence declared by this receipt; none grades C3PB itself. C3 remains blocked until C3PB closes.
 
 No C3P result proves a live boot measurement, runtime admission, Git materialization, attempt allocation, target publication, `OfficialTarget`, interlock acquisition, permit, subject spawn, finalized run, classification, product UX, security review, production readiness, adoption, or maintainership.

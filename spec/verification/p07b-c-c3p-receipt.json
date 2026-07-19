@@ -1,0 +1,126 @@
+{
+  "schema_version": "countershape/p07b-c-c3p-receipt/v1",
+  "source_commit": "f7b6e6bda7a8864969415ab8636c495902e78dd9",
+  "source_tree": "2d5555db63d46c837cf4e12f2dab2d04a41f4654",
+  "source_subject": "fix: use stable Darwin boot-session identity",
+  "secrets_override": true,
+  "strict_exit_code": 0,
+  "strict_claims_recorded_exact": 12,
+  "strict_claims_total": 12,
+  "coverage_total_events": 12,
+  "coverage_complete_events": 12,
+  "claims": [
+    {
+      "label": "P07B-C C3P planning and scope coherence",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT",
+      "supporting_event_index": 0
+    },
+    {
+      "label": "P07B-C C3P legacy clock-derived profile refusal",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT",
+      "supporting_event_index": 1
+    },
+    {
+      "label": "P07B-C C3P joined semantic example regeneration",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT",
+      "supporting_event_index": 2
+    },
+    {
+      "label": "P07B-C C3P contract model profile",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT",
+      "supporting_event_index": 3
+    },
+    {
+      "label": "P07B-C C3P cumulative C1 architecture compatibility",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT",
+      "supporting_event_index": 4
+    },
+    {
+      "label": "P07B-C C3P architecture defensive self-test",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT",
+      "supporting_event_index": 5
+    },
+    {
+      "label": "P07B-C C3P unit-scope defensive self-test",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT",
+      "supporting_event_index": 6
+    },
+    {
+      "label": "P07B-C C3P cumulative verifier self-test",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT",
+      "supporting_event_index": 7
+    },
+    {
+      "label": "P07B-C C3P cumulative verification",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT",
+      "supporting_event_index": 8
+    },
+    {
+      "label": "P07B-C C3P exact twenty-five-path staged scope and diff integrity",
+      "type": "command-succeeded",
+      "grade": "TREE-EXACT",
+      "supporting_event_index": 9
+    },
+    {
+      "label": "P07B-C C3P scoped staged credential-pattern scan",
+      "type": "command-succeeded",
+      "grade": "TREE-EXACT",
+      "supporting_event_index": 10
+    },
+    {
+      "label": "P07B-C C3P preceding didrun chain integrity",
+      "type": "command-succeeded",
+      "grade": "TREE-EXACT",
+      "supporting_event_index": 11
+    }
+  ],
+  "evidence": {
+    "html_report": {
+      "path": ".countershape/evidence/p07b-c-c3p-final-f7b6e6bda7a8.html",
+      "sha256": "7ffcf52106b90746638d9df7b3edadf994e667954ebdcde3510938a981fdb148",
+      "bytes": 8483,
+      "authority": "LOCAL_SNAPSHOT_NOT_PORTABLE_STRICT_WITNESS"
+    },
+    "ledger_archive": {
+      "path": ".didrun-history/2026-07-19-p07b-c-c3p-final/.didrun/",
+      "authority": "LOCAL_IGNORED_ARCHIVE_NOT_GIT_AUTHORITY",
+      "manifest_format": "sorted-relative-posix-path-tab-size-tab-sha256-newline/v1",
+      "sealed_event_count": 12,
+      "archive_session_event_count": 12,
+      "claim_count": 12,
+      "seal_count": 1,
+      "object_file_count": 13,
+      "total_file_count": 17,
+      "total_bytes": 44758,
+      "all_files_manifest_sha256": "ec95dd6e19d5eeaec9786e0c5e8a3d51dd8a18f569324c75ddb58c3e54185dc2",
+      "objects_manifest_sha256": "6926948d1012d1442b01f8b30eb2a946d81dbe51af1db25177db899e19141104",
+      "gitignore_sha256": "cdbcae15105d6b781e620813c79c7e868740d4e9cc53ce6f5fcbbc12387adf4b",
+      "session_log_sha256": "9bbb9ec54885026e6d2fab4d8cb9f0a4c466c2b222e9817a83f043fb4255a2f2",
+      "claims_jsonl_sha256": "23d492233f974cabfab1479fe915009f7c0cb4ea4762912ad270848bf980a59c",
+      "seals_jsonl_sha256": "f8b9f1fc3f9fbfe76bbb11ce885009414780d1c28bfe5ab16baa892fd4f5e1ab"
+    },
+    "git_note": {
+      "version": 1,
+      "blob_oid": "09dd345d428554b84da592841e48bdbcc42304c3",
+      "body_sha256": "06237c6d9f60d4d8f9a5c0edd971e6b0bb2bf7c977d45e89119c427b09000d11"
+    },
+    "seal_redaction": {
+      "finding_count": 46,
+      "finding_kinds": [
+        "high-entropy"
+      ],
+      "finding_provenance": "LOCAL_TERMINAL_OBSERVATION_NOT_GIT_NOTE",
+      "structured_staged_scan_findings": 0,
+      "structured_scan_provenance": "SEALED_C3P_SUPPORTING_EVENT_10"
+    }
+  }
+}
