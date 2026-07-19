@@ -1,5 +1,5 @@
 {
-  "schema_version": "countershape/p07b-c-unit-paths/v1",
+  "schema_version": "countershape/p07b-c-unit-paths/v2",
   "units": {
     "C0A": {
       "exact": [
@@ -32,7 +32,8 @@
         "tools/verify-current-selftest.mjs",
         "tools/verify-current.mjs"
       ],
-      "prefixes": []
+      "prefixes": [],
+      "verification_profile": "SOURCE_FULL"
     },
     "C0B": {
       "exact": [
@@ -41,7 +42,8 @@
         "docs/status/P07B-C-C0-AUTHORITY.md",
         "spec/verification/p07b-c-c0-receipt.json"
       ],
-      "prefixes": []
+      "prefixes": [],
+      "verification_profile": "SOURCE_FULL"
     },
     "C1": {
       "exact": [
@@ -89,7 +91,8 @@
         "tools/verify-current-selftest.mjs",
         "tools/verify-current.mjs"
       ],
-      "prefixes": []
+      "prefixes": [],
+      "verification_profile": "SOURCE_FULL"
     },
     "C1M": {
       "exact": [
@@ -112,7 +115,25 @@
         "tools/check-p07b-c-plan.mjs",
         "tools/check-p07b-c-unit-scope.mjs"
       ],
-      "prefixes": []
+      "prefixes": [],
+      "verification_profile": "SOURCE_FULL"
+    },
+    "C1V": {
+      "exact": [
+        "docs/HANDOFF_MODE_C.md",
+        "docs/PROMPT_PACK.md",
+        "docs/THREAT_MODEL.md",
+        "docs/VERIFICATION.md",
+        "docs/status/P07B-C-VERIFICATION-THROUGHPUT.md",
+        "spec/verification/p07b-c-unit-paths.json",
+        "tools/check-p07b-c-plan.mjs",
+        "tools/check-p07b-c-unit-scope.mjs",
+        "tools/verify-current-selftest.mjs",
+        "tools/verify-current.mjs",
+        "tools/verify-go-test-repetition.mjs"
+      ],
+      "prefixes": [],
+      "verification_profile": "SOURCE_FULL"
     },
     "C1B": {
       "exact": [
@@ -121,7 +142,38 @@
         "docs/status/P07B-C-C1-SEMANTICS.md",
         "spec/verification/p07b-c-c1-receipt.json"
       ],
-      "prefixes": []
+      "prefixes": [],
+      "receipt_claims": [
+        {
+          "label": "P07B-C C1B source receipt reconciliation",
+          "type": "tests-pass"
+        },
+        {
+          "label": "P07B-C C1B receipt checker defensive self-test",
+          "type": "tests-pass"
+        },
+        {
+          "label": "P07B-C C1B declared local source-evidence snapshot match",
+          "type": "tests-pass"
+        },
+        {
+          "label": "P07B-C C1B receipt-only Go build",
+          "type": "command-succeeded"
+        },
+        {
+          "label": "P07B-C C1B exact four-path staged scope and diff integrity",
+          "type": "command-succeeded"
+        },
+        {
+          "label": "P07B-C C1B scoped staged credential-pattern scan",
+          "type": "command-succeeded"
+        },
+        {
+          "label": "P07B-C C1B preceding didrun chain integrity",
+          "type": "command-succeeded"
+        }
+      ],
+      "verification_profile": "RECEIPT_RECONCILIATION"
     },
     "C2": {
       "exact": [
@@ -143,7 +195,8 @@
         "tools/verify-current-selftest.mjs",
         "tools/verify-current.mjs"
       ],
-      "prefixes": []
+      "prefixes": [],
+      "verification_profile": "SOURCE_FULL"
     },
     "C3": {
       "exact": [
@@ -166,7 +219,8 @@
       "prefixes": [
         "internal/hostepoch/",
         "internal/noderuntime/"
-      ]
+      ],
+      "verification_profile": "SOURCE_FULL"
     },
     "C4": {
       "exact": [
@@ -187,7 +241,8 @@
         "internal/contractexec/runner/",
         "internal/processmechanics/",
         "testkit/contractexec/cli/"
-      ]
+      ],
+      "verification_profile": "SOURCE_FULL"
     },
     "C5": {
       "exact": [
@@ -208,7 +263,8 @@
         "internal/contractexec/http/",
         "internal/contractexec/scope/",
         "testkit/contractexec/http/"
-      ]
+      ],
+      "verification_profile": "SOURCE_FULL"
     },
     "C6A": {
       "exact": [
@@ -231,7 +287,8 @@
         "docs/captures/p07b-c/",
         "testkit/contractexec/",
         "tools/p07b-c/"
-      ]
+      ],
+      "verification_profile": "SOURCE_FULL"
     },
     "C6B": {
       "exact": [
@@ -239,7 +296,38 @@
         "docs/status/DIDRUN_BUGS.md",
         "docs/status/P07B-C-C6-EVIDENCE.md"
       ],
-      "prefixes": []
+      "prefixes": [],
+      "receipt_claims": [
+        {
+          "label": "P07B-C C6B evidence receipt reconciliation",
+          "type": "tests-pass"
+        },
+        {
+          "label": "P07B-C C6B receipt checker defensive self-test",
+          "type": "tests-pass"
+        },
+        {
+          "label": "P07B-C C6B declared local source-evidence snapshot match",
+          "type": "tests-pass"
+        },
+        {
+          "label": "P07B-C C6B receipt-only Go build",
+          "type": "command-succeeded"
+        },
+        {
+          "label": "P07B-C C6B exact three-path staged scope and diff integrity",
+          "type": "command-succeeded"
+        },
+        {
+          "label": "P07B-C C6B scoped staged credential-pattern scan",
+          "type": "command-succeeded"
+        },
+        {
+          "label": "P07B-C C6B preceding didrun chain integrity",
+          "type": "command-succeeded"
+        }
+      ],
+      "verification_profile": "RECEIPT_RECONCILIATION"
     }
   }
 }

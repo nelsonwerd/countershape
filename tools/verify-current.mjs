@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { constants } from "node:fs";
-import { chmod, lstat, mkdir, mkdtemp, open, readdir, realpath, rm, symlink } from "node:fs/promises";
+import { chmod, lstat, mkdir, mkdtemp, open, readdir, realpath, rm, symlink, unlink } from "node:fs/promises";
 import { arch, platform } from "node:os";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,6 +12,11 @@ export const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "
 const verifierPath = resolve(repositoryRoot, "tools/verify-current.mjs");
 const maxChildOutput = 64 * 1024 * 1024;
 const childTimeoutMS = 20 * 60 * 1000;
+const lockRecordMaxBytes = 4096;
+const lockSchemaVersion = "countershape/verify-current-lock/v1";
+const modulePath = "github.com/nelsonwerd/countershape";
+const generalJobs = 2;
+const goTestParallelism = 2;
 
 export class VerificationError extends Error {
 	constructor(code, detail) {
@@ -29,14 +34,43 @@ export const toolSpecifications = Object.freeze([
 	Object.freeze({ name: "cxx", variable: "COUNTERSHAPE_CXX", fallback: "/usr/bin/clang++" }),
 ]);
 
-const goCommon = Object.freeze(["-mod=readonly", "-buildvcs=false", "-p=1"]);
+const goGeneralCommon = Object.freeze(["-mod=readonly", "-buildvcs=false", `-p=${generalJobs}`]);
+const goSerialCommon = Object.freeze(["-mod=readonly", "-buildvcs=false", "-p=1"]);
+
+export const sensitiveGoPackages = Object.freeze([
+	`${modulePath}/internal/emit/node/compiler`,
+	`${modulePath}/internal/emit/node/program/v1`,
+	`${modulePath}/internal/store`,
+	`${modulePath}/internal/world`,
+	`${modulePath}/testkit/studies/cli_precedence`,
+	`${modulePath}/testkit/studies/http_invoices`,
+]);
 
 export const currentSteps = Object.freeze([
 	Object.freeze({ id: "workspace-no-ds-store", kind: "guard" }),
-	Object.freeze({ id: "go-build", tool: "go", tools: Object.freeze(["go", "cc", "cxx"]), args: Object.freeze(["build", ...goCommon, "./..."]) }),
-	Object.freeze({ id: "go-vet", tool: "go", tools: Object.freeze(["go", "cc", "cxx"]), args: Object.freeze(["vet", ...goCommon, "./..."]) }),
-	Object.freeze({ id: "go-test-full", tool: "go", tools: Object.freeze(["go", "node", "git", "sh", "cc", "cxx"]), args: Object.freeze(["test", ...goCommon, "-count=1", "-timeout=20m", "./..."]) }),
+	Object.freeze({
+		id: "go-package-partition", kind: "package-guard", tool: "go", tools: Object.freeze(["go"]),
+		args: Object.freeze(["list", "-mod=readonly", "-buildvcs=false", "./..."]), marker: "PACKAGE_PARTITION exact",
+	}),
+	Object.freeze({ id: "go-build", tool: "go", tools: Object.freeze(["go", "cc", "cxx"]), args: Object.freeze(["build", ...goGeneralCommon, "./..."]) }),
+	Object.freeze({ id: "go-vet", tool: "go", tools: Object.freeze(["go", "cc", "cxx"]), args: Object.freeze(["vet", ...goGeneralCommon, "./..."]) }),
+	Object.freeze({
+		id: "go-test-general", tool: "go", tools: Object.freeze(["go", "node", "git", "sh", "cc", "cxx"]), packageClass: "general",
+		args: Object.freeze(["test", ...goGeneralCommon, `-parallel=${goTestParallelism}`, "-count=1", "-timeout=20m"]),
+	}),
+	Object.freeze({
+		id: "go-test-sensitive-serial", tool: "go", tools: Object.freeze(["go", "node", "git", "sh", "cc", "cxx"]), packageClass: "sensitive",
+		args: Object.freeze(["test", ...goSerialCommon, `-parallel=${goTestParallelism}`, "-count=1", "-timeout=20m"]),
+	}),
+	Object.freeze({
+		id: "go-package-partition-revalidation", kind: "package-revalidation", tool: "go", tools: Object.freeze(["go"]),
+		args: Object.freeze(["list", "-mod=readonly", "-buildvcs=false", "./..."]), marker: "PACKAGE_PARTITION_REVALIDATED exact",
+	}),
 	Object.freeze({ id: "verification-runner-selftest", tool: "node", tools: Object.freeze(["node"]), path: "tools/verify-current-selftest.mjs", marker: "verification runner self-test passed:" }),
+	Object.freeze({
+		id: "go-repetition-runner-selftest", tool: "node", tools: Object.freeze(["node"]), path: "tools/verify-go-test-repetition.mjs",
+		args: Object.freeze(["--self-test"]), marker: "Go repetition verifier self-test passed:",
+	}),
 	Object.freeze({ id: "architecture-u5", tool: "node", tools: Object.freeze(["node"]), path: "tools/check-u5-architecture.mjs", marker: "U5 architecture boundary OK" }),
 	Object.freeze({ id: "architecture-u5-selftest", tool: "node", tools: Object.freeze(["node"]), path: "tools/check-u5-architecture-selftest.mjs", marker: "U5 architecture self-test passed:" }),
 	Object.freeze({ id: "architecture-u6", tool: "node", tools: Object.freeze(["node"]), path: "tools/check-u6-architecture.mjs", marker: "U6 architecture boundary OK" }),
@@ -83,6 +117,7 @@ export const currentSteps = Object.freeze([
 		args: Object.freeze(["--self-test"]), marker: "P07B-C unit scope self-test passed:",
 	}),
 	Object.freeze({ id: "authority-revalidation", kind: "authority-guard" }),
+	Object.freeze({ id: "verification-resource-finalization", kind: "finalization-guard" }),
 ]);
 
 export const historicalOnly = Object.freeze([
@@ -103,6 +138,229 @@ export const historicalOnly = Object.freeze([
 function sameOpenedFile(left, right) {
 	return left.dev === right.dev && left.ino === right.ino && left.size === right.size &&
 		left.mode === right.mode && left.mtimeMs === right.mtimeMs;
+}
+
+function sameFileIdentity(left, right) {
+	return left.dev === right.dev && left.ino === right.ino;
+}
+
+function effectiveUID() {
+	if (typeof process.geteuid !== "function") throw new VerificationError("VERIFY_EFFECTIVE_UID_UNAVAILABLE", platform());
+	return process.geteuid();
+}
+
+async function requireOwnedDirectory(path, code, { exactMode, writableMode = 0 } = {}) {
+	let handle;
+	try {
+		handle = await open(path, constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | (constants.O_NOFOLLOW ?? 0));
+		const opened = await handle.stat();
+		const atPath = await lstat(path);
+		const canonical = await realpath(path);
+		if (!opened.isDirectory() || atPath.isSymbolicLink() || !sameFileIdentity(opened, atPath) || canonical !== path ||
+			opened.uid !== effectiveUID() || (exactMode !== undefined && (opened.mode & 0o777) !== exactMode) ||
+			(writableMode !== 0 && (opened.mode & writableMode) !== 0)) {
+			throw new VerificationError(code, path);
+		}
+	} catch (error) {
+		if (error instanceof VerificationError) throw error;
+		throw new VerificationError(code, `${path}: ${error.code ?? error.message}`);
+	} finally {
+		await handle?.close();
+	}
+}
+
+export async function createPrivateBase(root = repositoryRoot) {
+	const absoluteRoot = resolve(root);
+	const canonicalRoot = await realpath(absoluteRoot);
+	if (absoluteRoot !== canonicalRoot) {
+		throw new VerificationError("VERIFY_REPOSITORY_ROOT_NOT_CANONICAL", `${absoluteRoot} != ${canonicalRoot}`);
+	}
+	const artifactRoot = join(canonicalRoot, ".countershape");
+	try {
+		await mkdir(artifactRoot, { mode: 0o700 });
+	} catch (error) {
+		if (error.code !== "EEXIST") throw new VerificationError("VERIFY_ARTIFACT_ROOT_CREATE_FAILED", `${artifactRoot}: ${error.code ?? error.message}`);
+	}
+	await requireOwnedDirectory(artifactRoot, "VERIFY_ARTIFACT_ROOT_INVALID", { writableMode: 0o022 });
+	const base = join(artifactRoot, "verify-current");
+	try {
+		await mkdir(base, { mode: 0o700 });
+	} catch (error) {
+		if (error.code !== "EEXIST") throw new VerificationError("VERIFY_PRIVATE_BASE_CREATE_FAILED", `${base}: ${error.code ?? error.message}`);
+	}
+	await requireOwnedDirectory(base, "VERIFY_PRIVATE_BASE_INVALID", { exactMode: 0o700 });
+	return base;
+}
+
+function canonicalLockRecord(record) {
+	return `${JSON.stringify({
+		created_at_unix_ms: record.created_at_unix_ms,
+		nonce: record.nonce,
+		pid: record.pid,
+		repository_root_sha256: record.repository_root_sha256,
+		schema_version: record.schema_version,
+	})}\n`;
+}
+
+async function readBoundedHandle(handle, code, path) {
+	const before = await handle.stat();
+	if (!before.isFile() || before.size <= 0 || before.size > lockRecordMaxBytes) {
+		throw new VerificationError(code, `${path}: invalid byte length ${before.size}`);
+	}
+	const buffer = Buffer.alloc(before.size);
+	let offset = 0;
+	while (offset < buffer.length) {
+		const { bytesRead } = await handle.read(buffer, offset, buffer.length - offset, offset);
+		if (bytesRead === 0) throw new VerificationError(code, `${path}: unexpected EOF at ${offset}/${buffer.length}`);
+		offset += bytesRead;
+	}
+	const after = await handle.stat();
+	if (!sameOpenedFile(before, after)) throw new VerificationError(code, `${path}: changed while reading`);
+	return buffer.toString("utf8");
+}
+
+function validateLockRecord(text, expectedRootDigest, path) {
+	let record;
+	try {
+		record = JSON.parse(text);
+	} catch (error) {
+		throw new VerificationError("VERIFY_LOCK_INVALID", `${path}: ${error.message}`);
+	}
+	const expectedKeys = ["created_at_unix_ms", "nonce", "pid", "repository_root_sha256", "schema_version"];
+	if (!record || typeof record !== "object" || Array.isArray(record) ||
+		JSON.stringify(Object.keys(record)) !== JSON.stringify(expectedKeys) ||
+		record.schema_version !== lockSchemaVersion || !Number.isSafeInteger(record.pid) || record.pid <= 0 ||
+		!Number.isSafeInteger(record.created_at_unix_ms) || record.created_at_unix_ms < 0 ||
+		!(/^[0-9a-f]{32}$/u.test(record.nonce)) || record.repository_root_sha256 !== expectedRootDigest ||
+		canonicalLockRecord(record) !== text) {
+		throw new VerificationError("VERIFY_LOCK_INVALID", path);
+	}
+	return Object.freeze(record);
+}
+
+async function inspectExistingLock(path, expectedRootDigest) {
+	let handle;
+	try {
+		const before = await lstat(path);
+		if (!before.isFile() || before.isSymbolicLink() || before.uid !== effectiveUID() || (before.mode & 0o777) !== 0o600) {
+			throw new VerificationError("VERIFY_LOCK_INVALID", path);
+		}
+		handle = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
+		const opened = await handle.stat();
+		if (!opened.isFile() || !sameFileIdentity(before, opened)) throw new VerificationError("VERIFY_LOCK_INVALID", path);
+		const text = await readBoundedHandle(handle, "VERIFY_LOCK_INVALID", path);
+		const finalOpened = await handle.stat();
+		const after = await lstat(path);
+		if (after.isSymbolicLink() || !after.isFile() || after.uid !== effectiveUID() || (after.mode & 0o777) !== 0o600 ||
+			!sameOpenedFile(finalOpened, after)) throw new VerificationError("VERIFY_LOCK_INVALID", path);
+		return validateLockRecord(text, expectedRootDigest, path);
+	} catch (error) {
+		if (error instanceof VerificationError) throw error;
+		throw new VerificationError("VERIFY_LOCK_INVALID", `${path}: ${error.code ?? error.message}`);
+	} finally {
+		await handle?.close();
+	}
+}
+
+export function processLiveness(pid, signal = process.kill) {
+	try {
+		signal(pid, 0);
+		return "live";
+	} catch (error) {
+		if (error.code === "ESRCH") return "absent";
+		return "indeterminate";
+	}
+}
+
+export async function acquireVerificationLock(root = repositoryRoot, dependencies = {}) {
+	const canonicalRoot = await realpath(resolve(root));
+	const base = await createPrivateBase(canonicalRoot);
+	const path = join(base, "active.lock");
+	const repositoryRootDigest = createHash("sha256").update(canonicalRoot).digest("hex");
+	const record = Object.freeze({
+		created_at_unix_ms: dependencies.now?.() ?? Date.now(),
+		nonce: dependencies.nonce ?? randomBytes(16).toString("hex"),
+		pid: dependencies.pid ?? process.pid,
+		repository_root_sha256: repositoryRootDigest,
+		schema_version: lockSchemaVersion,
+	});
+	const serialized = canonicalLockRecord(record);
+	validateLockRecord(serialized, repositoryRootDigest, path);
+	let handle;
+	try {
+		handle = await open(path, constants.O_CREAT | constants.O_EXCL | constants.O_RDWR | (constants.O_NOFOLLOW ?? 0), 0o600);
+	} catch (error) {
+		if (error.code !== "EEXIST") throw new VerificationError("VERIFY_LOCK_CREATE_FAILED", `${path}: ${error.code ?? error.message}`);
+		const existing = await inspectExistingLock(path, repositoryRootDigest);
+		const state = await (dependencies.liveness?.(existing.pid) ?? processLiveness(existing.pid));
+		if (state === "absent") {
+			throw new VerificationError("VERIFY_STALE_LOCK", `${path}: pid=${existing.pid}; inspect and unlink only after confirming no verifier is active`);
+		}
+		throw new VerificationError("VERIFY_ALREADY_RUNNING", `${path}: pid=${existing.pid}; liveness=${state}`);
+	}
+	try {
+		const opened = await handle.stat();
+		if (!opened.isFile() || opened.uid !== effectiveUID() || (opened.mode & 0o777) !== 0o600) {
+			throw new VerificationError("VERIFY_LOCK_INVALID", path);
+		}
+		await handle.writeFile(serialized, { encoding: "utf8" });
+		await handle.sync();
+		await dependencies.afterWrite?.({ path, record });
+		const atPath = await lstat(path);
+		if (atPath.isSymbolicLink() || !sameFileIdentity(opened, atPath)) throw new VerificationError("VERIFY_LOCK_INVALID", path);
+	} catch (error) {
+		let created;
+		try { created = await handle.stat(); } catch { /* leave uncertain ownership fail-closed */ }
+		try {
+			const atPath = await lstat(path);
+			if (created && !atPath.isSymbolicLink() && sameFileIdentity(created, atPath)) await unlink(path);
+		} catch { /* preserve the primary failure and any uncertain path */ }
+		let closeFailure;
+		try { await handle.close(); } catch (failure) { closeFailure = failure; }
+		if (closeFailure) throw new AggregateError([error, closeFailure], "lock acquisition and handle close both failed");
+		if (error instanceof VerificationError) throw error;
+		throw new VerificationError("VERIFY_LOCK_WRITE_FAILED", `${path}: ${error.code ?? error.message}`);
+	}
+	let released = false;
+	const assertHeld = async () => {
+		if (released) throw new VerificationError("VERIFY_LOCK_INTEGRITY", `${path}: already released`);
+		const opened = await handle.stat();
+		const before = await lstat(path);
+		if (!opened.isFile() || opened.uid !== effectiveUID() || (opened.mode & 0o777) !== 0o600 ||
+			before.isSymbolicLink() || !before.isFile() || before.uid !== effectiveUID() || (before.mode & 0o777) !== 0o600 ||
+			!sameFileIdentity(opened, before)) {
+			throw new VerificationError("VERIFY_LOCK_INTEGRITY", path);
+		}
+		const text = await readBoundedHandle(handle, "VERIFY_LOCK_INTEGRITY", path);
+		const finalOpened = await handle.stat();
+		const after = await lstat(path);
+		if (after.isSymbolicLink() || !after.isFile() || after.uid !== effectiveUID() || (after.mode & 0o777) !== 0o600 ||
+			!sameOpenedFile(finalOpened, after) || text !== serialized) {
+			throw new VerificationError("VERIFY_LOCK_INTEGRITY", path);
+		}
+	};
+	return Object.freeze({
+		path,
+		pid: record.pid,
+		assertHeld,
+		async release() {
+			if (released) return;
+			let failure;
+			try {
+				await assertHeld();
+				await unlink(path);
+			} catch (error) {
+				failure = error instanceof VerificationError ? error : new VerificationError("VERIFY_LOCK_INTEGRITY", `${path}: ${error.code ?? error.message}`);
+			}
+			try {
+				await handle.close();
+			} catch (error) {
+				failure ??= new VerificationError("VERIFY_LOCK_CLOSE_FAILED", `${path}: ${error.code ?? error.message}`);
+			}
+			released = true;
+			if (failure) throw failure;
+		},
+	});
 }
 
 export async function admitTool(name, suppliedPath) {
@@ -289,16 +547,14 @@ export async function assertNoDSStore(root = repositoryRoot) {
 async function requirePrivateDirectory(path, code) {
 	const canonical = await realpath(path);
 	const metadata = await lstat(canonical);
-	if (canonical !== path || !metadata.isDirectory() || metadata.isSymbolicLink() || (metadata.mode & 0o777) !== 0o700) {
+	if (canonical !== path || !metadata.isDirectory() || metadata.isSymbolicLink() || metadata.uid !== effectiveUID() ||
+		(metadata.mode & 0o777) !== 0o700) {
 		throw new VerificationError(code, path);
 	}
 }
 
 export async function createPrivateRoots(root = repositoryRoot, admitted) {
-	const base = resolve(root, ".countershape/verify-current");
-	await mkdir(base, { recursive: true, mode: 0o700 });
-	await chmod(base, 0o700);
-	await requirePrivateDirectory(base, "VERIFY_PRIVATE_BASE_INVALID");
+	const base = await createPrivateBase(root);
 	const runRoot = await mkdtemp(join(base, "run-"));
 	await chmod(runRoot, 0o700);
 	const paths = { runRoot };
@@ -352,9 +608,58 @@ export function childArguments(step, root = repositoryRoot) {
 	return step.path ? [resolve(root, step.path), ...suffix] : suffix;
 }
 
+export function partitionGoPackages(stdout, sensitive = sensitiveGoPackages) {
+	if (typeof stdout !== "string" || !stdout.endsWith("\n") || stdout.includes("\r") || stdout.includes("\0")) {
+		throw new VerificationError("VERIFY_PACKAGE_LIST_INVALID", "go list framing");
+	}
+	const packages = stdout.slice(0, -1).split("\n");
+	if (packages.length === 0 || packages.some((path) => path.length === 0 ||
+		(path !== modulePath && !path.startsWith(`${modulePath}/`)) || path.includes("//") || path.split("/").includes("..")) ||
+		new Set(packages).size !== packages.length) {
+		throw new VerificationError("VERIFY_PACKAGE_LIST_INVALID", "go list package roster");
+	}
+	const sortedPackages = [...packages].sort();
+	const sortedSensitive = [...sensitive].sort();
+	if (JSON.stringify(sortedSensitive) !== JSON.stringify(sensitive) || new Set(sensitive).size !== sensitive.length ||
+		sensitive.some((path) => !sortedPackages.includes(path))) {
+		throw new VerificationError("VERIFY_SENSITIVE_PACKAGE_ROSTER_INVALID", sensitive.join(","));
+	}
+	const sensitiveSet = new Set(sensitive);
+	const general = sortedPackages.filter((path) => !sensitiveSet.has(path));
+	if (general.length === 0 || general.length + sensitive.length !== sortedPackages.length ||
+		new Set([...general, ...sensitive]).size !== sortedPackages.length) {
+		throw new VerificationError("VERIFY_PACKAGE_PARTITION_INVALID", `general=${general.length} sensitive=${sensitive.length} all=${sortedPackages.length}`);
+	}
+	return Object.freeze({
+		all: Object.freeze(sortedPackages),
+		general: Object.freeze(general),
+		sensitive: Object.freeze([...sensitive]),
+	});
+}
+
+export function packageArguments(step, partition) {
+	if (!step?.packageClass) return childArguments(step);
+	if (!partition || !Object.hasOwn(partition, step.packageClass) || !["general", "sensitive"].includes(step.packageClass)) {
+		throw new VerificationError("VERIFY_PACKAGE_PARTITION_UNAVAILABLE", step?.id ?? "unnamed step");
+	}
+	const packages = partition[step.packageClass];
+	if (!Array.isArray(packages) || packages.length === 0) {
+		throw new VerificationError("VERIFY_PACKAGE_PARTITION_UNAVAILABLE", `${step.id}: ${step.packageClass}`);
+	}
+	return [...childArguments(step), ...packages];
+}
+
+export function revalidatePackagePartition(initial, current) {
+	for (const name of ["all", "general", "sensitive"]) {
+		if (!initial || !current || JSON.stringify(initial[name]) !== JSON.stringify(current[name])) {
+			throw new VerificationError("VERIFY_PACKAGE_PARTITION_CHANGED", name);
+		}
+	}
+}
+
 export async function childResult(step, admitted, childEnvironment, dependencies = {}) {
 	const executable = admitted[step.tool].path;
-	const args = childArguments(step);
+	const args = dependencies.args ?? childArguments(step);
 	const revalidate = dependencies.revalidate ?? revalidateStepTools;
 	const spawn = dependencies.spawn ?? spawnSync;
 	await revalidate(step, admitted);
@@ -382,6 +687,13 @@ export async function childResult(step, admitted, childEnvironment, dependencies
 	};
 }
 
+export async function finalizeVerificationResources(lock, runRoot, dependencies = {}) {
+	const remove = dependencies.remove ?? rm;
+	await lock.assertHeld();
+	await remove(runRoot, { recursive: true, force: true });
+	await lock.release();
+}
+
 function writeChildFrames(write, step, stream, source) {
 	if (!source) return;
 	const lines = source.split(/\r?\n/u);
@@ -402,7 +714,7 @@ export async function executeCurrentPlan({
 	write = (value) => process.stdout.write(value),
 	clock = () => performance.now(),
 }) {
-	write(`COUNTERSHAPE_VERIFY_V1 platform=${platform()}/${arch()} jobs=2 roster_sha256:${rosterDigest(steps, historical)}\n`);
+	write(`COUNTERSHAPE_VERIFY_V1 platform=${platform()}/${arch()} general_jobs=${generalJobs} nested_jobs=1 gomaxprocs=2 roster_sha256:${rosterDigest(steps, historical)}\n`);
 	for (const specification of toolSpecifications) {
 		const tool = admitted[specification.name];
 		write(`AUTHORITY ${specification.name} path=${JSON.stringify(tool.path)} sha256:${tool.sha256}\n`);
@@ -450,29 +762,73 @@ async function main() {
 	if (platform() !== "darwin" || arch() !== "arm64") {
 		throw new VerificationError("VERIFY_PLATFORM_UNSUPPORTED", `${platform()}/${arch()}; Darwin reference baseline required`);
 	}
-	await validateRepositoryPlan();
-	const admitted = await admitTools();
-	const roots = await createPrivateRoots(repositoryRoot, admitted);
+	const lock = await acquireVerificationLock();
+	let primaryFailure;
+	let resourcesFinalized = false;
 	try {
-		const childEnvironment = buildChildEnvironment(admitted, roots);
-		const status = await executeCurrentPlan({
-			admitted,
-			childEnvironment,
-			executor: async (step) => {
-				if (step.kind === "guard") {
-					await assertNoDSStore();
-					return { status: 0, signal: null, error: null, stdout: "workspace contains no .DS_Store artifacts\n", stderr: "" };
-				}
-				if (step.kind === "authority-guard") {
-					await revalidateTools(admitted);
-					return { status: 0, signal: null, error: null, stdout: "all admitted tool authorities revalidated\n", stderr: "" };
-				}
-				return await childResult(step, admitted, childEnvironment);
-			},
-		});
-		process.exitCode = status;
+		await validateRepositoryPlan();
+		const admitted = await admitTools();
+		const roots = await createPrivateRoots(repositoryRoot, admitted);
+		try {
+			const childEnvironment = buildChildEnvironment(admitted, roots);
+			let packagePartition;
+			const status = await executeCurrentPlan({
+				admitted,
+				childEnvironment,
+				executor: async (step) => {
+					if (step.kind === "guard") {
+						await assertNoDSStore();
+						return { status: 0, signal: null, error: null, stdout: "workspace contains no .DS_Store artifacts\n", stderr: "" };
+					}
+					if (step.kind === "package-guard") {
+						const result = await childResult(step, admitted, childEnvironment);
+						if (result.error || result.signal || result.status !== 0) return result;
+						packagePartition = partitionGoPackages(result.stdout);
+						return {
+							...result,
+							stdout: `${result.stdout}PACKAGE_PARTITION exact general=${packagePartition.general.length} sensitive=${packagePartition.sensitive.length} total=${packagePartition.all.length}\n`,
+						};
+					}
+					if (step.kind === "package-revalidation") {
+						if (!packagePartition) throw new VerificationError("VERIFY_PACKAGE_PARTITION_UNAVAILABLE", step.id);
+						const result = await childResult(step, admitted, childEnvironment);
+						if (result.error || result.signal || result.status !== 0) return result;
+						const currentPartition = partitionGoPackages(result.stdout);
+						revalidatePackagePartition(packagePartition, currentPartition);
+						return {
+							...result,
+							stdout: `${result.stdout}PACKAGE_PARTITION_REVALIDATED exact general=${currentPartition.general.length} sensitive=${currentPartition.sensitive.length} total=${currentPartition.all.length}\n`,
+						};
+					}
+					if (step.kind === "authority-guard") {
+						await revalidateTools(admitted);
+						return { status: 0, signal: null, error: null, stdout: "all admitted tool authorities revalidated\n", stderr: "" };
+					}
+					if (step.kind === "finalization-guard") {
+						await finalizeVerificationResources(lock, roots.runRoot);
+						resourcesFinalized = true;
+						return { status: 0, signal: null, error: null, stdout: `private run root removed and verifier lock released for pid ${lock.pid}\n`, stderr: "" };
+					}
+					if (step.packageClass) return await childResult(step, admitted, childEnvironment, {
+						args: packageArguments(step, packagePartition),
+					});
+					return await childResult(step, admitted, childEnvironment);
+				},
+			});
+			process.exitCode = status;
+		} finally {
+			if (!resourcesFinalized) await rm(roots.runRoot, { recursive: true, force: true });
+		}
+	} catch (error) {
+		primaryFailure = error;
+		throw error;
 	} finally {
-		await rm(roots.runRoot, { recursive: true, force: true });
+		try {
+			if (!resourcesFinalized) await lock.release();
+		} catch (releaseFailure) {
+			if (primaryFailure) throw new AggregateError([primaryFailure, releaseFailure], "verification and lock release both failed");
+			throw releaseFailure;
+		}
 	}
 }
 

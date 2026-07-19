@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 import { isDeepStrictEqual } from "node:util";
 
 import { validateSpecification } from "./check-p07b-c-unit-scope.mjs";
+import { qualificationCaseIDs, qualificationMatrixDigest } from "./verify-go-test-repetition.mjs";
 
 export const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -52,6 +53,7 @@ const receiptDeclarationPath = "spec/verification/p07b-c-c0-receipt.json";
 const c1ReceiptDeclarationPath = "spec/verification/p07b-c-c1-receipt.json";
 const statusPath = "docs/status/P07B-C-C0-AUTHORITY.md";
 const c1MaintenanceStatusPath = "docs/status/P07B-C-C1-CUMULATIVE-MAINTENANCE.md";
+const c1VerificationStatusPath = "docs/status/P07B-C-VERIFICATION-THROUGHPUT.md";
 const c1StatusPath = "docs/status/P07B-C-C1-SEMANTICS.md";
 const c1DidrunBugsPath = "docs/status/DIDRUN_BUGS.md";
 const sealedC0AIdentity = Object.freeze({
@@ -242,8 +244,8 @@ const requiredText = Object.freeze({
 	"docs/PROMPT_PACK.md": [
 		"prompts/P07B-C-TARGET-RUN-EXECUTION.md",
 		"Only the higher contract runner may consume official target/admission authority",
-		"C1 source sealed; separate C1B receipt gate",
-		"C2 requires separately sealed/strict-clean C1B",
+		"C1 source and C1M sealed; C1V then separate C1B receipt gate",
+		"C2 still requires separately sealed/strict-clean C1B",
 	],
 	"docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md": [
 		"C0 → C1 → C2 → C3 → C4 → C5 → C6",
@@ -323,8 +325,8 @@ const requiredText = Object.freeze({
 	],
 	"docs/HANDOFF_MODE_C.md": [
 		"C1 now implements strict inert target/run/execution construction",
-		"P07B-C C1 inert canonical target/run/execution semantics only",
-		"one private boot-session interlock with no result authority",
+		"P07B-C C1V verifier throughput and receipt-profile maintenance only",
+		"private boot-session interlock",
 	],
 	[statusPath]: [
 		"Machine-readable authority summary: `spec/verification/p07b-c-c0-authority.json`.",
@@ -338,26 +340,46 @@ const requiredText = Object.freeze({
 		"eight byte-exact schema-valid/runtime-invalid cases",
 		"GOFLAGS=-mod=readonly -buildvcs=false -p=1",
 		"sha256:eb51c52657591df8faa5d3c4737291c071e40c07eb9c32bde88af1a36e68bf76",
+		"sha256:6032cc515978947743e1bfea72340e1065d77473ccc27b3b0fc036ebd4ceb2a5",
+		"Direct build, vet, and the exact general-package complement override only package jobs to `-p=2`",
+		"focused Go repetition runner",
+		"`RECEIPT_RECONCILIATION` is admitted only for an exact empty-prefix roster",
 	],
 	"spec/verification/p07b-c-unit-paths.json": [
-		"countershape/p07b-c-unit-paths/v1",
+		"countershape/p07b-c-unit-paths/v2",
 		"\"C0A\"",
 		"\"C1M\"",
+		"\"C1V\"",
 		"\"C6B\"",
+		"\"verification_profile\"",
+		"\"receipt_claims\"",
 	],
 	"tools/check-p07b-c-unit-scope.mjs": [
 		"P07B-C unit scope self-test passed:",
 		"--staged",
 		"--no-renames",
+		"--ignore-submodules=none",
+		"--receipt-manifest",
+		"receipt path must be one staged regular mode-100644 blob",
 	],
 	"tools/verify-current.mjs": [
-		"const goCommon = Object.freeze([\"-mod=readonly\", \"-buildvcs=false\", \"-p=1\"]);",
+		"const goGeneralCommon = Object.freeze",
+		"const goSerialCommon = Object.freeze",
 		"GOFLAGS: \"-mod=readonly -buildvcs=false -p=1\"",
+		"id: \"go-test-general\"",
+		"id: \"go-test-sensitive-serial\"",
+		"acquireVerificationLock",
+		"VERIFY_STALE_LOCK",
+		"verification-resource-finalization",
+		"finalizeVerificationResources",
 		"architecture-p07b-c-plan-selftest",
 		"architecture-p07b-c-unit-scope-selftest",
 	],
 	"tools/verify-current-selftest.mjs": [
 		"GOFLAGS: \"-mod=readonly -buildvcs=false -p=1\"",
+		"VERIFY_SELFTEST_PACKAGE_EXACT_UNION",
+		"VERIFY_SELFTEST_LOCK_REPLACEMENT_REMOVED",
+		"go-repetition-runner-selftest",
 	],
 });
 
@@ -508,11 +530,145 @@ const requiredC1MaintenanceText = Object.freeze({
 		"This maintenance boundary is a prerequisite gate for C1B but is not C1B, cannot grade C1B",
 	],
 });
+const requiredC1VerificationPaths = Object.freeze([
+	"docs/HANDOFF_MODE_C.md",
+	"docs/PROMPT_PACK.md",
+	"docs/THREAT_MODEL.md",
+	"docs/VERIFICATION.md",
+	"docs/status/P07B-C-VERIFICATION-THROUGHPUT.md",
+	"spec/verification/p07b-c-unit-paths.json",
+	"tools/check-p07b-c-plan.mjs",
+	"tools/check-p07b-c-unit-scope.mjs",
+	"tools/verify-current-selftest.mjs",
+	"tools/verify-current.mjs",
+	"tools/verify-go-test-repetition.mjs",
+]);
+const requiredC1VerificationDigest = "sha256:6032cc515978947743e1bfea72340e1065d77473ccc27b3b0fc036ebd4ceb2a5";
+const requiredQualificationMatrixDigest = "sha256:bf5803a752ffe6c2833e7869086ec6a4919e15c5e49e8cd012a5c8c16879fc37";
+const requiredQualificationCaseIDs = Object.freeze([
+	"world-output-caps-50",
+	"world-output-independence-20",
+	"world-simultaneous-overflow-20",
+	"world-lifecycle-readiness-20",
+	"compiler-generated-runtime-20",
+	"program-lifecycle-20",
+	"store-cross-process-cas-20",
+	...Array.from({ length: 20 }, (_, index) => `cli-physical-reducer-${String(index + 1).padStart(2, "0")}-of-20`),
+	...Array.from({ length: 20 }, (_, index) => `http-physical-reducer-${String(index + 1).padStart(2, "0")}-of-20`),
+	"parity-evaluator-20",
+	"parity-framing-20",
+	"parity-full-package-3",
+	"cli-physical-full-package-3",
+	"http-physical-full-package-3",
+]);
+const documentedQualificationCaseSnippets = Object.freeze([
+	"world-output-caps-50",
+	"world-output-independence-20",
+	"world-simultaneous-overflow-20",
+	"world-lifecycle-readiness-20",
+	"compiler-generated-runtime-20",
+	"program-lifecycle-20",
+	"store-cross-process-cas-20",
+	"cli-physical-reducer-01-of-20",
+	"cli-physical-reducer-20-of-20",
+	"http-physical-reducer-01-of-20",
+	"http-physical-reducer-20-of-20",
+	"parity-evaluator-20",
+	"parity-framing-20",
+	"parity-full-package-3",
+	"cli-physical-full-package-3",
+	"http-physical-full-package-3",
+]);
+const requiredC1VerificationRosterText = requiredC1VerificationPaths
+	.map((path, index) => `${index === requiredC1VerificationPaths.length - 1 ? "and " : ""}\`${path}\``)
+	.join(", ");
+const requiredC1VerificationDeclaration = `C1V owns exactly these ${requiredC1VerificationPaths.length} paths: ${requiredC1VerificationRosterText}. Their sorted-newline roster digest is \`${requiredC1VerificationDigest}\`.`;
+const requiredC1VerificationText = Object.freeze({
+	[c1VerificationStatusPath]: [
+		"`DECLINED_WITH_REASON`",
+		"`DEFECT_CONDITIONAL_REPAIR`",
+		"`DEFECT_REPAIR`",
+		"`DEFECT_NARROW_REPAIR`",
+		"GOCACHE` remains fresh",
+		"C1V does not automatically delete stale O_EXCL locks",
+		"`RECEIPT_RECONCILIATION` only for exact empty-prefix Markdown/receipt-declaration rosters",
+		"stage-zero regular mode-`100644` nonzero blob",
+		"focused Go repetition runner",
+		"Any tracked edit after the freeze invalidates the whole qualifying matrix",
+		"exact staged-scope/diff integrity, the scoped named-pattern credential scan, and preceding didrun-chain integrity",
+		"52 ordered named executions across 14 families",
+		".didrun-history/2026-07-18-p07b-c-c1v-final-attempt-1-physical-aggregate-timeout/.didrun/",
+		"twenty canonical count-1 cases",
+		requiredQualificationMatrixDigest,
+		...documentedQualificationCaseSnippets.map((id) => `\`${id}\``),
+		"This declaration does not receipt itself.",
+	],
+	"docs/THREAT_MODEL.md": [
+		"### T17 — Verifier concurrency and cross-run cache substitution",
+		"fails fast for a live or indeterminate owner",
+		"`GOCACHE` stays fresh per run because current Countershape includes cgo",
+	],
+	"docs/VERIFICATION.md": [
+		"The Go build cache deliberately remains fresh",
+		"A live or indeterminate owner fails immediately with `VERIFY_ALREADY_RUNNING`",
+		"`SOURCE_FULL` is mandatory for source, verifier, checker, schema, generated-artifact, or runtime changes",
+		"it cannot support a cumulative, full-suite, runtime, security, or unchanged-behavior claim",
+		"no C1B receipt declaration, receipt block, or reconciliation claim may be introduced until C1V seals and verifies strictly",
+		"The terminal `RESULT PASS` is printed only after",
+		"Any tracked change after that freeze invalidates the entire qualifying matrix",
+		"A scope check from the archived development ledger is admission evidence only",
+		requiredQualificationMatrixDigest,
+		"Explicit package/regex mode emits `qualification=false`",
+		"Every one of the three qualifying cumulative runs must finish in at most `878544 ms`",
+		"There are 52 ordered named executions across 14 families",
+		"C1V does not lengthen the deadline or claim that partial aggregate event",
+	],
+	"docs/HANDOFF_MODE_C.md": [
+		"C1V verifier-throughput maintenance is the active `SOURCE_FULL` unit",
+		"The current dirty tree is limited to the C1V eleven-path allowlist.",
+		".didrun-history/2026-07-18-p07b-c-c1v-build-loop/.didrun/",
+		".didrun-history/2026-07-18-p07b-c-c1v-physical-shard-repair/.didrun/",
+		"The live `.didrun/` is now the unclaimed physical-shard-repair development ledger",
+		"From this freeze onward, any tracked edit invalidates the entire qualifying matrix",
+		requiredQualificationMatrixDigest,
+		"every pass must finish in at most `878544 ms`",
+		"The pre-archive scope check is admission evidence only and cannot support a final-tree claim",
+		"every one of the 52 named",
+	],
+	"docs/PROMPT_PACK.md": [
+		"C1V is `SOURCE_FULL`",
+		"P07B-C C1V throughput ruling",
+	],
+	"tools/verify-go-test-repetition.mjs": [
+		"GO_REPETITION_JSON_FRAMING",
+		"GO_REPETITION_PROFILE_CLASS",
+		"GO_REPETITION_PACKAGE_LIFECYCLE",
+		"GO_REPETITION_PARENT_LIFECYCLE",
+		"GO_REPETITION_SPECIFICATION",
+		"GO_REPETITION_TEST_COUNTS",
+		"expectedEntrypointPattern",
+		"qualificationCases",
+		"qualificationMatrixDigest",
+		"GO_REPETITION_AUTHORITY",
+		"runRepetition",
+		"Go repetition verifier self-test passed:",
+		"Go repetition verification passed:",
+	],
+});
 const requiredC1BPaths = Object.freeze([
 	"docs/HANDOFF_MODE_C.md",
 	"docs/status/DIDRUN_BUGS.md",
 	"docs/status/P07B-C-C1-SEMANTICS.md",
 	"spec/verification/p07b-c-c1-receipt.json",
+]);
+const requiredC1BReceiptClaims = Object.freeze([
+	Object.freeze({ label: "P07B-C C1B source receipt reconciliation", type: "tests-pass" }),
+	Object.freeze({ label: "P07B-C C1B receipt checker defensive self-test", type: "tests-pass" }),
+	Object.freeze({ label: "P07B-C C1B declared local source-evidence snapshot match", type: "tests-pass" }),
+	Object.freeze({ label: "P07B-C C1B receipt-only Go build", type: "command-succeeded" }),
+	Object.freeze({ label: "P07B-C C1B exact four-path staged scope and diff integrity", type: "command-succeeded" }),
+	Object.freeze({ label: "P07B-C C1B scoped staged credential-pattern scan", type: "command-succeeded" }),
+	Object.freeze({ label: "P07B-C C1B preceding didrun chain integrity", type: "command-succeeded" }),
 ]);
 
 async function readBytes(root, path, overrides) {
@@ -1432,6 +1588,33 @@ export async function checkPlan(root = repositoryRoot, overrides = new Map(), re
 	if (computedC1MaintenanceDigest !== requiredC1MaintenanceDigest) {
 		errors.push(`internal C1M roster digest mismatch: ${computedC1MaintenanceDigest}`);
 	}
+	for (const [path, snippets] of Object.entries(requiredC1VerificationText)) {
+		let body;
+		try {
+			body = bodies.get(path) ?? await readText(root, path, overrides);
+			bodies.set(path, body);
+		} catch (error) {
+			errors.push(`${path}: unreadable (${error.message})`);
+			continue;
+		}
+		for (const snippet of snippets) {
+			if (!body.includes(snippet)) {
+				errors.push(`${path}: missing required verification-throughput ruling: ${JSON.stringify(snippet)}`);
+			}
+		}
+	}
+	const computedC1VerificationDigest = `sha256:${createHash("sha256")
+		.update(`${requiredC1VerificationPaths.join("\n")}\n`, "utf8").digest("hex")}`;
+	if (computedC1VerificationDigest !== requiredC1VerificationDigest) {
+		errors.push(`internal C1V roster digest mismatch: ${computedC1VerificationDigest}`);
+	}
+	if (!isDeepStrictEqual(qualificationCaseIDs, requiredQualificationCaseIDs)) {
+		errors.push("internal C1V Go repetition qualification case roster mismatch");
+	}
+	const computedQualificationMatrixDigest = `sha256:${qualificationMatrixDigest()}`;
+	if (computedQualificationMatrixDigest !== requiredQualificationMatrixDigest) {
+		errors.push(`internal C1V Go repetition qualification matrix digest mismatch: ${computedQualificationMatrixDigest}`);
+	}
 	const verificationBody = bodies.get("docs/VERIFICATION.md");
 	if (verificationBody !== undefined) {
 		requireExactlyOnce(
@@ -1439,6 +1622,23 @@ export async function checkPlan(root = repositoryRoot, overrides = new Map(), re
 			requiredC1MaintenanceDeclaration,
 			"docs/VERIFICATION.md",
 			"pre-enrollment maintenance scope declaration",
+			errors,
+		);
+		requireExactlyOnce(
+			verificationBody,
+			requiredC1VerificationDeclaration,
+			"docs/VERIFICATION.md",
+			"verification-throughput scope declaration",
+			errors,
+		);
+	}
+	const verificationStatusBody = bodies.get(c1VerificationStatusPath);
+	if (verificationStatusBody !== undefined) {
+		requireExactlyOnce(
+			verificationStatusBody,
+			requiredC1VerificationDeclaration,
+			c1VerificationStatusPath,
+			"verification-throughput scope declaration",
 			errors,
 		);
 	}
@@ -1541,6 +1741,9 @@ export async function checkPlan(root = repositoryRoot, overrides = new Map(), re
 		if (!isDeepStrictEqual(specification.units.C1.exact, requiredC1Paths)) {
 			errors.push("spec/verification/p07b-c-unit-paths.json: C1 exact path roster mismatch");
 		}
+		if (specification.units.C0B.verification_profile !== "SOURCE_FULL") {
+			errors.push("spec/verification/p07b-c-unit-paths.json: C0B historical verification profile mismatch");
+		}
 		if (!isDeepStrictEqual(specification.units.C1.prefixes, [])) {
 			errors.push("spec/verification/p07b-c-unit-paths.json: C1 prefix roster mismatch");
 		}
@@ -1550,11 +1753,29 @@ export async function checkPlan(root = repositoryRoot, overrides = new Map(), re
 		if (!isDeepStrictEqual(specification.units.C1M.prefixes, [])) {
 			errors.push("spec/verification/p07b-c-unit-paths.json: C1M prefix roster mismatch");
 		}
+		if (specification.units.C1M.verification_profile !== "SOURCE_FULL") {
+			errors.push("spec/verification/p07b-c-unit-paths.json: C1M verification profile mismatch");
+		}
+		if (!isDeepStrictEqual(specification.units.C1V.exact, requiredC1VerificationPaths)) {
+			errors.push("spec/verification/p07b-c-unit-paths.json: C1V exact path roster mismatch");
+		}
+		if (!isDeepStrictEqual(specification.units.C1V.prefixes, [])) {
+			errors.push("spec/verification/p07b-c-unit-paths.json: C1V prefix roster mismatch");
+		}
+		if (specification.units.C1V.verification_profile !== "SOURCE_FULL") {
+			errors.push("spec/verification/p07b-c-unit-paths.json: C1V verification profile mismatch");
+		}
 		if (!isDeepStrictEqual(specification.units.C1B.exact, requiredC1BPaths)) {
 			errors.push("spec/verification/p07b-c-unit-paths.json: C1B exact path roster mismatch");
 		}
 		if (!isDeepStrictEqual(specification.units.C1B.prefixes, [])) {
 			errors.push("spec/verification/p07b-c-unit-paths.json: C1B prefix roster mismatch");
+		}
+		if (specification.units.C1B.verification_profile !== "RECEIPT_RECONCILIATION") {
+			errors.push("spec/verification/p07b-c-unit-paths.json: C1B verification profile mismatch");
+		}
+		if (!isDeepStrictEqual(specification.units.C1B.receipt_claims, requiredC1BReceiptClaims)) {
+			errors.push("spec/verification/p07b-c-unit-paths.json: C1B receipt claim manifest mismatch");
 		}
 	} catch (error) {
 		errors.push(`spec/verification/p07b-c-unit-paths.json: invalid (${error.message})`);
@@ -1636,6 +1857,7 @@ async function runSelfTest() {
 	].join("\n");
 	const currentHandoff = await readText(repositoryRoot, "docs/HANDOFF_MODE_C.md", new Map());
 	const currentC1MaintenanceStatus = await readText(repositoryRoot, c1MaintenanceStatusPath, new Map());
+	const currentC1VerificationStatus = await readText(repositoryRoot, c1VerificationStatusPath, new Map());
 	const currentC1Status = await readText(repositoryRoot, c1StatusPath, new Map());
 	const currentC1DidrunBugs = await readText(repositoryRoot, c1DidrunBugsPath, new Map());
 	const currentPromptPack = await readText(repositoryRoot, "docs/PROMPT_PACK.md", new Map());
@@ -1816,7 +2038,7 @@ async function runSelfTest() {
 		c1PhaseReceiptCase,
 		{
 			name: "C1 prompt-pack receipt-gate removal", path: "docs/PROMPT_PACK.md",
-			value: currentPromptPack.replace("C2 requires separately sealed/strict-clean C1B", "C1B gate omitted"),
+			value: currentPromptPack.replace("C2 still requires separately sealed/strict-clean C1B", "C1B gate omitted"),
 			expect: "missing required C0 ruling",
 		},
 		{
@@ -1833,6 +2055,57 @@ async function runSelfTest() {
 			name: "C1M verification roster digest substitution", path: "docs/VERIFICATION.md",
 			value: currentVerification.replace(requiredC1MaintenanceDigest, `sha256:${"0".repeat(64)}`),
 			expect: "pre-enrollment maintenance scope declaration",
+		},
+		{
+			name: "C1V verification roster path substitution", path: "docs/VERIFICATION.md",
+			value: currentVerification.replace(c1VerificationStatusPath, "docs/status/P07B-C-VERIFICATION-UNREVIEWED.md"),
+			expect: "verification-throughput scope declaration",
+		},
+		{
+			name: "C1V verification roster digest substitution", path: "docs/VERIFICATION.md",
+			value: currentVerification.replace(requiredC1VerificationDigest, `sha256:${"0".repeat(64)}`),
+			expect: "verification-throughput scope declaration",
+		},
+		{
+			name: "C1V status roster path substitution", path: c1VerificationStatusPath,
+			value: currentC1VerificationStatus.replace(c1VerificationStatusPath, "docs/status/P07B-C-VERIFICATION-UNREVIEWED.md"),
+			expect: "verification-throughput scope declaration",
+		},
+		{
+			name: "C1V status roster digest substitution", path: c1VerificationStatusPath,
+			value: currentC1VerificationStatus.replace(requiredC1VerificationDigest, `sha256:${"0".repeat(64)}`),
+			expect: "verification-throughput scope declaration",
+		},
+		{
+			name: "C1V qualification matrix digest substitution", path: c1VerificationStatusPath,
+			value: currentC1VerificationStatus.replace(requiredQualificationMatrixDigest, `sha256:${"0".repeat(64)}`),
+			expect: "missing required verification-throughput ruling",
+		},
+		{
+			name: "C1V qualification case omission", path: c1VerificationStatusPath,
+			value: currentC1VerificationStatus.replace("`world-output-caps-50`", "`world-output-caps-49`"),
+			expect: "missing required verification-throughput ruling",
+		},
+		{
+			name: "C1V persistent-cache overclaim", path: c1VerificationStatusPath,
+			value: currentC1VerificationStatus.replace("`GOCACHE` remains fresh", "`GOCACHE` persists across runs"),
+			expect: "missing required verification-throughput ruling",
+		},
+		{
+			name: "C1V stale-lock auto-deletion", path: c1VerificationStatusPath,
+			value: currentC1VerificationStatus.replace(
+				"C1V does not automatically delete stale O_EXCL locks",
+				"C1V automatically deletes stale O_EXCL locks",
+			),
+			expect: "missing required verification-throughput ruling",
+		},
+		{
+			name: "C1V receipt-profile overclaim", path: "docs/VERIFICATION.md",
+			value: currentVerification.replace(
+				"it cannot support a cumulative, full-suite, runtime, security, or unchanged-behavior claim",
+				"it supports cumulative and runtime claims",
+			),
+			expect: "missing required verification-throughput ruling",
 		},
 		{
 			name: "C1M lifecycle signal-authority regression", path: "docs/STATE_MACHINES.md",
@@ -2000,6 +2273,46 @@ async function runSelfTest() {
 			expect: "C1M prefix roster mismatch",
 		},
 		{
+			name: "C1V exact path deletion", path: configPath,
+			value: (() => {
+				const candidate = structuredClone(currentConfiguration);
+				candidate.units.C1V.exact = candidate.units.C1V.exact.filter(
+					(path) => path !== c1VerificationStatusPath,
+				);
+				return `${JSON.stringify(candidate, null, 2)}\n`;
+			})(),
+			expect: "C1V exact path roster mismatch",
+		},
+		{
+			name: "C1V exact path substitution", path: configPath,
+			value: (() => {
+				const candidate = structuredClone(currentConfiguration);
+				candidate.units.C1V.exact = candidate.units.C1V.exact.map((path) =>
+					path === c1VerificationStatusPath ? "docs/status/P07B-C-VERIFICATION-UNREVIEWED.md" : path,
+				).sort();
+				return `${JSON.stringify(candidate, null, 2)}\n`;
+			})(),
+			expect: "C1V exact path roster mismatch",
+		},
+		{
+			name: "C1V prefix introduction", path: configPath,
+			value: (() => {
+				const candidate = structuredClone(currentConfiguration);
+				candidate.units.C1V.prefixes = ["tools/"];
+				return `${JSON.stringify(candidate, null, 2)}\n`;
+			})(),
+			expect: "invalid",
+		},
+		{
+			name: "C1V receipt-profile substitution", path: configPath,
+			value: (() => {
+				const candidate = structuredClone(currentConfiguration);
+				candidate.units.C1V.verification_profile = "RECEIPT_RECONCILIATION";
+				return `${JSON.stringify(candidate, null, 2)}\n`;
+			})(),
+			expect: "invalid",
+		},
+		{
 			name: "C1B unit omission", path: configPath,
 			value: (() => {
 				const candidate = structuredClone(currentConfiguration);
@@ -2042,7 +2355,7 @@ async function runSelfTest() {
 				candidate.units.C1B.exact.sort();
 				return `${JSON.stringify(candidate, null, 2)}\n`;
 			})(),
-			expect: "C1B exact path roster mismatch",
+			expect: "invalid",
 		},
 		{
 			name: "C1B prefix introduction", path: configPath,
@@ -2052,6 +2365,25 @@ async function runSelfTest() {
 				return `${JSON.stringify(candidate, null, 2)}\n`;
 			})(),
 			expect: "invalid",
+		},
+		{
+			name: "C1B source-profile substitution", path: configPath,
+			value: (() => {
+				const candidate = structuredClone(currentConfiguration);
+				candidate.units.C1B.verification_profile = "SOURCE_FULL";
+				delete candidate.units.C1B.receipt_claims;
+				return `${JSON.stringify(candidate, null, 2)}\n`;
+			})(),
+			expect: "C1B verification profile mismatch",
+		},
+		{
+			name: "C1B receipt claim label drift", path: configPath,
+			value: (() => {
+				const candidate = structuredClone(currentConfiguration);
+				candidate.units.C1B.receipt_claims[0].label = "P07B-C C1B source receipt reconciliation altered";
+				return `${JSON.stringify(candidate, null, 2)}\n`;
+			})(),
+			expect: "C1B receipt claim manifest mismatch",
 		},
 		{
 			name: "fourth semantic object", path: authorityDeclarationPath,

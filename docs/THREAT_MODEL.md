@@ -258,7 +258,17 @@ Before later spawn, a future nonhead `ContractExecutionTarget` is constructed on
 
 **Residual risk.** Receipts do not validate novelty, comprehension, bias reduction, market adoption, maintainability, or review completeness.
 
-### T17 — Store tamper, filesystem semantics, and durability overclaim
+### T17 — Verifier concurrency and cross-run cache substitution
+
+**Threat.** Two cumulative verifiers overlap and create the same load-sensitive timing failures that the serial profile is meant to prevent, or a persistent compilation cache is described as fresh authority even though Go does not detect imported C-library changes.
+
+**Required controls.** The Darwin verifier acquires one private mode-`0600` O_EXCL ownership record before plan/tool/cache work, fails fast for a live or indeterminate owner, treats an absent owner as a review-required stale refusal, revalidates exact descriptor/path metadata and canonical content before success and release, and never race-deletes an uncertain or stale record. PID reuse may conservatively refuse availability. General direct package jobs are closed at two, six frozen whole sensitive packages plus every nested Go command remain serial, and the exact `go list ./...` union is proved before tests and re-proved unchanged after both lanes. Every other initially discovered admitted-module package is intentionally general rather than “unclassified.” Focused stability evidence uses a tracked named-case matrix, exact Test/Fuzz/Example state parsing, and explicit admitted-tool path/digest rows; ad hoc regex runs cannot qualify. The last current row must remove the private run root and release the exact lock before terminal PASS. `GOCACHE` stays fresh per run because current Countershape includes cgo; C1V makes no warm-cache or automatic crash-recovery claim.
+
+**Refusal.** Concurrent owner, malformed/replaced/disappeared lock, stale lock, malformed/duplicate/foreign package row, missing frozen-sensitive package, during-run package drift, nested parallel inheritance, cleanup/release failure, or any repeated timing failure blocks the verifier. No timeout, assertion, package roster, or receipt label is weakened to recover throughput.
+
+**Residual risk.** O_EXCL is not a kernel lease. Abrupt termination can leave a stale file requiring inspected manual removal, same-UID replacement remains outside containment, PID reuse can false-busy, and the two-job general profile is only a local Darwin/arm64 resource ruling. A future persistent cache needs a broader compiler/SDK/C-library authority plus fresh cgo evidence.
+
+### T18 — Store tamper, filesystem semantics, and durability overclaim
 
 **Threat.** A stale or forged token wins, a loser publishes an orphan successor, a same-UID process edits object or head bytes, filesystem semantics differ from local Darwin, or fsync usage is described as proof of power-loss recovery.
 

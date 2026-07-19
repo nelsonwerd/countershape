@@ -2,13 +2,14 @@
 
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { chmod, mkdir, mkdtemp, readFile, readdir, realpath, rm, symlink, writeFile } from "node:fs/promises";
+import { chmod, lstat, mkdir, mkdtemp, readFile, readdir, realpath, rm, symlink, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
 	VerificationError,
+	acquireVerificationLock,
 	admitTool,
 	admitTools,
 	assertNoDSStore,
@@ -16,20 +17,26 @@ import {
 	childArguments,
 	childResult,
 	childToolNames,
+	createPrivateBase,
 	currentSteps,
 	executeCurrentPlan,
+	finalizeVerificationResources,
 	historicalOnly,
+	packageArguments,
+	partitionGoPackages,
 	repositoryRoot,
+	revalidatePackagePartition,
 	revalidateStepTools,
 	revalidateTool,
 	rosterDigest,
+	sensitiveGoPackages,
 	toolSpecifications,
 	validateRepositoryPlan,
 } from "./verify-current.mjs";
 
 const selftestPath = fileURLToPath(import.meta.url);
 const verifierPath = resolve(dirname(selftestPath), "verify-current.mjs");
-const expectedRosterDigest = "0338d82f7199edff546b0083c1fbfb2ff5423d98ec9f3221e511d59591613af2";
+const expectedRosterDigest = "ea3506a3679c6cbbffe043d31d9a9d05bb9d6305040072d6c55d19f9251b29ef";
 
 function fail(code, detail) {
 	throw new Error(`${code}: ${detail}`);
@@ -61,6 +68,12 @@ async function inspectRosters() {
 	expect(digest === expectedRosterDigest, "VERIFY_SELFTEST_ROSTER_DRIFT", `${digest} != ${expectedRosterDigest}`);
 	const currentIDs = currentSteps.map((step) => step.id);
 	expect(new Set(currentIDs).size === currentIDs.length, "VERIFY_SELFTEST_DUPLICATE_CURRENT", currentIDs.join(","));
+	const finalizationSteps = currentSteps.filter((step) => step.kind === "finalization-guard");
+	expect(
+		finalizationSteps.length === 1 && currentSteps.at(-1) === finalizationSteps[0],
+		"VERIFY_SELFTEST_FINALIZATION_NOT_UNIQUE_LAST",
+		currentIDs.join(","),
+	);
 	const historicalIDs = historicalOnly.map((row) => row.id);
 	expect(new Set(historicalIDs).size === historicalIDs.length, "VERIFY_SELFTEST_DUPLICATE_HISTORICAL", historicalIDs.join(","));
 	const knownTools = new Set(toolSpecifications.map((tool) => tool.name));
@@ -77,6 +90,58 @@ async function inspectRosters() {
 			expect(JSON.stringify(step[field]) === JSON.stringify(value), "VERIFY_SELFTEST_C1_STEP_DRIFT", `${id}:${field}`);
 		}
 	};
+	exactStep("go-package-partition", {
+		kind: "package-guard",
+		tool: "go",
+		tools: ["go"],
+		args: ["list", "-mod=readonly", "-buildvcs=false", "./..."],
+		marker: "PACKAGE_PARTITION exact",
+	});
+	exactStep("go-build", {
+		tool: "go",
+		tools: ["go", "cc", "cxx"],
+		args: ["build", "-mod=readonly", "-buildvcs=false", "-p=2", "./..."],
+	});
+	exactStep("go-vet", {
+		tool: "go",
+		tools: ["go", "cc", "cxx"],
+		args: ["vet", "-mod=readonly", "-buildvcs=false", "-p=2", "./..."],
+	});
+	exactStep("go-test-general", {
+		tool: "go",
+		tools: ["go", "node", "git", "sh", "cc", "cxx"],
+		packageClass: "general",
+		args: ["test", "-mod=readonly", "-buildvcs=false", "-p=2", "-parallel=2", "-count=1", "-timeout=20m"],
+	});
+	exactStep("go-test-sensitive-serial", {
+		tool: "go",
+		tools: ["go", "node", "git", "sh", "cc", "cxx"],
+		packageClass: "sensitive",
+		args: ["test", "-mod=readonly", "-buildvcs=false", "-p=1", "-parallel=2", "-count=1", "-timeout=20m"],
+	});
+	exactStep("go-package-partition-revalidation", {
+		kind: "package-revalidation",
+		tool: "go",
+		tools: ["go"],
+		args: ["list", "-mod=readonly", "-buildvcs=false", "./..."],
+		marker: "PACKAGE_PARTITION_REVALIDATED exact",
+	});
+	exactStep("go-repetition-runner-selftest", {
+		tool: "node",
+		tools: ["node"],
+		path: "tools/verify-go-test-repetition.mjs",
+		args: ["--self-test"],
+		marker: "Go repetition verifier self-test passed:",
+	});
+	exactStep("verification-resource-finalization", { kind: "finalization-guard" });
+	expect(JSON.stringify(sensitiveGoPackages) === JSON.stringify([
+		"github.com/nelsonwerd/countershape/internal/emit/node/compiler",
+		"github.com/nelsonwerd/countershape/internal/emit/node/program/v1",
+		"github.com/nelsonwerd/countershape/internal/store",
+		"github.com/nelsonwerd/countershape/internal/world",
+		"github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+		"github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+	]), "VERIFY_SELFTEST_SENSITIVE_PACKAGE_ROSTER", sensitiveGoPackages.join(","));
 	exactStep("planning-example-p07b-a2-2", {
 		tool: "node",
 		tools: ["node", "go"],
@@ -162,6 +227,61 @@ function inspectEnvironment() {
 	expect(JSON.stringify(environment) === JSON.stringify(expected), "VERIFY_SELFTEST_CHILD_ENVIRONMENT_DRIFT", JSON.stringify(environment));
 }
 
+async function inspectPackagePartition() {
+	const general = "github.com/nelsonwerd/countershape/internal/canon";
+	const shuffled = [sensitiveGoPackages[3], general, ...sensitiveGoPackages.slice(0, 3), ...sensitiveGoPackages.slice(4)];
+	const partition = partitionGoPackages(`${shuffled.join("\n")}\n`);
+	expect(partition.general.length === 1 && partition.general[0] === general, "VERIFY_SELFTEST_PACKAGE_GENERAL", partition.general.join(","));
+	expect(
+		JSON.stringify(partition.sensitive) === JSON.stringify(sensitiveGoPackages) &&
+			partition.all.length === sensitiveGoPackages.length + 1,
+		"VERIFY_SELFTEST_PACKAGE_EXACT_UNION",
+		JSON.stringify(partition),
+	);
+	const generalStep = currentSteps.find((step) => step.id === "go-test-general");
+	const sensitiveStep = currentSteps.find((step) => step.id === "go-test-sensitive-serial");
+	expect(
+		JSON.stringify(packageArguments(generalStep, partition)) === JSON.stringify([...generalStep.args, general]),
+		"VERIFY_SELFTEST_GENERAL_PACKAGE_DISPATCH",
+		JSON.stringify(packageArguments(generalStep, partition)),
+	);
+	expect(
+		JSON.stringify(packageArguments(sensitiveStep, partition)) === JSON.stringify([...sensitiveStep.args, ...sensitiveGoPackages]),
+		"VERIFY_SELFTEST_SENSITIVE_PACKAGE_DISPATCH",
+		JSON.stringify(packageArguments(sensitiveStep, partition)),
+	);
+	expect(
+		JSON.stringify(packageArguments({ args: ["list", "./..."] }, partition)) === JSON.stringify(["list", "./..."]),
+		"VERIFY_SELFTEST_NONPARTITION_ARGUMENT_DISPATCH",
+		"non-partition step changed",
+	);
+	revalidatePackagePartition(partition, partitionGoPackages(`${[general, ...sensitiveGoPackages].join("\n")}\n`));
+	await expectCode(
+		Promise.resolve().then(() => packageArguments({ id: "missing", packageClass: "general", args: ["test"] })),
+		"VERIFY_PACKAGE_PARTITION_UNAVAILABLE",
+	);
+	await expectCode(
+		Promise.resolve().then(() => packageArguments({ id: "unknown", packageClass: "all", args: ["test"] }, partition)),
+		"VERIFY_PACKAGE_PARTITION_UNAVAILABLE",
+	);
+	await expectCode(
+		Promise.resolve().then(() => revalidatePackagePartition(partition, {
+			...partition,
+			all: [...partition.all, "github.com/nelsonwerd/countershape/new-package"],
+		})),
+		"VERIFY_PACKAGE_PARTITION_CHANGED",
+	);
+	for (const [name, invoke, code] of [
+		["missing-sensitive", () => partitionGoPackages(`${[general, ...sensitiveGoPackages.slice(1)].join("\n")}\n`), "VERIFY_SENSITIVE_PACKAGE_ROSTER_INVALID"],
+		["duplicate", () => partitionGoPackages(`${[general, general, ...sensitiveGoPackages].join("\n")}\n`), "VERIFY_PACKAGE_LIST_INVALID"],
+		["foreign", () => partitionGoPackages(`${[general, ...sensitiveGoPackages, "example.invalid/foreign"].join("\n")}\n`), "VERIFY_PACKAGE_LIST_INVALID"],
+		["missing-final-lf", () => partitionGoPackages([general, ...sensitiveGoPackages].join("\n")), "VERIFY_PACKAGE_LIST_INVALID"],
+	]) {
+		await expectCode(Promise.resolve().then(invoke), code);
+		expect(name.length > 0, "VERIFY_SELFTEST_PACKAGE_CASE_NAME", name);
+	}
+}
+
 async function inspectChildArguments() {
 	expect(
 		JSON.stringify(childArguments({ path: "tools/example.mjs", args: ["--check"] })) ===
@@ -173,6 +293,25 @@ async function inspectChildArguments() {
 		JSON.stringify(childArguments({ args: ["test", "./..."] })) === JSON.stringify(["test", "./..."]),
 		"VERIFY_SELFTEST_TOOL_ARGUMENTS_DRIFT",
 		"tool-only arguments changed",
+	);
+	let overriddenArguments;
+	await childResult(
+		{ id: "argument-override", tool: "go", tools: ["go"] },
+		fakeAuthorities(),
+		{},
+		{
+			args: ["test", "example.invalid/package"],
+			revalidate: async () => {},
+			spawn: (_executable, args) => {
+				overriddenArguments = args;
+				return { status: 0, signal: null, error: null, stdout: "", stderr: "" };
+			},
+		},
+	);
+	expect(
+		JSON.stringify(overriddenArguments) === JSON.stringify(["test", "example.invalid/package"]),
+		"VERIFY_SELFTEST_CHILD_ARGUMENT_OVERRIDE",
+		JSON.stringify(overriddenArguments),
 	);
 	expect(
 		JSON.stringify(childToolNames({ id: "nested", tool: "node", tools: ["node", "go"] })) === JSON.stringify(["node", "go"]),
@@ -296,7 +435,7 @@ async function inspectFailClosedExecution() {
 			failedCalls.push(step.id);
 			return failedCalls.length === failureAt
 				? { status: 23, signal: null, error: null, stdout: "", stderr: "injected failure\n" }
-				: { status: 0, signal: null, error: null, stdout: "", stderr: "" };
+				: { status: 0, signal: null, error: null, stdout: step.marker ? `${step.marker}\n` : "", stderr: "" };
 		},
 		write: (value) => { failedOutput += value; },
 		clock: () => 0,
@@ -370,6 +509,135 @@ async function inspectFilesystemGuards() {
 	}
 }
 
+async function inspectVerificationLock() {
+	let fixture = await realpath(await mkdtemp(join(tmpdir(), "countershape-verify-lock-selftest-")));
+	let other = await realpath(await mkdtemp(join(tmpdir(), "countershape-verify-lock-other-")));
+	try {
+		const base = await createPrivateBase(fixture);
+		const baseMetadata = await lstat(base);
+		expect(baseMetadata.isDirectory() && (baseMetadata.mode & 0o777) === 0o700, "VERIFY_SELFTEST_PRIVATE_BASE_MODE", base);
+
+		const first = await acquireVerificationLock(fixture, { nonce: "1".repeat(32), now: () => 1 });
+		await first.assertHeld();
+		await expectCode(acquireVerificationLock(fixture), "VERIFY_ALREADY_RUNNING");
+		await expectCode(acquireVerificationLock(fixture, { liveness: async () => "absent" }), "VERIFY_STALE_LOCK");
+		await first.release();
+
+		const next = await acquireVerificationLock(fixture, { nonce: "2".repeat(32), now: () => 2 });
+		const independent = await acquireVerificationLock(other, { nonce: "3".repeat(32), now: () => 3 });
+		expect(next.path !== independent.path, "VERIFY_SELFTEST_LOCK_REPOSITORY_SCOPE", `${next.path} == ${independent.path}`);
+		await independent.release();
+		await next.release();
+
+		const lockPath = join(base, "active.lock");
+		await writeFile(lockPath, "{}\n", { encoding: "utf8", mode: 0o600, flag: "wx" });
+		await expectCode(acquireVerificationLock(fixture), "VERIFY_LOCK_INVALID");
+		await unlink(lockPath);
+
+		await writeFile(lockPath, "{}\n", { encoding: "utf8", mode: 0o644, flag: "wx" });
+		await expectCode(acquireVerificationLock(fixture), "VERIFY_LOCK_INVALID");
+		await unlink(lockPath);
+
+		const outside = join(fixture, "outside-lock");
+		await writeFile(outside, "outside\n", { encoding: "utf8", mode: 0o600 });
+		await symlink(outside, lockPath);
+		await expectCode(acquireVerificationLock(fixture), "VERIFY_LOCK_INVALID");
+		await unlink(lockPath);
+
+		await expectCode(acquireVerificationLock(fixture, {
+			nonce: "4".repeat(32),
+			now: () => 4,
+			afterWrite: async ({ path }) => {
+				await unlink(path);
+				await writeFile(path, "acquisition replacement\n", { encoding: "utf8", mode: 0o600, flag: "wx" });
+			},
+		}), "VERIFY_LOCK_INVALID");
+		expect(
+			(await readFile(lockPath, "utf8")) === "acquisition replacement\n",
+			"VERIFY_SELFTEST_LOCK_ACQUISITION_REPLACEMENT_REMOVED",
+			lockPath,
+		);
+		await unlink(lockPath);
+
+		const replaced = await acquireVerificationLock(fixture, { nonce: "5".repeat(32), now: () => 5 });
+		await unlink(replaced.path);
+		await writeFile(replaced.path, "replacement\n", { encoding: "utf8", mode: 0o600, flag: "wx" });
+		await expectCode(replaced.release(), "VERIFY_LOCK_INTEGRITY");
+		expect((await readFile(replaced.path, "utf8")) === "replacement\n", "VERIFY_SELFTEST_LOCK_REPLACEMENT_REMOVED", replaced.path);
+		await unlink(replaced.path);
+
+		const disappeared = await acquireVerificationLock(fixture, { nonce: "6".repeat(32), now: () => 6 });
+		await unlink(disappeared.path);
+		await expectCode(disappeared.release(), "VERIFY_LOCK_INTEGRITY");
+
+		const contentDrift = await acquireVerificationLock(fixture, { nonce: "7".repeat(32), now: () => 7 });
+		await writeFile(contentDrift.path, "same-inode drift\n", { encoding: "utf8", mode: 0o600 });
+		await expectCode(contentDrift.release(), "VERIFY_LOCK_INTEGRITY");
+		expect((await readFile(contentDrift.path, "utf8")) === "same-inode drift\n", "VERIFY_SELFTEST_LOCK_CONTENT_DRIFT_REMOVED", contentDrift.path);
+		await unlink(contentDrift.path);
+
+		const modeDrift = await acquireVerificationLock(fixture, { nonce: "8".repeat(32), now: () => 8 });
+		await chmod(modeDrift.path, 0o644);
+		await expectCode(modeDrift.release(), "VERIFY_LOCK_INTEGRITY");
+		expect((await lstat(modeDrift.path)).isFile(), "VERIFY_SELFTEST_LOCK_MODE_DRIFT_REMOVED", modeDrift.path);
+		await unlink(modeDrift.path);
+
+		await chmod(base, 0o755);
+		await expectCode(createPrivateBase(fixture), "VERIFY_PRIVATE_BASE_INVALID");
+		await chmod(base, 0o700);
+	} finally {
+		await rm(fixture, { recursive: true, force: true });
+		await rm(other, { recursive: true, force: true });
+	}
+
+	fixture = await realpath(await mkdtemp(join(tmpdir(), "countershape-verify-base-symlink-selftest-")));
+	let outside;
+	try {
+		outside = await realpath(await mkdtemp(join(tmpdir(), "countershape-verify-base-target-")));
+		await symlink(outside, join(fixture, ".countershape"));
+		await expectCode(createPrivateBase(fixture), "VERIFY_ARTIFACT_ROOT_INVALID");
+	} finally {
+		await rm(fixture, { recursive: true, force: true });
+		if (outside) await rm(outside, { recursive: true, force: true });
+	}
+}
+
+async function inspectResourceFinalization() {
+	const events = [];
+	const lock = {
+		async assertHeld() { events.push("assert-held"); },
+		async release() { events.push("release"); },
+	};
+	await finalizeVerificationResources(lock, "/private/run-root", {
+		remove: async (path, options) => {
+			events.push(`remove:${path}:${options.recursive}:${options.force}`);
+		},
+	});
+	expect(
+		JSON.stringify(events) === JSON.stringify(["assert-held", "remove:/private/run-root:true:true", "release"]),
+		"VERIFY_SELFTEST_FINALIZATION_ORDER",
+		events.join(","),
+	);
+
+	const failedEvents = [];
+	try {
+		await finalizeVerificationResources({
+			async assertHeld() { failedEvents.push("assert-held"); },
+			async release() { failedEvents.push("release"); },
+		}, "/private/run-root", {
+			remove: async () => { failedEvents.push("remove"); throw new Error("injected cleanup failure"); },
+		});
+		fail("VERIFY_SELFTEST_FALSE_NEGATIVE", "resource finalization cleanup failure");
+	} catch (error) {
+		expect(error.message === "injected cleanup failure", "VERIFY_SELFTEST_FINALIZATION_WRONG_ERROR", error.stack ?? error);
+	}
+	expect(
+		JSON.stringify(failedEvents) === JSON.stringify(["assert-held", "remove"]),
+		"VERIFY_SELFTEST_FINALIZATION_RELEASED_AFTER_CLEANUP_FAILURE",
+		failedEvents.join(","),
+	);
+}
+
 async function inspectSourceAndArguments() {
 	const source = await readFile(verifierPath, "utf8");
 	expect(!source.includes("...process.env"), "VERIFY_SELFTEST_PROCESS_ENV_SPREAD", "verify-current.mjs");
@@ -392,12 +660,15 @@ async function main() {
 	if (process.argv.length !== 2) fail("VERIFY_SELFTEST_ARGUMENTS", "no arguments are accepted");
 	await inspectRosters();
 	inspectEnvironment();
+	await inspectPackagePartition();
 	await inspectChildArguments();
 	await inspectFailClosedExecution();
 	await inspectFilesystemGuards();
+	await inspectVerificationLock();
+	await inspectResourceFinalization();
 	await inspectSourceAndArguments();
 	const sourceDigest = createHash("sha256").update(await readFile(verifierPath)).digest("hex");
-	process.stdout.write(`verification runner self-test passed: exact rosters/env, fail-closed status/signal/error/marker, framed child output, canonical plan/tool paths, symlink main, historical nonexecution, and artifact refusal (source sha256:${sourceDigest})\n`);
+	process.stdout.write(`verification runner self-test passed: exact rosters/env/package partition, fail-closed status/signal/error/marker, framed child output, canonical plan/tool paths, exclusive lock integrity, symlink main, historical nonexecution, and artifact refusal (source sha256:${sourceDigest})\n`);
 }
 
 main().catch((error) => {
