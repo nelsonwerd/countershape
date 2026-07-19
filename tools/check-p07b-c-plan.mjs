@@ -14,6 +14,7 @@ import { validateSpecification } from "./check-p07b-c-unit-scope.mjs";
 import { qualificationCaseIDs, qualificationMatrixDigest } from "./verify-go-test-repetition.mjs";
 
 export const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const ABSENT_FIXTURE_PATH = Symbol("ABSENT_FIXTURE_PATH");
 
 const c1PlanningPaths = Object.freeze({
 	targetSchema: "spec/schema/v1/contract-execution-target.schema.json",
@@ -59,6 +60,7 @@ const c1VerificationStatusPath = "docs/status/P07B-C-VERIFICATION-THROUGHPUT.md"
 const c1EvidenceMaintenanceStatusPath = "docs/status/P07B-C-C1-LOCAL-EVIDENCE-MAINTENANCE.md";
 const c1StatusPath = "docs/status/P07B-C-C1-SEMANTICS.md";
 const c2StatusPath = "docs/status/P07B-C-C2-PERSISTENCE.md";
+const c2MaintenanceStatusPath = "docs/status/P07B-C-C2-RECEIPT-PHASE-MAINTENANCE.md";
 const c1DidrunBugsPath = "docs/status/DIDRUN_BUGS.md";
 const sealedC0AIdentity = Object.freeze({
 	commit: "1c6d9fdef339314bfcb99d7d53f3a7c5040e5020",
@@ -76,6 +78,10 @@ const sealedC1Identity = Object.freeze({
 const sealedC1BIdentity = Object.freeze({
 	commit: "46c48507fe998ea04e121470d6aa8ba0b38b3dae",
 	tree: "6a6ee49048c2639d102641cecab4e6d99f31377e",
+});
+const sealedC2Identity = Object.freeze({
+	commit: "19c90786d9832e21ec86daea96ca514cc7304836",
+	tree: "1557f1e26762d717327a2ec770f8153daa0baf3e",
 });
 const c0ClaimLabels = Object.freeze([
 	"P07B C0 authority plan coherence",
@@ -354,11 +360,12 @@ const requiredText = Object.freeze({
 		"`RECEIPT_RECONCILIATION` is admitted only for an exact empty-prefix roster",
 	],
 	"spec/verification/p07b-c-unit-paths.json": [
-		"countershape/p07b-c-unit-paths/v3",
+		"countershape/p07b-c-unit-paths/v4",
 		"\"C0A\"",
 		"\"C1M\"",
 		"\"C1V\"",
 		"\"C1E\"",
+		"\"C2M\"",
 		"\"C6B\"",
 		"\"verification_profile\"",
 		"\"receipt_claims\"",
@@ -735,7 +742,7 @@ const requiredC1EvidenceMaintenanceText = Object.freeze({
 			"later independently sealed, delimited handoff/receipt descendant",
 	],
 	"spec/verification/p07b-c-unit-paths.json": [
-		"countershape/p07b-c-unit-paths/v3",
+		"countershape/p07b-c-unit-paths/v4",
 		"\"C1E\"",
 	],
 		"tools/check-p07b-c-plan.mjs": [
@@ -860,6 +867,85 @@ const requiredC2AddedPaths = new Set([
 	"internal/store/private_contract_run.go",
 	"internal/store/private_contract_run_test.go",
 ]);
+const requiredC2MaintenancePaths = Object.freeze([
+	"docs/HANDOFF_MODE_C.md",
+	"docs/PROMPT_PACK.md",
+	"docs/VERIFICATION.md",
+	"docs/status/P07B-C-C2-RECEIPT-PHASE-MAINTENANCE.md",
+	"spec/verification/p07b-c-unit-paths.json",
+	"tools/check-p07b-c-plan.mjs",
+	"tools/check-p07b-c-unit-scope.mjs",
+]);
+const requiredC2MaintenanceDigest = "sha256:75dcb6a88a9faec8aa89cfbe67c0870e88d95709a1bf07e2fb494e92362688cd";
+const requiredC2MaintenanceRosterText = requiredC2MaintenancePaths
+	.map((path, index) => `${index === requiredC2MaintenancePaths.length - 1 ? "and " : ""}\`${path}\``)
+	.join(", ");
+const requiredC2MaintenanceDeclaration = `C2M owns exactly these ${requiredC2MaintenancePaths.length} paths: ${requiredC2MaintenanceRosterText}. Their sorted-newline roster digest is \`${requiredC2MaintenanceDigest}\`.`;
+const c2MaintenanceClaimLabels = Object.freeze([
+	"P07B-C C2M receipt-phase plan coherence",
+	"P07B-C C2M pre-receipt and receipt-phase checker self-test",
+	"P07B-C C2M unit-scope defensive self-test",
+	"P07B-C C2M cumulative verifier self-test",
+	"P07B-C C2M cumulative verification",
+	"P07B-C C2M exact seven-path staged scope and diff integrity",
+	"P07B-C C2M scoped staged credential-pattern scan",
+	"P07B-C C2M preceding didrun chain integrity",
+]);
+const c2MaintenanceClaimTypes = Object.freeze([
+	...Array(5).fill("tests-pass"),
+	...Array(3).fill("command-succeeded"),
+]);
+const c2MaintenanceExpectedClaimArgv = Object.freeze([
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--self-test"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--self-test"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current-selftest.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C2M", "--source-final-gate"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C2M", "--credential-scan"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--verify-c2m-preseal-ledger"]),
+]);
+const requiredC2MaintenanceText = Object.freeze({
+	[c2MaintenanceStatusPath]: [
+		"`DEFECT_REPAIR`",
+		"receipt-present plan self-test",
+		"four pre-receipt-only hostile mutations",
+		".didrun-history/2026-07-19-p07b-c-c2b-build-loop-pre-maintenance/.didrun/",
+		".didrun-history/2026-07-19-p07b-c-c2m-build-loop/.didrun/",
+		"229a60c0630e296b67faa3c81b91fac73f9f63ff",
+		"19c90786d9832e21ec86daea96ca514cc7304836",
+		requiredC2MaintenanceDeclaration,
+		...c2MaintenanceClaimLabels.map((label) => `\`${label}\``),
+	],
+	"docs/VERIFICATION.md": [
+		"## C2 receipt-phase checker maintenance",
+		"synthetic, `readFile`-equivalent `ENOENT` signal",
+		"receipt-present working-tree baseline",
+		"receipt-present synthetic full-plan baseline",
+		requiredC2MaintenanceDeclaration,
+	],
+	"docs/HANDOFF_MODE_C.md": [
+		"C2M receipt-phase checker maintenance is the active `SOURCE_FULL` unit",
+		requiredC2MaintenanceDigest,
+		"229a60c0630e296b67faa3c81b91fac73f9f63ff",
+		".didrun-history/2026-07-19-p07b-c-c2b-build-loop-pre-maintenance/.didrun/",
+	],
+	"docs/PROMPT_PACK.md": [
+		"P07B-C C2M receipt-phase checker maintenance",
+		requiredC2MaintenanceDigest,
+		"C2B remains exact and stashed",
+	],
+	"tools/check-p07b-c-plan.mjs": [
+		"ABSENT_FIXTURE_PATH",
+		"syntheticC2SealedSourcePhaseFixture",
+		"runC2SealedSourcePhaseSelfTest",
+		"--verify-c2m-preseal-ledger",
+	],
+	"tools/check-p07b-c-unit-scope.mjs": [
+		"\"C2M\"",
+		"declared exact-roster SOURCE_FULL unit",
+	],
+});
 const requiredC2BPaths = Object.freeze([
 	"docs/HANDOFF_MODE_C.md",
 	"docs/status/P07B-C-C2-PERSISTENCE.md",
@@ -879,6 +965,11 @@ const requiredC2BReceiptClaims = Object.freeze([
 async function readBytes(root, path, overrides) {
 	if (overrides.has(path)) {
 		const value = overrides.get(path);
+		if (value === ABSENT_FIXTURE_PATH) {
+			const error = new Error(`synthetic absent fixture path: ${path}`);
+			error.code = "ENOENT";
+			throw error;
+		}
 		return Buffer.isBuffer(value) ? value : Buffer.from(value, "utf8");
 	}
 	return readFile(resolve(root, path));
@@ -2623,6 +2714,26 @@ export async function checkPlan(root = repositoryRoot, overrides = new Map(), re
 	if (computedC1EvidenceMaintenanceDigest !== requiredC1EvidenceMaintenanceDigest) {
 		errors.push(`internal C1E roster digest mismatch: ${computedC1EvidenceMaintenanceDigest}`);
 	}
+	for (const [path, snippets] of Object.entries(requiredC2MaintenanceText)) {
+		let body;
+		try {
+			body = bodies.get(path) ?? await readText(root, path, overrides);
+			bodies.set(path, body);
+		} catch (error) {
+			errors.push(`${path}: unreadable (${error.message})`);
+			continue;
+		}
+		for (const snippet of snippets) {
+			if (!body.includes(snippet)) {
+				errors.push(`${path}: missing required C2 receipt-phase maintenance ruling: ${JSON.stringify(snippet)}`);
+			}
+		}
+	}
+	const computedC2MaintenanceDigest = `sha256:${createHash("sha256")
+		.update(`${requiredC2MaintenancePaths.join("\n")}\n`, "utf8").digest("hex")}`;
+	if (computedC2MaintenanceDigest !== requiredC2MaintenanceDigest) {
+		errors.push(`internal C2M roster digest mismatch: ${computedC2MaintenanceDigest}`);
+	}
 	const computedC2Digest = `sha256:${createHash("sha256").update(`${requiredC2Paths.join("\n")}\n`, "utf8").digest("hex")}`;
 	if (computedC2Digest !== requiredC2Digest) errors.push(`internal C2 roster digest mismatch: ${computedC2Digest}`);
 	const computedC2BDigest = `sha256:${createHash("sha256").update(`${requiredC2BPaths.join("\n")}\n`, "utf8").digest("hex")}`;
@@ -2657,6 +2768,13 @@ export async function checkPlan(root = repositoryRoot, overrides = new Map(), re
 			"local-evidence maintenance scope declaration",
 			errors,
 		);
+		requireExactlyOnce(
+			verificationBody,
+			requiredC2MaintenanceDeclaration,
+			"docs/VERIFICATION.md",
+			"C2 receipt-phase maintenance scope declaration",
+			errors,
+		);
 	}
 	const verificationStatusBody = bodies.get(c1VerificationStatusPath);
 	if (verificationStatusBody !== undefined) {
@@ -2683,6 +2801,25 @@ export async function checkPlan(root = repositoryRoot, overrides = new Map(), re
 				`| \`${label}\` |`,
 				c1EvidenceMaintenanceStatusPath,
 				"local-evidence maintenance intended claim map",
+				errors,
+			);
+		}
+	}
+	const c2MaintenanceStatusBody = bodies.get(c2MaintenanceStatusPath);
+	if (c2MaintenanceStatusBody !== undefined) {
+		requireExactlyOnce(
+			c2MaintenanceStatusBody,
+			requiredC2MaintenanceDeclaration,
+			c2MaintenanceStatusPath,
+			"C2 receipt-phase maintenance scope declaration",
+			errors,
+		);
+		for (const label of c2MaintenanceClaimLabels) {
+			requireExactlyOnce(
+				c2MaintenanceStatusBody,
+				`| \`${label}\` |`,
+				c2MaintenanceStatusPath,
+				"C2 receipt-phase maintenance intended claim map",
 				errors,
 			);
 		}
@@ -2856,6 +2993,13 @@ export async function checkPlan(root = repositoryRoot, overrides = new Map(), re
 		if (!isDeepStrictEqual(specification.units.C2.prefixes, []) || specification.units.C2.verification_profile !== "SOURCE_FULL") {
 			errors.push("spec/verification/p07b-c-unit-paths.json: C2 source profile mismatch");
 		}
+		if (!isDeepStrictEqual(specification.units.C2M.exact, requiredC2MaintenancePaths)) {
+			errors.push("spec/verification/p07b-c-unit-paths.json: C2M exact path roster mismatch");
+		}
+		if (!isDeepStrictEqual(specification.units.C2M.prefixes, []) ||
+			specification.units.C2M.verification_profile !== "SOURCE_FULL") {
+			errors.push("spec/verification/p07b-c-unit-paths.json: C2M source profile mismatch");
+		}
 		if (!isDeepStrictEqual(specification.units.C2B.exact, requiredC2BPaths)) {
 			errors.push("spec/verification/p07b-c-unit-paths.json: C2B exact path roster mismatch");
 		}
@@ -2871,6 +3015,125 @@ export async function checkPlan(root = repositoryRoot, overrides = new Map(), re
 	}
 
 	return errors;
+}
+
+function readSealedC2StatusFixture() {
+	const env = {
+		HOME: process.env.HOME || "/",
+		PATH: "/usr/bin:/bin",
+		LANG: "C",
+		LC_ALL: "C",
+		NO_COLOR: "1",
+		GIT_CONFIG_NOSYSTEM: "1",
+		GIT_CONFIG_GLOBAL: "/dev/null",
+		GIT_NO_LAZY_FETCH: "1",
+		GIT_OPTIONAL_LOCKS: "0",
+		GIT_TERMINAL_PROMPT: "0",
+	};
+	const run = (args, maxBuffer = 1024 * 1024) => {
+		const result = spawnSync("/usr/bin/git", ["--no-replace-objects", ...args], {
+			cwd: repositoryRoot,
+			encoding: "utf8",
+			timeout: 30_000,
+			maxBuffer,
+			env,
+		});
+		if (result.error || result.signal || result.status !== 0 || result.stderr !== "") {
+			throw new Error(`P07B-C C2 sealed-source fixture git ${args[0]} failed (status=${result.status}, signal=${result.signal}, error=${result.error?.message ?? "none"})`);
+		}
+		return result.stdout;
+	};
+	const tree = run(["rev-parse", "--verify", `${sealedC2Identity.commit}^{tree}`]).trim();
+	if (tree !== sealedC2Identity.tree) throw new Error(`P07B-C C2 sealed-source fixture tree drift: ${tree}`);
+	const status = run(["cat-file", "blob", `${sealedC2Identity.commit}:${c2StatusPath}`], 2 * 1024 * 1024);
+	if (!status.endsWith("\n") || Buffer.byteLength(status, "utf8") > 1024 * 1024) {
+		throw new Error("P07B-C C2 sealed-source status fixture is not bounded canonical text");
+	}
+	return status;
+}
+
+function withoutC2ReceiptBlock(body) {
+	const pattern = /\n?<!-- P07B-C-C2-SOURCE-RECEIPTS:START -->[\s\S]*?<!-- P07B-C-C2-SOURCE-RECEIPTS:END -->\n?/gu;
+	const matches = [...body.matchAll(pattern)];
+	if (matches.length > 1) throw new Error("P07B-C C2 sealed-source phase fixture found duplicate receipt blocks");
+	const stripped = matches.length === 0 ? body : body.replace(pattern, "\n");
+	if (stripped.includes("<!-- P07B-C-C2-SOURCE-RECEIPTS:START -->") ||
+		stripped.includes("<!-- P07B-C-C2-SOURCE-RECEIPTS:END -->")) {
+		throw new Error("P07B-C C2 sealed-source phase fixture found an unmatched receipt marker");
+	}
+	return stripped;
+}
+
+function replaceFixtureExactlyOnce(body, needle, replacement, name) {
+	const occurrences = countOccurrences(body, needle);
+	if (occurrences !== 1) {
+		throw new Error(`P07B-C C2 phase fixture ${name} anchor count ${occurrences}`);
+	}
+	return body.replace(needle, replacement);
+}
+
+async function syntheticC2SealedSourcePhaseFixture() {
+	const sourceStatus = readSealedC2StatusFixture();
+	const currentHandoff = await readText(repositoryRoot, "docs/HANDOFF_MODE_C.md", new Map());
+	const sourcePhaseHandoff = withoutC2ReceiptBlock(currentHandoff);
+	return new Map([
+		[c2StatusPath, sourceStatus],
+		["docs/HANDOFF_MODE_C.md", sourcePhaseHandoff],
+		[c2ReceiptDeclarationPath, ABSENT_FIXTURE_PATH],
+	]);
+}
+
+async function runC2SealedSourcePhaseSelfTest() {
+	const baseOverrides = await syntheticC2SealedSourcePhaseFixture();
+	const baseline = await checkPlan(repositoryRoot, baseOverrides);
+	if (baseline.length > 0) {
+		throw new Error(`P07B-C C2 sealed-source phase self-test baseline failed:\n${baseline.join("\n")}`);
+	}
+	const cases = [
+		{
+			name: "handoff source digest drift",
+			path: "docs/HANDOFF_MODE_C.md",
+			needle: requiredC2Digest,
+			replacement: `sha256:${"0".repeat(64)}`,
+			expect: "C2 source scope digest",
+		},
+		{
+			name: "handoff receipt digest drift",
+			path: "docs/HANDOFF_MODE_C.md",
+			needle: requiredC2BDigest,
+			replacement: `sha256:${"0".repeat(64)}`,
+			expect: "C2B receipt scope digest",
+		},
+		{
+			name: "status source digest drift",
+			path: c2StatusPath,
+			needle: requiredC2Digest,
+			replacement: `sha256:${"0".repeat(64)}`,
+			expect: "C2 source scope",
+		},
+		{
+			name: "status pending grade drift",
+			path: c2StatusPath,
+			needle: `| \`${c2ClaimLabels[0]}\` | \`${c2ClaimTypes[0]}\` | \`UNRECEIPTED\` |`,
+			replacement: `| \`${c2ClaimLabels[0]}\` | \`${c2ClaimTypes[0]}\` | \`TREE-EXACT\` |`,
+			expect: "C2 pending source receipt map",
+		},
+	];
+	for (const testCase of cases) {
+		const overrides = new Map(baseOverrides);
+		const body = overrides.get(testCase.path);
+		overrides.set(testCase.path, replaceFixtureExactlyOnce(
+			body,
+			testCase.needle,
+			testCase.replacement,
+			testCase.name,
+		));
+		const errors = await checkPlan(repositoryRoot, overrides);
+		if (!errors.some((error) => error.includes(testCase.expect))) {
+			throw new Error(`P07B-C C2 sealed-source phase self-test false negative: ${testCase.name} (${errors.join("; ")})`);
+		}
+	}
+	return cases.length;
 }
 
 function syntheticC2ReceiptFixture() {
@@ -2986,6 +3249,39 @@ function syntheticC2ReceiptFixture() {
 	return { receipt, authority, status, handoff };
 }
 
+async function syntheticC2ReceiptPlanFixture(fixture) {
+	let status = readSealedC2StatusFixture();
+	const sourceState = "- **State:** active pre-seal source boundary; every C2 grade below is `UNRECEIPTED`";
+	const receiptState = `- **Source receipt:** C2 source commit \`${fixture.receipt.source_commit}\`, tree \`${fixture.receipt.source_tree}\`, is sealed, note-present, and strict-clean; every C2 source grade below is \`TREE-EXACT\`. This C2B receipt-document working unit binds only that existing source and remains \`UNRECEIPTED\` until its own commit, seal, note, and strict boundary.`;
+	status = replaceFixtureExactlyOnce(status, sourceState, receiptState, "receipt-present status state");
+	const receiptMetadata = [
+		"## C2 source receipt map",
+		"- C2 source strict exit: `0`",
+		`- C2 source strict claims: \`${fixture.receipt.strict_claims_recorded_exact}/${fixture.receipt.strict_claims_total} claims recorded-exact\``,
+		"This receipt binds only the already-existing C2 source commit. C2B cannot name or grade its own commit, tree, Git note, or strict result.",
+		...c2ReceiptDisclosureLines(fixture.receipt),
+	].join("\n");
+	status = replaceFixtureExactlyOnce(status, "## Intended final receipt map", receiptMetadata, "receipt-present status heading");
+	for (const claim of fixture.receipt.claims) {
+		status = replaceFixtureExactlyOnce(
+			status,
+			`| \`${claim.label}\` | \`${claim.type}\` | \`UNRECEIPTED\` |`,
+			`| \`${claim.label}\` | \`${claim.type}\` | \`${claim.grade}\` |`,
+			`receipt-present row ${claim.label}`,
+		);
+	}
+	const currentHandoff = withoutC2ReceiptBlock(await readText(repositoryRoot, "docs/HANDOFF_MODE_C.md", new Map()));
+	const handoff = `${currentHandoff.trimEnd()}\n\n${fixture.handoff}\n`;
+	return {
+		overrides: new Map([
+			[c2StatusPath, status],
+			["docs/HANDOFF_MODE_C.md", handoff],
+			[c2ReceiptDeclarationPath, `${JSON.stringify(fixture.receipt)}\n`],
+		]),
+		authority: fixture.authority,
+	};
+}
+
 async function runC2ReceiptCheckerSelfTest() {
 	const fixture = syntheticC2ReceiptFixture();
 	let rejected = 0;
@@ -3022,6 +3318,21 @@ async function runC2ReceiptCheckerSelfTest() {
 		fixture.authority,
 	);
 	if (phaseBaseline.length > 0) throw new Error(`P07B-C C2 receipt phase self-test baseline failed: ${phaseBaseline.join(", ")}`);
+	const planFixture = await syntheticC2ReceiptPlanFixture(fixture);
+	const planBaseline = await checkPlan(repositoryRoot, planFixture.overrides, undefined, undefined, planFixture.authority);
+	if (planBaseline.length > 0) throw new Error(`P07B-C C2 receipt-present full-plan self-test baseline failed: ${planBaseline.join(", ")}`);
+	const hostilePlanOverrides = new Map(planFixture.overrides);
+	hostilePlanOverrides.set(
+		"docs/HANDOFF_MODE_C.md",
+		replaceFixtureExactlyOnce(
+			hostilePlanOverrides.get("docs/HANDOFF_MODE_C.md"),
+			`C2 source commit \`${fixture.receipt.source_commit}\`, tree \`${fixture.receipt.source_tree}\`.`,
+			`C2 source commit \`${fixture.receipt.source_commit}\`, tree \`${"7".repeat(40)}\`.`,
+			"receipt-present full-plan handoff identity",
+		),
+	);
+	const hostilePlanErrors = await checkPlan(repositoryRoot, hostilePlanOverrides, undefined, undefined, planFixture.authority);
+	requireError("receipt-present full-plan handoff wiring", hostilePlanErrors, "C2B source identity");
 
 	const wrongSchema = structuredClone(fixture.receipt);
 	wrongSchema.schema_version = "countershape/p07b-c-c2-receipt/v2";
@@ -3132,6 +3443,7 @@ async function runSelfTest() {
 	const localEvidenceMutations = await runLocalEvidenceSelfTest();
 	const receiptModePhaseMutations = await runC1ReceiptModePhaseSelfTest();
 	const c2ReceiptMutations = await runC2ReceiptCheckerSelfTest();
+	const c2SealedSourcePhaseMutations = await runC2SealedSourcePhaseSelfTest();
 	const c2LocalEvidenceMutations = await runC2LocalEvidencePositiveSelfTest();
 
 	const promptPath = "docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md";
@@ -3197,7 +3509,6 @@ async function runSelfTest() {
 		"<!-- P07B-C-C0A-RECEIPTS:END -->",
 	].join("\n");
 	const currentHandoff = await readText(repositoryRoot, "docs/HANDOFF_MODE_C.md", new Map());
-	const currentC2Status = await readText(repositoryRoot, c2StatusPath, new Map());
 	const currentC1MaintenanceStatus = await readText(repositoryRoot, c1MaintenanceStatusPath, new Map());
 	const currentC1VerificationStatus = await readText(repositoryRoot, c1VerificationStatusPath, new Map());
 	const currentC1EvidenceMaintenanceStatus = await readText(repositoryRoot, c1EvidenceMaintenanceStatusPath, new Map());
@@ -3802,34 +4113,63 @@ async function runSelfTest() {
 				expect: "C2 exact path roster mismatch",
 			},
 			{
-				name: "C2 handoff source digest drift", path: "docs/HANDOFF_MODE_C.md",
-				value: currentHandoff.replace(requiredC2Digest, `sha256:${"0".repeat(64)}`),
-				expect: "C2 source scope digest",
-			},
-			{
-				name: "C2 handoff receipt digest drift", path: "docs/HANDOFF_MODE_C.md",
-				value: currentHandoff.replace(requiredC2BDigest, `sha256:${"0".repeat(64)}`),
-				expect: "C2B receipt scope digest",
-			},
-			{
-				name: "C2 status source digest drift", path: c2StatusPath,
-				value: currentC2Status.replace(requiredC2Digest, `sha256:${"0".repeat(64)}`),
-				expect: "C2 source scope",
-			},
-			{
-				name: "C2 status pending grade drift", path: c2StatusPath,
-				value: currentC2Status.replace(
-					`| \`${c2ClaimLabels[0]}\` | \`${c2ClaimTypes[0]}\` | \`UNRECEIPTED\` |`,
-					`| \`${c2ClaimLabels[0]}\` | \`${c2ClaimTypes[0]}\` | \`TREE-EXACT\` |`,
-				),
-				expect: "C2 pending source receipt map",
-			},
-			{
 				name: "C2 source profile substitution", path: configPath,
 				value: (() => {
 					const candidate = structuredClone(currentConfiguration);
 					candidate.units.C2.verification_profile = "RECEIPT_RECONCILIATION";
 					candidate.units.C2.receipt_claims = structuredClone(requiredC2BReceiptClaims);
+					return `${JSON.stringify(candidate, null, 2)}\n`;
+				})(),
+				expect: "invalid",
+			},
+			{
+				name: "C2M unit removal", path: configPath,
+				value: (() => {
+					const candidate = structuredClone(currentConfiguration);
+					delete candidate.units.C2M;
+					return `${JSON.stringify(candidate, null, 2)}\n`;
+				})(),
+				expect: "invalid",
+			},
+			{
+				name: "C2M unit order drift", path: configPath,
+				value: (() => {
+					const candidate = structuredClone(currentConfiguration);
+					const entries = Object.entries(candidate.units);
+					const c2m = entries.find(([unit]) => unit === "C2M");
+					candidate.units = Object.fromEntries([
+						...entries.filter(([unit]) => unit !== "C2M" && unit !== "C2B"),
+						entries.find(([unit]) => unit === "C2B"),
+						c2m,
+					]);
+					return `${JSON.stringify(candidate, null, 2)}\n`;
+				})(),
+				expect: "invalid",
+			},
+			{
+				name: "C2M exact path removal", path: configPath,
+				value: (() => {
+					const candidate = structuredClone(currentConfiguration);
+					candidate.units.C2M.exact = candidate.units.C2M.exact.filter((path) => path !== c2MaintenanceStatusPath);
+					return `${JSON.stringify(candidate, null, 2)}\n`;
+				})(),
+				expect: "C2M exact path roster mismatch",
+			},
+			{
+				name: "C2M prefix introduction", path: configPath,
+				value: (() => {
+					const candidate = structuredClone(currentConfiguration);
+					candidate.units.C2M.prefixes = ["tools/"];
+					return `${JSON.stringify(candidate, null, 2)}\n`;
+				})(),
+				expect: "invalid",
+			},
+			{
+				name: "C2M receipt-profile substitution", path: configPath,
+				value: (() => {
+					const candidate = structuredClone(currentConfiguration);
+					candidate.units.C2M.verification_profile = "RECEIPT_RECONCILIATION";
+					candidate.units.C2M.receipt_claims = structuredClone(requiredC2BReceiptClaims);
 					return `${JSON.stringify(candidate, null, 2)}\n`;
 				})(),
 				expect: "invalid",
@@ -4236,7 +4576,85 @@ async function runSelfTest() {
 		}
 	}
 
-	console.log(`P07B-C evolved plan checker self-test passed: ${cases.length + localEvidenceMutations + receiptModePhaseMutations + c2ReceiptMutations + c2LocalEvidenceMutations} authority, structure, C1/C2 local-evidence, phase-isolation, semantic-projection, receipt, and allowlist mutations rejected`);
+	console.log(`P07B-C evolved plan checker self-test passed: ${cases.length + localEvidenceMutations + receiptModePhaseMutations + c2ReceiptMutations + c2SealedSourcePhaseMutations + c2LocalEvidenceMutations} authority, structure, C1/C2 local-evidence, phase-isolation, semantic-projection, receipt, and allowlist mutations rejected`);
+}
+
+async function verifyC2MaintenancePresealLedger() {
+	const expectedInvocation = c2MaintenanceExpectedClaimArgv.at(-1);
+	const observedInvocation = [
+		process.argv0,
+		relative(repositoryRoot, resolve(process.argv[1])),
+		...process.argv.slice(2),
+	];
+	const requestedRuntime = await realpath(process.argv0);
+	const runningRuntime = await realpath(process.execPath);
+	if (!isDeepStrictEqual(observedInvocation, expectedInvocation) || requestedRuntime !== runningRuntime) {
+		throw new Error(`P07B-C C2M live chain-gate invocation mismatch: ${JSON.stringify({ argv: observedInvocation, requestedRuntime, runningRuntime })}`);
+	}
+	const python = "/Users/drewnelson/.venvs/didrun/bin/python";
+	const program = String.raw`
+from pathlib import Path
+import json
+import os
+import subprocess
+from didrun.ledger import Session
+
+root = Path(".didrun")
+session = Session(root)
+ok, broken = session.verify_chain()
+assert ok and broken is None, (ok, broken)
+entries = list(session.entries())
+assert [entry.index for entry in entries] == list(range(7))
+events = [entry.event for entry in entries]
+assert all(event.exit_code == 0 for event in events)
+assert all(event.observed_via == "wrapper" for event in events)
+assert all(event.coverage == "complete" for event in events)
+assert all(event.self_stable() for event in events)
+assert not any(event.submodule_dirty for event in events)
+tree = events[0].tree_before
+assert all(event.tree_before == tree and event.tree_after == tree for event in events)
+assert subprocess.check_output(["/usr/bin/git", "write-tree"], text=True).strip() == tree
+expected_argv = json.loads(os.environ["COUNTERSHAPE_C2M_EXPECTED_ARGV"])
+assert [list(event.argv) for event in events] == expected_argv
+expected_claims = json.loads(os.environ["COUNTERSHAPE_C2M_EXPECTED_CLAIMS"])
+claims = [json.loads(line) for line in (root / "claims.jsonl").read_text(encoding="utf8").splitlines() if line]
+assert len(claims) == len(expected_claims) == 7
+for index, (claim, expected) in enumerate(zip(claims, expected_claims, strict=True)):
+    assert claim["ctype"] == expected["type"]
+    assert claim["label"] == expected["label"]
+    assert claim["declared_at_index"] == index
+    assert claim["event_indices"] == [index]
+    assert claim["pathspecs"] == []
+assert not (root / "seals.jsonl").exists()
+print(f"P07B-C C2M preceding chain exact: events=7 claims=7 green=7 tree={tree} chain=valid seal=absent")
+`;
+	const expectedClaims = c2MaintenanceClaimLabels.slice(0, 7)
+		.map((label, index) => ({ label, type: c2MaintenanceClaimTypes[index] }));
+	const result = spawnSync(python, ["-c", program], {
+		cwd: repositoryRoot,
+		encoding: "utf8",
+		timeout: 30_000,
+		maxBuffer: 4 * 1024 * 1024,
+		env: {
+			HOME: process.env.HOME || "/",
+			PATH: "/usr/bin:/bin",
+			LANG: "C",
+			LC_ALL: "C",
+			NO_COLOR: "1",
+			GIT_CONFIG_NOSYSTEM: "1",
+			GIT_CONFIG_GLOBAL: "/dev/null",
+			GIT_NO_LAZY_FETCH: "1",
+			GIT_OPTIONAL_LOCKS: "0",
+			GIT_TERMINAL_PROMPT: "0",
+			COUNTERSHAPE_C2M_EXPECTED_ARGV: JSON.stringify(c2MaintenanceExpectedClaimArgv.slice(0, 7)),
+			COUNTERSHAPE_C2M_EXPECTED_CLAIMS: JSON.stringify(expectedClaims),
+		},
+	});
+	if (result.error || result.signal || result.status !== 0 || result.stderr !== "" ||
+		!/^P07B-C C2M preceding chain exact: events=7 claims=7 green=7 tree=[0-9a-f]{40,64} chain=valid seal=absent\n$/u.test(result.stdout)) {
+		throw new Error(`P07B-C C2M preceding-ledger verification failed (status=${result.status}, signal=${result.signal}, error=${result.error?.message ?? "none"}): ${result.stderr || result.stdout}`);
+	}
+	process.stdout.write(result.stdout);
 }
 
 async function verifyC2PresealLedger() {
@@ -4307,7 +4725,7 @@ print(f"P07B-C C2 preceding chain exact: events=13 claims=13 green=13 tree={tree
 
 async function main() {
 	const mode = process.argv[2];
-	const usage = "usage: check-p07b-c-plan.mjs [--self-test|--verify-sealed-c1-local-evidence|--verify-c1-local-evidence|--verify-c2-local-evidence|--verify-c2-preseal-ledger]";
+	const usage = "usage: check-p07b-c-plan.mjs [--self-test|--verify-sealed-c1-local-evidence|--verify-c1-local-evidence|--verify-c2-local-evidence|--verify-c2m-preseal-ledger|--verify-c2-preseal-ledger]";
 	if (mode === "--self-test") {
 		if (process.argv.length !== 3) throw new Error(usage);
 		await runSelfTest();
@@ -4359,6 +4777,11 @@ async function main() {
 			throw new Error(`P07B-C C2 local-evidence verification failed:\n${evidenceErrors.join("\n")}`);
 		}
 		console.log("P07B-C C2 local evidence passed: HTML plus the ignored sealed-source ledger snapshot match the closed C2 receipt declaration; this local snapshot is not portable strict authority");
+		return;
+	}
+	if (mode === "--verify-c2m-preseal-ledger") {
+		if (process.argv.length !== 3) throw new Error(usage);
+		await verifyC2MaintenancePresealLedger();
 		return;
 	}
 	if (mode === "--verify-c2-preseal-ledger") {

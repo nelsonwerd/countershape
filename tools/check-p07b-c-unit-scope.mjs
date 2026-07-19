@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 
 export const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const specificationPath = resolve(repositoryRoot, "spec/verification/p07b-c-unit-paths.json");
-const unitOrder = Object.freeze(["C0A", "C0B", "C1", "C1M", "C1V", "C1E", "C1B", "C2", "C2B", "C3", "C4", "C5", "C6A", "C6B"]);
+const unitOrder = Object.freeze(["C0A", "C0B", "C1", "C1M", "C1V", "C1E", "C1B", "C2", "C2M", "C2B", "C3", "C4", "C5", "C6A", "C6B"]);
 const verificationProfiles = new Set(["SOURCE_FULL", "RECEIPT_RECONCILIATION"]);
 const receiptClaimTypes = new Set(["tests-pass", "command-succeeded"]);
 const stagedInventoryArgs = Object.freeze([
@@ -51,7 +51,7 @@ export function validateSpecification(specification) {
 		JSON.stringify(Object.keys(specification).sort()) !== JSON.stringify(["schema_version", "units"])) {
 		fail("specification root roster");
 	}
-	if (specification.schema_version !== "countershape/p07b-c-unit-paths/v3") fail("specification version");
+	if (specification.schema_version !== "countershape/p07b-c-unit-paths/v4") fail("specification version");
 	if (!specification.units || typeof specification.units !== "object" || Array.isArray(specification.units) ||
 		JSON.stringify(Object.keys(specification.units)) !== JSON.stringify(unitOrder)) fail("unit roster/order");
 
@@ -241,9 +241,15 @@ async function requireExactStagedSource(specification, unit) {
 	return paths;
 }
 
+function exactSourceGateAdmitted(specification, unit) {
+	return unitOrder.includes(unit) &&
+		specification.units[unit]?.verification_profile === "SOURCE_FULL" &&
+		specification.units[unit].prefixes.length === 0;
+}
+
 async function runSourceFinalGate(specification, unit) {
-	if (unit !== "C2" || specification.units[unit]?.verification_profile !== "SOURCE_FULL") {
-		fail("source-final-gate is admitted only for C2 SOURCE_FULL");
+	if (!exactSourceGateAdmitted(specification, unit)) {
+		fail("source-final-gate is admitted only for a declared exact-roster SOURCE_FULL unit");
 	}
 	const paths = await requireExactStagedSource(specification, unit);
 	await gitOutput(["diff", "--no-ext-diff", "--no-textconv", "--ignore-submodules=none", "--cached", "--check", "--"]);
@@ -258,8 +264,8 @@ async function runSourceFinalGate(specification, unit) {
 }
 
 async function runCredentialScan(specification, unit) {
-	if (unit !== "C2" || specification.units[unit]?.verification_profile !== "SOURCE_FULL") {
-		fail("credential-scan is admitted only for C2 SOURCE_FULL");
+	if (!exactSourceGateAdmitted(specification, unit)) {
+		fail("credential-scan is admitted only for a declared exact-roster SOURCE_FULL unit");
 	}
 	const paths = await requireExactStagedSource(specification, unit);
 	const findings = credentialPatternFindings(await stagedBlobEntries(paths));
@@ -275,6 +281,8 @@ async function runSelfTest() {
 		unexpectedPaths(specification, "C4", ["internal/processmechanics/owner_darwin.go"]).length === 0,
 		unexpectedPaths(specification, "C4", ["internal/processmechanics_evil/owner_darwin.go"])[0] === "internal/processmechanics_evil/owner_darwin.go",
 		unexpectedPaths(specification, "C2", ["internal/store/nonhead_backdoor.go"])[0] === "internal/store/nonhead_backdoor.go",
+		unexpectedPaths(specification, "C2M", ["tools/check-p07b-c-plan.mjs"]).length === 0,
+		unexpectedPaths(specification, "C2M", ["internal/store/nonhead_contract.go"])[0] === "internal/store/nonhead_contract.go",
 		unexpectedPaths(specification, "C3", ["internal/contractexec/target_evil.go"])[0] === "internal/contractexec/target_evil.go",
 		unexpectedPaths(specification, "C1B", ["spec/verification/p07b-c-c1-receipt.json"]).length === 0,
 		unexpectedPaths(specification, "C1B", ["internal/store/nonhead_contract.go"])[0] === "internal/store/nonhead_contract.go",
@@ -296,6 +304,11 @@ async function runSelfTest() {
 		!exactPathsMatch(specification, "C1B", specification.units.C1B.exact.slice(1)),
 		exactPathsMatch(specification, "C2B", specification.units.C2B.exact),
 		!exactPathsMatch(specification, "C2B", specification.units.C2B.exact.slice(1)),
+		exactPathsMatch(specification, "C2M", specification.units.C2M.exact),
+		!exactPathsMatch(specification, "C2M", specification.units.C2M.exact.slice(1)),
+		exactSourceGateAdmitted(specification, "C2M"),
+		!exactSourceGateAdmitted(specification, "C3"),
+		!exactSourceGateAdmitted(specification, "C2B"),
 		unexpectedPaths(specification, "C0A", ["docs/SEMANTICS.md", "README.md"])[0] === "README.md",
 		JSON.stringify(stagedInventoryArgs) === JSON.stringify([
 			"diff", "--no-ext-diff", "--no-textconv", "--ignore-submodules=none", "--cached", "--name-only", "-z", "--no-renames", "--diff-filter=ACDMRTUXB", "--",
@@ -387,7 +400,7 @@ async function main() {
 	}
 	if (process.argv.length !== 5 || process.argv[2] !== "--unit" ||
 		!(["--staged", "--exact-staged", "--receipt-manifest", "--source-final-gate", "--credential-scan"].includes(process.argv[4]))) {
-		fail("usage: check-p07b-c-unit-scope.mjs --unit <C0A|C0B|C1|C1M|C1V|C1E|C1B|C2|C2B|C3|C4|C5|C6A|C6B> <--staged|--exact-staged|--receipt-manifest|--source-final-gate|--credential-scan> | --self-test");
+		fail("usage: check-p07b-c-unit-scope.mjs --unit <C0A|C0B|C1|C1M|C1V|C1E|C1B|C2|C2M|C2B|C3|C4|C5|C6A|C6B> <--staged|--exact-staged|--receipt-manifest|--source-final-gate|--credential-scan> | --self-test");
 	}
 	const specification = await loadSpecification();
 	if (process.argv[4] === "--source-final-gate") {
