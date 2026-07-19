@@ -131,3 +131,35 @@ These are live product findings, not proof of adversarial tamper resistance, pla
 - **Entropy behavior:** the plain seal stopped on four aggregate high-entropy findings despite an exact 28-path staged boundary and a named nine-pattern credential scan with zero findings. The logged `--allow-secrets` redacted-export seal then succeeded. This is neither a secret-absence result nor permission to publish the ledger.
 - **Receipt portability:** after strict succeeded, the exact C0a ledger moved to `.didrun-history/2026-07-18-p07b-c-c0a-source/.didrun/` before the fresh C0b ledger. Reproducing C0a strict still requires restoring that ledger, as S6-13 predicts. C0b's machine receipt instead binds the actual ancestor commit/tree and didrun Git-note claims; that is a durable reconciliation check, not a substitute for the local witness ledger.
 - **Live-session verdict:** under the frozen-tree, one-writer, immediate-claim, note-check, and strict-loop discipline, didrun again produced useful exact-tree attribution. Progressive output, actionable entropy locality, self-contained strict verification, concurrent append safety, and fail-closed note publication remain unresolved production-hardening work.
+
+<!-- P07B-C-C1-DIDRUN-LIVE:START -->
+## P07B-C C1 live-session evidence
+
+C1 source commit `2fceacecbacb89fd7650f1570b2af33e6ea25ed3`, tree `573fcd0b5548f9f7368493afe801a4bbd2cc9a34`, is sealed, note-present, and strict-clean with `19/19 claims recorded-exact`.
+
+The C1 seal records `secrets_override: true` after 346 local scanner findings, all kind `high-entropy`; this is not evidence of secret absence.
+
+The separately claimed structured staged credential scan reported `0` findings; its provenance is sealed supporting event `16`, not the Git note alone.
+
+Local ignored ledger archive `.didrun-history/2026-07-18-p07b-c-c1-source/.didrun/` contains `19` sealed events and `20` archived session events; event 20 is post-seal note reconciliation and is outside the sealed manifest.
+
+Ledger manifests use `sorted-relative-posix-path-tab-size-tab-sha256-newline/v1`; all-files SHA-256 is `be365f510e8e824090529a5f710b557506f3ea795f8835818dfbe5c68066ca38` and objects-only SHA-256 is `b72ea691de9acfd1de11bc7e1203a120222dd7b5079fdba6ae2331af336f989b`.
+
+Archive core SHA-256 values are session `2df996d7da7821ad7bb11b46a4186473293ea5cab1d5fd5899ec8e7dc16f4752`, claims `a4ce64dc38932d98e32851e77e8f5f52ef6e417a581f536cf66ccbd34bcfcc49`, seals `742fc31388da2d489423f8a63b7d86653398087a55426592305b1acd343224ca`, and .gitignore `cdbcae15105d6b781e620813c79c7e868740d4e9cc53ce6f5fcbbc12387adf4b`.
+
+The local HTML snapshot is `.countershape/evidence/p07b-c-c1-final-2fceacecbacb.html`, SHA-256 `52e09b237d2afc9f4844ceef7e171d218dee2d05fb1ed3f0b22e1e41f1f8f51d`, 10394 bytes; it is not a portable strict witness.
+
+The C1 Git note blob is `5d990e07d9ad6960de298bdc232818aac838700e` with body SHA-256 `c7f32d8e3ecb0f788c29c205215f9335b499e7ed50a74536fb7b06fcf8a3f9ea`.
+
+Live S6 behavior: didrun preserved failed development receipts, chained every wrapper event, buffered the long cumulative verifier without intermediate stdout, required an explicit seal override for high-entropy-only findings, wrote the Git note, and then reported 19/19 claims recorded-exact at strict exit 0.
+
+This section binds only the already-sealed C1 source. C1B remains ungraded in its own tracked files.
+<!-- P07B-C-C1-DIDRUN-LIVE:END -->
+
+## S6-15 — C1V verifier maintenance exercises real throughput and failure-history boundaries
+
+- **Observed clean behavior:** C1V commit `88e62acb3023dcd6ee51950c2ad24bbcc2ca8900`, tree `6c98b3c384f01b63d1a00a002303041576896609`, completed the exact 52-case focused qualification matrix plus three complete cumulative verifier passes at `814384`, `815886`, and `813933` milliseconds. Every run stayed below the fixed `878544` millisecond acceptance ceiling. The sealed manifest covers 61 completely observed wrapper events, not 61 passing events: event `59` is the admitted unclaimed failure below, while corrected event `60` is the successful final audit. The commit sealed with `10/10 claims recorded-exact`; all ten verbatim grades are `TREE-EXACT`, its Git note was checked independently, and strict exited `0`. Archived event `61` is the post-seal note audit and lies outside the 61-event sealed manifest.
+- **Permanent negative history:** the rejected `-p=4` development candidate retained two late architecture-timeout events. Final attempt 1 retained the aggregate physical-test child timeout. The accepted final ledger also retains event `59`, an unclaimed operator audit-harness failure caused by comparing didrun's tuple `argv` representation to a list. Corrected event `60` explicitly verifies events `0`–`58`, admits event `59` as the one known unclaimed harness failure, and rechecks the exact case order and intact chain. No capability or claim binds event `59`.
+- **Throughput result:** the accepted `-p=2` direct general tier is a local Darwin result, not a portable performance guarantee. The six frozen sensitive packages are package-job-serialized at `-p=1` while retaining `GOMAXPROCS=2` and `-parallel=2`; nested Go work remains at `-p=1`. The persistent Go cache proposal was declined because this cgo tree lacks a complete C/SDK cache authority. A fail-fast verifier lock prevents the overlapping runs that had inflated wall time and load sensitivity.
+- **Entropy continuation:** the plain C1V seal stopped on one aggregate high-entropy finding after the exact 11-path boundary and nine-pattern structured staged scan reported `0` named-pattern findings. The logged redacted-export override then sealed successfully, so the Git note records `secrets_override: true`. This is not evidence of secret absence or permission to publish the local ledger.
+- **Live-session verdict:** didrun preserved the negative receipts and produced useful exact-tree attribution under one-writer serialization, but the agent still had to poll long silent wrappers, inspect an immutable stderr blob to diagnose event `59`, classify an aggregate entropy stop externally, and check the Git note separately. Those are live S6 findings, not merely hypothetical tool critiques.

@@ -1,0 +1,168 @@
+{
+  "schema_version": "countershape/p07b-c-c1-receipt/v1",
+  "source_commit": "2fceacecbacb89fd7650f1570b2af33e6ea25ed3",
+  "source_tree": "573fcd0b5548f9f7368493afe801a4bbd2cc9a34",
+  "source_subject": "feat: define P07B-C execution semantics",
+  "strict_exit_code": 0,
+  "strict_claims_recorded_exact": 19,
+  "strict_claims_total": 19,
+  "coverage_total_events": 19,
+  "coverage_complete_events": 19,
+  "secrets_override": true,
+  "claims": [
+    {
+      "label": "P07B C1 inert semantic model",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT",
+      "supporting_event_index": 0
+    },
+    {
+      "label": "P07B C1 exhaustive algebra",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT",
+      "supporting_event_index": 1
+    },
+    {
+      "label": "P07B C1 schema runtime example intersection",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT",
+      "supporting_event_index": 2
+    },
+    {
+      "label": "P07B C1 target parser bounded fuzz",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT",
+      "supporting_event_index": 3
+    },
+    {
+      "label": "P07B C1 finalized-run parser bounded fuzz",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT",
+      "supporting_event_index": 4
+    },
+    {
+      "label": "P07B C1 execution parser bounded fuzz",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT",
+      "supporting_event_index": 5
+    },
+    {
+      "label": "P07B C1 architecture boundary",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT",
+      "supporting_event_index": 6
+    },
+    {
+      "label": "P07B C1 architecture checker self-test",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT",
+      "supporting_event_index": 7
+    },
+    {
+      "label": "P07B C1 predecessor architecture compatibility",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT",
+      "supporting_event_index": 8
+    },
+    {
+      "label": "P07B C1 predecessor architecture self-test",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT",
+      "supporting_event_index": 9
+    },
+    {
+      "label": "P07B C1 planning generator parity",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT",
+      "supporting_event_index": 10
+    },
+    {
+      "label": "P07B C1 planning validator compatibility",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT",
+      "supporting_event_index": 11
+    },
+    {
+      "label": "P07B C1 evolved plan coherence",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT",
+      "supporting_event_index": 12
+    },
+    {
+      "label": "P07B C1 plan checker self-test",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT",
+      "supporting_event_index": 13
+    },
+    {
+      "label": "P07B C1 cumulative verifier self-test",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT",
+      "supporting_event_index": 14
+    },
+    {
+      "label": "P07B C1 exact staged scope and diff",
+      "type": "command-succeeded",
+      "grade": "TREE-EXACT",
+      "supporting_event_index": 15
+    },
+    {
+      "label": "P07B C1 scoped staged credential scan",
+      "type": "command-succeeded",
+      "grade": "TREE-EXACT",
+      "supporting_event_index": 16
+    },
+    {
+      "label": "P07B C1 cumulative verification",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT",
+      "supporting_event_index": 17
+    },
+    {
+      "label": "P07B C1 didrun chain intact",
+      "type": "command-succeeded",
+      "grade": "TREE-EXACT",
+      "supporting_event_index": 18
+    }
+  ],
+  "evidence": {
+    "html_report": {
+      "path": ".countershape/evidence/p07b-c-c1-final-2fceacecbacb.html",
+      "sha256": "52e09b237d2afc9f4844ceef7e171d218dee2d05fb1ed3f0b22e1e41f1f8f51d",
+      "bytes": 10394,
+      "authority": "LOCAL_SNAPSHOT_NOT_PORTABLE_STRICT_WITNESS"
+    },
+    "ledger_archive": {
+      "path": ".didrun-history/2026-07-18-p07b-c-c1-source/.didrun/",
+      "authority": "LOCAL_IGNORED_ARCHIVE_NOT_GIT_AUTHORITY",
+      "manifest_format": "sorted-relative-posix-path-tab-size-tab-sha256-newline/v1",
+      "sealed_event_count": 19,
+      "archive_session_event_count": 20,
+      "claim_count": 19,
+      "seal_count": 1,
+      "object_file_count": 77,
+      "total_file_count": 81,
+      "total_bytes": 478508,
+      "all_files_manifest_sha256": "be365f510e8e824090529a5f710b557506f3ea795f8835818dfbe5c68066ca38",
+      "objects_manifest_sha256": "b72ea691de9acfd1de11bc7e1203a120222dd7b5079fdba6ae2331af336f989b",
+      "gitignore_sha256": "cdbcae15105d6b781e620813c79c7e868740d4e9cc53ce6f5fcbbc12387adf4b",
+      "session_log_sha256": "2df996d7da7821ad7bb11b46a4186473293ea5cab1d5fd5899ec8e7dc16f4752",
+      "claims_jsonl_sha256": "a4ce64dc38932d98e32851e77e8f5f52ef6e417a581f536cf66ccbd34bcfcc49",
+      "seals_jsonl_sha256": "742fc31388da2d489423f8a63b7d86653398087a55426592305b1acd343224ca"
+    },
+    "git_note": {
+      "version": 1,
+      "blob_oid": "5d990e07d9ad6960de298bdc232818aac838700e",
+      "body_sha256": "c7f32d8e3ecb0f788c29c205215f9335b499e7ed50a74536fb7b06fcf8a3f9ea"
+    },
+    "seal_redaction": {
+      "finding_count": 346,
+      "finding_kinds": [
+        "high-entropy"
+      ],
+      "finding_provenance": "LOCAL_TERMINAL_OBSERVATION_NOT_GIT_NOTE",
+      "structured_staged_scan_findings": 0,
+      "structured_scan_provenance": "SEALED_C1_SUPPORTING_EVENT_16"
+    }
+  }
+}

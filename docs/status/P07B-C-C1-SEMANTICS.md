@@ -1,6 +1,6 @@
 # P07B-C C1 inert-semantics status
 
-**Source state:** sealed C1 source commit `2fceacecbacb89fd7650f1570b2af33e6ea25ed3`, tree `573fcd0b5548f9f7368493afe801a4bbd2cc9a34`, is note-present and strict-clean with `19/19` claims. Tracked C1 receipt reconciliation is pending; every C1 capability below remains `UNRECEIPTED` until the separately sealed C1B receipt boundary binds the source note, status, and handoff without grading itself.
+**Source receipt:** C1 source commit `2fceacecbacb89fd7650f1570b2af33e6ea25ed3`, tree `573fcd0b5548f9f7368493afe801a4bbd2cc9a34`, is sealed, note-present, and strict-clean; every source grade below is `TREE-EXACT`. This C1B receipt-document working unit binds only that existing source and remains `UNRECEIPTED` until its own commit, seal, note, and strict boundary.
 
 **Immediate sealed predecessor to the C1 source:** cumulative output-cap maintenance source `fa3d0c12b4c599744b666b2848e38a2499f33a89`, tree `c908c4e580144aa481f646090a1a21d92c86e1cf`, is note-present and strict-clean with `8/8 TREE-EXACT`; its receipt reconciliation `3f31370a70979c4c5fe3a523be19e05f84271e96`, tree `29c5708b05c562984a0b7b66d6cfe3ac6e19c626`, is note-present and strict-clean with `6/6 TREE-EXACT`. The source changes only one Darwin test stimulus, its fixture, and its status file; the receipt changes only that status file. Neither changes runtime control or a C1 semantic path.
 
@@ -61,29 +61,44 @@ The different-model critic changed the source boundary rather than rubber-stampi
 
 Every critic report and development pass is `UNRECEIPTED` unless it becomes the exact event immediately supporting a declared claim in the final C1 ledger.
 
-## Intended C1 receipt map
+## C1 source receipt map
 
-| Intended capability | Exact claim label | Source grade |
-| --- | --- | --- |
-| Strict inert target/run/execution model | `P07B C1 inert semantic model` | `UNRECEIPTED` |
-| Exhaustive closed-run/classification algebra | `P07B C1 exhaustive algebra` | `UNRECEIPTED` |
-| Checked schema/runtime/example intersection and overapproximation refusals | `P07B C1 schema runtime example intersection` | `UNRECEIPTED` |
-| Target parser bounded fuzz | `P07B C1 target parser bounded fuzz` | `UNRECEIPTED` |
-| Finalized-run parser bounded fuzz | `P07B C1 finalized-run parser bounded fuzz` | `UNRECEIPTED` |
-| Execution parser bounded fuzz | `P07B C1 execution parser bounded fuzz` | `UNRECEIPTED` |
-| Exact production package/dependency/importer boundary | `P07B C1 architecture boundary` | `UNRECEIPTED` |
-| Architecture checker defensive self-test | `P07B C1 architecture checker self-test` | `UNRECEIPTED` |
-| Preserved P07B-B invariants plus exact C1 compatibility | `P07B C1 predecessor architecture compatibility` | `UNRECEIPTED` |
-| Inherited B checker defensive self-test | `P07B C1 predecessor architecture self-test` | `UNRECEIPTED` |
-| Go-authoritative checked-example generator | `P07B C1 planning generator parity` | `UNRECEIPTED` |
-| Planning-validator compatibility and defensive mutations | `P07B C1 planning validator compatibility` | `UNRECEIPTED` |
-| Durable C0 authority plus exact C1 projection coherence | `P07B C1 evolved plan coherence` | `UNRECEIPTED` |
-| Evolved plan-checker defensive self-test | `P07B C1 plan checker self-test` | `UNRECEIPTED` |
-| Cumulative-verifier orchestration self-test | `P07B C1 cumulative verifier self-test` | `UNRECEIPTED` |
-| Exact staged C1 path and diff boundary | `P07B C1 exact staged scope and diff` | `UNRECEIPTED` |
-| Scoped staged credential-pattern scan | `P07B C1 scoped staged credential scan` | `UNRECEIPTED` |
-| Serial-Go cumulative repository verification | `P07B C1 cumulative verification` | `UNRECEIPTED` |
-| Serialized didrun ledger chain | `P07B C1 didrun chain intact` | `UNRECEIPTED` |
+- C1 source strict exit: `0`
+- C1 source strict claims: `19/19 claims recorded-exact`
+
+This receipt binds only the already-existing C1 source commit. C1B cannot name or grade its own commit, tree, Git note, or strict result.
+
+| Receipted capability | Exact claim label | Claim type | Verbatim source grade |
+| --- | --- | --- | --- |
+| Strict inert target/run/execution model | `P07B C1 inert semantic model` | `tests-pass` | `TREE-EXACT` |
+| Exhaustive closed-run/classification algebra | `P07B C1 exhaustive algebra` | `tests-pass` | `TREE-EXACT` |
+| Checked schema/runtime/example intersection and overapproximation refusals | `P07B C1 schema runtime example intersection` | `tests-pass` | `TREE-EXACT` |
+| Target parser bounded fuzz | `P07B C1 target parser bounded fuzz` | `tests-pass` | `TREE-EXACT` |
+| Finalized-run parser bounded fuzz | `P07B C1 finalized-run parser bounded fuzz` | `tests-pass` | `TREE-EXACT` |
+| Execution parser bounded fuzz | `P07B C1 execution parser bounded fuzz` | `tests-pass` | `TREE-EXACT` |
+| Exact production package/dependency/importer boundary | `P07B C1 architecture boundary` | `tests-pass` | `TREE-EXACT` |
+| Architecture checker defensive self-test | `P07B C1 architecture checker self-test` | `tests-pass` | `TREE-EXACT` |
+| Preserved P07B-B invariants plus exact C1 compatibility | `P07B C1 predecessor architecture compatibility` | `tests-pass` | `TREE-EXACT` |
+| Inherited B checker defensive self-test | `P07B C1 predecessor architecture self-test` | `tests-pass` | `TREE-EXACT` |
+| Go-authoritative checked-example generator | `P07B C1 planning generator parity` | `tests-pass` | `TREE-EXACT` |
+| Planning-validator compatibility and defensive mutations | `P07B C1 planning validator compatibility` | `tests-pass` | `TREE-EXACT` |
+| Durable C0 authority plus exact C1 projection coherence | `P07B C1 evolved plan coherence` | `tests-pass` | `TREE-EXACT` |
+| Evolved plan-checker defensive self-test | `P07B C1 plan checker self-test` | `tests-pass` | `TREE-EXACT` |
+| Cumulative-verifier orchestration self-test | `P07B C1 cumulative verifier self-test` | `tests-pass` | `TREE-EXACT` |
+| Exact staged C1 path and diff boundary | `P07B C1 exact staged scope and diff` | `command-succeeded` | `TREE-EXACT` |
+| Scoped staged credential-pattern scan | `P07B C1 scoped staged credential scan` | `command-succeeded` | `TREE-EXACT` |
+| Serial-Go cumulative repository verification | `P07B C1 cumulative verification` | `tests-pass` | `TREE-EXACT` |
+| Serialized didrun ledger chain | `P07B C1 didrun chain intact` | `command-succeeded` | `TREE-EXACT` |
+
+The C1 seal records `secrets_override: true` after 346 local scanner findings, all kind `high-entropy`; this is not evidence of secret absence.
+
+The separately claimed structured staged credential scan reported `0` findings; its provenance is sealed supporting event `16`, not the Git note alone.
+
+Local ignored ledger archive `.didrun-history/2026-07-18-p07b-c-c1-source/.didrun/` contains `19` sealed events and `20` archived session events; event 20 is post-seal note reconciliation and is outside the sealed manifest.
+
+Ledger manifests use `sorted-relative-posix-path-tab-size-tab-sha256-newline/v1`; all-files SHA-256 is `be365f510e8e824090529a5f710b557506f3ea795f8835818dfbe5c68066ca38` and objects-only SHA-256 is `b72ea691de9acfd1de11bc7e1203a120222dd7b5079fdba6ae2331af336f989b`.
+
+The local HTML snapshot is `.countershape/evidence/p07b-c-c1-final-2fceacecbacb.html`, SHA-256 `52e09b237d2afc9f4844ceef7e171d218dee2d05fb1ed3f0b22e1e41f1f8f51d`, 10394 bytes; it is not a portable strict witness.
 
 ## Explicit nonclaims
 
@@ -93,4 +108,6 @@ Linux, Windows, other Node/platform tuples, host-wide absence, network/registry 
 
 ## Gate before C2
 
-Archive the C1 development ledger intact. From a fresh ledger, run and immediately claim every final row above. The model-suite and exhaustive events must pipe `go test -json` through `--assert-go-json model-suite` and `--assert-go-json exhaustive-algebra`. Each fuzz event must use its exact parser profile, `-parallel=1`, and `-fuzztime=10000x`. The schema/runtime claim attaches to a full cross-language planning-validator self-test; planning-validator compatibility attaches to a separate rerun, never a second claim on the first event. Stage exactly 43 individually named paths, require the sorted newline roster digest `sha256:6755b26a51dc71c4565fb1c600ba6282e63f44bff3521cecc1c8ba463c2882fe`, and keep `prefixes` empty. The chain event validates the preceding 18 wrapper events; its immediately attached claim is the nineteenth and is closed only by the later seal/note/strict gate. Commit `feat: define P07B-C execution semantics`, seal the commit, require its didrun Git note, and loop `NO_COLOR=1 didrun verify --strict` until exit `0`. A nonzero strict gate leaves C1 unfinished and cannot be repaired by deleting, weakening, or relabeling a test or claim.
+The C1 source boundary is closed: its development history is archived, its exact 19-event sealed source manifest is note-present, and strict verification exited `0`. C1B is the active four-path data-only `RECEIPT_RECONCILIATION` working unit and remains `UNRECEIPTED`. It may run only its seven machine-declared receipt-profile claims: source receipt reconciliation, defensive checker self-test, declared local evidence match, receipt-only Go build, exact four-path staged scope/diff integrity, scoped named-pattern scan, and preceding-chain integrity. It cannot claim the cumulative suite, runtime behavior, security, or unchanged behavior.
+
+C2 remains blocked until C1B independently commits those four paths, seals the exact commit, proves its didrun Git note exists, and loops `NO_COLOR=1 didrun verify --strict` to exit `0`. A nonzero gate leaves C1B unfinished and cannot be opened by deleting, weakening, or relabeling a test or claim.

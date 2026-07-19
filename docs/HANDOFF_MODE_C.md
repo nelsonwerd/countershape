@@ -12,12 +12,26 @@
 
 ## Current state
 
-- **Pipeline phase:** U0–U6, P07A/U6b, every P07B-A/B boundary, both P07B-C C0 boundaries, C1 inert semantic source, C1M, and C1V are sealed and strict-clean. C1E local-evidence checker maintenance is the active `SOURCE_FULL` unit. C1B's exact four-path work is preserved in named stash object `1d2c14f160ff42d509d96219512fa413830a9b1d`, remains `UNRECEIPTED`, and will be applied without dropping only after C1E closes. C2 remains blocked.
-- **Git:** repository is on `codex/countershape-autopilot` at sealed C1V commit `88e62acb3023dcd6ee51950c2ad24bbcc2ca8900`, tree `6c98b3c384f01b63d1a00a002303041576896609`, with `10/10 claims recorded-exact`, every grade `TREE-EXACT`, a present didrun note, and strict exit `0`. Its exact HTML is `.countershape/evidence/p07b-c-c1v-final-88e62acb3023.html`, SHA-256 `8a4f0dbe063ad95ef5a7a1c06a5d05e5f09b0c5a76c28a60e463987f122bbc5e`. The current dirty tree is limited to C1E's exact seven paths and digest `sha256:9a6422b45c82a44e6171ae9351468df5f6ece2190d6ab47f26aec6f84fd7ccde`.
-- **didrun:** installed globally and unchanged. C1V development history remains at `.didrun-history/2026-07-18-p07b-c-c1v-build-loop/.didrun/`; its failed aggregate attempt and successful repair remain at `.didrun-history/2026-07-18-p07b-c-c1v-final-attempt-1-physical-aggregate-timeout/.didrun/` and `.didrun-history/2026-07-18-p07b-c-c1v-physical-shard-repair/.didrun/`; its final ledger is `.didrun-history/2026-07-18-p07b-c-c1v-final/.didrun/`. The sealed manifest covers 61 completely observed events, not 61 passes: event `59` is a permanent unclaimed operator-harness failure, corrected event `60` accounts for it, and archived event `61` is a post-seal note audit outside the manifest. The plain seal stopped on one aggregate high-entropy finding; event `58` reported zero findings across 11 paths and nine named patterns, and the note records `secrets_override: true`. This is neither secret absence nor publication authority. The failed zero-claim C1B development ledger is preserved at `.didrun-history/2026-07-18-p07b-c-c1b-development-local-evidence-namespace-defect/.didrun/`. C1E's 21-event, zero-claim, zero-seal build-loop ledger is archived at `.didrun-history/2026-07-18-p07b-c-c1e-build-loop/.didrun/`; permanent nonzero events `0`, `9`, `10`, and `11` remain development history. The C1E qualifying ledger is a distinct zero-origin frozen-tree ledger, never a relabeling of those events.
-- **Current baseline:** `/opt/homebrew/bin/node tools/verify-current.mjs` retains C1V's accepted local `-p=2` direct general tier, package-job-serialized six-package sensitive tier at `-p=1` with `GOMAXPROCS=2`/`-parallel=2`, serial nested Go work, fresh per-run Go cache, exact partition closure, and fail-fast O_EXCL lock. Its 52 named C1V qualification cases are bound by `sha256:bf5803a752ffe6c2833e7869086ec6a4919e15c5e49e8cd012a5c8c16879fc37`; the three qualifying cumulative passes all stayed below `878544` milliseconds. C1E changes only local-evidence checker authority. Read `docs/VERIFICATION.md`; a direct pass is not a didrun grade.
+- **Pipeline phase:** U0–U6, P07A/U6b, every P07B-A/B boundary, both P07B-C C0 boundaries, C1 inert semantic source, C1M, C1V, and C1E are sealed and strict-clean. C1B is now the active exact four-path data-only `RECEIPT_RECONCILIATION` working unit and remains `UNRECEIPTED`. C2 remains blocked until C1B independently commits, seals, proves its Git note, and verifies strictly.
+- **Git:** repository is on `codex/countershape-autopilot` at sealed C1E commit `34574fad4817373ba253d08822649383aea15bb9`, tree `c7db2cdc51858a4cad73ae4d157ee0e145a3cb74`, with `8/8 claims recorded-exact`, every grade `TREE-EXACT`, a present didrun note, and strict exit `0`. Its exact HTML is `.countershape/evidence/p07b-c-c1e-final-34574fad4817.html`, SHA-256 `df5b34b5896c209e82866fbfbc083f3a28502f02e713cdac4a718ddbf535c97d`, 7326 bytes. The current working tree is limited to C1B's exact four-path roster; stash object `1d2c14f160ff42d509d96219512fa413830a9b1d` remains retained.
+- **didrun:** installed globally and unchanged. C1V development/final history remains at `.didrun-history/2026-07-18-p07b-c-c1v-build-loop/.didrun/`, `.didrun-history/2026-07-18-p07b-c-c1v-final-attempt-1-physical-aggregate-timeout/.didrun/`, `.didrun-history/2026-07-18-p07b-c-c1v-physical-shard-repair/.didrun/`, and `.didrun-history/2026-07-18-p07b-c-c1v-final/.didrun/`; event `59` is its permanent unclaimed audit-harness failure, event `60` accounts for it, and event `61` is outside its seal. C1E's 21-event zero-claim build-loop ledger is archived at `.didrun-history/2026-07-18-p07b-c-c1e-build-loop/.didrun/` with permanent nonzero events `0`, `9`, `10`, and `11`; its final ledger is `.didrun-history/2026-07-18-p07b-c-c1e-final/.didrun/`, whose seal covers eight successful events and whose event `8` is the post-seal note audit. The C1E plain seal stopped on five aggregate high-entropy findings; final event `6` reported zero matches across seven paths and nine named patterns, and the note records `secrets_override: true`. This establishes neither secret absence, security review, nor publication authority. The earlier four-event zero-claim C1B defect ledger remains at `.didrun-history/2026-07-18-p07b-c-c1b-development-local-evidence-namespace-defect/.didrun/`; its nonzero events are `0` and `3`. The later eight-event, zero-claim C1B pre-freeze ledger is preserved at `.didrun-history/2026-07-18-p07b-c-c1b-build-loop-pre-freeze/.didrun/`; all eight events succeeded, its final event audits the preceding seven-event chain, and it has no seal. Every later pre-freeze correction ledger is likewise unclaimed admission evidence only and must be archived before the final C1B ledger starts at event zero.
+- **Current baseline:** from a fresh repository-root shell, run `/opt/homebrew/bin/node tools/verify-current.mjs`. The sealed C1V verifier keeps a fresh per-run Go cache because Go's build-cache key does not completely admit this tree's cgo C/SDK authority. Direct build/vet and the exact general package complement use `-p=2`; six whole timing/process-sensitive packages are package-job-serialized at `-p=1` while retaining `GOMAXPROCS=2` and `-parallel=2`, and nested Go work remains at `-p=1`. Exact package-union guards and the fail-fast O_EXCL lock remain active. The three C1V qualifying passes completed at `814384`, `815886`, and `813933` milliseconds; C1E's complete cumulative event `4` passed in `814372.145` milliseconds. Its 52 named C1V qualification cases remain bound by `sha256:bf5803a752ffe6c2833e7869086ec6a4919e15c5e49e8cd012a5c8c16879fc37`, and `878544` milliseconds is the historical local ceiling, not a portable performance guarantee. Read `docs/VERIFICATION.md`; a direct pass is not a didrun grade.
 - **Build:** A2.2's accepted compiler and sealed P07B-B terminal publication/materialization remain unchanged. C1 now implements strict inert target/run/execution construction, canonical parsing, derived classification, checked schema/example projection, exhaustive algebra, and parser properties in `internal/contractexec/model`. The cumulative rehearsal correctly exposed B's former phase-specific total-absence C check; the current repair preserves every B invariant, admits C names only inside the exact inert model prefix after the complete C1 gate passes, and keeps every foreign C surface forbidden. A later rehearsal exposed a pre-existing scheduler-sensitive Darwin test: the stdout-first fixture could be terminated on overflow before its later stderr write, while the assertion required that write. The separately sealed maintenance unit made the sibling write causally prior without changing runtime control or weakening assertions. C1's staged scope itself is stricter: 43 individually named paths, no prefix allowance, exact nine-production/five-test topology, exact test imports, and 22 pinned top-level test/fuzz symbols. The forty-third path is the maintenance status C1 must reconcile; keeping it outside C1 would leave the live authority one receipt phase behind. Targeted receipts require positive Go-JSON run/pass evidence. C1 implements no store, official target, Git/runtime admission, interlock/start admission, physical finalized run, publication, product CLI, server, dashboard, or report. Runtime facts are checkpointed path/content identity only; start-error physical evidence and chronology remain C4 work.
 - **External APIs:** none used in the product. The A2.2 UX pass used a different internal model over sanitized captures; its qualitative verdict is `UNRECEIPTED` and has no semantic authority. Any real external model/API integration remains human-gated and must never be faked.
+
+### Historical pre-seal C1V snapshot — not current
+
+The phase checker still treats the following pre-seal runbook sentences as a compatibility contract. They are retained verbatim only as historical evidence and must not be interpreted as live instructions or current state:
+
+> C1V verifier-throughput maintenance is the active `SOURCE_FULL` unit. The current dirty tree is limited to the C1V eleven-path allowlist. The live `.didrun/` is now the unclaimed physical-shard-repair development ledger. From this freeze onward, any tracked edit invalidates the entire qualifying matrix. Its matrix digest was `sha256:bf5803a752ffe6c2833e7869086ec6a4919e15c5e49e8cd012a5c8c16879fc37`; every one of the 52 named executions was required, and every pass must finish in at most `878544 ms`. The pre-archive scope check is admission evidence only and cannot support a final-tree claim.
+
+The corresponding historical orientation described the bounded unit as “P07B-C C1V verifier throughput and receipt-profile maintenance only.” That phrase is likewise retained for checker compatibility, not as a live phase declaration.
+
+### Historical pre-seal C1E snapshot — not current
+
+The phase checker likewise retains the following pre-seal compatibility statement. It is historical evidence only; C1E is now sealed and C1B is the live unit:
+
+> C1E local-evidence checker maintenance is the active `SOURCE_FULL` unit. C1B's exact four-path work is preserved with sorted-newline roster digest `sha256:f8d1fb96d36f7e0cfde99bb73c7726297763c66bafd21aeb5c1fb1e249bdd119`; its recorded handoff SHA-256 is `4bf73e5a34bef6cf72b491d654f423cfa317ae84e3ee66852ccb9cbf1790a5dc`, and its untracked receipt was preserved at `1d2c14f160ff42d509d96219512fa413830a9b1d^3:spec/verification/p07b-c-c1-receipt.json`. C1E's exact seven-path roster digest is `sha256:9a6422b45c82a44e6171ae9351468df5f6ece2190d6ab47f26aec6f84fd7ccde`; its development evidence remains at `.didrun-history/2026-07-18-p07b-c-c1e-build-loop/.didrun/`.
 
 <!-- P07B-C-C0A-RECEIPTS:START -->
 ### P07B-C C0a receipt map
@@ -102,9 +116,75 @@ C1V strict claims: `10/10 claims recorded-exact`; strict exit: `0`; seal disclos
 | `P07B-C C1V preceding didrun chain integrity with one unclaimed audit-harness failure` | `command-succeeded` | `TREE-EXACT` |
 | `P07B-C C1V unchanged frozen qualification tree` | `command-succeeded` | `TREE-EXACT` |
 
-Event `59` is the one permanent unclaimed failure; corrected event `60` supports the aggregate and chain claims. Event `61` is outside the sealed manifest. The named-pattern scan reported zero findings, but it and the override establish neither secret absence nor security review.
+The 61-event sealed manifest contains 60 successful wrapper events and one permanent unclaimed operator-harness failure at event `59`; corrected event `60` explicitly accounts for it. Archived event `61` is the post-seal note audit outside that manifest. The structured staged scan reported `0` findings across nine named patterns, but neither it nor the redacted-export override establishes secret absence, security review, or publication authority.
 <!-- P07B-C-C1V-RECEIPTS:END -->
 
+<!-- P07B-C-C1E-RECEIPTS:START -->
+### P07B-C C1E local-evidence checker maintenance receipt map
+
+C1E commit `34574fad4817373ba253d08822649383aea15bb9`, tree `c7db2cdc51858a4cad73ae4d157ee0e145a3cb74`.
+C1E strict claims: `8/8 claims recorded-exact`; strict exit: `0`; seal disclosure: `secrets_override: true` after five aggregate high-entropy findings.
+
+| Claim label | Claim type | Verbatim grade |
+| --- | --- | --- |
+| `P07B-C C1E checker syntax and evolved plan coherence` | `tests-pass` | `TREE-EXACT` |
+| `P07B-C C1E mixed-namespace local-evidence checker self-test` | `tests-pass` | `TREE-EXACT` |
+| `P07B-C C1E sealed-C1 local archive object-namespace match` | `tests-pass` | `TREE-EXACT` |
+| `P07B-C C1E unit-scope defensive self-test` | `tests-pass` | `TREE-EXACT` |
+| `P07B-C C1E cumulative verification` | `tests-pass` | `TREE-EXACT` |
+| `P07B-C C1E exact seven-path staged scope and diff integrity` | `command-succeeded` | `TREE-EXACT` |
+| `P07B-C C1E scoped staged credential-pattern scan` | `command-succeeded` | `TREE-EXACT` |
+| `P07B-C C1E preceding didrun chain integrity` | `command-succeeded` | `TREE-EXACT` |
+
+The sealed manifest covers eight successful events. Archived event `8` is the post-seal note audit outside that manifest. The scoped staged scan reported `0` findings across seven paths and nine named patterns, but neither that scan nor the override establishes secret absence, security review, or publication authority.
+
+C1E's zero-claim development ledger contains 21 events and preserves permanent nonzero events `0`, `9`, `10`, and `11`. Its final HTML snapshot is `.countershape/evidence/p07b-c-c1e-final-34574fad4817.html`, SHA-256 `df5b34b5896c209e82866fbfbc083f3a28502f02e713cdac4a718ddbf535c97d`, 7326 bytes. Its Git note blob is `f18765e2655aaa93611b7fba122afc676cd50c66` with body SHA-256 `1a3f7f9b2e576912dea158fd70d78969da53a90dc58aacf28bb5922e7022a2f7`.
+<!-- P07B-C-C1E-RECEIPTS:END -->
+
+<!-- P07B-C-C1-SOURCE-RECEIPTS:START -->
+### P07B-C C1 source receipt map
+
+C1 source commit `2fceacecbacb89fd7650f1570b2af33e6ea25ed3`, tree `573fcd0b5548f9f7368493afe801a4bbd2cc9a34`.
+C1 strict claims: `19/19 claims recorded-exact`; strict exit: `0`.
+
+C1 source commit `2fceacecbacb89fd7650f1570b2af33e6ea25ed3`, tree `573fcd0b5548f9f7368493afe801a4bbd2cc9a34`, is sealed, note-present, and strict-clean with `19/19 claims recorded-exact`.
+
+The C1 seal records `secrets_override: true` after 346 local scanner findings, all kind `high-entropy`; this is not evidence of secret absence.
+
+The separately claimed structured staged credential scan reported `0` findings; its provenance is sealed supporting event `16`, not the Git note alone.
+
+Local ignored ledger archive `.didrun-history/2026-07-18-p07b-c-c1-source/.didrun/` contains `19` sealed events and `20` archived session events; event 20 is post-seal note reconciliation and is outside the sealed manifest.
+
+Ledger manifests use `sorted-relative-posix-path-tab-size-tab-sha256-newline/v1`; all-files SHA-256 is `be365f510e8e824090529a5f710b557506f3ea795f8835818dfbe5c68066ca38` and objects-only SHA-256 is `b72ea691de9acfd1de11bc7e1203a120222dd7b5079fdba6ae2331af336f989b`.
+
+Archive core SHA-256 values are session `2df996d7da7821ad7bb11b46a4186473293ea5cab1d5fd5899ec8e7dc16f4752`, claims `a4ce64dc38932d98e32851e77e8f5f52ef6e417a581f536cf66ccbd34bcfcc49`, seals `742fc31388da2d489423f8a63b7d86653398087a55426592305b1acd343224ca`, and .gitignore `cdbcae15105d6b781e620813c79c7e868740d4e9cc53ce6f5fcbbc12387adf4b`.
+
+The local HTML snapshot is `.countershape/evidence/p07b-c-c1-final-2fceacecbacb.html`, SHA-256 `52e09b237d2afc9f4844ceef7e171d218dee2d05fb1ed3f0b22e1e41f1f8f51d`, 10394 bytes; it is not a portable strict witness.
+
+The C1 Git note blob is `5d990e07d9ad6960de298bdc232818aac838700e` with body SHA-256 `c7f32d8e3ecb0f788c29c205215f9335b499e7ed50a74536fb7b06fcf8a3f9ea`.
+
+| Claim label | Claim type | Verbatim grade |
+| --- | --- | --- |
+| `P07B C1 inert semantic model` | `tests-pass` | `TREE-EXACT` |
+| `P07B C1 exhaustive algebra` | `tests-pass` | `TREE-EXACT` |
+| `P07B C1 schema runtime example intersection` | `tests-pass` | `TREE-EXACT` |
+| `P07B C1 target parser bounded fuzz` | `tests-pass` | `TREE-EXACT` |
+| `P07B C1 finalized-run parser bounded fuzz` | `tests-pass` | `TREE-EXACT` |
+| `P07B C1 execution parser bounded fuzz` | `tests-pass` | `TREE-EXACT` |
+| `P07B C1 architecture boundary` | `tests-pass` | `TREE-EXACT` |
+| `P07B C1 architecture checker self-test` | `tests-pass` | `TREE-EXACT` |
+| `P07B C1 predecessor architecture compatibility` | `tests-pass` | `TREE-EXACT` |
+| `P07B C1 predecessor architecture self-test` | `tests-pass` | `TREE-EXACT` |
+| `P07B C1 planning generator parity` | `tests-pass` | `TREE-EXACT` |
+| `P07B C1 planning validator compatibility` | `tests-pass` | `TREE-EXACT` |
+| `P07B C1 evolved plan coherence` | `tests-pass` | `TREE-EXACT` |
+| `P07B C1 plan checker self-test` | `tests-pass` | `TREE-EXACT` |
+| `P07B C1 cumulative verifier self-test` | `tests-pass` | `TREE-EXACT` |
+| `P07B C1 exact staged scope and diff` | `command-succeeded` | `TREE-EXACT` |
+| `P07B C1 scoped staged credential scan` | `command-succeeded` | `TREE-EXACT` |
+| `P07B C1 cumulative verification` | `tests-pass` | `TREE-EXACT` |
+| `P07B C1 didrun chain intact` | `command-succeeded` | `TREE-EXACT` |
+<!-- P07B-C-C1-SOURCE-RECEIPTS:END -->
 ## Read first, in order
 
 1. `docs/PERSONA_SOREN_VALE.md`
@@ -621,13 +701,13 @@ separate reviewed boundary.
 
 ## Exact next actions if this task resumes elsewhere
 
-1. Run `git status --short --branch`; confirm branch `codex/countershape-autopilot`, HEAD `88e62acb3023dcd6ee51950c2ad24bbcc2ca8900`, the archived C1E development ledger with nonzero events `0`, `9`, `10`, and `11`, the named four-path C1B stash object `1d2c14f160ff42d509d96219512fa413830a9b1d`, and the preserved failed zero-claim C1B development ledger. If live `.didrun/` exists, it must be the distinct zero-origin C1E qualifying ledger against the unchanged frozen tree; otherwise start that ledger at event zero. Do not pop or drop the stash.
-2. Resume only C1E's exact seven-path `SOURCE_FULL` roster and digest `sha256:9a6422b45c82a44e6171ae9351468df5f6ece2190d6ab47f26aec6f84fd7ccde`. The C1 receipt declaration must remain absent, and C1B's exact four-path authority must remain unchanged.
-3. Exercise the mixed-layout baseline plus every hostile namespace mutation, the real sealed-C1 archive mode, the unit-scope self-test, normal plan check, and independent read-only red team. Preserve all nonzero development events and fix the checker rather than weakening the archive declaration or manifest.
-4. Stage exactly the seven C1E paths, require exact staged scope and diff integrity, archive the development ledger intact, and start the final ledger at event zero. Any tracked edit after freeze invalidates that ledger.
-5. In the final ledger, run and immediately claim the eight intended rows from the C1E status: checker syntax/plan, mixed-namespace hostile self-test, real sealed-C1 archive match, unit-scope self-test, complete cumulative verifier, exact seven-path boundary, named-pattern scan, and preceding-chain integrity.
-6. Commit the exact staged snapshot, seal it, independently require its `refs/notes/didrun` note, and loop `NO_COLOR=1 didrun verify --strict` until exit `0`. Generate the exact-commit HTML and archive the complete ledger only after strict succeeds.
-7. Before applying, run `git stash show --include-untracked --name-only 1d2c14f160ff42d509d96219512fa413830a9b1d` and require exactly four paths. The main stash tree contains the three tracked paths; the untracked receipt must be read from `1d2c14f160ff42d509d96219512fa413830a9b1d^3:spec/verification/p07b-c-c1-receipt.json`. Verify the recorded SHA-256 values: handoff `4bf73e5a34bef6cf72b491d654f423cfa317ae84e3ee66852ccb9cbf1790a5dc`, DIDRUN_BUGS `39f31d21649113aaafe4dad7b766b57ae791140c529504d776975f16d7cc9642`, C1 status `1728f10f4f21b809a1e3f6fcf40c1314106e6cb7afa4f582e50cb415bd7d75b8`, and receipt JSON `bf511d668f51950b9c9784a0d0330b4e34fd4e0f7c7749e4c0da3f157946714e`. Apply the explicit stash object without `--index` and without dropping it. Require the three non-overlap files to remain byte-identical to the stash, then deliberately merge the handoff so it contains both C1E's sealed receipt and C1B's pre-seal state. Validate both authorities and the unchanged exact four-path roster before restarting C1B from a fresh ledger. Retain the stash until C1B itself closes strictly.
+1. Run `git status --short --branch`; confirm branch `codex/countershape-autopilot`, sealed C1E commit `34574fad4817373ba253d08822649383aea15bb9`, tree `c7db2cdc51858a4cad73ae4d157ee0e145a3cb74`, its didrun note, and `8/8` recorded-exact claims. The named stash, the original C1B defect ledger, and the eight-event zero-claim C1B pre-freeze ledger remain preserved; any later correction ledger is also development-only and must be archived before final event `0`. No `.didrun` or `.didrun-history` path may be staged or tracked.
+2. Resume only the exact four-path C1B `RECEIPT_RECONCILIATION` working unit: `docs/HANDOFF_MODE_C.md`, `docs/status/DIDRUN_BUGS.md`, `docs/status/P07B-C-C1-SEMANTICS.md`, and `spec/verification/p07b-c-c1-receipt.json`; sorted-newline digest `sha256:f8d1fb96d36f7e0cfde99bb73c7726297763c66bafd21aeb5c1fb1e249bdd119`. Confirm the exact ordered seven-label/type authority with `tools/check-p07b-c-unit-scope.mjs --unit C1B --receipt-manifest`. Do not add source, verifier, runtime, schema, or generated-artifact paths.
+3. Finish the receipt declaration and three documentation reconciliations, then run the normal plan checker, its defensive self-test, and `--verify-c1-local-evidence` through a development didrun ledger. Obtain an independent read-only red-team pass. Development receipts may guide repairs but cannot qualify the final snapshot.
+4. Stage exactly the four paths as nonzero stage-zero regular mode-`100644` blobs. Require exact staged scope, cached diff integrity, no unstaged tracked changes, no untracked paths, and a scoped nine-pattern staged-blob scan. Archive the development ledger intact before starting the final ledger from event zero.
+5. In the fresh final ledger, run and immediately claim only the seven ordered machine-declared rows: receipt reconciliation, checker defensive self-test, local source-evidence match, hermetic receipt-only Go build, exact four-path staged boundary, scoped named-pattern scan, and preceding-chain audit. Do not run or claim the full cumulative suite for this data-only boundary, and do not infer runtime, security, or unchanged-behavior evidence.
+6. Commit the exact staged snapshot without an AI co-author trailer. Seal that commit, independently require its `refs/notes/didrun` note, and loop `NO_COLOR=1 didrun verify --strict` until exit `0`; any nonzero result keeps the unit unfinished and requires a real repair plus a fresh verified boundary. Generate the exact-commit HTML report and archive the complete ledger only after strict succeeds.
+7. Resume C2 only after the preceding boundary is closed. Preserve all failed or superseded ledgers intact and keep C1B's own grades out of this pre-seal tracked snapshot; report them only from the later commit-bound note/strict result, and reconcile them in a separately receipted descendant only if that ever becomes necessary.
 8. Keep root as sole writer and didrun/Git/seal operator; parallel agents remain read-only critics. Preserve the human-gated external-API boundary and the adoption, comprehension, production-hardening, independent-security-review, cross-platform, release, and maintainership tail.
 
 ## Orientation handshake for a fresh agent/chat
@@ -638,6 +718,6 @@ Before editing, reply in your working notes with:
 2. the three distinct truth authorities (Git, Choicepoint observations/ruling, didrun receipts);
 3. two things the system must never claim;
 4. the maintenance and A2.1 commits, P07B-A1 source prerequisite `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`, A2.2 checkpoint `32efaaf2f6d9fc58389d48d18219ce03995a2805`, accepted corrected source `6bf33350944dcdd56a4ceaa70f1d0836203ffb1f`, B0 scope lock `7f04b2a5129dcbee2fc991453aefdd6713281b86`, sealed B source `eb06bdcf18f8e14db1257e73733afdc05cac045e`, sealed B receipt document `b4ac17bd66c6260fd4b12b9277ab5259659c55e1`, and sealed final B handoff `464e47adbf7f4497dfafa89938a9539239ffd41b`, with their exact receipt maps and nonclaims; and
-5. the current bounded shippable unit: P07B-C C1E local-evidence checker maintenance only; C1/C1V semantics and receipts remain unchanged, C1B is safely preserved and `UNRECEIPTED`, C2 is blocked, and every unrun capability remains excluded and `UNRECEIPTED`.
+5. the current bounded shippable unit: P07B-C C1B receipt reconciliation only; C1 semantics and the sealed C1V verifier remain unchanged, the four-path working unit is still `UNRECEIPTED`, C2 is blocked, and every unrun capability remains excluded and `UNRECEIPTED`.
 
 If any answer is missing, read the files above again. Do not infer a didrun grade from this handoff; run strict verification locally.
