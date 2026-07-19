@@ -2,7 +2,7 @@
 
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { constants } from "node:fs";
+import { constants, realpathSync } from "node:fs";
 import { lstat, open, readdir } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -15,6 +15,17 @@ const c2StorageSymbols = new Set([
 	"internal/store/nonhead_contract.go:ContractExecutionTarget",
 	"internal/store/nonhead_contract.go:FinalizedContractRun",
 	"internal/store/nonhead_contract.go:ContractExecution",
+]);
+const c2SupportSymbols = new Set([
+	"internal/store/nonhead_contract.go:ContractExecutionClassifierProfile",
+]);
+const c3OfficialTargetSymbols = new Set([
+	"internal/contractexec/target.go:ContractExecutionTarget",
+]);
+const futureSemanticFamilies = Object.freeze([
+	"ContractExecutionTarget",
+	"FinalizedContractRun",
+	"ContractExecution",
 ]);
 
 const reviewedFiles = Object.freeze([
@@ -167,10 +178,21 @@ export function partitionFutureSymbols(values) {
 	const admitted = [];
 	const foreign = [];
 	for (const value of values) {
-		if (value.startsWith(c1SemanticPrefix) || c2StorageSymbols.has(value)) admitted.push(value);
+		if (value.startsWith(c1SemanticPrefix) || c2StorageSymbols.has(value) || c2SupportSymbols.has(value) || c3OfficialTargetSymbols.has(value)) admitted.push(value);
 		else foreign.push(value);
 	}
 	return Object.freeze({ admitted: Object.freeze(admitted), foreign: Object.freeze(foreign) });
+}
+
+export function futureSymbolsInSource(path, source) {
+	const symbols = new Set();
+	for (const match of source.matchAll(/[_\p{L}][_\p{L}\p{N}]*/gu)) {
+		const symbol = match[0];
+		if (futureSemanticFamilies.some((family) => symbol.includes(family))) {
+			symbols.add(`${path}:${symbol}`);
+		}
+	}
+	return [...symbols].sort();
 }
 
 async function readReviewedFile(relativePath) {
@@ -378,9 +400,7 @@ export async function collectFacts() {
 	const authorizedCore = functionBody(materialize, "materializeAuthorized");
 	const existingAcceptance = functionBody(materialize, "acceptExistingOpen");
 	const alreadyReopenedAcceptance = functionBody(materialize, "acceptAlreadyReopened");
-	const futureSymbols = productionEntries.flatMap((entry) =>
-		["ContractExecutionTarget", "FinalizedContractRun", "ContractExecution"].filter((symbol) => entry.source.includes(symbol))
-			.map((symbol) => `${entry.path}:${symbol}`));
+	const futureSymbols = productionEntries.flatMap((entry) => futureSymbolsInSource(entry.path, entry.source));
 	const futureSymbolPartition = partitionFutureSymbols(futureSymbols);
 	const issueCallers = productionEntries.filter((entry) => entry.source.includes("internalpublication.Issue("))
 		.map((entry) => entry.path);
@@ -563,7 +583,7 @@ async function main() {
 	process.stdout.write("P07B B architecture boundary OK\n");
 }
 
-if (process.argv[1] && resolve(process.argv[1]) === checkerPath) {
+if (process.argv[1] && realpathSync(process.argv[1]) === realpathSync(checkerPath)) {
 	main().catch((error) => {
 		process.stderr.write(`${error.stack ?? error}\n`);
 		process.exitCode = 1;

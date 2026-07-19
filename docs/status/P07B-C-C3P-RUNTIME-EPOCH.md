@@ -2,13 +2,13 @@
 
 ## State
 
-- **Unit:** `C3P` source receipt, reconciled by the active `C3PB` working unit
-- **Profile:** `RECEIPT_RECONCILIATION` for this working unit; the bound source used `SOURCE_FULL`
-- **Source receipt:** C3P source commit `f7b6e6bda7a8864969415ab8636c495902e78dd9`, tree `2d5555db63d46c837cf4e12f2dab2d04a41f4654`, is sealed, note-present, and strict-clean; every C3P source grade below is `TREE-EXACT`. This C3PB receipt-document working unit binds only that existing source and remains `UNRECEIPTED` until its own commit, seal, note, and strict boundary.
+- **Unit:** closed `C3P` source receipt, reconciled by the independently sealed `C3PB` descendant
+- **Profile:** historical `SOURCE_FULL` source with a closed `RECEIPT_RECONCILIATION` descendant
+- **Source receipt:** C3P source commit `f7b6e6bda7a8864969415ab8636c495902e78dd9`, tree `2d5555db63d46c837cf4e12f2dab2d04a41f4654`, is sealed, note-present, and strict-clean; every C3P source grade below is `TREE-EXACT`. This source-receipt record binds only that existing C3P source; the independently sealed C3PB descendant is outside these C3P grades.
 - **Parent:** sealed C2B commit `ab5e2dd5b66702a1d1cd13eb0047b57a48469487`, tree `02fd396858ca41cff6d0ee561dce7ee65a3f94d0`
 - **Scope:** 25 exact mode-`100644` paths, no prefixes; sorted-newline roster `sha256:8b047704df047cb96f1c5d19418c4cfe8502e4b4746bb4f24c0851dac8d018c0`
 - **Commit subject:** `fix: use stable Darwin boot-session identity`
-- **Active receipt unit:** C3PB owns exactly three paths with roster `sha256:531cbe600cf2747752749890ea9a15c3d0126e498da6838d4f6faeb1a0d7e885`; it may bind only the already-sealed C3P source evidence and cannot grade itself
+- **Closed receipt unit:** C3PB owns exactly three paths with roster `sha256:531cbe600cf2747752749890ea9a15c3d0126e498da6838d4f6faeb1a0d7e885`; it closed at commit `13369122ba7d5557eba1949095c1135a41843070`, tree `d710d9b249786f3fb648f566ae542f1d9ddec180`, with `7/7 claims recorded-exact` and strict exit `0`
 
 ## Defect and correction
 
@@ -24,14 +24,14 @@ This correction does not claim that a changed UUID proves child absence, a physi
 - `internal/store/public_api_test.go` is included because the narrow inert attempt/target bridge must be compiler-visible and frozen rather than hidden from C2's public-surface gate.
 - Direct single-target materialization accepts opaque `gitobj.InspectedTree`; it never creates a fake one-member world/candidate binding.
 - C3B is declared as a separate exact three-path receipt unit with digest `sha256:3ef17156a2f3051171da70983f9428de2b9bdb5a179602407a36f34200012a67`.
-- The dedicated C3P/C3PB receipt checker is enrolled in the cumulative verifier with both its phase-coherence gate and hostile self-test; the verifier and its self-test therefore belong to this exact source roster.
+- The dedicated receipt checker was originally enrolled for C3P/C3PB source reconciliation and remains in the cumulative verifier with its hostile self-test. Its current phase contract has evolved after sealed C3PB: both synthetic receipt branches now require the sole active C3A descendant tuple, while the C3P grades themselves remain phase-neutral.
 
 ## C3P source receipt map
 
 - C3P source strict exit: `0`
 - C3P source strict claims: `12/12 claims recorded-exact`
 
-This receipt binds only the already-existing C3P source commit. C3PB cannot name or grade its own commit, tree, Git note, or strict result.
+This receipt binds only the already-existing C3P source commit. The independently sealed C3PB descendant is outside this C3P source grade map, and the active C3A unit cannot grade itself here.
 
 C3P source commit `f7b6e6bda7a8864969415ab8636c495902e78dd9`, tree `2d5555db63d46c837cf4e12f2dab2d04a41f4654`, is sealed, note-present, and strict-clean with `12/12 claims recorded-exact`.
 
@@ -66,6 +66,6 @@ The C3P Git note blob is `09dd345d428554b84da592841e48bdbcc42304c3` with body SH
 
 ## Gate
 
-The C3P source and intervening C3V and C3M maintenance boundaries are already sealed and strict-clean. This active C3PB working unit is complete only after its seven narrow receipt commands run through didrun on one exact staged tree, its three paths commit, the commit seals, its Git note is independently readable, and `NO_COLOR=1 didrun verify --strict` exits `0`. The source grades above come only from the sealed C3P source note and evidence declared by this receipt; none grades C3PB itself. C3 remains blocked until C3PB closes.
+The C3P source, intervening C3V/C3M maintenance, and C3PB receipt boundary are sealed and strict-clean. The active C3A maintenance unit owns only its separately declared architecture/model/checker correction and remains `UNRECEIPTED`. The grades above come only from the sealed C3P source note and its receipt declaration; none grades C3PB, C3A, or later C3 behavior. C3 remains blocked until C3A independently closes.
 
 No C3P result proves a live boot measurement, runtime admission, Git materialization, attempt allocation, target publication, `OfficialTarget`, interlock acquisition, permit, subject spawn, finalized run, classification, product UX, security review, production readiness, adoption, or maintainership.

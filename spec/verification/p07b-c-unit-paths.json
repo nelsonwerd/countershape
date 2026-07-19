@@ -1,5 +1,5 @@
 {
-  "schema_version": "countershape/p07b-c-unit-paths/v6",
+  "schema_version": "countershape/p07b-c-unit-paths/v7",
   "units": {
     "C0A": {
       "exact": [
@@ -367,6 +367,25 @@
         }
       ],
       "verification_profile": "RECEIPT_RECONCILIATION"
+    },
+    "C3A": {
+      "exact": [
+        "docs/ARCHITECTURE.md",
+        "docs/HANDOFF_MODE_C.md",
+        "docs/PROMPT_PACK.md",
+        "docs/VERIFICATION.md",
+        "docs/status/P07B-C-C3A-CUMULATIVE-ADMISSION-MAINTENANCE.md",
+        "docs/status/P07B-C-C3P-RUNTIME-EPOCH.md",
+        "internal/contractexec/model/codec_test.go",
+        "internal/contractexec/model/target.go",
+        "spec/verification/p07b-c-unit-paths.json",
+        "tools/check-p07b-b-architecture-selftest.mjs",
+        "tools/check-p07b-b-architecture.mjs",
+        "tools/check-p07b-c-plan.mjs",
+        "tools/check-p07b-c-unit-scope.mjs"
+      ],
+      "prefixes": [],
+      "verification_profile": "SOURCE_FULL"
     },
     "C3": {
       "exact": [

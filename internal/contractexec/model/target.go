@@ -164,7 +164,8 @@ func validateTargetInput(input TargetInput) error {
 		return refuse(CodeInvalidTarget, "attempt or boot-session binding is incomplete", nil)
 	}
 	if !validAbsoluteExecutablePath(runtime.AdmittedExecutablePath) ||
-		runtime.MeasuredProcessExecPath != runtime.AdmittedExecutablePath || !versionPattern.MatchString(runtime.Version) ||
+		runtime.MeasuredProcessExecPath != runtime.AdmittedExecutablePath || len(runtime.Version) > 128 ||
+		!versionPattern.MatchString(runtime.Version) ||
 		runtime.Major < 1 || runtime.Major > 9007199254740991 || runtime.Platform != "darwin" ||
 		runtime.Architecture != "arm64" || !runtime.ExecutableBytesDigest.Valid() ||
 		!modePattern.MatchString(runtime.ExecutableMode) || runtime.ExecutableByteCount < 1 ||

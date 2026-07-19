@@ -2,14 +2,17 @@
 
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { dirname, resolve } from "node:path";
+import { mkdtempSync, rmSync, symlinkSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { collectFacts, partitionFutureSymbols, validateFacts } from "./check-p07b-b-architecture.mjs";
+import { collectFacts, futureSymbolsInSource, partitionFutureSymbols, validateFacts } from "./check-p07b-b-architecture.mjs";
 
 const selftestPath = fileURLToPath(import.meta.url);
 const root = resolve(dirname(selftestPath), "..");
 const checker = resolve(root, "tools/check-p07b-b-architecture.mjs");
+const cleanMarker = "P07B B architecture boundary OK\n";
 
 const cases = Object.freeze([
 	Object.freeze({ id: "issuer-owner", code: "P07B_B_ISSUER_OWNERSHIP" }),
@@ -47,8 +50,22 @@ function runCleanChecker() {
 	const result = spawnSync(process.execPath, [checker], {
 		cwd: root, encoding: "utf8", timeout: 420_000, maxBuffer: 16 * 1024 * 1024, env: process.env,
 	});
-	if (result.error || result.signal || result.status !== 0 || !result.stdout.includes("P07B B architecture boundary OK")) {
+	if (result.error || result.signal || result.status !== 0 || result.stdout !== cleanMarker || result.stderr !== "") {
 		fail("P07B_B_SELFTEST_CLEAN_CHECKER", `${result.status ?? result.signal}: ${result.stderr || result.stdout}`);
+	}
+	const directory = mkdtempSync(join(tmpdir(), "countershape-b-checker-"));
+	try {
+		const alias = join(directory, "architecture-alias.mjs");
+		symlinkSync(checker, alias);
+		const aliased = spawnSync(process.execPath, [alias], {
+			cwd: root, encoding: "utf8", timeout: 420_000, maxBuffer: 16 * 1024 * 1024, env: process.env,
+		});
+		if (aliased.error || aliased.signal || aliased.status !== 0 ||
+			aliased.stdout !== cleanMarker || aliased.stderr !== "") {
+			fail("P07B_B_SELFTEST_SYMLINK_ENTRYPOINT", `${aliased.status ?? aliased.signal}: ${aliased.stderr || aliased.stdout}`);
+		}
+	} finally {
+		rmSync(directory, { recursive: true, force: true });
 	}
 }
 
@@ -59,17 +76,75 @@ function requireExactC1PrefixPartition() {
 		"internal/store/nonhead_contract.go:FinalizedContractRun",
 		"internal/store/nonhead_contract.go:ContractExecution",
 	];
+	const c2Support = "internal/store/nonhead_contract.go:ContractExecutionClassifierProfile";
+	const c3Official = "internal/contractexec/target.go:ContractExecutionTarget";
 	const modelEvil = "internal/contractexec/model_evil/execution.go:ContractExecution";
 	const c2Lookalikes = [
 		"internal/store/nonhead_contract_copy.go:ContractExecutionTarget",
 		"internal/store/nonhead_contract.go:ContractExecutionTargetCopy",
 		"internal/store/object_store.go:FinalizedContractRun",
 	];
+	const c3Lookalikes = [
+		"internal/contractexec/target_copy.go:ContractExecutionTarget",
+		"internal/contractexec/target.go:ContractExecutionTargetCopy",
+		"internal/contractexec/target.go:CopyContractExecutionTarget",
+		"internal/contractexec/target.go:ContractExecutionTargetβ",
+		"internal/contractexec/runner/target.go:ContractExecutionTarget",
+		"internal/contractexecx/target.go:ContractExecutionTarget",
+	];
+	const semanticFamilyLookalikes = [
+		"internal/contractexec/target.go:FinalizedContractRunCopy",
+		"internal/contractexec/target.go:CopyFinalizedContractRun",
+		"internal/contractexec/target.go:FinalizedContractRunβ",
+		"internal/contractexec/target.go:ContractExecutionCopy",
+		"internal/contractexec/target.go:CopyContractExecution",
+		"internal/contractexec/target.go:ContractExecutionβ",
+		"internal/store/nonhead_contract.go:ContractExecutionClassifierProfileCopy",
+		"internal/future.go:ContractExecutionClassifierProfile",
+	];
 	const foreign = "internal/future.go:ContractExecutionTarget";
-	const partition = partitionFutureSymbols([admitted, ...c2Storage, modelEvil, ...c2Lookalikes, foreign]);
-	if (JSON.stringify(partition.admitted) !== JSON.stringify([admitted, ...c2Storage]) ||
-		JSON.stringify(partition.foreign) !== JSON.stringify([modelEvil, ...c2Lookalikes, foreign])) {
+	const partition = partitionFutureSymbols([admitted, ...c2Storage, c2Support, c3Official, modelEvil, ...c2Lookalikes, ...c3Lookalikes, ...semanticFamilyLookalikes, foreign]);
+	if (JSON.stringify(partition.admitted) !== JSON.stringify([admitted, ...c2Storage, c2Support, c3Official]) ||
+		JSON.stringify(partition.foreign) !== JSON.stringify([modelEvil, ...c2Lookalikes, ...c3Lookalikes, ...semanticFamilyLookalikes, foreign])) {
 		fail("P07B_B_SELFTEST_PREFIX_PARTITION", JSON.stringify(partition));
+	}
+	const scannerControls = [
+		["", []],
+		["type ContractExecutionTarget struct{}", [c3Official]],
+		["type ContractExecutionTargetCopy struct{}", ["internal/contractexec/target.go:ContractExecutionTargetCopy"]],
+		["type CopyContractExecutionTarget struct{}", ["internal/contractexec/target.go:CopyContractExecutionTarget"]],
+		["type ContractExecutionTargetβ struct{}", ["internal/contractexec/target.go:ContractExecutionTargetβ"]],
+		["type FinalizedContractRunCopy struct{}", ["internal/contractexec/target.go:FinalizedContractRunCopy"]],
+		["type CopyFinalizedContractRun struct{}", ["internal/contractexec/target.go:CopyFinalizedContractRun"]],
+		["type FinalizedContractRunβ struct{}", ["internal/contractexec/target.go:FinalizedContractRunβ"]],
+		["type ContractExecutionCopy struct{}", ["internal/contractexec/target.go:ContractExecutionCopy"]],
+		["type CopyContractExecution struct{}", ["internal/contractexec/target.go:CopyContractExecution"]],
+		["type ContractExecutionβ struct{}", ["internal/contractexec/target.go:ContractExecutionβ"]],
+		["// CopyFinalizedContractRun", ["internal/contractexec/target.go:CopyFinalizedContractRun"]],
+		["const value = \"ContractExecutionCopy\"", ["internal/contractexec/target.go:ContractExecutionCopy"]],
+	];
+	for (const [source, expected] of scannerControls) {
+		const observed = futureSymbolsInSource("internal/contractexec/target.go", source);
+		if (JSON.stringify(observed) !== JSON.stringify(expected)) {
+			fail("P07B_B_SELFTEST_SYMBOL_SCANNER", JSON.stringify({ source, observed, expected }));
+		}
+	}
+	const supportObserved = futureSymbolsInSource("internal/store/nonhead_contract.go", "const ContractExecutionClassifierProfile = 1");
+	const supportPartition = partitionFutureSymbols(supportObserved);
+	if (JSON.stringify(supportObserved) !== JSON.stringify([c2Support]) ||
+		JSON.stringify(supportPartition.admitted) !== JSON.stringify([c2Support]) || supportPartition.foreign.length !== 0) {
+		fail("P07B_B_SELFTEST_SUPPORT_SYMBOL", JSON.stringify({ supportObserved, supportPartition }));
+	}
+	for (const hostilePath of [
+		"internal/contractexec/target_copy.go",
+		"internal/contractexec/runner/target.go",
+		"internal/contractexecx/target.go",
+	]) {
+		const observed = futureSymbolsInSource(hostilePath, "type ContractExecutionTarget struct{}");
+		const hostile = partitionFutureSymbols(observed);
+		if (hostile.admitted.length !== 0 || JSON.stringify(hostile.foreign) !== JSON.stringify(observed)) {
+			fail("P07B_B_SELFTEST_SYMBOL_PATH", JSON.stringify({ hostilePath, hostile }));
+		}
 	}
 }
 
@@ -128,7 +203,7 @@ async function main() {
 		}
 		requireViolation(facts, test.code, test.id);
 	}
-	process.stdout.write(`P07B B architecture defensive self-test OK (${cases.length} metadata cases; exact C1 prefix and C2 symbol partition)\n`);
+	process.stdout.write(`P07B B architecture defensive self-test OK (${cases.length} metadata cases; exact C1 prefix, C2 storage symbols, C3 issuer symbol, and symlink entrypoint)\n`);
 }
 
 main().catch((error) => {

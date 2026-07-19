@@ -42,6 +42,38 @@ func TestTargetPrimitiveBoundsAndDerivedRelations(t *testing.T) {
 			}
 		})
 	}
+	t.Run("runtime version schema boundary", func(t *testing.T) {
+		input := valid
+		input.Runtime.Version = "v1." + string(bytes.Repeat([]byte{'0'}, 125))
+		input.Runtime.Major = 1
+		if len(input.Runtime.Version) != 128 {
+			t.Fatalf("maximum fixture width = %d", len(input.Runtime.Version))
+		}
+		maximum, err := NewContractExecutionTarget(input)
+		if err != nil || !maximum.Valid() {
+			t.Fatalf("128-byte runtime version was refused: %v", err)
+		}
+		parsed, err := ParseContractExecutionTarget(maximum.CanonicalBytes(), maximum.Digest())
+		if err != nil || !parsed.Valid() {
+			t.Fatalf("128-byte runtime version did not round-trip: %v", err)
+		}
+
+		overLimit := "v1." + string(bytes.Repeat([]byte{'0'}, 126))
+		if len(overLimit) != 129 {
+			t.Fatalf("over-limit fixture width = %d", len(overLimit))
+		}
+		input.Runtime.Version = overLimit
+		if _, err := NewContractExecutionTarget(input); !IsCode(err, CodeInvalidTarget) {
+			t.Fatalf("129-byte constructor error = %v", err)
+		}
+		overLimitBody := mutateCanonical(t, maximum.CanonicalBytes(), func(root map[string]any) {
+			root["runtime_binding"].(map[string]any)["version"] = overLimit
+		})
+		overLimitDigest := typedDigestForTest(t, TargetKind, overLimitBody)
+		if _, err := ParseContractExecutionTarget(overLimitBody, overLimitDigest); !IsCode(err, CodeInvalidTarget) {
+			t.Fatalf("129-byte parser error = %v", err)
+		}
+	})
 	t.Run("legacy clock-derived boot profile", func(t *testing.T) {
 		target := testTarget(t, bundle)
 		legacy := mutateCanonical(t, target.CanonicalBytes(), func(root map[string]any) {
