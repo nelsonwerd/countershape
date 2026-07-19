@@ -11,6 +11,11 @@ const checkerPath = fileURLToPath(import.meta.url);
 const repositoryRoot = resolve(dirname(checkerPath), "..");
 const modulePrefix = "github.com/nelsonwerd/countershape/";
 const c1SemanticPrefix = "internal/contractexec/model/";
+const c2StorageSymbols = new Set([
+	"internal/store/nonhead_contract.go:ContractExecutionTarget",
+	"internal/store/nonhead_contract.go:FinalizedContractRun",
+	"internal/store/nonhead_contract.go:ContractExecution",
+]);
 
 const reviewedFiles = Object.freeze([
 	"internal/emit/node/internal/publication/authority.go",
@@ -162,7 +167,7 @@ export function partitionFutureSymbols(values) {
 	const admitted = [];
 	const foreign = [];
 	for (const value of values) {
-		if (value.startsWith(c1SemanticPrefix)) admitted.push(value);
+		if (value.startsWith(c1SemanticPrefix) || c2StorageSymbols.has(value)) admitted.push(value);
 		else foreign.push(value);
 	}
 	return Object.freeze({ admitted: Object.freeze(admitted), foreign: Object.freeze(foreign) });

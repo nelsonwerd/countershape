@@ -52,11 +52,13 @@ const promptHeadings = Object.freeze([
 const authorityDeclarationPath = "spec/verification/p07b-c-c0-authority.json";
 const receiptDeclarationPath = "spec/verification/p07b-c-c0-receipt.json";
 const c1ReceiptDeclarationPath = "spec/verification/p07b-c-c1-receipt.json";
+const c2ReceiptDeclarationPath = "spec/verification/p07b-c-c2-receipt.json";
 const statusPath = "docs/status/P07B-C-C0-AUTHORITY.md";
 const c1MaintenanceStatusPath = "docs/status/P07B-C-C1-CUMULATIVE-MAINTENANCE.md";
 const c1VerificationStatusPath = "docs/status/P07B-C-VERIFICATION-THROUGHPUT.md";
 const c1EvidenceMaintenanceStatusPath = "docs/status/P07B-C-C1-LOCAL-EVIDENCE-MAINTENANCE.md";
 const c1StatusPath = "docs/status/P07B-C-C1-SEMANTICS.md";
+const c2StatusPath = "docs/status/P07B-C-C2-PERSISTENCE.md";
 const c1DidrunBugsPath = "docs/status/DIDRUN_BUGS.md";
 const sealedC0AIdentity = Object.freeze({
 	commit: "1c6d9fdef339314bfcb99d7d53f3a7c5040e5020",
@@ -70,6 +72,10 @@ const sealedC1Identity = Object.freeze({
 	commit: "2fceacecbacb89fd7650f1570b2af33e6ea25ed3",
 	tree: "573fcd0b5548f9f7368493afe801a4bbd2cc9a34",
 	subject: "feat: define P07B-C execution semantics",
+});
+const sealedC1BIdentity = Object.freeze({
+	commit: "46c48507fe998ea04e121470d6aa8ba0b38b3dae",
+	tree: "6a6ee49048c2639d102641cecab4e6d99f31377e",
 });
 const c0ClaimLabels = Object.freeze([
 	"P07B C0 authority plan coherence",
@@ -338,7 +344,7 @@ const requiredText = Object.freeze({
 	],
 	"docs/VERIFICATION.md": [
 		"P07B-C C1 inert-model architecture checker",
-		"Composition is one-way (`B -> C1`)",
+		"C2 then composes the exact C2 boundary over B and C1 (`C2 -> B -> C1`)",
 		"eight byte-exact schema-valid/runtime-invalid cases",
 		"GOFLAGS=-mod=readonly -buildvcs=false -p=1",
 		"sha256:eb51c52657591df8faa5d3c4737291c071e40c07eb9c32bde88af1a36e68bf76",
@@ -363,7 +369,10 @@ const requiredText = Object.freeze({
 		"--no-renames",
 		"--ignore-submodules=none",
 		"--receipt-manifest",
-		"receipt path must be one staged regular mode-100644 blob",
+		"path must be one staged regular mode-100644 blob",
+		"--source-final-gate",
+		"--credential-scan",
+		"validateExactIndexModes",
 	],
 	"tools/verify-current.mjs": [
 		"const goGeneralCommon = Object.freeze",
@@ -759,6 +768,113 @@ const requiredC1BReceiptClaims = Object.freeze([
 	Object.freeze({ label: "P07B-C C1B scoped staged credential-pattern scan", type: "command-succeeded" }),
 	Object.freeze({ label: "P07B-C C1B preceding didrun chain integrity", type: "command-succeeded" }),
 ]);
+const requiredC2Paths = Object.freeze([
+	"docs/ARCHITECTURE.md",
+	"docs/HANDOFF_MODE_C.md",
+	"docs/SEMANTICS.md",
+	"docs/STATE_MACHINES.md",
+	"docs/THREAT_MODEL.md",
+	"docs/VERIFICATION.md",
+	"docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md",
+	"docs/status/P07B-C-C2-PERSISTENCE.md",
+	"internal/store/execution_interlock.go",
+	"internal/store/execution_interlock_test.go",
+	"internal/store/nonhead_contract.go",
+	"internal/store/nonhead_contract_test.go",
+	"internal/store/object_store.go",
+	"internal/store/object_store_test.go",
+	"internal/store/private_contract_run.go",
+	"internal/store/private_contract_run_test.go",
+	"internal/store/public_api_test.go",
+	"spec/verification/p07b-c-unit-paths.json",
+	"tools/check-p07b-b-architecture-selftest.mjs",
+	"tools/check-p07b-b-architecture.mjs",
+	"tools/check-p07b-c-architecture-selftest.mjs",
+	"tools/check-p07b-c-architecture.mjs",
+	"tools/check-p07b-c-plan.mjs",
+	"tools/check-p07b-c-unit-scope.mjs",
+	"tools/verify-current-selftest.mjs",
+	"tools/verify-current.mjs",
+]);
+const requiredC2Digest = "sha256:a463e4e9ad9830cb420bbad1da494c26d55e3f68b983abfd683a0c8cb1c3a522";
+const c2ClaimLabels = Object.freeze([
+	"P07B C2 exact typed nonhead persistence profile",
+	"P07B C2 interlock StartClaim and receipt-backed clear profile",
+	"P07B C2 private evidence lifecycle profile",
+	"P07B C2 exported authority and discovery absence",
+	"P07B C2 focused store race suite",
+	"P07B C2 cumulative architecture boundary",
+	"P07B C2 cumulative architecture defensive self-test",
+	"P07B C2 predecessor B compatibility",
+	"P07B C2 predecessor B defensive self-test",
+	"P07B C2 cumulative verifier self-test",
+	"P07B C2 cumulative verification",
+	"P07B C2 exact 26-path staged scope and diff integrity",
+	"P07B C2 scoped staged credential-pattern scan",
+	"P07B C2 preceding didrun chain integrity",
+]);
+const c2ClaimTypes = Object.freeze([
+	...Array(11).fill("tests-pass"),
+	"command-succeeded",
+	"command-succeeded",
+	"command-succeeded",
+]);
+const c2FinalRunRoot = resolve(repositoryRoot, ".countershape/p07bc-c2-final");
+const c2HermeticArgvPrefix = Object.freeze([
+	"/usr/bin/env", "-i",
+	`HOME=${resolve(c2FinalRunRoot, "home")}`,
+	`TMPDIR=${resolve(c2FinalRunRoot, "tmp")}`,
+	`GOTMPDIR=${resolve(c2FinalRunRoot, "gotmp")}`,
+	`GOCACHE=${resolve(c2FinalRunRoot, "gocache")}`,
+	`GOPATH=${resolve(c2FinalRunRoot, "gopath")}`,
+	`GOMODCACHE=${resolve(c2FinalRunRoot, "gomodcache")}`,
+	"GOENV=off", "GOWORK=off", "GOTOOLCHAIN=local", "GOPROXY=off", "GOSUMDB=off", "GOVCS=*:off",
+	"GOFLAGS=-mod=readonly -buildvcs=false -p=1", "CGO_ENABLED=1", "GOMAXPROCS=2",
+	"LANG=C", "LC_ALL=C", "TZ=UTC", "NO_COLOR=1", "PATH=/opt/homebrew/bin:/usr/bin:/bin",
+	"COUNTERSHAPE_GO=/opt/homebrew/bin/go", "COUNTERSHAPE_CC=/usr/bin/clang", "COUNTERSHAPE_CXX=/usr/bin/clang++",
+	"CC=/usr/bin/clang", "CXX=/usr/bin/clang++",
+]);
+const c2HermeticArgv = (...tail) => Object.freeze([...c2HermeticArgvPrefix, ...tail]);
+const c2ExpectedClaimArgv = Object.freeze([
+	c2HermeticArgv("/opt/homebrew/bin/node", "tools/check-p07b-c-architecture.mjs", "--run-go-json", "c2-nonhead-persistence"),
+	c2HermeticArgv("/opt/homebrew/bin/node", "tools/check-p07b-c-architecture.mjs", "--run-go-json", "c2-interlock"),
+	c2HermeticArgv("/opt/homebrew/bin/node", "tools/check-p07b-c-architecture.mjs", "--run-go-json", "c2-private-evidence"),
+	c2HermeticArgv("/opt/homebrew/bin/node", "tools/check-p07b-c-architecture.mjs", "--run-go-json", "c2-public-surface"),
+	c2HermeticArgv("/opt/homebrew/bin/go", "test", "-mod=readonly", "-buildvcs=false", "-p=1", "-race", "-count=1", "-run", "^TestC2", "./internal/store"),
+	c2HermeticArgv("/opt/homebrew/bin/node", "tools/check-p07b-c-architecture.mjs", "--c2"),
+	c2HermeticArgv("/opt/homebrew/bin/node", "tools/check-p07b-c-architecture-selftest.mjs", "--c2"),
+	c2HermeticArgv("/opt/homebrew/bin/node", "tools/check-p07b-b-architecture.mjs"),
+	c2HermeticArgv("/opt/homebrew/bin/node", "tools/check-p07b-b-architecture-selftest.mjs"),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current-selftest.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C2", "--source-final-gate"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C2", "--credential-scan"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--verify-c2-preseal-ledger"]),
+]);
+const requiredC2AddedPaths = new Set([
+	"docs/status/P07B-C-C2-PERSISTENCE.md",
+	"internal/store/execution_interlock.go",
+	"internal/store/execution_interlock_test.go",
+	"internal/store/nonhead_contract.go",
+	"internal/store/nonhead_contract_test.go",
+	"internal/store/private_contract_run.go",
+	"internal/store/private_contract_run_test.go",
+]);
+const requiredC2BPaths = Object.freeze([
+	"docs/HANDOFF_MODE_C.md",
+	"docs/status/P07B-C-C2-PERSISTENCE.md",
+	"spec/verification/p07b-c-c2-receipt.json",
+]);
+const requiredC2BDigest = "sha256:5e30e009bb29672d585ece9893bd7c8db198915335a73ded3f3c790ad18f665b";
+const requiredC2BReceiptClaims = Object.freeze([
+	Object.freeze({ label: "P07B-C C2B source receipt reconciliation", type: "tests-pass" }),
+	Object.freeze({ label: "P07B-C C2B receipt checker defensive self-test", type: "tests-pass" }),
+	Object.freeze({ label: "P07B-C C2B declared local source-evidence snapshot match", type: "tests-pass" }),
+	Object.freeze({ label: "P07B-C C2B receipt-only Go build", type: "command-succeeded" }),
+	Object.freeze({ label: "P07B-C C2B exact three-path staged scope and diff integrity", type: "command-succeeded" }),
+	Object.freeze({ label: "P07B-C C2B scoped staged credential-pattern scan", type: "command-succeeded" }),
+	Object.freeze({ label: "P07B-C C2B preceding didrun chain integrity", type: "command-succeeded" }),
+]);
 
 async function readBytes(root, path, overrides) {
 	if (overrides.has(path)) {
@@ -910,15 +1026,23 @@ function requireClaimLabelExactlyOnce(body, label, path, phase, errors) {
 	requireExactlyOnce(body, `\`${label}\``, path, `${phase} claim-label uniqueness`, errors);
 }
 
-function rejectC1BSelfReceiptClaims(body, path, errors) {
+function rejectReceiptSelfClaims(body, path, unit, errors) {
 	const patterns = [
-		/\bC1B (?:receipt )?commit `[0-9a-f]{40}`/iu,
-		/\bC1B (?:receipt )?tree `[0-9a-f]{40}`/iu,
-		/\bC1B[^\n]*(?:`?tree-exact`?|claims recorded-exact|note-present|strict exit(?:\s*:\s*|\s+)`?0`?|(?:is|was|has been) (?:sealed|strict-clean|verified)|passed verification)/iu,
+		new RegExp("\\b" + unit + " (?:receipt )?commit `[0-9a-f]{40}`", "iu"),
+		new RegExp("\\b" + unit + " (?:receipt )?tree `[0-9a-f]{40}`", "iu"),
+		new RegExp("\\b" + unit + "[^\\n]*(?:`?tree-exact`?|claims recorded-exact|note-present|strict exit(?:\\s*:\\s*|\\s+)`?0`?|(?:is|was|has been) (?:sealed|strict-clean|verified)|passed verification)", "iu"),
 	];
 	for (const pattern of patterns) {
-		if (pattern.test(body)) errors.push(`${path}: C1B self-receipt claim is forbidden`);
+		if (pattern.test(body)) errors.push(`${path}: ${unit} self-receipt claim is forbidden`);
 	}
+}
+
+function rejectC1BSelfReceiptClaims(body, path, errors) {
+	rejectReceiptSelfClaims(body, path, "C1B", errors);
+}
+
+function rejectC2BSelfReceiptClaims(body, path, errors) {
+	rejectReceiptSelfClaims(body, path, "C2B", errors);
 }
 
 function c1ReceiptDisclosureLines(receipt) {
@@ -1026,27 +1150,35 @@ async function admittedExistingLocalPath(root, declaredPath) {
 	return absolute;
 }
 
-async function requireC1ReceiptDeclarationPhase(root, expectedPresent) {
-	const absolute = admittedLocalPath(root, c1ReceiptDeclarationPath);
+async function requireReceiptDeclarationPhase(root, declarationPath, expectedPresent, phase) {
+	const absolute = admittedLocalPath(root, declarationPath);
 	let status;
 	try {
 		status = await lstat(absolute);
 	} catch (error) {
 		if (error.code !== "ENOENT") throw error;
-		if (expectedPresent) throw new Error(`${c1ReceiptDeclarationPath} must be present in declaration-bound mode`);
+		if (expectedPresent) throw new Error(`${declarationPath} must be present in ${phase} declaration-bound mode`);
 		return;
 	}
 	if (!status.isFile() || status.isSymbolicLink()) {
-		throw new Error(`${c1ReceiptDeclarationPath} must be a regular non-symlink file`);
+		throw new Error(`${declarationPath} must be a regular non-symlink file`);
 	}
-	if (!expectedPresent) throw new Error(`${c1ReceiptDeclarationPath} must be absent in sealed-maintenance mode`);
+	if (!expectedPresent) throw new Error(`${declarationPath} must be absent in ${phase} pre-receipt mode`);
+}
+
+async function requireC1ReceiptDeclarationPhase(root, expectedPresent) {
+	await requireReceiptDeclarationPhase(root, c1ReceiptDeclarationPath, expectedPresent, "C1");
+}
+
+async function readReceiptDeclarationSnapshot(root, declarationPath, phase) {
+	await requireReceiptDeclarationPhase(root, declarationPath, true, phase);
+	const absolute = await admittedExistingLocalPath(root, declarationPath);
+	const bytes = await readRegularNoFollow(absolute, c1ReceiptSnapshotLimit);
+	return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
 }
 
 async function readC1ReceiptDeclarationSnapshot(root) {
-	await requireC1ReceiptDeclarationPhase(root, true);
-	const absolute = await admittedExistingLocalPath(root, c1ReceiptDeclarationPath);
-	const bytes = await readRegularNoFollow(absolute, c1ReceiptSnapshotLimit);
-	return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+	return readReceiptDeclarationSnapshot(root, c1ReceiptDeclarationPath, "C1");
 }
 
 async function readRegularNoFollow(absolute, maxBytes = Number.MAX_SAFE_INTEGER) {
@@ -1170,7 +1302,7 @@ function manifestDigest(entries) {
 	return sha256(Buffer.from(body, "utf8"));
 }
 
-async function verifyC1LocalEvidence(root, receipt) {
+async function verifyLocalEvidence(root, receipt, claimLabels, claimTypes, expectedArgv = null) {
 	const errors = [];
 	const html = receipt.evidence.html_report;
 	try {
@@ -1257,12 +1389,15 @@ async function verifyC1LocalEvidence(root, receipt) {
 		if (!isDeepStrictEqual([...referencedCaptureBlobIDs].sort(), [...captureBlobIDs].sort())) {
 			errors.push("local ledger capture blob reference set");
 		}
-		for (let index = 0; index < c1ClaimLabels.length; index += 1) {
+		for (let index = 0; index < claimLabels.length; index += 1) {
 			const claim = claims[index];
-			if (claim?.label !== c1ClaimLabels[index] || claim?.ctype !== c1ClaimTypes[index] ||
+			if (claim?.label !== claimLabels[index] || claim?.ctype !== claimTypes[index] ||
 				claim?.declared_at_index !== index || !isDeepStrictEqual(claim?.event_indices, [index]) ||
 				!isDeepStrictEqual(claim?.pathspecs, [])) {
 				errors.push(`local ledger claim ${index + 1}`);
+			}
+			if (expectedArgv !== null && !isDeepStrictEqual(sessions[index]?.event?.argv, expectedArgv[index])) {
+				errors.push(`local ledger event ${index + 1} argv`);
 			}
 		}
 		if (seals[0]?.commit !== receipt.source_commit || seals[0]?.tree !== receipt.source_tree ||
@@ -1275,11 +1410,22 @@ async function verifyC1LocalEvidence(root, receipt) {
 	return errors;
 }
 
+async function verifyC1LocalEvidence(root, receipt) {
+	return verifyLocalEvidence(root, receipt, c1ClaimLabels, c1ClaimTypes);
+}
+
 async function writeJSONLines(path, values) {
 	await writeFile(path, `${values.map((value) => JSON.stringify(value)).join("\n")}\n`, "utf8");
 }
 
-async function buildLocalEvidenceFixture(root) {
+async function buildLocalEvidenceFixture(root, {
+	claimLabels = c1ClaimLabels,
+	claimTypes = c1ClaimTypes,
+	claimArgv = null,
+	sourceCommit = sealedC1Identity.commit,
+	sourceTree = sealedC1Identity.tree,
+	archiveSessionEventCount = claimLabels.length + 1,
+} = {}) {
 	const htmlPath = "evidence/report.html";
 	const archivePath = "archive/.didrun/";
 	const htmlAbsolute = resolve(root, htmlPath);
@@ -1292,12 +1438,13 @@ async function buildLocalEvidenceFixture(root) {
 	const objectBytes = Buffer.from("fixture-object\n", "utf8");
 	const objectDigest = sha256(objectBytes);
 	const sessions = [];
-	for (let index = 0; index < 20; index += 1) {
+	for (let index = 0; index < archiveSessionEventCount; index += 1) {
 		sessions.push({
 			index,
 			prev_hash: index === 0 ? "0".repeat(64) : sessions[index - 1].entry_hash,
 			entry_hash: sha256(Buffer.from(`fixture-entry-${index}`, "utf8")),
 			event: {
+				argv: claimArgv === null || index >= claimArgv.length ? ["fixture"] : [...claimArgv[index]],
 				coverage: "complete",
 				exit_code: 0,
 				stdout_blob: objectDigest,
@@ -1306,17 +1453,17 @@ async function buildLocalEvidenceFixture(root) {
 			},
 		});
 	}
-	const claims = c1ClaimLabels.map((label, index) => ({
+	const claims = claimLabels.map((label, index) => ({
 		label,
-		ctype: c1ClaimTypes[index],
+		ctype: claimTypes[index],
 		declared_at_index: index,
 		event_indices: [index],
 		pathspecs: [],
 	}));
 	const seals = [{
-		claims_watermark: c1ClaimLabels.length,
-		commit: sealedC1Identity.commit,
-		tree: sealedC1Identity.tree,
+		claims_watermark: claimLabels.length,
+		commit: sourceCommit,
+		tree: sourceTree,
 	}];
 	await writeJSONLines(resolve(archiveRoot, "session.log"), sessions);
 	await writeJSONLines(resolve(archiveRoot, "claims.jsonl"), claims);
@@ -1369,7 +1516,7 @@ async function buildLocalEvidenceFixture(root) {
 				path: archivePath,
 				authority: "LOCAL_IGNORED_ARCHIVE_NOT_GIT_AUTHORITY",
 				manifest_format: "sorted-relative-posix-path-tab-size-tab-sha256-newline/v1",
-				sealed_event_count: 19,
+					sealed_event_count: claimLabels.length,
 				archive_session_event_count: sessions.length,
 				claim_count: claims.length,
 				seal_count: seals.length,
@@ -1384,8 +1531,8 @@ async function buildLocalEvidenceFixture(root) {
 				seals_jsonl_sha256: byPath.get("seals.jsonl").digest,
 			},
 		},
-		source_commit: sealedC1Identity.commit,
-		source_tree: sealedC1Identity.tree,
+		source_commit: sourceCommit,
+		source_tree: sourceTree,
 	};
 	return {
 		root,
@@ -1742,6 +1889,26 @@ function validateReceiptAuthority(receipt, authority) {
 	return errors;
 }
 
+function parseRawSourceDiff(text) {
+	if (typeof text !== "string" || (text.length > 0 && !text.endsWith("\0"))) {
+		throw new Error("raw source diff omitted its final NUL delimiter");
+	}
+	const tokens = text.length === 0 ? [] : text.slice(0, -1).split("\0");
+	if (tokens.length % 2 !== 0) throw new Error("raw source diff has an unpaired header/path");
+	const entries = [];
+	for (let index = 0; index < tokens.length; index += 2) {
+		const match = /^:([0-7]{6}) ([0-7]{6}) ([0-9a-f]{40}|[0-9a-f]{64}) ([0-9a-f]{40}|[0-9a-f]{64}) ([A-Z])$/u.exec(tokens[index]);
+		const path = tokens[index + 1];
+		if (!match || typeof path !== "string" || path.length === 0 || /[\u0000-\u001f\u007f]/u.test(path)) {
+			throw new Error("raw source diff row is malformed");
+		}
+		entries.push(Object.freeze({
+			old_mode: match[1], new_mode: match[2], old_oid: match[3], new_oid: match[4], status: match[5], path,
+		}));
+	}
+	return entries.sort((left, right) => Buffer.compare(Buffer.from(left.path, "utf8"), Buffer.from(right.path, "utf8")));
+}
+
 async function loadReceiptAuthorityFromGit(root, receipt) {
 	const requested = process.env.COUNTERSHAPE_GIT || "/usr/bin/git";
 	if (!isAbsolute(requested)) throw new Error("COUNTERSHAPE_GIT must be absolute");
@@ -1770,7 +1937,12 @@ async function loadReceiptAuthorityFromGit(root, receipt) {
 	const commit = run(["rev-parse", "--verify", `${receipt.source_commit}^{commit}`]).stdout.trim();
 	if (commit !== receipt.source_commit) throw new Error("source commit did not reopen exactly");
 	const tree = run(["rev-parse", "--verify", `${receipt.source_commit}^{tree}`]).stdout.trim();
-	const parent = run(["rev-parse", "--verify", `${receipt.source_commit}^`]).stdout.trim();
+	const parentText = run(["show", "-s", "--format=%P", receipt.source_commit]).stdout.trim();
+	const parents = parentText.length === 0 ? [] : parentText.split(" ");
+	const parent = parents[0] ?? "";
+	const sourceDiff = parent === "" ? [] : parseRawSourceDiff(run([
+		"diff-tree", "--no-commit-id", "--raw", "-r", "-z", "--no-renames", "--full-index", parent, commit, "--",
+	]).stdout);
 	const subject = run(["show", "-s", "--format=%s", receipt.source_commit]).stdout.trimEnd();
 	const ancestor = run(["merge-base", "--is-ancestor", receipt.source_commit, "HEAD"], [0, 1]).status === 0;
 	const noteText = run(["notes", "--ref=didrun", "show", receipt.source_commit]).stdout;
@@ -1788,6 +1960,8 @@ async function loadReceiptAuthorityFromGit(root, receipt) {
 		commit,
 		tree,
 		parent,
+		parents,
+		source_diff: sourceDiff,
 		subject,
 		ancestor_of_head: ancestor,
 		note,
@@ -1874,6 +2048,220 @@ function validateC1ReceiptAuthority(receipt, authority) {
 		errors.push("didrun note exact event coverage");
 	}
 	return errors;
+}
+
+function validateC2ReceiptEvidence(receipt) {
+	const errors = [];
+	const evidence = receipt.evidence;
+	if (!evidence || typeof evidence !== "object" || Array.isArray(evidence) ||
+		!isDeepStrictEqual(Object.keys(evidence).sort(), ["git_note", "html_report", "ledger_archive", "seal_redaction"])) {
+		return ["local evidence field roster"];
+	}
+	const html = evidence.html_report;
+	const sourcePrefix = typeof receipt.source_commit === "string" ? receipt.source_commit.slice(0, 12) : "";
+	if (!html || typeof html !== "object" || Array.isArray(html) ||
+		!isDeepStrictEqual(Object.keys(html).sort(), ["authority", "bytes", "path", "sha256"]) ||
+		html.path !== `.countershape/evidence/p07b-c-c2-final-${sourcePrefix}.html` ||
+		html.authority !== "LOCAL_SNAPSHOT_NOT_PORTABLE_STRICT_WITNESS" ||
+		!Number.isSafeInteger(html.bytes) || html.bytes <= 0 || html.bytes > 16 * 1024 * 1024 ||
+		!(/^[0-9a-f]{64}$/u.test(html.sha256 ?? ""))) {
+		errors.push("local HTML declaration");
+	}
+	const ledger = evidence.ledger_archive;
+	const ledgerKeys = [
+		"all_files_manifest_sha256", "archive_session_event_count", "authority", "claim_count",
+		"claims_jsonl_sha256", "gitignore_sha256", "manifest_format", "object_file_count", "objects_manifest_sha256",
+		"path", "seal_count", "sealed_event_count", "seals_jsonl_sha256", "session_log_sha256", "total_bytes", "total_file_count",
+	];
+	if (!ledger || typeof ledger !== "object" || Array.isArray(ledger) ||
+		!isDeepStrictEqual(Object.keys(ledger).sort(), ledgerKeys) ||
+		ledger.path !== ".didrun-history/2026-07-19-p07b-c-c2-source/.didrun/" ||
+		ledger.authority !== "LOCAL_IGNORED_ARCHIVE_NOT_GIT_AUTHORITY" ||
+		ledger.manifest_format !== "sorted-relative-posix-path-tab-size-tab-sha256-newline/v1" ||
+		ledger.sealed_event_count !== c2ClaimLabels.length || ledger.claim_count !== c2ClaimLabels.length ||
+		ledger.seal_count !== 1 || !Number.isSafeInteger(ledger.archive_session_event_count) ||
+		ledger.archive_session_event_count < c2ClaimLabels.length || ledger.archive_session_event_count > c2ClaimLabels.length + 4 ||
+		!Number.isSafeInteger(ledger.object_file_count) || ledger.object_file_count <= 0 || ledger.object_file_count > 10_000 ||
+		ledger.total_file_count !== ledger.object_file_count + 4 || !Number.isSafeInteger(ledger.total_bytes) ||
+		ledger.total_bytes <= 0 || ledger.total_bytes > 1024 * 1024 * 1024 ||
+		![ledger.all_files_manifest_sha256, ledger.objects_manifest_sha256, ledger.gitignore_sha256,
+			ledger.session_log_sha256, ledger.claims_jsonl_sha256, ledger.seals_jsonl_sha256]
+			.every((digest) => /^[0-9a-f]{64}$/u.test(digest ?? ""))) {
+		errors.push("local ledger declaration");
+	}
+	const note = evidence.git_note;
+	if (!note || typeof note !== "object" || Array.isArray(note) ||
+		!isDeepStrictEqual(Object.keys(note).sort(), ["blob_oid", "body_sha256", "version"]) || note.version !== 1 ||
+		!(/^[0-9a-f]{40}$/u.test(note.blob_oid ?? "")) || !(/^[0-9a-f]{64}$/u.test(note.body_sha256 ?? ""))) {
+		errors.push("Git note evidence declaration");
+	}
+	const redaction = evidence.seal_redaction;
+	if (!redaction || typeof redaction !== "object" || Array.isArray(redaction) ||
+		!isDeepStrictEqual(Object.keys(redaction).sort(), [
+			"finding_count", "finding_kinds", "finding_provenance", "structured_scan_provenance", "structured_staged_scan_findings",
+		]) || !Number.isSafeInteger(redaction.finding_count) || redaction.finding_count < 0 || redaction.finding_count > 100_000 ||
+		!Array.isArray(redaction.finding_kinds) || !isDeepStrictEqual(redaction.finding_kinds, redaction.finding_count === 0 ? [] : ["high-entropy"]) ||
+		redaction.finding_provenance !== "LOCAL_TERMINAL_OBSERVATION_NOT_GIT_NOTE" ||
+		redaction.structured_staged_scan_findings !== 0 ||
+		redaction.structured_scan_provenance !== "SEALED_C2_SUPPORTING_EVENT_12" ||
+		(receipt.secrets_override !== (redaction.finding_count > 0))) {
+		errors.push("seal redaction evidence declaration");
+	}
+	return errors;
+}
+
+function validateC2ReceiptDeclaration(receipt) {
+	const errors = [];
+	const keys = [
+		"claims", "coverage_complete_events", "coverage_total_events", "evidence", "schema_version",
+		"secrets_override", "source_commit", "source_subject", "source_tree", "strict_claims_recorded_exact",
+		"strict_claims_total", "strict_exit_code",
+	];
+	if (!receipt || typeof receipt !== "object" || Array.isArray(receipt) ||
+		!isDeepStrictEqual(Object.keys(receipt).sort(), keys)) return ["root field roster"];
+	if (receipt.schema_version !== "countershape/p07b-c-c2-receipt/v1") errors.push("schema version");
+	if (!/^[0-9a-f]{40}$/u.test(receipt.source_commit ?? "") || /^0+$/u.test(receipt.source_commit ?? "")) errors.push("source commit");
+	if (!/^[0-9a-f]{40}$/u.test(receipt.source_tree ?? "") || /^0+$/u.test(receipt.source_tree ?? "")) errors.push("source tree");
+	if (receipt.source_subject !== "feat: add contract execution persistence substrate") errors.push("source subject");
+	if (typeof receipt.secrets_override !== "boolean") errors.push("secrets override disclosure");
+	if (receipt.strict_exit_code !== 0) errors.push("strict exit code");
+	if (receipt.strict_claims_recorded_exact !== c2ClaimLabels.length || receipt.strict_claims_total !== c2ClaimLabels.length) {
+		errors.push("strict claim counts");
+	}
+	if (receipt.coverage_total_events !== c2ClaimLabels.length || receipt.coverage_complete_events !== c2ClaimLabels.length) {
+		errors.push("coverage counts");
+	}
+	if (!Array.isArray(receipt.claims) || receipt.claims.length !== c2ClaimLabels.length) {
+		errors.push("claim roster length");
+	} else {
+		for (let index = 0; index < c2ClaimLabels.length; index += 1) {
+			const claim = receipt.claims[index];
+			if (!claim || typeof claim !== "object" || Array.isArray(claim) ||
+				!isDeepStrictEqual(Object.keys(claim).sort(), ["grade", "label", "supporting_event_index", "type"]) ||
+				claim.supporting_event_index !== index || claim.type !== c2ClaimTypes[index] ||
+				claim.label !== c2ClaimLabels[index] || claim.grade !== "TREE-EXACT") {
+				errors.push(`claim ${index + 1}`);
+			}
+		}
+	}
+	errors.push(...validateC2ReceiptEvidence(receipt));
+	return errors;
+}
+
+function validateC2RawClaimArgv(index, argv) {
+	return Number.isSafeInteger(index) && index >= 0 && index < c2ExpectedClaimArgv.length &&
+		Array.isArray(argv) && argv.length > 0 && argv.length <= 64 &&
+		argv.every((argument) => typeof argument === "string" && argument.length > 0 && argument.length <= 4096 &&
+			!/[\u0000-\u001f\u007f]/u.test(argument)) &&
+		isDeepStrictEqual(argv, c2ExpectedClaimArgv[index]);
+}
+
+function validateC2ClaimPreview(index, argv) {
+	if (index >= 9) return validateC2RawClaimArgv(index, argv);
+	const expected = c2ExpectedClaimArgv[index];
+	if (!Array.isArray(argv) || argv.length !== expected.length || argv.some((entry) => typeof entry !== "string")) return false;
+	for (let position = 0; position < expected.length; position += 1) {
+		if (argv[position] === expected[position]) continue;
+		if (position >= 2 && position <= 7) {
+			const suffixOffset = expected[position].indexOf(".countershape/");
+			const suffix = suffixOffset < 0 ? "" : expected[position].slice(suffixOffset);
+			if (suffix !== "" && (argv[position] === `«redacted:high-entropy»${suffix}` ||
+				argv[position] === "«redacted:high-entropy».«redacted:high-entropy»")) continue;
+		}
+		if (position >= 22 && position <= 24 && argv[position] === "«redacted:high-entropy»") continue;
+		return false;
+	}
+	return true;
+}
+
+function validateC2SourceDiff(authority) {
+	const errors = [];
+	if (!isDeepStrictEqual(authority.parents, [sealedC1BIdentity.commit])) errors.push("source parents");
+	const entries = authority.source_diff;
+	if (!Array.isArray(entries)) return [...errors, "source diff roster"];
+	const paths = entries.map((entry) => entry?.path);
+	if (new Set(paths).size !== paths.length || !isDeepStrictEqual(paths, requiredC2Paths)) {
+		errors.push("source diff exact path roster");
+	}
+	for (const path of requiredC2Paths) {
+		const entry = entries.find((candidate) => candidate?.path === path);
+		if (!entry || !isDeepStrictEqual(Object.keys(entry).sort(), ["new_mode", "new_oid", "old_mode", "old_oid", "path", "status"])) {
+			errors.push(`source diff row ${path}`);
+			continue;
+		}
+		const objectPattern = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/u;
+		const newObjectValid = objectPattern.test(entry.new_oid) && !/^0+$/u.test(entry.new_oid);
+		if (requiredC2AddedPaths.has(path)) {
+			if (entry.status !== "A" || entry.old_mode !== "000000" || entry.new_mode !== "100644" ||
+				!objectPattern.test(entry.old_oid) || !/^0+$/u.test(entry.old_oid) || !newObjectValid ||
+				entry.old_oid.length !== entry.new_oid.length) {
+				errors.push(`source diff added row ${path}`);
+			}
+		} else if (entry.status !== "M" || entry.old_mode !== "100644" || entry.new_mode !== "100644" ||
+			!objectPattern.test(entry.old_oid) || /^0+$/u.test(entry.old_oid) || !newObjectValid ||
+			entry.old_oid.length !== entry.new_oid.length || entry.old_oid === entry.new_oid) {
+			errors.push(`source diff modified row ${path}`);
+		}
+	}
+	return errors;
+}
+
+function validateC2ReceiptAuthority(receipt, authority) {
+	const errors = [];
+	if (!authority || typeof authority !== "object" || Array.isArray(authority)) return ["missing Git/didrun authority"];
+	if (authority.commit !== receipt.source_commit) errors.push("source commit does not equal admitted Git commit");
+	if (authority.tree !== receipt.source_tree) errors.push("source tree does not equal Git commit tree");
+	if (authority.parent !== sealedC1BIdentity.commit) errors.push("source parent");
+	errors.push(...validateC2SourceDiff(authority));
+	if (authority.subject !== receipt.source_subject) errors.push("source commit subject");
+	if (authority.ancestor_of_head !== true) errors.push("source commit is not an ancestor of HEAD");
+	if (authority.note_blob_oid !== receipt.evidence.git_note.blob_oid) errors.push("didrun note object identity");
+	if (authority.note_body_sha256 !== receipt.evidence.git_note.body_sha256) errors.push("didrun note body digest");
+	const note = authority.note;
+	if (!note || typeof note !== "object" || Array.isArray(note)) {
+		errors.push("missing parsed didrun Git note");
+		return errors;
+	}
+	if (note.version !== receipt.evidence.git_note.version) errors.push("didrun note version");
+	if (note.commit !== receipt.source_commit) errors.push("didrun note commit");
+	if (note.tree !== receipt.source_tree) errors.push("didrun note tree");
+	if (note.secrets_override !== receipt.secrets_override) errors.push("didrun note redacted seal disclosure");
+	if (!Array.isArray(note.claims) || note.claims.length !== c2ClaimLabels.length) {
+		errors.push("didrun note claim roster length");
+	} else {
+		for (let index = 0; index < c2ClaimLabels.length; index += 1) {
+			const recorded = note.claims[index];
+			const claim = recorded?.claim;
+			if (claim?.label !== c2ClaimLabels[index] || claim?.ctype !== c2ClaimTypes[index] ||
+				claim?.declared_at_index !== index || !isDeepStrictEqual(claim?.event_indices, [index]) ||
+				!isDeepStrictEqual(claim?.pathspecs, []) ||
+				recorded?.supporting_event_index !== index || recorded?.grade !== "tree-exact" || recorded?.exit_code !== 0 ||
+				recorded?.reason !== "self-stable command ran against the sealed tree" || !isDeepStrictEqual(recorded?.delta, [])) {
+				errors.push(`didrun note claim ${index + 1}`);
+			}
+			if (!validateC2ClaimPreview(index, claim?.argv_preview)) errors.push(`didrun note claim ${index + 1} argv`);
+		}
+	}
+	if (note.coverage?.total_events !== receipt.coverage_total_events ||
+		note.coverage?.by_coverage?.complete !== receipt.coverage_complete_events ||
+		!isDeepStrictEqual(Object.keys(note.coverage?.by_coverage ?? {}), ["complete"])) {
+		errors.push("didrun note exact event coverage");
+	}
+	return errors;
+}
+
+function c2ReceiptDisclosureLines(receipt) {
+	const { html_report: html, ledger_archive: ledger, git_note: note, seal_redaction: redaction } = receipt.evidence;
+	return Object.freeze([
+		`C2 source commit \`${receipt.source_commit}\`, tree \`${receipt.source_tree}\`, is sealed, note-present, and strict-clean with \`${receipt.strict_claims_recorded_exact}/${receipt.strict_claims_total} claims recorded-exact\`.`,
+		`The C2 seal records \`secrets_override: ${receipt.secrets_override}\` after ${redaction.finding_count} local scanner findings with kinds \`${redaction.finding_kinds.join(",") || "none"}\`; this is not evidence of secret absence.`,
+		`The separately claimed C2 structured staged credential scan reported \`${redaction.structured_staged_scan_findings}\` findings; its provenance is sealed supporting event \`12\`, not the Git note alone.`,
+		`Local ignored C2 ledger archive \`${ledger.path}\` contains \`${ledger.sealed_event_count}\` sealed events and \`${ledger.archive_session_event_count}\` archived session events; post-seal events, if any, are outside the sealed manifest.`,
+		`C2 ledger manifests use \`${ledger.manifest_format}\`; all-files SHA-256 is \`${ledger.all_files_manifest_sha256}\` and objects-only SHA-256 is \`${ledger.objects_manifest_sha256}\`.`,
+		`C2 archive core SHA-256 values are session \`${ledger.session_log_sha256}\`, claims \`${ledger.claims_jsonl_sha256}\`, seals \`${ledger.seals_jsonl_sha256}\`, and .gitignore \`${ledger.gitignore_sha256}\`.`,
+		`The local C2 HTML snapshot is \`${html.path}\`, SHA-256 \`${html.sha256}\`, ${html.bytes} bytes; it is not a portable strict witness.`,
+		`The C2 Git note blob is \`${note.blob_oid}\` with body SHA-256 \`${note.body_sha256}\`.`,
+	]);
 }
 
 async function checkC1ReceiptPhase(root, overrides, status, handoff, errors, injectedReceiptAuthority) {
@@ -1978,6 +2366,96 @@ async function checkC1ReceiptPhase(root, overrides, status, handoff, errors, inj
 	if (didrunBugs !== undefined) rejectC1BSelfReceiptClaims(didrunBugs, c1DidrunBugsPath, errors);
 }
 
+async function checkC2ReceiptPhase(root, overrides, status, handoff, errors, injectedReceiptAuthority) {
+	let receiptText;
+	try {
+		receiptText = await readText(root, c2ReceiptDeclarationPath, overrides);
+	} catch (error) {
+		if (error.code !== "ENOENT") errors.push(`${c2ReceiptDeclarationPath}: unreadable (${error.message})`);
+	}
+
+	if (receiptText === undefined) {
+		requireExactlyOnce(
+			status,
+			"- **State:** active pre-seal source boundary; every C2 grade below is `UNRECEIPTED`",
+			c2StatusPath,
+			"C2 pre-seal source state",
+			errors,
+		);
+		requireExactlyOnce(status, `- **Scope:** 26 exact paths, no prefixes; sorted-newline roster \`${requiredC2Digest}\``, c2StatusPath, "C2 source scope", errors);
+		for (let index = 0; index < c2ClaimLabels.length; index += 1) {
+			requireExactlyOnce(
+				status,
+				`| \`${c2ClaimLabels[index]}\` | \`${c2ClaimTypes[index]}\` | \`UNRECEIPTED\` |`,
+				c2StatusPath,
+				"C2 pending source receipt map",
+				errors,
+			);
+			requireClaimLabelExactlyOnce(status, c2ClaimLabels[index], c2StatusPath, "C2 pending source receipt map", errors);
+		}
+		if (handoff.includes("<!-- P07B-C-C2-SOURCE-RECEIPTS:START -->") ||
+			handoff.includes("<!-- P07B-C-C2-SOURCE-RECEIPTS:END -->")) {
+			errors.push("docs/HANDOFF_MODE_C.md: C2 pending receipt state cannot contain a source receipt block");
+		}
+		requireExactlyOnce(handoff, requiredC2Digest, "docs/HANDOFF_MODE_C.md", "C2 source scope digest", errors);
+		requireExactlyOnce(handoff, requiredC2BDigest, "docs/HANDOFF_MODE_C.md", "C2B receipt scope digest", errors);
+		rejectC2BSelfReceiptClaims(status, c2StatusPath, errors);
+		rejectC2BSelfReceiptClaims(handoff, "docs/HANDOFF_MODE_C.md", errors);
+		return;
+	}
+
+	let receipt;
+	try {
+		receipt = JSON.parse(receiptText);
+	} catch (error) {
+		errors.push(`${c2ReceiptDeclarationPath}: invalid JSON (${error.message})`);
+		return;
+	}
+	const receiptErrors = validateC2ReceiptDeclaration(receipt);
+	for (const error of receiptErrors) errors.push(`${c2ReceiptDeclarationPath}: invalid receipt declaration (${error})`);
+	if (receiptErrors.length > 0) return;
+	let authority = injectedReceiptAuthority;
+	if (authority === undefined) {
+		try {
+			authority = await loadReceiptAuthorityFromGit(root, receipt);
+		} catch (error) {
+			errors.push(`${c2ReceiptDeclarationPath}: Git/didrun authority unavailable (${error.message})`);
+			return;
+		}
+	}
+	const authorityErrors = validateC2ReceiptAuthority(receipt, authority);
+	for (const error of authorityErrors) errors.push(`${c2ReceiptDeclarationPath}: Git/didrun authority mismatch (${error})`);
+	if (authorityErrors.length > 0) return;
+
+	const state = `- **Source receipt:** C2 source commit \`${receipt.source_commit}\`, tree \`${receipt.source_tree}\`, is sealed, note-present, and strict-clean; every C2 source grade below is \`TREE-EXACT\`. This C2B receipt-document working unit binds only that existing source and remains \`UNRECEIPTED\` until its own commit, seal, note, and strict boundary.`;
+	requireExactlyOnce(status, state, c2StatusPath, "C2B reconciled source state", errors);
+	requireExactlyOnce(status, "## C2 source receipt map", c2StatusPath, "C2B receipt heading", errors);
+	requireExactlyOnce(status, "- C2 source strict exit: `0`", c2StatusPath, "C2B strict result", errors);
+	requireExactlyOnce(status, `- C2 source strict claims: \`${receipt.strict_claims_recorded_exact}/${receipt.strict_claims_total} claims recorded-exact\``, c2StatusPath, "C2B strict claim count", errors);
+	requireExactlyOnce(status, "This receipt binds only the already-existing C2 source commit. C2B cannot name or grade its own commit, tree, Git note, or strict result.", c2StatusPath, "C2B no-recursion boundary", errors);
+	for (const claim of receipt.claims) {
+		requireExactlyOnce(status, `| \`${claim.label}\` | \`${claim.type}\` | \`${claim.grade}\` |`, c2StatusPath, "C2B source receipt map", errors);
+		requireClaimLabelExactlyOnce(status, claim.label, c2StatusPath, "C2B source receipt map", errors);
+	}
+	const disclosures = c2ReceiptDisclosureLines(receipt);
+	for (const disclosure of disclosures) {
+		requireExactlyOnce(status, disclosure, c2StatusPath, "C2B source evidence disclosure", errors);
+	}
+	requireExactlyOnce(handoff, "<!-- P07B-C-C2-SOURCE-RECEIPTS:START -->", "docs/HANDOFF_MODE_C.md", "C2B receipt block", errors);
+	requireExactlyOnce(handoff, "<!-- P07B-C-C2-SOURCE-RECEIPTS:END -->", "docs/HANDOFF_MODE_C.md", "C2B receipt block", errors);
+	requireExactlyOnce(handoff, `C2 source commit \`${receipt.source_commit}\`, tree \`${receipt.source_tree}\`.`, "docs/HANDOFF_MODE_C.md", "C2B source identity", errors);
+	requireExactlyOnce(handoff, `C2 strict claims: \`${receipt.strict_claims_recorded_exact}/${receipt.strict_claims_total} claims recorded-exact\`; strict exit: \`0\`.`, "docs/HANDOFF_MODE_C.md", "C2B strict result", errors);
+	for (const claim of receipt.claims) {
+		requireExactlyOnce(handoff, `| \`${claim.label}\` | \`${claim.type}\` | \`${claim.grade}\` |`, "docs/HANDOFF_MODE_C.md", "C2B claim map", errors);
+		requireClaimLabelExactlyOnce(handoff, claim.label, "docs/HANDOFF_MODE_C.md", "C2B claim map", errors);
+	}
+	for (const disclosure of disclosures) {
+		requireExactlyOnce(handoff, disclosure, "docs/HANDOFF_MODE_C.md", "C2B source evidence disclosure", errors);
+	}
+	rejectC2BSelfReceiptClaims(status, c2StatusPath, errors);
+	rejectC2BSelfReceiptClaims(handoff, "docs/HANDOFF_MODE_C.md", errors);
+}
+
 async function checkStatusPhase(root, overrides, status, handoff, errors, injectedReceiptAuthority) {
 	let receiptText;
 	try {
@@ -2067,7 +2545,7 @@ async function checkStatusPhase(root, overrides, status, handoff, errors, inject
 	}
 }
 
-export async function checkPlan(root = repositoryRoot, overrides = new Map(), receiptAuthority, c1ReceiptAuthority) {
+export async function checkPlan(root = repositoryRoot, overrides = new Map(), receiptAuthority, c1ReceiptAuthority, c2ReceiptAuthority) {
 	const errors = [];
 	const bodies = new Map();
 
@@ -2145,6 +2623,10 @@ export async function checkPlan(root = repositoryRoot, overrides = new Map(), re
 	if (computedC1EvidenceMaintenanceDigest !== requiredC1EvidenceMaintenanceDigest) {
 		errors.push(`internal C1E roster digest mismatch: ${computedC1EvidenceMaintenanceDigest}`);
 	}
+	const computedC2Digest = `sha256:${createHash("sha256").update(`${requiredC2Paths.join("\n")}\n`, "utf8").digest("hex")}`;
+	if (computedC2Digest !== requiredC2Digest) errors.push(`internal C2 roster digest mismatch: ${computedC2Digest}`);
+	const computedC2BDigest = `sha256:${createHash("sha256").update(`${requiredC2BPaths.join("\n")}\n`, "utf8").digest("hex")}`;
+	if (computedC2BDigest !== requiredC2BDigest) errors.push(`internal C2B roster digest mismatch: ${computedC2BDigest}`);
 	if (!isDeepStrictEqual(qualificationCaseIDs, requiredQualificationCaseIDs)) {
 		errors.push("internal C1V Go repetition qualification case roster mismatch");
 	}
@@ -2254,14 +2736,33 @@ export async function checkPlan(root = repositoryRoot, overrides = new Map(), re
 	} catch (error) {
 		errors.push(`${c1StatusPath}: unreadable (${error.message})`);
 	}
+	let c2Status;
+	try {
+		c2Status = await readText(root, c2StatusPath, overrides);
+		for (const snippet of [
+			"C2 is the Darwin-private persistence substrate",
+			"C2 production never issues official target or permit authority",
+			"`ExecutionInterlockClearReceipt`",
+			"compiler-parsed Go AST enumeration",
+			requiredC2Digest,
+			requiredC2BDigest,
+		]) {
+			if (!c2Status.includes(snippet)) errors.push(`${c2StatusPath}: missing required C2 boundary: ${JSON.stringify(snippet)}`);
+		}
+	} catch (error) {
+		errors.push(`${c2StatusPath}: unreadable (${error.message})`);
+	}
 
 	const status = bodies.get(statusPath);
 	const handoff = bodies.get("docs/HANDOFF_MODE_C.md");
 	if (status !== undefined && handoff !== undefined) {
 		await checkStatusPhase(root, overrides, status, handoff, errors, receiptAuthority);
-		if (c1Status !== undefined) {
-			await checkC1ReceiptPhase(root, overrides, c1Status, handoff, errors, c1ReceiptAuthority);
-		}
+			if (c1Status !== undefined) {
+				await checkC1ReceiptPhase(root, overrides, c1Status, handoff, errors, c1ReceiptAuthority);
+			}
+			if (c2Status !== undefined) {
+				await checkC2ReceiptPhase(root, overrides, c2Status, handoff, errors, c2ReceiptAuthority);
+			}
 	}
 
 	for (const path of controllingPaths) {
@@ -2349,11 +2850,276 @@ export async function checkPlan(root = repositoryRoot, overrides = new Map(), re
 		if (!isDeepStrictEqual(specification.units.C1B.receipt_claims, requiredC1BReceiptClaims)) {
 			errors.push("spec/verification/p07b-c-unit-paths.json: C1B receipt claim manifest mismatch");
 		}
+		if (!isDeepStrictEqual(specification.units.C2.exact, requiredC2Paths)) {
+			errors.push("spec/verification/p07b-c-unit-paths.json: C2 exact path roster mismatch");
+		}
+		if (!isDeepStrictEqual(specification.units.C2.prefixes, []) || specification.units.C2.verification_profile !== "SOURCE_FULL") {
+			errors.push("spec/verification/p07b-c-unit-paths.json: C2 source profile mismatch");
+		}
+		if (!isDeepStrictEqual(specification.units.C2B.exact, requiredC2BPaths)) {
+			errors.push("spec/verification/p07b-c-unit-paths.json: C2B exact path roster mismatch");
+		}
+		if (!isDeepStrictEqual(specification.units.C2B.prefixes, []) ||
+			specification.units.C2B.verification_profile !== "RECEIPT_RECONCILIATION") {
+			errors.push("spec/verification/p07b-c-unit-paths.json: C2B receipt profile mismatch");
+		}
+		if (!isDeepStrictEqual(specification.units.C2B.receipt_claims, requiredC2BReceiptClaims)) {
+			errors.push("spec/verification/p07b-c-unit-paths.json: C2B receipt claim manifest mismatch");
+		}
 	} catch (error) {
 		errors.push(`spec/verification/p07b-c-unit-paths.json: invalid (${error.message})`);
 	}
 
 	return errors;
+}
+
+function syntheticC2ReceiptFixture() {
+	const sourceCommit = "a".repeat(40);
+	const sourceTree = "b".repeat(40);
+	const sourceDiff = requiredC2Paths.map((path, index) => {
+		const added = requiredC2AddedPaths.has(path);
+		return {
+			old_mode: added ? "000000" : "100644",
+			new_mode: "100644",
+			old_oid: added ? "0".repeat(40) : (index + 1).toString(16).padStart(40, "1").slice(-40),
+			new_oid: (index + 1).toString(16).padStart(40, "2").slice(-40),
+			status: added ? "A" : "M",
+			path,
+		};
+	});
+	const receipt = {
+		schema_version: "countershape/p07b-c-c2-receipt/v1",
+		source_commit: sourceCommit,
+		source_tree: sourceTree,
+		source_subject: "feat: add contract execution persistence substrate",
+		strict_exit_code: 0,
+		strict_claims_recorded_exact: c2ClaimLabels.length,
+		strict_claims_total: c2ClaimLabels.length,
+		coverage_complete_events: c2ClaimLabels.length,
+		coverage_total_events: c2ClaimLabels.length,
+		secrets_override: false,
+		claims: c2ClaimLabels.map((label, index) => ({
+			label, type: c2ClaimTypes[index], supporting_event_index: index, grade: "TREE-EXACT",
+		})),
+		evidence: {
+			html_report: {
+				path: `.countershape/evidence/p07b-c-c2-final-${sourceCommit.slice(0, 12)}.html`,
+				sha256: "c".repeat(64), bytes: 8192,
+				authority: "LOCAL_SNAPSHOT_NOT_PORTABLE_STRICT_WITNESS",
+			},
+			ledger_archive: {
+				path: ".didrun-history/2026-07-19-p07b-c-c2-source/.didrun/",
+				authority: "LOCAL_IGNORED_ARCHIVE_NOT_GIT_AUTHORITY",
+				manifest_format: "sorted-relative-posix-path-tab-size-tab-sha256-newline/v1",
+				sealed_event_count: c2ClaimLabels.length,
+				archive_session_event_count: c2ClaimLabels.length + 1,
+				claim_count: c2ClaimLabels.length,
+				seal_count: 1,
+				object_file_count: 20,
+				total_file_count: 24,
+				total_bytes: 100_000,
+				all_files_manifest_sha256: "d".repeat(64),
+				objects_manifest_sha256: "e".repeat(64),
+				gitignore_sha256: "f".repeat(64),
+				session_log_sha256: "1".repeat(64),
+				claims_jsonl_sha256: "2".repeat(64),
+				seals_jsonl_sha256: "3".repeat(64),
+			},
+			git_note: { version: 1, blob_oid: "4".repeat(40), body_sha256: "5".repeat(64) },
+			seal_redaction: {
+				finding_count: 0,
+				finding_kinds: [],
+				finding_provenance: "LOCAL_TERMINAL_OBSERVATION_NOT_GIT_NOTE",
+				structured_staged_scan_findings: 0,
+				structured_scan_provenance: "SEALED_C2_SUPPORTING_EVENT_12",
+			},
+		},
+	};
+	const authority = {
+		commit: sourceCommit,
+		tree: sourceTree,
+		parent: sealedC1BIdentity.commit,
+		parents: [sealedC1BIdentity.commit],
+		source_diff: sourceDiff,
+		subject: receipt.source_subject,
+		ancestor_of_head: true,
+		note_blob_oid: receipt.evidence.git_note.blob_oid,
+		note_body_sha256: receipt.evidence.git_note.body_sha256,
+		note: {
+			version: 1,
+			commit: sourceCommit,
+			tree: sourceTree,
+			secrets_override: false,
+			claims: c2ClaimLabels.map((label, index) => ({
+				claim: {
+					label, ctype: c2ClaimTypes[index], declared_at_index: index, event_indices: [index],
+					pathspecs: [], argv_preview: [...c2ExpectedClaimArgv[index]],
+				},
+				supporting_event_index: index,
+				grade: "tree-exact",
+				exit_code: 0,
+				reason: "self-stable command ran against the sealed tree",
+				delta: [],
+			})),
+			coverage: { total_events: c2ClaimLabels.length, by_coverage: { complete: c2ClaimLabels.length } },
+		},
+	};
+	const disclosures = c2ReceiptDisclosureLines(receipt);
+	const receiptRows = receipt.claims.map((claim) => `| \`${claim.label}\` | \`${claim.type}\` | \`${claim.grade}\` |`).join("\n");
+	const status = [
+		`- **Source receipt:** C2 source commit \`${sourceCommit}\`, tree \`${sourceTree}\`, is sealed, note-present, and strict-clean; every C2 source grade below is \`TREE-EXACT\`. This C2B receipt-document working unit binds only that existing source and remains \`UNRECEIPTED\` until its own commit, seal, note, and strict boundary.`,
+		"## C2 source receipt map",
+		"- C2 source strict exit: `0`",
+		`- C2 source strict claims: \`${c2ClaimLabels.length}/${c2ClaimLabels.length} claims recorded-exact\``,
+		"This receipt binds only the already-existing C2 source commit. C2B cannot name or grade its own commit, tree, Git note, or strict result.",
+		receiptRows,
+		...disclosures,
+	].join("\n");
+	const handoff = [
+		"<!-- P07B-C-C2-SOURCE-RECEIPTS:START -->",
+		`C2 source commit \`${sourceCommit}\`, tree \`${sourceTree}\`.`,
+		`C2 strict claims: \`${c2ClaimLabels.length}/${c2ClaimLabels.length} claims recorded-exact\`; strict exit: \`0\`.`,
+		receiptRows,
+		...disclosures,
+		"<!-- P07B-C-C2-SOURCE-RECEIPTS:END -->",
+	].join("\n");
+	return { receipt, authority, status, handoff };
+}
+
+async function runC2ReceiptCheckerSelfTest() {
+	const fixture = syntheticC2ReceiptFixture();
+	let rejected = 0;
+	const requireError = (name, errors, expected) => {
+		if (!errors.some((error) => error.includes(expected))) {
+			throw new Error(`P07B-C C2 receipt checker self-test false negative: ${name} (${errors.join("; ")})`);
+		}
+		rejected += 1;
+	};
+	const declarationBaseline = validateC2ReceiptDeclaration(fixture.receipt);
+	if (declarationBaseline.length > 0) throw new Error(`P07B-C C2 receipt declaration self-test baseline failed: ${declarationBaseline.join(", ")}`);
+	const authorityBaseline = validateC2ReceiptAuthority(fixture.receipt, fixture.authority);
+	if (authorityBaseline.length > 0) throw new Error(`P07B-C C2 receipt authority self-test baseline failed: ${authorityBaseline.join(", ")}`);
+	const redactedAuthority = structuredClone(fixture.authority);
+	for (let index = 0; index < 9; index += 1) {
+		const preview = redactedAuthority.note.claims[index].claim.argv_preview;
+		for (let position = 2; position <= 7; position += 1) {
+			const suffix = preview[position].slice(preview[position].indexOf(".countershape/"));
+			preview[position] = position === 5
+				? `«redacted:high-entropy»${suffix}`
+				: "«redacted:high-entropy».«redacted:high-entropy»";
+		}
+		for (let position = 22; position <= 24; position += 1) preview[position] = "«redacted:high-entropy»";
+	}
+	const redactedBaseline = validateC2ReceiptAuthority(fixture.receipt, redactedAuthority);
+	if (redactedBaseline.length > 0) throw new Error(`P07B-C C2 redacted-preview self-test baseline failed: ${redactedBaseline.join(", ")}`);
+	const phaseBaseline = [];
+	await checkC2ReceiptPhase(
+		repositoryRoot,
+		new Map([[c2ReceiptDeclarationPath, `${JSON.stringify(fixture.receipt)}\n`]]),
+		fixture.status,
+		fixture.handoff,
+		phaseBaseline,
+		fixture.authority,
+	);
+	if (phaseBaseline.length > 0) throw new Error(`P07B-C C2 receipt phase self-test baseline failed: ${phaseBaseline.join(", ")}`);
+
+	const wrongSchema = structuredClone(fixture.receipt);
+	wrongSchema.schema_version = "countershape/p07b-c-c2-receipt/v2";
+	requireError("schema", validateC2ReceiptDeclaration(wrongSchema), "schema version");
+	const wrongClaim = structuredClone(fixture.receipt);
+	wrongClaim.claims[0].grade = "UNRECEIPTED";
+	requireError("claim grade", validateC2ReceiptDeclaration(wrongClaim), "claim 1");
+	const wrongEvidence = structuredClone(fixture.receipt);
+	wrongEvidence.evidence.html_report.sha256 = "wrong";
+	requireError("HTML evidence", validateC2ReceiptDeclaration(wrongEvidence), "local HTML declaration");
+	const wrongParent = structuredClone(fixture.authority);
+	wrongParent.parent = "6".repeat(40);
+	requireError("Git parent", validateC2ReceiptAuthority(fixture.receipt, wrongParent), "source parent");
+	const wrongNote = structuredClone(fixture.authority);
+	wrongNote.note.claims[0].grade = "unreceipted";
+	requireError("note grade", validateC2ReceiptAuthority(fixture.receipt, wrongNote), "didrun note claim 1");
+	const swappedProfile = structuredClone(fixture.authority);
+	swappedProfile.note.claims[0].claim.argv_preview = [...c2ExpectedClaimArgv[1]];
+	requireError("profile command substitution", validateC2ReceiptAuthority(fixture.receipt, swappedProfile), "didrun note claim 1 argv");
+	const benignVerifierSubstitution = structuredClone(fixture.authority);
+	benignVerifierSubstitution.note.claims[10].claim.argv_preview = ["/usr/bin/true"];
+	requireError("cumulative command substitution", validateC2ReceiptAuthority(fixture.receipt, benignVerifierSubstitution), "didrun note claim 11 argv");
+	const appendedArgument = structuredClone(fixture.authority);
+	appendedArgument.note.claims[5].claim.argv_preview.push("--extra");
+	requireError("appended command argument", validateC2ReceiptAuthority(fixture.receipt, appendedArgument), "didrun note claim 6 argv");
+	const nonStringArgument = structuredClone(fixture.authority);
+	nonStringArgument.note.claims[7].claim.argv_preview[0] = 7;
+	requireError("non-string command argument", validateC2ReceiptAuthority(fixture.receipt, nonStringArgument), "didrun note claim 8 argv");
+	const mergeParent = structuredClone(fixture.authority);
+	mergeParent.parents.push("6".repeat(40));
+	requireError("merge source", validateC2ReceiptAuthority(fixture.receipt, mergeParent), "source parents");
+	for (const [name, mutate, expected] of [
+		["extra source path", (authority) => { authority.source_diff.push({ ...authority.source_diff.at(-1), path: "wrong/extra.go" }); }, "source diff exact path roster"],
+		["missing source path", (authority) => { authority.source_diff.shift(); }, "source diff exact path roster"],
+		["duplicate source path", (authority) => { authority.source_diff[1].path = authority.source_diff[0].path; }, "source diff exact path roster"],
+		["added status drift", (authority) => { authority.source_diff.find((entry) => entry.status === "A").status = "M"; }, "source diff added row"],
+		["modified status drift", (authority) => { authority.source_diff.find((entry) => entry.status === "M").status = "A"; }, "source diff modified row"],
+		["executable final mode", (authority) => { authority.source_diff[0].new_mode = "100755"; }, "source diff modified row"],
+		["symlink final mode", (authority) => { authority.source_diff[0].new_mode = "120000"; }, "source diff modified row"],
+		["submodule final mode", (authority) => { authority.source_diff[0].new_mode = "160000"; }, "source diff modified row"],
+		["deleted final object", (authority) => { authority.source_diff[0].status = "D"; authority.source_diff[0].new_mode = "000000"; authority.source_diff[0].new_oid = "0".repeat(40); }, "source diff modified row"],
+		["unchanged modified object", (authority) => { authority.source_diff.find((entry) => entry.status === "M").new_oid = authority.source_diff.find((entry) => entry.status === "M").old_oid; }, "source diff modified row"],
+	]) {
+		const hostile = structuredClone(fixture.authority);
+		mutate(hostile);
+		requireError(name, validateC2ReceiptAuthority(fixture.receipt, hostile), expected);
+	}
+	for (const [name, status, handoff, expected] of [
+		["status disagreement", fixture.status.replace(fixture.receipt.claims[0].label, "wrong label"), fixture.handoff, "C2B source receipt map"],
+		["handoff disagreement", fixture.status, fixture.handoff.replace(fixture.receipt.source_tree, "7".repeat(40)), "C2B source identity"],
+		["C2B self receipt", `${fixture.status}\nC2B commit \`${"8".repeat(40)}\``, fixture.handoff, "C2B self-receipt claim"],
+	]) {
+		const errors = [];
+		await checkC2ReceiptPhase(
+			repositoryRoot,
+			new Map([[c2ReceiptDeclarationPath, `${JSON.stringify(fixture.receipt)}\n`]]),
+			status,
+			handoff,
+			errors,
+			fixture.authority,
+		);
+		requireError(name, errors, expected);
+	}
+	return rejected;
+}
+
+async function runC2LocalEvidencePositiveSelfTest() {
+	const root = await mkdtemp(resolve(tmpdir(), "countershape-c2-evidence-"));
+	try {
+		const fixture = await buildLocalEvidenceFixture(root, {
+			claimLabels: c2ClaimLabels,
+			claimTypes: c2ClaimTypes,
+			claimArgv: c2ExpectedClaimArgv,
+			sourceCommit: "a".repeat(40),
+			sourceTree: "b".repeat(40),
+			archiveSessionEventCount: c2ClaimLabels.length + 1,
+		});
+		const baseline = await verifyLocalEvidence(fixture.root, fixture.receipt, c2ClaimLabels, c2ClaimTypes, c2ExpectedClaimArgv);
+		if (baseline.length > 0) throw new Error(`P07B-C C2 local-evidence self-test baseline failed: ${baseline.join(", ")}`);
+		const hostileClaims = structuredClone(fixture.claims);
+		hostileClaims[0].label = "wrong label";
+		await writeJSONLines(fixture.claimsPath, hostileClaims);
+		const errors = await verifyLocalEvidence(fixture.root, fixture.receipt, c2ClaimLabels, c2ClaimTypes, c2ExpectedClaimArgv);
+		if (!errors.some((error) => error.includes("local ledger claim 1"))) {
+			throw new Error(`P07B-C C2 local-evidence self-test false negative: ${errors.join(", ")}`);
+		}
+		await writeJSONLines(fixture.claimsPath, fixture.claims);
+		const hostileSessions = structuredClone(fixture.sessions);
+		hostileSessions[0].event.argv = ["/usr/bin/true"];
+		await writeJSONLines(fixture.sessionPath, hostileSessions);
+		const argvErrors = await verifyLocalEvidence(fixture.root, fixture.receipt, c2ClaimLabels, c2ClaimTypes, c2ExpectedClaimArgv);
+		if (!argvErrors.some((error) => error.includes("local ledger event 1 argv"))) {
+			throw new Error(`P07B-C C2 local-evidence argv self-test false negative: ${argvErrors.join(", ")}`);
+		}
+		return 2;
+	} finally {
+		await rm(root, { recursive: true, force: true });
+	}
 }
 
 async function mutatedText(path, transform) {
@@ -2362,9 +3128,11 @@ async function mutatedText(path, transform) {
 
 async function runSelfTest() {
 	const baseline = await checkPlan();
-	if (baseline.length > 0) throw new Error(`P07B-C C1 evolved plan checker self-test baseline failed:\n${baseline.join("\n")}`);
+	if (baseline.length > 0) throw new Error(`P07B-C evolved plan checker self-test baseline failed:\n${baseline.join("\n")}`);
 	const localEvidenceMutations = await runLocalEvidenceSelfTest();
 	const receiptModePhaseMutations = await runC1ReceiptModePhaseSelfTest();
+	const c2ReceiptMutations = await runC2ReceiptCheckerSelfTest();
+	const c2LocalEvidenceMutations = await runC2LocalEvidencePositiveSelfTest();
 
 	const promptPath = "docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md";
 	const prompt = await readText(repositoryRoot, promptPath, new Map());
@@ -2429,6 +3197,7 @@ async function runSelfTest() {
 		"<!-- P07B-C-C0A-RECEIPTS:END -->",
 	].join("\n");
 	const currentHandoff = await readText(repositoryRoot, "docs/HANDOFF_MODE_C.md", new Map());
+	const currentC2Status = await readText(repositoryRoot, c2StatusPath, new Map());
 	const currentC1MaintenanceStatus = await readText(repositoryRoot, c1MaintenanceStatusPath, new Map());
 	const currentC1VerificationStatus = await readText(repositoryRoot, c1VerificationStatusPath, new Map());
 	const currentC1EvidenceMaintenanceStatus = await readText(repositoryRoot, c1EvidenceMaintenanceStatusPath, new Map());
@@ -3014,17 +3783,111 @@ async function runSelfTest() {
 			})(),
 			expect: "C1B verification profile mismatch",
 		},
-		{
-			name: "C1B receipt claim label drift", path: configPath,
+			{
+				name: "C1B receipt claim label drift", path: configPath,
 			value: (() => {
 				const candidate = structuredClone(currentConfiguration);
 				candidate.units.C1B.receipt_claims[0].label = "P07B-C C1B source receipt reconciliation altered";
 				return `${JSON.stringify(candidate, null, 2)}\n`;
 			})(),
-			expect: "C1B receipt claim manifest mismatch",
-		},
-		{
-			name: "fourth semantic object", path: authorityDeclarationPath,
+				expect: "C1B receipt claim manifest mismatch",
+			},
+			{
+				name: "C2 receipt checker enrollment removal", path: configPath,
+				value: (() => {
+					const candidate = structuredClone(currentConfiguration);
+					candidate.units.C2.exact = candidate.units.C2.exact.filter((path) => path !== "tools/check-p07b-c-plan.mjs");
+					return `${JSON.stringify(candidate, null, 2)}\n`;
+				})(),
+				expect: "C2 exact path roster mismatch",
+			},
+			{
+				name: "C2 handoff source digest drift", path: "docs/HANDOFF_MODE_C.md",
+				value: currentHandoff.replace(requiredC2Digest, `sha256:${"0".repeat(64)}`),
+				expect: "C2 source scope digest",
+			},
+			{
+				name: "C2 handoff receipt digest drift", path: "docs/HANDOFF_MODE_C.md",
+				value: currentHandoff.replace(requiredC2BDigest, `sha256:${"0".repeat(64)}`),
+				expect: "C2B receipt scope digest",
+			},
+			{
+				name: "C2 status source digest drift", path: c2StatusPath,
+				value: currentC2Status.replace(requiredC2Digest, `sha256:${"0".repeat(64)}`),
+				expect: "C2 source scope",
+			},
+			{
+				name: "C2 status pending grade drift", path: c2StatusPath,
+				value: currentC2Status.replace(
+					`| \`${c2ClaimLabels[0]}\` | \`${c2ClaimTypes[0]}\` | \`UNRECEIPTED\` |`,
+					`| \`${c2ClaimLabels[0]}\` | \`${c2ClaimTypes[0]}\` | \`TREE-EXACT\` |`,
+				),
+				expect: "C2 pending source receipt map",
+			},
+			{
+				name: "C2 source profile substitution", path: configPath,
+				value: (() => {
+					const candidate = structuredClone(currentConfiguration);
+					candidate.units.C2.verification_profile = "RECEIPT_RECONCILIATION";
+					candidate.units.C2.receipt_claims = structuredClone(requiredC2BReceiptClaims);
+					return `${JSON.stringify(candidate, null, 2)}\n`;
+				})(),
+				expect: "invalid",
+			},
+			{
+				name: "C2B unit removal", path: configPath,
+				value: (() => {
+					const candidate = structuredClone(currentConfiguration);
+					delete candidate.units.C2B;
+					return `${JSON.stringify(candidate, null, 2)}\n`;
+				})(),
+				expect: "invalid",
+			},
+			{
+				name: "C2B unit order drift", path: configPath,
+				value: (() => {
+					const candidate = structuredClone(currentConfiguration);
+					const entries = Object.entries(candidate.units);
+					const c2b = entries.find(([unit]) => unit === "C2B");
+					candidate.units = Object.fromEntries([
+						...entries.filter(([unit]) => unit !== "C2B" && unit !== "C3"),
+						entries.find(([unit]) => unit === "C3"),
+						c2b,
+					]);
+					return `${JSON.stringify(candidate, null, 2)}\n`;
+				})(),
+				expect: "invalid",
+			},
+			{
+				name: "C2B receipt path removal", path: configPath,
+				value: (() => {
+					const candidate = structuredClone(currentConfiguration);
+					candidate.units.C2B.exact = candidate.units.C2B.exact.filter((path) => path !== c2ReceiptDeclarationPath);
+					return `${JSON.stringify(candidate, null, 2)}\n`;
+				})(),
+				expect: "C2B exact path roster mismatch",
+			},
+			{
+				name: "C2B source profile substitution", path: configPath,
+				value: (() => {
+					const candidate = structuredClone(currentConfiguration);
+					candidate.units.C2B.verification_profile = "SOURCE_FULL";
+					delete candidate.units.C2B.receipt_claims;
+					return `${JSON.stringify(candidate, null, 2)}\n`;
+				})(),
+				expect: "C2B receipt profile mismatch",
+			},
+			{
+				name: "C2B receipt claim label drift", path: configPath,
+				value: (() => {
+					const candidate = structuredClone(currentConfiguration);
+					candidate.units.C2B.receipt_claims[0].label = "P07B-C C2B source receipt reconciliation altered";
+					return `${JSON.stringify(candidate, null, 2)}\n`;
+				})(),
+				expect: "C2B receipt claim manifest mismatch",
+			},
+			{
+				name: "fourth semantic object", path: authorityDeclarationPath,
 			value: mutateAuthority((candidate) => candidate.semantic_objects.push({
 				name: "FourthObject", storage: "IMMUTABLE_NONHEAD", production_issuer: "C4",
 			})),
@@ -3369,22 +4232,89 @@ async function runSelfTest() {
 			testCase.c1ReceiptAuthority,
 		);
 		if (!errors.some((error) => error.includes(testCase.expect))) {
-			throw new Error(`P07B-C C1 evolved plan checker self-test false negative: ${testCase.name}`);
+			throw new Error(`P07B-C evolved plan checker self-test false negative: ${testCase.name}`);
 		}
 	}
 
-	console.log(`P07B-C C1 evolved plan checker self-test passed: ${cases.length + localEvidenceMutations + receiptModePhaseMutations} authority, structure, local-evidence, phase-isolation, semantic-projection, and allowlist mutations rejected`);
+	console.log(`P07B-C evolved plan checker self-test passed: ${cases.length + localEvidenceMutations + receiptModePhaseMutations + c2ReceiptMutations + c2LocalEvidenceMutations} authority, structure, C1/C2 local-evidence, phase-isolation, semantic-projection, receipt, and allowlist mutations rejected`);
+}
+
+async function verifyC2PresealLedger() {
+	const python = "/Users/drewnelson/.venvs/didrun/bin/python";
+	const program = String.raw`
+from pathlib import Path
+import json
+import os
+import subprocess
+from didrun.ledger import Session
+
+root = Path(".didrun")
+session = Session(root)
+ok, broken = session.verify_chain()
+assert ok and broken is None, (ok, broken)
+entries = list(session.entries())
+assert [entry.index for entry in entries] == list(range(13))
+events = [entry.event for entry in entries]
+assert all(event.exit_code == 0 for event in events)
+assert all(event.observed_via == "wrapper" for event in events)
+assert all(event.coverage == "complete" for event in events)
+assert all(event.self_stable() for event in events)
+assert not any(event.submodule_dirty for event in events)
+tree = events[0].tree_before
+assert all(event.tree_before == tree and event.tree_after == tree for event in events)
+assert subprocess.check_output(["/usr/bin/git", "write-tree"], text=True).strip() == tree
+expected_argv = json.loads(os.environ["COUNTERSHAPE_C2_EXPECTED_ARGV"])
+assert [list(event.argv) for event in events] == expected_argv
+expected_claims = json.loads(os.environ["COUNTERSHAPE_C2_EXPECTED_CLAIMS"])
+claims = [json.loads(line) for line in (root / "claims.jsonl").read_text(encoding="utf8").splitlines() if line]
+assert len(claims) == len(expected_claims) == 13
+for index, (claim, expected) in enumerate(zip(claims, expected_claims, strict=True)):
+    assert claim["ctype"] == expected["type"]
+    assert claim["label"] == expected["label"]
+    assert claim["declared_at_index"] == index
+    assert claim["event_indices"] == [index]
+    assert claim["pathspecs"] == []
+assert not (root / "seals.jsonl").exists()
+print(f"P07B-C C2 preceding chain exact: events=13 claims=13 green=13 tree={tree} chain=valid seal=absent")
+`;
+	const expectedClaims = c2ClaimLabels.slice(0, 13).map((label, index) => ({ label, type: c2ClaimTypes[index] }));
+	const result = spawnSync(python, ["-c", program], {
+		cwd: repositoryRoot,
+		encoding: "utf8",
+		timeout: 30_000,
+		maxBuffer: 4 * 1024 * 1024,
+		env: {
+			HOME: process.env.HOME || "/",
+			PATH: "/usr/bin:/bin",
+			LANG: "C",
+			LC_ALL: "C",
+			NO_COLOR: "1",
+			GIT_CONFIG_NOSYSTEM: "1",
+			GIT_CONFIG_GLOBAL: "/dev/null",
+			GIT_NO_LAZY_FETCH: "1",
+			GIT_OPTIONAL_LOCKS: "0",
+			GIT_TERMINAL_PROMPT: "0",
+			COUNTERSHAPE_C2_EXPECTED_ARGV: JSON.stringify(c2ExpectedClaimArgv.slice(0, 13)),
+			COUNTERSHAPE_C2_EXPECTED_CLAIMS: JSON.stringify(expectedClaims),
+		},
+	});
+	if (result.error || result.signal || result.status !== 0 || result.stderr !== "" ||
+		!/^P07B-C C2 preceding chain exact: events=13 claims=13 green=13 tree=[0-9a-f]{40,64} chain=valid seal=absent\n$/u.test(result.stdout)) {
+		throw new Error(`P07B-C C2 preceding-ledger verification failed (status=${result.status}, signal=${result.signal}, error=${result.error?.message ?? "none"}): ${result.stderr || result.stdout}`);
+	}
+	process.stdout.write(result.stdout);
 }
 
 async function main() {
 	const mode = process.argv[2];
+	const usage = "usage: check-p07b-c-plan.mjs [--self-test|--verify-sealed-c1-local-evidence|--verify-c1-local-evidence|--verify-c2-local-evidence|--verify-c2-preseal-ledger]";
 	if (mode === "--self-test") {
-		if (process.argv.length !== 3) throw new Error("usage: check-p07b-c-plan.mjs [--self-test|--verify-sealed-c1-local-evidence|--verify-c1-local-evidence]");
+		if (process.argv.length !== 3) throw new Error(usage);
 		await runSelfTest();
 		return;
 	}
 	if (mode === "--verify-sealed-c1-local-evidence") {
-		if (process.argv.length !== 3) throw new Error("usage: check-p07b-c-plan.mjs [--self-test|--verify-sealed-c1-local-evidence|--verify-c1-local-evidence]");
+		if (process.argv.length !== 3) throw new Error(usage);
 		await requireC1ReceiptDeclarationPhase(repositoryRoot, false);
 		const planErrors = await checkPlan();
 		if (planErrors.length > 0) {
@@ -3402,7 +4332,7 @@ async function main() {
 		return;
 	}
 	if (mode === "--verify-c1-local-evidence") {
-		if (process.argv.length !== 3) throw new Error("usage: check-p07b-c-plan.mjs [--self-test|--verify-sealed-c1-local-evidence|--verify-c1-local-evidence]");
+		if (process.argv.length !== 3) throw new Error(usage);
 		const receiptText = await readC1ReceiptDeclarationSnapshot(repositoryRoot);
 		const planErrors = await checkPlan(repositoryRoot, new Map([[c1ReceiptDeclarationPath, receiptText]]));
 		if (planErrors.length > 0) {
@@ -3416,7 +4346,27 @@ async function main() {
 		console.log("P07B-C C1 local evidence passed: HTML plus the ignored 19-event sealed/20-event archived ledger snapshot match the closed receipt declaration; this local snapshot is not portable strict authority");
 		return;
 	}
-	if (mode !== undefined) throw new Error("usage: check-p07b-c-plan.mjs [--self-test|--verify-sealed-c1-local-evidence|--verify-c1-local-evidence]");
+	if (mode === "--verify-c2-local-evidence") {
+		if (process.argv.length !== 3) throw new Error(usage);
+		const receiptText = await readReceiptDeclarationSnapshot(repositoryRoot, c2ReceiptDeclarationPath, "C2");
+		const planErrors = await checkPlan(repositoryRoot, new Map([[c2ReceiptDeclarationPath, receiptText]]));
+		if (planErrors.length > 0) {
+			throw new Error(`P07B-C C2 local-evidence precondition failed:\n${planErrors.join("\n")}`);
+		}
+		const receipt = JSON.parse(receiptText);
+		const evidenceErrors = await verifyLocalEvidence(repositoryRoot, receipt, c2ClaimLabels, c2ClaimTypes, c2ExpectedClaimArgv);
+		if (evidenceErrors.length > 0) {
+			throw new Error(`P07B-C C2 local-evidence verification failed:\n${evidenceErrors.join("\n")}`);
+		}
+		console.log("P07B-C C2 local evidence passed: HTML plus the ignored sealed-source ledger snapshot match the closed C2 receipt declaration; this local snapshot is not portable strict authority");
+		return;
+	}
+	if (mode === "--verify-c2-preseal-ledger") {
+		if (process.argv.length !== 3) throw new Error(usage);
+		await verifyC2PresealLedger();
+		return;
+	}
+	if (mode !== undefined) throw new Error(usage);
 
 	const errors = await checkPlan();
 	if (errors.length > 0) {

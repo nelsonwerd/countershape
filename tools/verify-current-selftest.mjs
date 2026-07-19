@@ -36,7 +36,7 @@ import {
 
 const selftestPath = fileURLToPath(import.meta.url);
 const verifierPath = resolve(dirname(selftestPath), "verify-current.mjs");
-const expectedRosterDigest = "ea3506a3679c6cbbffe043d31d9a9d05bb9d6305040072d6c55d19f9251b29ef";
+const expectedRosterDigest = "ec46d983a8f1f52eabc04d8e9ded6529854e21bfde93ca53734845c8b219cd7e";
 
 function fail(code, detail) {
 	throw new Error(`${code}: ${detail}`);
@@ -179,12 +179,40 @@ async function inspectRosters() {
 		path: "tools/check-p07b-c-architecture-selftest.mjs",
 		marker: "P07B-C C1 architecture defensive self-test OK",
 	});
+	exactStep("architecture-p07b-c-c2", {
+		tool: "node",
+		tools: ["node", "go", "cc", "cxx"],
+		path: "tools/check-p07b-c-architecture.mjs",
+		args: ["--c2"],
+		marker: "P07B-C C2 cumulative architecture boundary OK",
+	});
+	exactStep("architecture-p07b-c-c2-selftest", {
+		tool: "node",
+		tools: ["node", "go", "cc", "cxx"],
+		path: "tools/check-p07b-c-architecture-selftest.mjs",
+		args: ["--c2"],
+		marker: "P07B-C C2 cumulative architecture defensive self-test OK",
+	});
+	for (const [id, profile, count] of [
+		["go-json-p07b-c-c2-nonhead", "c2-nonhead-persistence", 6],
+		["go-json-p07b-c-c2-interlock", "c2-interlock", 7],
+		["go-json-p07b-c-c2-private-evidence", "c2-private-evidence", 6],
+		["go-json-p07b-c-c2-public-surface", "c2-public-surface", 2],
+	]) {
+		exactStep(id, {
+			tool: "node",
+			tools: ["node", "go", "cc", "cxx"],
+			path: "tools/check-p07b-c-architecture.mjs",
+			args: ["--run-go-json", profile],
+			marker: `P07B-C C2 Go JSON target execution OK (${profile}: ${count} passed, 0 skipped)`,
+		});
+	}
 	exactStep("architecture-p07b-c-plan-selftest", {
 		tool: "node",
 		tools: ["node", "git"],
 		path: "tools/check-p07b-c-plan.mjs",
 		args: ["--self-test"],
-		marker: "P07B-C C1 evolved plan checker self-test passed:",
+		marker: "P07B-C evolved plan checker self-test passed:",
 	});
 
 	const toolEntries = (await readdir(resolve(repositoryRoot, "tools"))).sort();
@@ -197,10 +225,10 @@ async function inspectRosters() {
 	);
 
 	const architectureFiles = toolEntries.filter((name) => /^check-.+\.mjs$/u.test(name)).map((name) => `tools/${name}`);
-	const admittedArchitecture = [
+	const admittedArchitecture = [...new Set([
 		...currentSteps.filter((step) => step.id.startsWith("architecture-")).map((step) => step.path),
 		...historicalOnly.filter((row) => row.id.startsWith("architecture-")).flatMap((row) => row.scripts),
-	].sort();
+	])].sort();
 	expect(
 		JSON.stringify(architectureFiles) === JSON.stringify(admittedArchitecture),
 		"VERIFY_SELFTEST_ORPHAN_ARCHITECTURE_GATE",

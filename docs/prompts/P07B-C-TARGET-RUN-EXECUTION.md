@@ -19,7 +19,7 @@ The user has explicitly authorized commits at verified shippable boundaries. Tha
 2. Verify every file/line reference against current code. Current source wins over remembered locations and API facts; if it disagrees with a locked semantic ruling, stop and amend the ruling explicitly rather than silently letting stale code broaden authority.
 3. The root is the sole repository writer and sole didrun/Git/seal operator. Parallel agents are read-only critics.
 4. Every load-bearing command runs through `/opt/homebrew/bin/didrun run -- ...`; immediately claim each successful final event before any next event.
-5. Use `GOMAXPROCS=2`; every Go build/vet/test/race/fuzz command uses `-p=1`, and fuzz uses `-parallel=1` with a count budget.
+5. Inherit sealed C1V exactly: `GOMAXPROCS=2`; direct build/vet and the exact general-package complement use `-p=2`; the six declared sensitive packages (including `internal/store`) and every inherited/nested Go invocation use `-p=1`; fuzz uses `-parallel=1` with a count budget.
 6. Stage only paths admitted by the machine-readable unit allowlist and fail unexpected paths. Never commit `.didrun/`, private captures, runtime roots, or `.countershape` artifacts. Never add AI co-author metadata.
 7. After commit, seal, require the exact Git note, and loop on strict verification. A nonzero gate means the unit is unfinished. Never weaken tests, remove claims, relabel, or erase failed history.
 8. Preserve the current didrun implementation for the longitudinal run. Record any misbehavior in `docs/status/DIDRUN_BUGS.md`.
@@ -40,20 +40,20 @@ All three are nonhead semantic objects. None is a mutable execution result, sele
 
 ### Official publication and discovery
 
-- Generic CAS object existence proves canonical bytes only. Official target/run/execution reopen requires a store-private typed publication witness and an exact create-once relationship.
+- Generic CAS object existence proves canonical bytes only. A store-private typed publication witness and exact create-once relationship are necessary inert storage facts; C3/C4 alone rejoin them with live prerequisites and issue official target/run/execution authority.
 - The closed mappings are `attempt digest -> target digest`, `target digest -> finalized-run digest`, and `(finalized-run digest, classifier-profile digest) -> execution digest`. Resolution requires the already-held typed parent key; no API accepts a search predicate or returns siblings/newest values.
 - Semantic reopen is exact-digest/typed-parent-only. P07B-C adds no result listing, filesystem traversal, `latest`, mutable result/status record, or semantic execution head.
 - Publication returns exact digests. Lost output is not solved inside C; a future immutable collection is a separate design.
 
 ### Cooperative spawn admission
 
-- `ExecutionInterlock` is one store-private, store-wide operational CAS. It is either `CLEAR` for a measured Darwin boot-session identity or `HELD(target, boot-session)`. It serializes candidate spawn only; it is neither canonical evidence nor a source of run/classification facts.
+- `ExecutionInterlock` is one store-private, store-wide operational CAS. It is either receipt-backed `CLEAR(boot-session,generation,revision)` or `HELD(target,attempt,boot-session,generation)`. It serializes candidate spawn only; it is neither canonical evidence nor a source of run/classification facts.
 - A production acquisition requires an opaque C3-issued official target capability. C2 may implement/test storage mechanics but has no production issuer and cannot make a parsed C1 body official.
 - A target-keyed `StartClaim` is durable intent and a permanent tombstone, never proof a child started.
 - The C4 contract runner first durably acquires/reopens the interlock for the authentic target, then creates/reopens StartClaim. Only that winner receives one opaque process-local `RunPermit`. Generic publish/read, a losing publisher, copied owner data, a test fixture outside `_test.go`, or restart never recreates it.
 - `SpawnObservation` separately records `Start` error or observed child PID. Missing observation is unknown.
 - The honest guarantee is serialized cooperative at-most-once spawn admission per exact target, not exactly-once execution.
-- Conclusive owner-produced terminal closure releases the interlock only after the terminal witness is durable. Any crash/ambiguity after intent permanently consumes the target and leaves the interlock held on that boot session. A fresh target identity alone is insufficient retry authority.
+- Conclusive owner-produced terminal closure releases the interlock only after the private manifest, exact FCR, and target-to-run relationship are durable and reopened. An ambiguous operation returns no winner or permit and cannot itself reopen admission. Before `CLEAR`, ambiguity after StartClaim consumes the target and leaves the interlock held; after `CLEAR`, a missing or invalid receipt remains blocked without rolling back the FCR. Proven-no-claim, known-no-effect preclaim reconciliation does not consume the target.
 - Clearing an ambiguous interlock requires explicit operator reset plus a measured Darwin boot-session identity demonstrably distinct from the held identity. If that fence cannot be proven, P07B-C stops before every further subject spawn. It never claims the prior child absent on the same boot.
 
 ### Closed run and scope
@@ -99,7 +99,7 @@ Wake integration is an immutable-ref handoff only. Countershape may receive a di
 - `spec/schema/v1/finalized-contract-run.schema.json` — C1 closed finalized-run syntax projection; Go owns process/scope/evidence correlations.
 - `spec/schema/v1/contract-execution.schema.json` — C1 closed derived-classification syntax projection.
 - `tools/validate-planning.mjs` — schema/example graph compatibility checks, not semantic or runtime authority.
-- `tools/verify-current.mjs` — cumulative roster; C0 repairs all direct and inherited Go package parallelism to `-p=1`, and every later unit enrolls its own gate before sealing.
+- `tools/verify-current.mjs` — cumulative roster; C0's global serialization repair is preserved as history, C1V's qualified general-`p=2`/sensitive-`p=1` tier is current, and every later unit enrolls its own gate before sealing.
 
 ### C1 wire-resolution rulings
 
@@ -154,11 +154,13 @@ Locked ceilings: every canonical C body remains within the existing 1 MiB object
 | --- | --- | --- |
 | C0 | deep-dive corrections, controlling docs, pack, handoff | planning/scope lock only |
 | C1 | strict semantic model, schemas, examples, exhaustive algebra | inert canonical semantics only |
-| C2 | nonhead storage mechanics, exact mappings, private evidence, interlock/claim substrate with test-only issuers | persistence substrate only; no official target or production permit |
+| C2 | nonhead storage mechanics, exact mappings, private evidence, interlock/claim substrate with test-only issuers; then a separate narrow C2B source-receipt reconciliation | persistence substrate only; no official target or production permit |
 | C3 | direct single-target Git + Node authority and target publication | exact pre-spawn target authority only |
 | C4 | process mechanics plus contract runner, production interlock/permit, CLI-profile physical closure, FCR, classification | CLI-profile-only native physical slice |
 | C5 | HTTP plus full five-domain standalone evidence | full P07B-C on exact exercised native tuple |
 | C6 | C6a cumulative hostile/fault/parity/expert-surface closure, then C6b receipt reconciliation | exact sealed P07B-C claims only |
+
+Every source boundary that must hand durable grades to a later unit is followed by its separately sealed receipt-reconciliation subunit. C2B may bind only the already-sealed C2 source note, strict result, exact claim map, HTML snapshot, and ignored-ledger manifest; it cannot edit source/checker behavior or grade itself. C3 remains blocked until C2B also seals and verifies strictly.
 
 ## What this pack does not cover
 
@@ -266,37 +268,44 @@ Machine-cleared inert semantic algebra only.
 # C2 — add nonhead persistence and private interlock substrate
 
 **Risk:** high. Winner/loser and crash semantics are authority-bearing.
-**Files:** the exact `internal/store/execution_interlock.go`, `nonhead_contract.go`, and `private_contract_run.go` families admitted by the unit allowlist; private manifests/attachments; store tests; architecture gates/self-tests; cumulative roster; status docs. Any additional file must first be named explicitly in the staged allowlist.
+**Files:** the exact `internal/store/execution_interlock.go`, `nonhead_contract.go`, `object_store.go`, and `private_contract_run.go` families admitted by the unit allowlist; the controlling prompt/docs; architecture gates/self-tests; cumulative roster; status docs. Any additional file must first be named explicitly in the staged allowlist.
 
 ## Goal
 
-Add the low-level storage mechanics for typed official-publication records, exact-key relationships, the private operational interlock, start-intent records, private attempt attachments, and durable terminal manifests without any production issuer that can make a C1 body official or mint a RunPermit.
+Add only the Darwin private persistence substrate for exact nonhead relationships, bounded private evidence, and cooperative spawn exclusion. C2 may persist and reopen inert store records, but it cannot return an official target, admit a subject run, mint a `RunPermit`, spawn a process, or make a semantic conclusion.
 
 ## Exact changes
 
-- Namespace-specific witness/mapping bytes and exact-existing convergence; generic CAS bytes alone remain unofficial.
-- Closed create-once mappings for attempt→target, target→run, and `(run,classifier-profile)`→execution, each resolvable only with its exact typed parent key.
-- Store-private `ExecutionInterlock` durability/CAS/reconcile/reset mechanics and target-keyed StartClaim persistence. C2 exports no production semantic issuer and returns no production RunPermit.
-- Any C2 issuer used to exercise mechanics exists only in `_test.go`; production official-target publication arrives in C3, and production interlock/StartClaim acquisition plus permit minting arrives in C4.
-- StartClaim remains deterministic intent/tombstone; the interlock has only `CLEAR(boot-session)` or `HELD(target,boot-session)`, with no PID, liveness, result, latest pointer, or process-resume authority.
-- Bounded private evidence manifest with retention-at-finalization semantics and explicit purge nonmutation rule. Canonical FCR summaries are sufficient semantic authority; private-blob availability is a separately reported operational state (`RETAINED | PURGED | MISSING_UNEXPECTED`), never rewritten into the FCR.
-- Exact existing convergence, mismatch refusal, no-effect/unknown-effect ambiguity, restart reopen, store-instance binding, safe no-claim reconciliation, held-on-ambiguity behavior, and explicit changed-boot-session reset.
+- Define versioned, namespace-specific private link records. Each canonically repeats its relation, typed parent key, typed child key, and relationship-specific joins: `CONFORMANCE_ATTEMPT -> ContractExecutionTarget`; `ContractExecutionTarget -> FinalizedContractRun`; and `(FinalizedContractRun, derived classifier-profile digest) -> ContractExecution`. The target's attempt, the run's target/attempt/StartClaim, and the execution's target/run/profile must join exactly. Link paths come from a domain-separated canonical typed-key preimage, never concatenated caller strings or untyped digest path fragments.
+- C2 returns only store-instance-bound inert records. None is an official-target capability or permit. C3 alone may wrap a reopened target record plus live Git/runtime/boot prerequisites into `OfficialTarget`; C4 alone may wrap a fresh successful admission into a process-local `RunPermit`. Files deliberately reopened by those descendants are named in their unit allowlists now.
+- Generic CAS object existence remains insufficient. C2 may persist model objects only as mechanical storage; no C2 API accepting a body, digest, or generic object may return authority consumable by admission or spawn. Test fixture issuers exist only in `_test.go`.
+- Persist one store-wide `ExecutionInterlock` under a Darwin cooperative cross-process lock. Its durable state is only `CLEAR(boot-session)` or `HELD(target,attempt,boot-session,generation)`. The generation is an opaque compare fence, not PID, liveness, result, lease expiry, discovery, or resume authority. The caller boot must equal the target's serialized boot binding; a historical `CLEAR` boot is transition history, not C3's live-boot authority.
+- Acquire the interlock before StartClaim. StartClaim is one deterministic target/attempt/boot-bound durable tombstone. Only a newly durable claim created beneath one fresh lease may later feed C4 permit minting. Existing claim, reopened held state, copied generation, restart, losing racer, or ambiguous create result grants no winner authority.
+- Classify persistence mutations as `KNOWN_NO_EFFECT`, `EXACT_CONVERGED`, or `AMBIGUOUS`. Only an exact held generation with proven no claim and a known-no-effect preclaim result may reconcile to clear. Before `CLEAR`, ambiguity after StartClaim remains held; after `CLEAR`, a missing or invalid receipt remains blocked. The first-ever absent interlock is the only receiptless bootstrap. Every persisted `CLEAR` requires an exact durable clear receipt with one closed cause (`KNOWN_NO_CLAIM`, `FINALIZED_RUN`, or `CHANGED_BOOT`) that reconstructs the previous HELD state and exact HELD-to-CLEAR transition. Receiptless or invalid `CLEAR` blocks all later acquisition but cannot roll back an already durable FCR.
+- Treat every exact-visible create-once record as potentially unsynced until its parent directory is synchronized and the exact bytes reopen. Apply that convergence rule to typed relationships, StartClaims, private manifests, clear receipts, and purge intents before returning durable records or deleting a pack.
+- Define a private manifest bound to the exact target, attempt, and StartClaim. It maps every logical witness reference to checked private blob bytes/ranges and a distinct private-byte digest, enforces the closed logical roster, and enforces the 16-blob/64-MiB ceilings. A finalized run may be stored only after its manifest and every referenced private item reopen exactly; C4, not C2, later owns the claim that those bytes substantiate a semantic evidence reference.
+- `retention_at_finalization` means the complete manifest was retained and reopened at finalization time; it is not a current-availability claim. Availability is separately `RETAINED | PURGED | MISSING_UNEXPECTED`. `PURGED` requires a durable no-serve tombstone before best-effort cleanup and means neither secure erasure nor confidentiality. Purge/loss never rewrites target, run, relationship, or classification bytes.
+- Cross-store protection is live capability/store-instance binding plus exact reopen in the original root. It does not detect or prevent a complete offline filesystem clone. The classifier profile digest identifies the declaration, not classifier implementation bytes.
 
 ## MUST NOT change
 
-- No official target/run/execution issuer, production RunPermit, process spawn, Git materialization, runtime admission, result list/latest/traversal/status API, study head, or semantic conclusion from the interlock.
+- No C2 production issuer of `OfficialTarget`, `FinalizedContractRun`, `ContractExecution`, or `RunPermit`; no path from body/digest/generic CAS bytes to admission or spawn authority.
+- No process spawn, Git materialization, runtime/boot measurement, semantic result derivation, list/latest/traversal/status API, study-head mutation, lease expiry, PID takeover, automatic same-boot reset, clone-resistance claim, classifier-implementation provenance claim, or confidentiality/secure-erasure claim.
 
 ## Tests
 
-- Multi-process interlock/claim races; exactly one storage winner, with no production permit.
-- Parsed/copied target bodies cannot reach the C2 mechanics through production APIs; all fixture issuers are `_test.go`-only and an architecture gate kills any non-test issuer.
-- Fault matrix at create/sync/link/reopen; corruption, cross-store, wrong-kind, and alternate-link refusal.
-- Interlock acquisition-before-claim, safe release only from a terminal-closure test capability, same-boot ambiguity refusal, and changed-boot-session reset matrix.
-- Private manifest count/size/roster/retention/purge boundaries; missing evidence before FCR publication refuses publication, while postpublication purge or unexpected loss changes only honestly reported blob availability and never historical classification.
+- Multi-process interlock races prove one fresh lease and one StartClaim creator; no C2 production value is spawn-capable.
+- Typed-key mutations reject wrong relation, parent/child kind, parent digest, target/attempt join, StartClaim join, classifier-profile key, alternate link, generic object, copied body, and raw-digest lookup.
+- Fault-inject create/link/rename/sync/reopen boundaries. Only exact convergence may continue; an ambiguous operation cannot mint a permit or reopen admission, pre-`CLEAR` ambiguity after StartClaim remains held, and post-`CLEAR` receipt ambiguity remains blocked.
+- Reconciliation proves that only a held generation with a proven no-claim, known-no-effect preclaim path can clear. Same-boot reset always refuses; changed-boot reset remains fenced test mechanics pending C3's live witness and C4's operator action.
+- Clear-receipt tests cover missing, corrupt, wrong-cause, wrong-previous, every temporary/link/directory-sync/reopen fault, restart admission, and receiptless fail-closed behavior. A receipt is only the trusted writer's operational admission marker; it is not independent proof of terminal causation or child absence.
+- After-link interruption tests directly restart and reopen exact relationships, StartClaims, private manifests, clear receipts, and purge intents; no merely visible file is promoted without durability convergence.
+- Cross-store live-capability misuse refuses. A copied on-disk store is labeled as an explicit nonclaim, not a passed anti-clone control.
+- Private-manifest tests cover missing, extra, wrong-role, wrong-range, wrong-hash, oversized, cross-run, and postpublication-loss cases. Tombstone-first purge reports `PURGED` without serving blobs; unexpected loss reports `MISSING_UNEXPECTED`; finalized-run and classification bytes remain unchanged.
 
 ## Gate
 
-Machine-cleared persistence/interlock substrate only. Official semantic publication, production permit issuance, and spawn remain absent.
+Machine-cleared persistence substrate only. It proves exact typed storage, fixture-driven interlock/StartClaim and receipt-backed-CLEAR mechanics, and bounded private-manifest retention at inert finalized-run persistence. It proves no official target, production permit or spawn admission, process spawn, physical run/finalization chronology, child absence, clone resistance, confidentiality, secure deletion, classifier implementation provenance, or semantic classification.
 
 ## Commit
 
@@ -307,33 +316,32 @@ Machine-cleared persistence/interlock substrate only. Official semantic publicat
 # C3 — publish one exact pre-spawn target
 
 **Risk:** high. This joins live Git, private materialization, runtime, attempt, and store authority.
-**Files:** `internal/gitobj/single_target.go`, `internal/noderuntime/**`, `internal/hostepoch/**`, `internal/contractexec/target*.go`, production target-publication owner, tests/checkers/self-tests, cumulative roster, docs/status.
+**Files:** `internal/gitobj/single_target.go`, `internal/noderuntime/**`, `internal/hostepoch/**`, `internal/contractexec/target*.go`, the exact C2 nonhead-store files named in the C3 allowlist, production target-publication owner, tests/checkers/self-tests, cumulative roster, docs/status.
 
 ## Goal
 
-Publish/reopen a `ContractExecutionTarget` from one exact current residue and live physical authorities before any subject spawn.
+Make C3 the sole producer of an opaque `OfficialTarget`: one C2-reopened inert target record rejoined with the reopened terminal residue, one live pinned and verified Git materialization, one fresh attempt, one live measured boot session, and one admitted Node runtime. C3 publishes no run, acquires no interlock, and never mints a permit.
 
 ## Exact changes
 
 - Materialize/revalidate directly from opaque `InspectedTree`; share only private mechanics with comparison materialization.
-- Admit one explicit absolute Node path with owned probe and exact identity summaries.
-- Admit the exact Darwin boot-session identity used by later interlock acquisition/reset.
-- Allocate/sync a fresh CONFORMANCE attempt attachment.
-- Construct/publish/reopen the target plus its typed witness and attempt→target relationship only through the live C3 issuer; retain exact private revalidation closure and return an opaque official-target capability.
-- Enroll the C3 target gate and hostile self-test in the cumulative verifier before sealing.
-- Assert study head inode and bytes remain unchanged.
+- Admit one explicit absolute Node path with owned probe and exact identity summaries, plus the stable Darwin boot-session identity used by later admission/reset.
+- Allocate/sync a fresh CONFORMANCE attempt attachment. Construct the C1 target only from C3-owned live prerequisites, persist it through C2's inert-record mechanics, then reopen the exact typed relationship.
+- Return only sealed `OfficialTarget`. It privately carries the exact C2 record, but that record remains mechanically inert when obtained outside C3. No public C3 API accepts copied target bytes, a digest/OID/runtime-string bag, generic CAS authority, or a prior process-local capability as a substitute.
+- Reopening official authority remeasures and revalidates the full C3 prerequisite graph, including live boot identity. C4 must measure boot again; a stale-boot target is never spawnable.
+- Enroll the C3 target gate and hostile self-test in the cumulative verifier, and assert study-head inode/bytes remain unchanged.
 
 ## MUST NOT change
 
-- No fake one-member `WorldPlan`, `BoundCandidate`, or `WorldInstance`; no PATH lookup, dirty worktree, arbitrary executable, candidate/subject spawn, run, classification, TAP, interlock acquisition, StartClaim, RunPermit, or head advance. One bounded owner-controlled Node runtime-probe subprocess is required and is not a subject run.
+- No fake one-member `WorldPlan`, `BoundCandidate`, or `WorldInstance`; no PATH lookup, dirty worktree, arbitrary executable, candidate/subject spawn, run, classification, TAP, interlock acquisition, StartClaim, RunPermit, FCR, execution status, or head advance. One bounded owner-controlled Node runtime-probe subprocess is required and is not a subject run.
 
 ## Tests
 
-- Moving-ref pin, copied OID/body refusal, dirty-worktree exclusion, unsupported tree forms, target mutation, runtime symlink/byte/probe mismatch, closed capability, restart exact-digest reopen, and pre-spawn fault matrix.
+- Moving-ref pin, copied OID/body/generic-record refusal, dirty-worktree exclusion, unsupported tree forms, target-link mutation, runtime symlink/byte/probe mismatch, attempt reuse, boot mismatch, closed capability, restart full-live-authority rebuild, and pre-spawn fault matrix. Offline store clones remain an explicit nonclaim.
 
 ## Gate
 
-Machine-cleared pre-spawn target authority only. This is the minimum honest cut if later physical evidence cannot be proven.
+Machine-cleared pre-spawn target authority only. Architecture evidence proves C3 is the only production `OfficialTarget` issuer while C2 remains inert. This is the minimum honest cut if later physical evidence cannot be proven.
 
 ## Commit
 
@@ -344,27 +352,28 @@ Machine-cleared pre-spawn target authority only. This is the minimum honest cut 
 # C4 — close a CLI candidate-profile run and publish its classification
 
 **Risk:** high. First subject execution and first finalized/classified evidence.
-**Files:** `internal/processmechanics/**`, `internal/contractexec/runner/**`, CLI candidate-profile service, production admission/run/classification publication, private capture manifest, tests/checkers/self-tests, cumulative roster, docs/status.
+**Files:** `internal/processmechanics/**`, `internal/contractexec/runner/**`, the exact C2 store files named in the C4 allowlist, CLI candidate-profile service, production admission/run/classification publication, private capture manifest, tests/checkers/self-tests, cumulative roster, docs/status.
 
 ## Goal
 
-Extract the low-level Darwin mechanics and make the higher contract runner the sole consumer of one authentic target-bound RunPermit. Perform a Go-owned CLI candidate-profile run, close physical evidence, durably release or preserve the interlock as appropriate, publish `FinalizedContractRun`, then publish `ContractExecution`.
+Extract the low-level Darwin mechanics and make the higher contract runner the sole consumer of one authentic target-bound RunPermit. Perform a Go-owned CLI candidate-profile run, close physical evidence, publish and reopen the exact `FinalizedContractRun` plus target-to-run relationship, durably release or preserve the interlock as appropriate, then publish `ContractExecution`.
 
 ## Exact changes
 
 - Exact import graph: `processmechanics` imports no store/contract/domain package; `contractexec/runner` imports official-target/admission/runtime plus `processmechanics`; only existing `world` and the contract runner may call raw mechanics; no low-level mechanics API accepts a permit, target digest, semantic body, or public raw argv.
-- The runner reopens the official target, durably acquires/reopens `ExecutionInterlock`, creates/reopens StartClaim, and only then receives the single-consumption process-local RunPermit. It consumes the permit itself, derives the private mechanics request, and revalidates target/runtime immediately before subject spawn.
+- The runner accepts only sealed C3 `OfficialTarget`, reopens it, compares its boot binding with a newly measured live boot identity, and revalidates target/runtime immediately before subject spawn.
+- Admission is ordered and fenced: acquire one fresh `HELD(target,boot,generation)` lease; create/reopen the deterministic StartClaim with that exact fresh lease; only a claim newly created and reopened by that same live operation lets the runner construct one private, nonserializable, single-use `RunPermit`; consume it inside the runner immediately before `Start`. Existing claim/lease, restart, copied generation, losing racer, ambiguous persistence, or stale boot returns no permit and performs no spawn.
 - Persist a separate SpawnObservation. Missing/unknown observation or incomplete owner closure cannot publish an FCR or classification; the target remains consumed and the interlock stays held for that boot session.
 - Close capture, process, wait, drains, teardown, final group probe, materialization/runtime revalidation, and all five standalone domains for the CLI profile.
-- Persist bounded summaries/typed refs; raw evidence remains private. Make the terminal witness durable before releasing the interlock. Only a conclusive terminal-closure capability can release it.
-- Publish/reopen FCR, derive/publish/reopen classifier-profile-bound execution.
-- Classification-only retry performs no spawn.
+- Persist every private evidence item, exact private manifest, and closed terminal facts. Publish and reopen the exact FCR and target-to-run relationship before writing `CLEAR`; only C4's conclusive terminal-closure capability may initiate release. Spawn/private-evidence/FCR ambiguity before `CLEAR` leaves the target consumed and held. A later `CLEAR` or receipt ambiguity preserves the durable FCR but blocks admission until the exact receipt independently converges.
+- Derive/publish/reopen classifier-profile-bound execution only after FCR durability. Classification-only retry never reruns a process.
+- A changed-boot reset requires explicit operator action plus the exact C2 CAS fence. It is not a same-boot retry and does not claim prior-child absence.
 - Revalidation proves checkpoint-bound identity plus child self-report only. Preserve the revalidation-to-`execve` same-user substitution residual; no descriptor-bound or coordinated-replacement claim is added.
 - Enroll runner/architecture gates and hostile self-tests in the cumulative verifier before sealing.
 
 ## MUST NOT change
 
-- No TAP-derived authority, raw argv public edge, process resume, same-target retry, same-boot reset after ambiguity, HTTP, product CLI, full two-profile P07B-C claim, result list/status, or head mutation.
+- No TAP-derived authority, raw target/body/digest admission, raw argv public edge, direct low-level-mechanics permit/semantic-body edge, process resume, same-target retry, lease/PID takeover, same-boot reset after ambiguity, automatic reset, FCR mutation after purge/loss, clone-resistance, confidentiality, secure-erasure claim, HTTP, product CLI, full two-profile P07B-C claim, result list/status, or head mutation.
 
 ## Tests
 
@@ -440,7 +449,7 @@ Use C6a to freeze and prove all C layers plus inherited boundaries and run a gen
 
 ## Verification
 
-- Full repo twice under stock macOS TMPDIR; Go `-p=1`; race/vet/count-fuzz; architecture/checker selftests; exact physical CLI/HTTP matrix; direct generated Node parity; unchanged head; staged scope/credential-prefix checks.
+- Full repo twice under stock macOS TMPDIR; the exact sealed C1V general-`p=2`/sensitive-`p=1` profile; race/vet/count-fuzz; architecture/checker selftests; exact physical CLI/HTTP matrix; direct generated Node parity; unchanged head; staged scope/credential-prefix checks.
 - Each final command receives an immediate narrow didrun claim.
 - C6a source and C6b receipt commits each seal, their Git notes validate, and strict exits `0`; exact HTML is generated for C6b only after that exact commit exists.
 

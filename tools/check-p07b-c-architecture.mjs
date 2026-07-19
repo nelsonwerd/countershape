@@ -10,7 +10,127 @@ const checkerPath = fileURLToPath(import.meta.url);
 const repositoryRoot = resolve(dirname(checkerPath), "..");
 const modulePath = "github.com/nelsonwerd/countershape";
 const packagePath = `${modulePath}/internal/contractexec/model`;
+const storePackagePath = `${modulePath}/internal/store`;
 const goExecutable = process.env.COUNTERSHAPE_GO ?? "/opt/homebrew/bin/go";
+
+const expectedC2ProductionFiles = Object.freeze([
+	"execution_interlock.go", "head.go", "head_darwin.go", "nonhead_contract.go",
+	"object_store.go", "private_contract_run.go", "reduction_sweep.go",
+]);
+const expectedC2TestFiles = Object.freeze([
+	"execution_interlock_test.go", "head_test.go", "nonhead_contract_test.go",
+	"object_store_test.go", "private_contract_run_test.go", "reduction_sweep_test.go",
+]);
+const expectedC2XTestFiles = Object.freeze(["public_api_test.go"]);
+const expectedC2Imports = Object.freeze({
+	"execution_interlock.go": Object.freeze([
+		"bytes", "context", "errors", "fmt", `${modulePath}/internal/canon`,
+		`${modulePath}/internal/domain`, "os", "path/filepath", "sync",
+	]),
+	"nonhead_contract.go": Object.freeze([
+		"bytes", "context", "errors", "fmt", `${modulePath}/internal/canon`,
+		`${modulePath}/internal/domain`, "io", "os", "path/filepath", "sort", "strings",
+	]),
+	"object_store.go": Object.freeze([
+		"bytes", "context", "errors", "fmt", `${modulePath}/internal/canon`,
+		`${modulePath}/internal/domain`, "io", "os", "path/filepath", "strings", "sync", "unicode/utf8",
+	]),
+	"private_contract_run.go": Object.freeze([
+		"bytes", "context", "errors", "fmt", `${modulePath}/internal/canon`,
+		`${modulePath}/internal/domain`, "io", "os", "path/filepath", "sort", "strings", "unicode/utf8",
+	]),
+});
+const expectedC2PackageImports = Object.freeze([
+	"bytes", "context", "encoding/json", "errors", "fmt", `${modulePath}/internal/canon`,
+	`${modulePath}/internal/choice/promotion/authority`, `${modulePath}/internal/compare`,
+	`${modulePath}/internal/confirmation/authority`, `${modulePath}/internal/domain`,
+	`${modulePath}/internal/emit/node/authority`, `${modulePath}/internal/reduce`, "io", "os",
+	"path/filepath", "sort", "strconv", "strings", "sync", "syscall", "time", "unicode", "unicode/utf8",
+]);
+const c2NonheadTests = Object.freeze([
+	"TestC2FixturePublishesAndReopensExactNonheadObjects",
+	"TestC2ExactKeyMappingsConvergeOnlyForTypedParents",
+	"TestC2MappingsRejectWrongKindCrossStoreAndAlternateLinks",
+	"TestC2CopiedOrParsedBodiesCannotEnterProductionMechanics",
+	"TestC2NonheadFaultMatrixSeparatesNoEffectAndUnknownEffect",
+	"TestC2NonheadPublicationNeverMutatesStudyHead",
+]);
+const c2InterlockTests = Object.freeze([
+	"TestC2InterlockClaimMultiProcessRaceHasOneStorageWinnerAndNoPermit",
+	"TestC2InterlockMustBeAcquiredBeforeTargetKeyedStartClaim",
+	"TestC2InterlockRestartReopensIntentWithoutAuthority",
+	"TestC2InterlockSameBootAmbiguityRemainsHeld",
+	"TestC2InterlockResetRequiresExplicitDifferentBootSession",
+	"TestC2InterlockReleaseRequiresTestOnlyDurableTerminalClosure",
+	"TestC2InterlockRejectsCorruptCrossStoreAndAlternateOwnerState",
+]);
+const c2PrivateTests = Object.freeze([
+	"TestC2PrivateManifestEnforcesCountSizeAndRosterBounds",
+	"TestC2MissingPrivateEvidenceBeforeFinalizationRefuses",
+	"TestC2PostFinalizationPurgeChangesAvailabilityOnly",
+	"TestC2UnexpectedPrivateLossReportsMissingWithoutCanonicalMutation",
+	"TestC2PrivateEvidenceFaultMatrixReopensAcrossRestart",
+	"TestC2PurgeCannotDeleteObjectsHeadsOrRetentionFact",
+]);
+const c2PublicTests = Object.freeze([
+	"TestC2StoreExportsNoOfficialIssuerOrRunPermit",
+	"TestC2StoreExportsNoListLatestTraversalStatusOrHeadMutationSurface",
+]);
+const expectedC2TestSymbols = Object.freeze([
+	...c2NonheadTests, ...c2InterlockTests, ...c2PrivateTests, ...c2PublicTests,
+].sort());
+const expectedC2StructFields = Object.freeze({
+	attemptStorageRecord: Object.freeze(["storeInstance", "digest", "seal"]),
+	targetStorageInput: Object.freeze(["attempt", "object"]),
+	runStorageInput: Object.freeze(["target", "claim", "object", "manifest"]),
+	executionStorageInput: Object.freeze(["run", "object"]),
+	contractStorageRecord: Object.freeze([
+		"storeInstance", "object", "authority", "witnessPath", "relationPath", "relation", "relationBytes",
+	]),
+	interlockLease: Object.freeze(["storeInstance", "state", "seal"]),
+	startClaimRecord: Object.freeze([
+		"storeInstance", "targetDigest", "attemptDigest", "bootDigest", "generation", "digest", "canonical", "path",
+	]),
+	startClaimWinner: Object.freeze(["lease", "claim", "seal"]),
+	terminalClosureRecord: Object.freeze(["run", "manifest", "seal"]),
+	changedBootResetAuthorization: Object.freeze(["currentBoot", "seal"]),
+	privateManifestRecord: Object.freeze([
+		"storeInstance", "targetDigest", "attemptDigest", "startClaimDigest", "digest", "canonical", "packDigest",
+		"packBytes", "blobCount", "aggregateBytes", "entries", "manifestPath", "packPath", "purgePath", "seal",
+	]),
+});
+const c2ProductionPaths = Object.freeze([
+	"internal/store/execution_interlock.go",
+	"internal/store/nonhead_contract.go",
+	"internal/store/private_contract_run.go",
+]);
+const c2ImportPaths = Object.freeze([...c2ProductionPaths, "internal/store/object_store.go"]);
+const c2ReviewedPaths = Object.freeze([
+	...c2ProductionPaths,
+	"internal/store/object_store.go",
+	"internal/store/execution_interlock_test.go",
+	"internal/store/nonhead_contract_test.go",
+	"internal/store/object_store_test.go",
+	"internal/store/private_contract_run_test.go",
+	"internal/store/public_api_test.go",
+]);
+const expectedC2ObjectStoreSurface = Object.freeze([
+	"Error", "Error.Error", "Error.Unwrap", "NewSemanticObject", "ObjectAuthority", "ObjectStore",
+	"ObjectStore.Open", "ObjectStore.Publish", "ObjectStore.Read", "ObjectStore.Validate",
+	"ObjectStore.ValidateExternalPublicationPath", "OpenObjectStore", "SemanticObject", "SemanticObject.CanonicalBytes",
+	"SemanticObject.Digest", "SemanticObject.Kind", "SemanticObject.Valid",
+].sort());
+const expectedC2ObjectStoreFields = Object.freeze([
+	"root", "objects", "digestRoot", "studies", "privateCaptures", "contractRoot", "contractLinks", "contractOps",
+	"contractRuns", "rootInfo", "objectsInfo", "digestRootInfo", "studiesInfo", "privateInfo", "contractInfo",
+	"contractLinkInfo", "contractOpsInfo", "contractRunInfo", "shardInfos", "studyInfos", "contractInfos", "instance",
+]);
+const expectedC2TestFilesByProfile = Object.freeze({
+	"internal/store/nonhead_contract_test.go": c2NonheadTests,
+	"internal/store/execution_interlock_test.go": c2InterlockTests,
+	"internal/store/private_contract_run_test.go": c2PrivateTests,
+	"internal/store/public_api_test.go": c2PublicTests,
+});
 
 const expectedProductionFiles = Object.freeze([
 	"codec.go",
@@ -96,10 +216,12 @@ const optInTestSymbols = Object.freeze([
 ]);
 const goJSONProfiles = Object.freeze({
 	"model-suite": Object.freeze({
+		packagePath,
 		pass: Object.freeze(expectedTestSymbols.filter((name) => !optInTestSymbols.includes(name))),
 		skip: optInTestSymbols,
 	}),
 	"exhaustive-algebra": Object.freeze({
+		packagePath,
 		pass: Object.freeze([
 			"TestClassifierTruthTableUsesOnlyEligibleCompleteTupleMembership",
 			"TestClosedRunAlgebraExhaustiveCrossProduct",
@@ -107,16 +229,35 @@ const goJSONProfiles = Object.freeze({
 		skip: Object.freeze([]),
 	}),
 	"target-parser-fuzz": Object.freeze({
+		packagePath,
 		pass: Object.freeze(["FuzzContractExecutionTargetParser"]),
 		skip: Object.freeze([]),
 	}),
 	"finalized-run-parser-fuzz": Object.freeze({
+		packagePath,
 		pass: Object.freeze(["FuzzFinalizedContractRunParser"]),
 		skip: Object.freeze([]),
 	}),
 	"execution-parser-fuzz": Object.freeze({
+		packagePath,
 		pass: Object.freeze(["FuzzContractExecutionParser"]),
 		skip: Object.freeze([]),
+	}),
+	"c2-nonhead-persistence": Object.freeze({
+		packagePath: storePackagePath, packageArgument: "./internal/store",
+		pass: c2NonheadTests, skip: Object.freeze([]),
+	}),
+	"c2-interlock": Object.freeze({
+		packagePath: storePackagePath, packageArgument: "./internal/store",
+		pass: c2InterlockTests, skip: Object.freeze([]),
+	}),
+	"c2-private-evidence": Object.freeze({
+		packagePath: storePackagePath, packageArgument: "./internal/store",
+		pass: c2PrivateTests, skip: Object.freeze([]),
+	}),
+	"c2-public-surface": Object.freeze({
+		packagePath: storePackagePath, packageArgument: "./internal/store",
+		pass: c2PublicTests, skip: Object.freeze([]),
 	}),
 });
 const expectedLocalDependencies = Object.freeze([
@@ -322,6 +463,22 @@ function goTestSymbols() {
 	return sorted(lines);
 }
 
+function goTestC2Symbols() {
+	const output = run(goExecutable, [
+		"test", "-mod=readonly", "-buildvcs=false", "-p=1", "-count=1", "-list", "^TestC2", "./internal/store",
+	], "P07B_C2_GO_TEST_LIST");
+	const lines = output.trimEnd().split(/\r?\n/u);
+	const trailer = lines.pop();
+	const trailerParts = trailer?.trim().split(/\s+/u) ?? [];
+	if (trailerParts.length !== 3 || trailerParts[0] !== "ok" || trailerParts[1] !== storePackagePath || !/^[0-9.]+s$/u.test(trailerParts[2])) {
+		throw new ArchitectureError("P07B_C2_GO_TEST_LIST_FRAME", trailer ?? "missing trailer");
+	}
+	if (lines.some((line) => !/^TestC2[A-Za-z0-9_]+$/u.test(line))) {
+		throw new ArchitectureError("P07B_C2_GO_TEST_LIST_FRAME", JSON.stringify(lines));
+	}
+	return sorted(lines);
+}
+
 export function validateGoJSONTranscript(profileName, bytes) {
 	const profile = goJSONProfiles[profileName];
 	if (!profile) throw new ArchitectureError("P07B_C1_GO_JSON_PROFILE", profileName);
@@ -345,7 +502,7 @@ export function validateGoJSONTranscript(profileName, bytes) {
 			throw new ArchitectureError("P07B_C1_GO_JSON_PARSE", `${index + 1}:${error.message}`);
 		}
 	});
-	if (events.some((event) => !event || typeof event !== "object" || Array.isArray(event) || event.Package !== packagePath)) {
+	if (events.some((event) => !event || typeof event !== "object" || Array.isArray(event) || event.Package !== profile.packagePath)) {
 		throw new ArchitectureError("P07B_C1_GO_JSON_PACKAGE", "foreign or malformed event");
 	}
 	if (events.some((event) => event.Action === "fail")) {
@@ -372,6 +529,19 @@ export function validateGoJSONTranscript(profileName, bytes) {
 		throw new ArchitectureError("P07B_C1_GO_JSON_PACKAGE_RESULT", String(packagePasses.length));
 	}
 	return Object.freeze({ profile: profileName, passed: profile.pass.length, skipped: profile.skip.length });
+}
+
+export function runGoJSONProfile(profileName) {
+	const profile = goJSONProfiles[profileName];
+	if (!profile?.packageArgument || profile.skip.length !== 0 || profile.pass.length === 0 ||
+		profile.pass.some((name) => !/^(?:Test|Fuzz)[A-Za-z0-9_]+$/u.test(name))) {
+		throw new ArchitectureError("P07B_C2_GO_JSON_RUN_PROFILE", profileName);
+	}
+	const pattern = `^(?:${profile.pass.join("|")})$`;
+	const output = run(goExecutable, [
+		"test", "-mod=readonly", "-buildvcs=false", "-p=1", "-count=1", "-json", "-run", pattern, profile.packageArgument,
+	], "P07B_C2_GO_JSON_RUN");
+	return validateGoJSONTranscript(profileName, Buffer.from(output, "utf8"));
 }
 
 async function readStandardInput() {
@@ -489,6 +659,94 @@ function exampleFacts(bundle, target, finalizedRun, execution) {
 	};
 }
 
+function count(source, expression) { return source.match(expression)?.length ?? 0; }
+
+function goImports(source) {
+	const imports = [];
+	for (const block of source.matchAll(/^\s*import\s*\(([^]*?)^\s*\)/gmu)) {
+		for (const match of block[1].matchAll(/^\s*(?:[._A-Za-z][A-Za-z0-9_]*\s+)?"([^"]+)"/gmu)) imports.push(match[1]);
+	}
+	for (const match of source.matchAll(/^\s*import\s+(?:[._A-Za-z][A-Za-z0-9_]*\s+)?"([^"]+)"/gmu)) imports.push(match[1]);
+	return sorted(imports);
+}
+
+function balancedBody(source, expression) {
+	const match = expression.exec(source);
+	if (!match) return "";
+	const openBrace = source.indexOf("{", match.index);
+	if (openBrace < 0) return "";
+	let depth = 0;
+	for (let index = openBrace; index < source.length; index += 1) {
+		if (source[index] === "{") depth += 1;
+		else if (source[index] === "}") {
+			depth -= 1;
+			if (depth === 0) return source.slice(openBrace + 1, index);
+		}
+	}
+	return "";
+}
+
+function functionBody(source, name) {
+	return balancedBody(source, new RegExp(`^func\\s+(?:\\([^)]*\\)\\s+)?${name}\\s*\\(`, "mu"));
+}
+
+function methodBody(source, receiver, name) {
+	return balancedBody(source, new RegExp(
+		`^func\\s+\\(\\s*[^)]*\\*?${receiver}\\s*\\)\\s+${name}\\s*\\(`, "mu",
+	));
+}
+
+function structFields(source, name) {
+	const body = balancedBody(source, new RegExp(`^type\\s+${name}\\s+struct\\s*`, "mu"));
+	return body.split(/\r?\n/u).map((line) => line.trim()).filter(Boolean)
+		.map((line) => /^([A-Za-z_][A-Za-z0-9_]*)\b/u.exec(line)?.[1]).filter(Boolean);
+}
+
+function exportedSurface(source) {
+	const functions = [...source.matchAll(/^func\s+([A-Z][A-Za-z0-9_]*)\s*(?:\[[^\]]*\]\s*)?\(/gmu)].map((match) => match[1]);
+	const types = [...source.matchAll(/^type\s+([A-Z][A-Za-z0-9_]*)\b/gmu)].map((match) => match[1]);
+	const values = [...source.matchAll(/^(?:var|const)\s+([A-Z][A-Za-z0-9_]*)\b/gmu)].map((match) => match[1]);
+	const grouped = [...source.matchAll(/^(?:type|var|const)\s*\(([^]*?)^\)/gmu)]
+		.flatMap((block) => [...block[1].matchAll(/^\s*([A-Z][A-Za-z0-9_]*)\b/gmu)].map((match) => match[1]));
+	const methods = [];
+	for (const match of source.matchAll(/^func\s+\(([^)]*)\)\s+([A-Z][A-Za-z0-9_]*)\s*\(/gmu)) {
+		const receiver = /\*?([A-Za-z_][A-Za-z0-9_]*)\s*$/u.exec(match[1])?.[1];
+		if (receiver && /^[A-Z]/u.test(receiver)) methods.push(`${receiver}.${match[2]}`);
+	}
+	return sorted([...functions, ...types, ...values, ...grouped, ...methods]);
+}
+
+function ordered(body, anchors) {
+	let cursor = -1;
+	for (const anchor of anchors) {
+		cursor = body.indexOf(anchor, cursor + 1);
+		if (cursor < 0) return false;
+	}
+	return true;
+}
+
+async function readC2Source(relativePath) {
+	const absolute = resolve(repositoryRoot, relativePath);
+	const fromRoot = relative(repositoryRoot, absolute);
+	if (isAbsolute(fromRoot) || fromRoot === ".." || fromRoot.startsWith(`..${sep}`)) {
+		throw new ArchitectureError("P07B_C2_PATH_ESCAPE", relativePath);
+	}
+	const before = await lstat(absolute);
+	if (!before.isFile() || before.isSymbolicLink()) throw new ArchitectureError("P07B_C2_NONREGULAR_FILE", relativePath);
+	const bytes = await readFile(absolute);
+	const after = await lstat(absolute);
+	if (!after.isFile() || after.isSymbolicLink() || before.dev !== after.dev || before.ino !== after.ino || before.size !== after.size) {
+		throw new ArchitectureError("P07B_C2_FILE_CHANGED", relativePath);
+	}
+	let source;
+	try {
+		source = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+	} catch (error) {
+		throw new ArchitectureError("P07B_C2_INVALID_UTF8", `${relativePath}:${error.message}`);
+	}
+	return Object.freeze({ path: relativePath, source, digest: sha256(bytes) });
+}
+
 async function topologyFacts() {
 	const contractexec = await readdir(resolve(repositoryRoot, "internal/contractexec"), { withFileTypes: true });
 	const model = await readdir(resolve(repositoryRoot, "internal/contractexec/model"), { withFileTypes: true });
@@ -559,7 +817,322 @@ export async function collectFacts() {
 	};
 }
 
+export async function collectC2Facts() {
+	const [storePackage] = goList(["./internal/store"]);
+	const entries = await Promise.all(c2ReviewedPaths.map(readC2Source));
+	const sources = Object.fromEntries(entries.map((entry) => [entry.path, entry.source]));
+	const newProduction = c2ProductionPaths.map((path) => sources[path]).join("\n");
+	const changedProduction = c2ImportPaths.map((path) => sources[path]).join("\n");
+	const allTests = Object.entries(sources).filter(([path]) => path.endsWith("_test.go"))
+		.map(([, source]) => source).join("\n");
+	const nonhead = sources["internal/store/nonhead_contract.go"];
+	const interlock = sources["internal/store/execution_interlock.go"];
+	const privateRun = sources["internal/store/private_contract_run.go"];
+	const objectStore = sources["internal/store/object_store.go"];
+	const publicAPI = sources["internal/store/public_api_test.go"];
+	const directoryEntries = [];
+	for (const entry of await readdir(resolve(repositoryRoot, "internal/store"), { withFileTypes: true })) {
+		const metadata = await lstat(resolve(repositoryRoot, "internal/store", entry.name));
+		directoryEntries.push(`${entry.name}:${metadata.isSymbolicLink() ? "symlink" : entry.isFile() ? "file" : entry.isDirectory() ? "directory" : "other"}`);
+	}
+	const nonGoBuildFields = [
+		"CFiles", "CXXFiles", "MFiles", "HFiles", "FFiles", "SFiles", "SwigFiles", "SwigCXXFiles", "SysoFiles", "EmbedFiles",
+	];
+	const structSources = {
+		attemptStorageRecord: nonhead,
+		targetStorageInput: nonhead,
+		runStorageInput: nonhead,
+		executionStorageInput: nonhead,
+		contractStorageRecord: nonhead,
+		interlockLease: interlock,
+		startClaimRecord: interlock,
+		startClaimWinner: interlock,
+		terminalClosureRecord: interlock,
+		changedBootResetAuthorization: interlock,
+		privateManifestRecord: privateRun,
+	};
+	const privateKindsBody = /var\s+privateEvidenceKindOrder\s*=\s*\[\.\.\.\]string\s*\{([^]*?)\n\}/mu.exec(privateRun)?.[1] ?? "";
+	const testFiles = {};
+	for (const path of Object.keys(expectedC2TestFilesByProfile)) {
+		testFiles[path] = sorted([...sources[path].matchAll(/^func\s+(TestC2[A-Za-z0-9_]+)\s*\(/gmu)].map((match) => match[1]));
+	}
+	const forbiddenPatterns = [
+		["semantic-model-import", /internal\/contractexec\/model/u],
+		["process-start", /\b(?:exec\.Command|os\.StartProcess)\s*\(/u],
+		["production-capability", /\b(?:OfficialTarget|RunPermit)\b/u],
+		["semantic-head", /\b(?:CreateStudy|OpenHead|AdvanceBaseline|AdvanceDivergence|AdvanceReduction|AdvanceConfirmation|AdvanceChoicepoint|AdvanceRuling|AdvanceResidue|ConfirmResiduePublication)\s*\(/u],
+	];
+	return structuredClone({
+		package: {
+			importPath: storePackage?.ImportPath,
+			name: storePackage?.Name,
+			modulePath: storePackage?.Module?.Path,
+			moduleMain: storePackage?.Module?.Main === true,
+			productionFiles: sorted(storePackage?.GoFiles ?? []),
+			testFiles: sorted(storePackage?.TestGoFiles ?? []),
+			xTestFiles: sorted(storePackage?.XTestGoFiles ?? []),
+			ignoredGoFiles: sorted(storePackage?.IgnoredGoFiles ?? []),
+			invalidGoFiles: sorted(storePackage?.InvalidGoFiles ?? []),
+			nonGoBuildFiles: sorted(nonGoBuildFields.flatMap((field) => storePackage?.[field] ?? [])),
+			productionImports: sorted(storePackage?.Imports ?? []),
+		},
+		directoryEntries: sorted(directoryEntries),
+		imports: Object.fromEntries(c2ImportPaths.map((path) => [path.split("/").at(-1), goImports(sources[path])])),
+		newProductionExports: Object.fromEntries(c2ProductionPaths.map((path) => [path, exportedSurface(sources[path])])),
+		objectStoreExports: exportedSurface(objectStore),
+		compilerParsedSurface: [
+			"go/ast", "go/parser", "go/token", "parser.ParseFile", "parser.SkipObjectResolution",
+			"ast.IsExported", "*ast.StructType", "field.Names", "c2ReceiverName", "c2FileExportedSurface",
+			"c2ForbiddenProcessSurface", "parsed.Imports", "strconv.Unquote", "os/exec",
+			"c2ExportedProductionSurface", "wantPackageSurface",
+			"execution_interlock.go", "nonhead_contract.go", "object_store.go", "private_contract_run.go",
+		].every((anchor) => publicAPI.includes(anchor)),
+		structs: Object.fromEntries(Object.entries(structSources).map(([name, source]) => [name, structFields(source, name)])),
+		testSymbols: goTestC2Symbols(),
+		testFiles,
+		forbiddenSurface: forbiddenPatterns.filter(([, expression]) => expression.test(changedProduction)).map(([name]) => name),
+		namespaces: {
+			fields: structFields(objectStore, "ObjectStore"),
+			paths: [
+				"contractDirectory       = \"contract-execution\"",
+				"contractLinkDirectory   = \"links\"",
+				"contractOpsDirectory    = \"operations\"",
+				"contractRunDirectory    = \"contract-runs\"",
+			].every((anchor) => objectStore.includes(anchor)),
+			retained: ["s.contractRoot", "s.contractLinks", "s.contractOps", "s.contractRuns", "s.contractInfos"]
+				.every((anchor) => functionBody(objectStore, "assertReady").includes(anchor)),
+			replacementTest: sources["internal/store/object_store_test.go"].includes("replacement contract-operation directory retained store authority"),
+			caseAliasGuard: count(functionBody(objectStore, "assertReady"), /rejectPathCaseAlias\s*\(/gu) === 2,
+		},
+		relations: {
+			constants: [
+				"CONFORMANCE_ATTEMPT_TO_TARGET", "TARGET_TO_FINALIZED_RUN", "RUN_PROFILE_TO_EXECUTION",
+				"target-by-attempt", "run-by-target", "execution-by-run-profile", "contract-storage-relation/v1",
+			].every((anchor) => nonhead.includes(`\"${anchor}\"`)),
+			effects: sorted([...nonhead.matchAll(/contractEffect\s*=\s*"([A-Z_]+)"/gmu)].map((match) => match[1])),
+			keyRoster: [
+				"ContractStorageRelationKey", "parent_kind", "parent_digest", "secondary_parent_kind", "secondary_parent_digest",
+				"child_kind", "child_digest", "target_digest", "attempt_digest", "start_claim_digest", "classifier_profile_digest",
+			].every((anchor) => functionBody(nonhead, "contractRelationMaterial").includes(anchor)),
+			algebraClosed: ["relationAttemptTarget", "relationTargetRun", "relationRunExecution"].every((anchor) =>
+				functionBody(nonhead, "contractRelationAlgebraValid").includes(anchor)) &&
+				["targetAttemptDigest", "finalizedRunJoins", "executionJoins"].every((anchor) =>
+					functionBody(nonhead, "validateContractRelation").includes(anchor)),
+			persistenceOrder: ordered(functionBody(nonhead, "persistContractRecord"), [
+				"publishLocked", "createExactHardLink", "relationDirectoryLocked", "createExactPrivateFile",
+				"reopenContractWitness", "readExactPrivateFile", "store.assertReady",
+			]),
+			openConvergence: ordered(functionBody(nonhead, "openContractRecordByParent"), [
+				"relationDirectoryLocked", "filepath.Dir(relationPath)", "readExactPrivateFile", "parseContractRelation",
+				"contractRelationMaterial", "createExactPrivateFile",
+				"contractExactConverged", "readObjectReference", "reopenContractWitness",
+			]) && ["relationDirectoryLocked", "ensureContractDirectoryLocked", "filepath.Dir(record.relationPath)",
+				"filepath.Dir(record.witnessPath)", "store.assertReady"].every((anchor) =>
+				methodBody(nonhead, "contractStorageRecord", "validForLocked").includes(anchor)),
+			runManifestGate: ordered(functionBody(nonhead, "persistFinalizedRunRecord"), [
+				"validatePrivateManifestForFinalization", "validatePrivateManifestRoster", "persistContractRecord",
+			]),
+			executionProfileDerived: functionBody(nonhead, "persistExecutionRecord").includes("contractClassifierProfileDigest()") &&
+				!functionBody(nonhead, "persistExecutionRecord").includes("input.profile"),
+			identityGuards: count(functionBody(nonhead, "ensureContractDirectoryLocked"), /rejectCaseAlias\s*\(/gu) === 2 &&
+				functionBody(nonhead, "createExactHardLink").includes("rejectPathCaseAlias(destination)") &&
+				functionBody(nonhead, "createExactPrivateFile").includes("rejectCaseAlias(directory, name)") &&
+				count(functionBody(nonhead, "readExactPrivateFile"), /rejectPathCaseAlias\s*\(path\)/gu) === 2,
+			identityReplacementTests: [
+				"c2ReplaceDirectoryWithExactClone", "os.Link(from, to)",
+				"typed-relation-real-parent-replacement", "typed-publication-real-parent-replacement",
+				"typed-relation-directory-case-alias", "typed-relation-leaf-case-alias",
+				"typed-publication-leaf-case-alias",
+			].every((anchor) => allTests.includes(anchor)),
+		},
+		interlock: {
+			bootJoin: ordered(functionBody(interlock, "acquireInterlockAndStartClaim"), [
+				"targetBootDigest", "targetBoot != bootDigest", "openAndLockStudy",
+			]),
+			acquisitionOrder: ordered(functionBody(interlock, "acquireInterlockAndStartClaim"), [
+				"openAndLockStudy", "os.Lstat(claimPath)", "readExecutionInterlockState", "clearReceiptExactLocked",
+				"replaceExecutionInterlock", "createExactPrivateFile", "readExactPrivateFile",
+				"readExecutionInterlockState", "startClaimWinner{",
+			]),
+			releaseOrder: ordered(functionBody(interlock, "releaseInterlockAfterFinalizedRun"), [
+				"validatePrivateManifestLocked", "validatePrivateManifestRoster", "readExecutionInterlockState",
+				"replaceExecutionInterlock", "persistClearReceiptLocked",
+			]),
+			resetOrder: ordered(functionBody(interlock, "resetInterlockAfterBootChange"), [
+				"current.bootDigest == authorization.currentBoot", "replaceExecutionInterlock", "persistClearReceiptLocked",
+			]),
+			winnerFreshAndConsumed: ordered(functionBody(interlock, "validForStoreLocked"), [
+				"store.assertReady", "winner.claim.validForLocked", "readExecutionInterlockState",
+			]) && ordered(functionBody(interlock, "consumeStartClaimWinner"), [
+				"store.assertReady", "openAndLockStudy", "validForStoreLocked", "winner.seal.consumed = true",
+			]),
+			startClaimConvergence: ordered(functionBody(interlock, "openStartClaim"), [
+				"store.assertReady", "openAndLockStudy", "readExactPrivateFile", "parseStartClaim",
+				"createExactPrivateFile", "contractExactConverged",
+			]),
+			clearReceiptTransition: [
+				"previous_target_digest", "previous_attempt_digest", "previous_boot_digest", "previous_generation",
+				"previous_revision", "deriveInterlockGeneration", "sameInterlockState(expectedClear, clear)",
+			].every((anchor) => interlock.includes(anchor)),
+			clearReceiptConvergence: ordered(functionBody(interlock, "clearReceiptExactLocked"), [
+				"value.CanonicalChecked", "createExactPrivateFile", "contractExactConverged", "store.assertReady",
+			]),
+			clearReceiptFaults: [
+				"before-clear-receipt-create", "after-clear-receipt-temporary-sync", "before-clear-receipt-link",
+				"after-clear-receipt-link", "after-clear-receipt-directory-sync", "before-clear-receipt-reopen",
+			].every((anchor) => interlock.includes(`\"${anchor}\"`)),
+			identityBoundary: functionBody(interlock, "replaceExecutionInterlock").includes("rejectPathCaseAlias(path)") &&
+				functionBody(interlock, "acquireInterlockAndStartClaim").includes("rejectPathCaseAlias(claimPath)") && [
+				"start-claim-real-parent-replacement-preserves-unconsumed-winner",
+				"start-claim-directory-case-alias-preserves-winner",
+				"start-claim-leaf-case-alias-preserves-winner",
+				"case-alias-claim-preflight-does-not-create-interlock",
+				"fixed-ops-real-directory-replacement-refuses-consume",
+				"fixed-ops-case-alias-refuses-consume",
+			].every((anchor) => allTests.includes(anchor)),
+			productionSeals: {
+				attempt: count(newProduction, /&attemptRecordSeal\{marker:\s*1\}/gu),
+				terminal: count(newProduction, /&terminalClosureSeal\{marker:\s*1\}/gu),
+				reset: count(newProduction, /&changedBootResetSeal\{marker:\s*1\}/gu),
+				lease: count(newProduction, /&interlockLeaseSeal\{marker:\s*1\}/gu),
+				winner: count(newProduction, /&startClaimWinnerSeal\{marker:\s*1\}/gu),
+				manifest: count(newProduction, /&privateManifestSeal\{marker:\s*1\}/gu),
+			},
+			testSeals: {
+				attempt: count(allTests, /&attemptRecordSeal\{marker:\s*1\}/gu),
+				terminal: count(allTests, /&terminalClosureSeal\{marker:\s*1\}/gu),
+				reset: count(allTests, /&changedBootResetSeal\{marker:\s*1\}/gu),
+			},
+		},
+		privateEvidence: (() => {
+			const purgeBody = functionBody(privateRun, "purgePrivateEvidence");
+			const freshPurgeBody = balancedBody(purgeBody, /if\s+!purgeDurable\s*/u);
+			return {
+			limits: /maxPrivateBlobs\s*=\s*16\b/u.test(privateRun) &&
+				/maxPrivateEvidenceBytes\s*=\s*64\s*\*\s*1024\s*\*\s*1024\b/u.test(privateRun),
+			kinds: [...privateKindsBody.matchAll(/"([A-Z_]+)"/gu)].map((match) => match[1]),
+			states: sorted([...privateRun.matchAll(/privateState[A-Za-z]+\s*=\s*"([A-Z_]+)"/gmu)].map((match) => match[1])),
+			manifestClosure: ordered(functionBody(privateRun, "openPrivateManifest"), [
+				"parsePrivateManifest", "record.targetDigest", "record.attemptDigest", "record.startClaimDigest", "record.validFor",
+			]) && ordered(functionBody(privateRun, "reopenPrivateManifestLocked"), [
+				"privateRunDirectoriesLocked", "strictDigestHex", "filepath.Join(manifestDirectory, hex)",
+				"filepath.Join(packDirectory, hex)", "filepath.Join(purgeDirectory, hex)",
+				"readExactPrivateFile", "samePrivateManifestEntries",
+			]),
+			manifestOpenConvergence: ordered(functionBody(privateRun, "openPrivateManifest"), [
+				"readExactPrivateFile", "parsePrivateManifest", "createExactPrivateFile", "contractExactConverged", "record.validFor",
+			]),
+			arithmeticBounded: functionBody(privateRun, "parsePrivateManifest").includes("countedBytes > maxPrivateEvidenceBytes-count") &&
+				functionBody(privateRun, "validatePrivatePack").includes("entry.count > record.packBytes-entry.offset"),
+			availabilityJoins: ordered(functionBody(privateRun, "privateAvailability"), [
+				"run.validForLocked", "validatePrivateManifestRoster", "reopenPrivateManifestLocked",
+				"readExactPrivateFile", "createExactPrivateFile", "validatePrivatePack",
+			]),
+			purgeOrder: ordered(purgeBody, [
+				"run.validForLocked", "validatePrivateManifestRoster", "reopenPrivateManifestLocked",
+				"privatePurgeIntent", "createExactPrivateFile", "purgeDurable = true", "os.Remove", "syncDirectory",
+			]),
+			purgeCreateCount: count(purgeBody, /\bcreateExactPrivateFile\s*\(/gu) === 2,
+			freshPurgeOrder: ordered(freshPurgeBody, [
+				"faultBeforePurgeIntent", "createExactPrivateFile", "faultAfterPurgeIntentSync", "readExactPrivateFile",
+			]),
+				missingPackGate: purgeBody
+					.includes("else if err := validatePrivatePack(manifest.packPath, manifest); err != nil"),
+				noCanonicalMutation: !/\b(?:publishLocked|advanceHead|CreateStudy|OpenHead)\s*\(/u.test(privateRun),
+				identityGuards: functionBody(privateRun, "validatePrivateManifestLocked")
+					.includes("rejectPathCaseAlias(record.purgePath)") &&
+					count(functionBody(privateRun, "openPrivateManifest"), /rejectPathCaseAlias\s*\(/gu) === 3 &&
+					count(functionBody(privateRun, "createPrivateManifest"), /rejectPathCaseAlias\s*\(/gu) === 3 &&
+					["manifestAliasErr", "packAliasErr", "purgeAliasErr"].every((anchor) =>
+						functionBody(privateRun, "reopenPrivateManifestLocked").includes(anchor)) &&
+					count(functionBody(privateRun, "validatePrivatePack"), /rejectPathCaseAlias\s*\(path\)/gu) === 2 &&
+					ordered(purgeBody, ["rejectPathCaseAlias(manifest.packPath)", "os.Remove(manifest.packPath)"]) &&
+					functionBody(privateRun, "createExactPrivatePack").includes("rejectCaseAlias(directory, name)"),
+				identityReplacementTests: [
+					"dynamic-private-real-directory-replacement-refuses",
+					"private-case-alias-preflight-is-known-no-effect",
+					"private-manifest-leaf-case-alias-refuses", "private-pack-leaf-case-alias-refuses",
+				].every((anchor) => allTests.includes(anchor)),
+			};
+		})(),
+	});
+}
+
 function violation(code, detail) { return Object.freeze({ code, detail }); }
+
+export function validateC2Facts(facts) {
+	const problems = [];
+	const add = (code, detail) => problems.push(violation(code, detail));
+	if (facts.package?.importPath !== storePackagePath || facts.package?.name !== "store" ||
+		facts.package?.modulePath !== modulePath || facts.package?.moduleMain !== true) {
+		add("P07B_C2_PACKAGE_IDENTITY", JSON.stringify(facts.package));
+	}
+	if (!exact(facts.package?.productionFiles, expectedC2ProductionFiles) ||
+		!exact(facts.package?.testFiles, expectedC2TestFiles) || !exact(facts.package?.xTestFiles, expectedC2XTestFiles) ||
+		!exact(facts.package?.ignoredGoFiles, ["head_unsupported.go"]) ||
+		(facts.package?.invalidGoFiles ?? []).length !== 0 || (facts.package?.nonGoBuildFiles ?? []).length !== 0) {
+		add("P07B_C2_STORE_TOPOLOGY", JSON.stringify(facts.package));
+	}
+	if (!exact(facts.package?.productionImports, expectedC2PackageImports)) {
+		add("P07B_C2_IMPORT_ROSTER", `package:${JSON.stringify(facts.package?.productionImports)}`);
+	}
+	const expectedEntries = sorted([
+		...expectedC2ProductionFiles, ...expectedC2TestFiles, ...expectedC2XTestFiles, "head_unsupported.go",
+	].map((name) => `${name}:file`));
+	if (!exact(facts.directoryEntries, expectedEntries)) add("P07B_C2_STORE_TOPOLOGY", JSON.stringify(facts.directoryEntries));
+	for (const [file, expected] of Object.entries(expectedC2Imports)) {
+		if (!exact(facts.imports?.[file], expected)) add("P07B_C2_IMPORT_ROSTER", `${file}:${JSON.stringify(facts.imports?.[file])}`);
+	}
+	if (Object.values(facts.newProductionExports ?? {}).some((surface) => surface.length !== 0) ||
+		!exact(facts.objectStoreExports, expectedC2ObjectStoreSurface) || facts.compilerParsedSurface !== true) {
+		add("P07B_C2_EXPORTED_SURFACE", JSON.stringify({
+			new: facts.newProductionExports, store: facts.objectStoreExports, compilerParsed: facts.compilerParsedSurface,
+		}));
+	}
+	for (const [name, expected] of Object.entries(expectedC2StructFields)) {
+		if (!exact(facts.structs?.[name], expected)) add("P07B_C2_AUTHORITY_SHAPE", `${name}:${JSON.stringify(facts.structs?.[name])}`);
+	}
+	if (!exact(facts.testSymbols, expectedC2TestSymbols)) add("P07B_C2_TEST_SYMBOL_ROSTER", JSON.stringify(facts.testSymbols));
+	for (const [path, expected] of Object.entries(expectedC2TestFilesByProfile)) {
+		if (!exact(facts.testFiles?.[path], sorted(expected))) add("P07B_C2_TEST_FILE_ROSTER", `${path}:${JSON.stringify(facts.testFiles?.[path])}`);
+	}
+	if ((facts.forbiddenSurface ?? []).length !== 0) add("P07B_C2_FORBIDDEN_PRODUCTION_SURFACE", facts.forbiddenSurface.join(","));
+	if (!facts.namespaces?.paths || !facts.namespaces?.retained || !facts.namespaces?.replacementTest ||
+		!facts.namespaces?.caseAliasGuard ||
+		!exact(facts.namespaces?.fields, expectedC2ObjectStoreFields)) {
+		add("P07B_C2_NAMESPACE_IDENTITY", JSON.stringify(facts.namespaces));
+	}
+	if (!facts.relations?.constants || !facts.relations?.keyRoster || !facts.relations?.algebraClosed ||
+		!facts.relations?.persistenceOrder || !facts.relations?.openConvergence ||
+		!facts.relations?.runManifestGate || !facts.relations?.executionProfileDerived ||
+		!facts.relations?.identityGuards || !facts.relations?.identityReplacementTests ||
+		!exact(facts.relations?.effects, ["AMBIGUOUS", "EXACT_CONVERGED", "KNOWN_NO_EFFECT"])) {
+		add("P07B_C2_RELATION_ALGEBRA", JSON.stringify(facts.relations));
+	}
+	if (!facts.interlock?.bootJoin || !facts.interlock?.acquisitionOrder || !facts.interlock?.releaseOrder || !facts.interlock?.resetOrder ||
+		!facts.interlock?.winnerFreshAndConsumed || !facts.interlock?.startClaimConvergence || !facts.interlock?.clearReceiptTransition ||
+		!facts.interlock?.clearReceiptConvergence || !facts.interlock?.clearReceiptFaults || !facts.interlock?.identityBoundary) {
+		add("P07B_C2_INTERLOCK_PROTOCOL", JSON.stringify(facts.interlock));
+	}
+	if (!exact(facts.interlock?.productionSeals, { attempt: 0, terminal: 0, reset: 0, lease: 1, winner: 1, manifest: 2 }) ||
+		!exact(facts.interlock?.testSeals, { attempt: 1, terminal: 1, reset: 1 })) {
+		add("P07B_C2_SEAL_OWNERSHIP", JSON.stringify({ production: facts.interlock?.productionSeals, test: facts.interlock?.testSeals }));
+	}
+	if (!facts.privateEvidence?.limits || !exact(facts.privateEvidence?.kinds, [
+		"MATERIALIZATION_REVALIDATION", "RUNTIME_REVALIDATION", "PROCESS_RESULT", "WAIT_RESULT", "DRAIN_RESULT",
+		"TEARDOWN_RESULT", "ORPHAN_CHECK", "FINALIZATION_MARKER", "CAPTURED_OBSERVATION", "PROJECTION_RESULT",
+		"TARGET_INVENTORY", "CHILD_BINDINGS", "IMPORT_RESOLUTION", "SERVICE_BINDINGS",
+		"NAMED_PARENT_SECRET_SENTINEL_INHERITANCE",
+	]) || !exact(facts.privateEvidence?.states, ["MISSING_UNEXPECTED", "PURGED", "RETAINED"]) ||
+		!facts.privateEvidence?.manifestClosure || !facts.privateEvidence?.manifestOpenConvergence || !facts.privateEvidence?.arithmeticBounded ||
+		!facts.privateEvidence?.availabilityJoins || !facts.privateEvidence?.purgeOrder ||
+		!facts.privateEvidence?.purgeCreateCount || !facts.privateEvidence?.freshPurgeOrder ||
+		!facts.privateEvidence?.missingPackGate || !facts.privateEvidence?.noCanonicalMutation ||
+		!facts.privateEvidence?.identityGuards || !facts.privateEvidence?.identityReplacementTests) {
+		add("P07B_C2_PRIVATE_EVIDENCE", JSON.stringify(facts.privateEvidence));
+	}
+	return problems;
+}
 
 export function validateFacts(facts) {
 	const problems = [];
@@ -686,13 +1259,61 @@ async function runIntersection(facts) {
 	if (!exact(before, after)) throw new ArchitectureError("P07B_C1_SNAPSHOT_CHANGED", "model/schema/example inputs changed during read-only checks");
 }
 
+function runInheritedB() {
+	const result = spawnSync(process.execPath, [resolve(repositoryRoot, "tools/check-p07b-b-architecture.mjs")], {
+		cwd: repositoryRoot,
+		encoding: "utf8",
+		timeout: 300_000,
+		maxBuffer: 32 * 1024 * 1024,
+		env: process.env,
+	});
+	if (result.error || result.signal || result.status !== 0 || result.stderr !== "" ||
+		result.stdout.trim() !== "P07B B architecture boundary OK") {
+		throw new ArchitectureError(
+			"P07B_C2_INHERITED_B_FAILED", `${result.status ?? result.signal}: ${result.stderr || result.stdout || result.error}`,
+		);
+	}
+}
+
+async function runC2Boundary() {
+	const before = await snapshot(c2ReviewedPaths);
+	runInheritedB();
+	const facts = await collectC2Facts();
+	const problems = validateC2Facts(facts);
+	if (problems.length > 0) {
+		for (const problem of problems) process.stderr.write(`${problem.code}: ${problem.detail}\n`);
+		process.exitCode = 1;
+		return;
+	}
+	runGoJSONProfile("c2-public-surface");
+	const after = await snapshot(c2ReviewedPaths);
+	if (!exact(before, after)) {
+		throw new ArchitectureError("P07B_C2_SNAPSHOT_CHANGED", "C2 reviewed inputs changed during cumulative checks");
+	}
+	process.stdout.write("P07B-C C2 cumulative architecture boundary OK\n");
+}
+
 async function main() {
 	if (process.argv[2] === "--assert-go-json") {
 		if (process.argv.length !== 4) {
 			throw new ArchitectureError("P07B_C1_ARGUMENTS", "--assert-go-json requires one exact profile");
 		}
 		const result = validateGoJSONTranscript(process.argv[3], await readStandardInput());
-		process.stdout.write(`P07B-C C1 Go JSON target execution OK (${result.profile}: ${result.passed} passed, ${result.skipped} skipped)\n`);
+		const phase = result.profile.startsWith("c2-") ? "C2" : "C1";
+		process.stdout.write(`P07B-C ${phase} Go JSON target execution OK (${result.profile}: ${result.passed} passed, ${result.skipped} skipped)\n`);
+		return;
+	}
+	if (process.argv[2] === "--run-go-json") {
+		if (process.argv.length !== 4 || !process.argv[3].startsWith("c2-")) {
+			throw new ArchitectureError("P07B_C2_ARGUMENTS", "--run-go-json requires one exact C2 profile");
+		}
+		const result = runGoJSONProfile(process.argv[3]);
+		process.stdout.write(`P07B-C C2 Go JSON target execution OK (${result.profile}: ${result.passed} passed, ${result.skipped} skipped)\n`);
+		return;
+	}
+	if (process.argv[2] === "--c2") {
+		if (process.argv.length !== 3) throw new ArchitectureError("P07B_C2_ARGUMENTS", "--c2 accepts no other arguments");
+		await runC2Boundary();
 		return;
 	}
 	if (process.argv.length !== 2) throw new ArchitectureError("P07B_C1_ARGUMENTS", "no arguments accepted");

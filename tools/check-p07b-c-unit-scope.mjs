@@ -8,13 +8,24 @@ import { fileURLToPath } from "node:url";
 
 export const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const specificationPath = resolve(repositoryRoot, "spec/verification/p07b-c-unit-paths.json");
-const unitOrder = Object.freeze(["C0A", "C0B", "C1", "C1M", "C1V", "C1E", "C1B", "C2", "C3", "C4", "C5", "C6A", "C6B"]);
+const unitOrder = Object.freeze(["C0A", "C0B", "C1", "C1M", "C1V", "C1E", "C1B", "C2", "C2B", "C3", "C4", "C5", "C6A", "C6B"]);
 const verificationProfiles = new Set(["SOURCE_FULL", "RECEIPT_RECONCILIATION"]);
 const receiptClaimTypes = new Set(["tests-pass", "command-succeeded"]);
 const stagedInventoryArgs = Object.freeze([
 	"diff", "--no-ext-diff", "--no-textconv", "--ignore-submodules=none", "--cached", "--name-only", "-z", "--no-renames", "--diff-filter=ACDMRTUXB", "--",
 ]);
 const stagedIndexArgs = Object.freeze(["ls-files", "--stage", "-z", "--"]);
+const credentialPatterns = Object.freeze([
+	Object.freeze({ name: "pem-private-key", expression: /-----BEGIN (?:[A-Z0-9 ]+ )?PRIVATE KEY-----/u }),
+	Object.freeze({ name: "aws-access-key", expression: /AKIA[0-9A-Z]{16}/u }),
+	Object.freeze({ name: "github-token", expression: /gh[pousr]_[A-Za-z0-9]{30,}/u }),
+	Object.freeze({ name: "gitlab-token", expression: /glpat-[A-Za-z0-9_-]{20,}/u }),
+	Object.freeze({ name: "slack-token", expression: /xox[baprs]-[A-Za-z0-9-]{20,}/u }),
+	Object.freeze({ name: "google-api-key", expression: /AIza[0-9A-Za-z_-]{35}/u }),
+	Object.freeze({ name: "openai-key", expression: /sk-(?:proj-)?[A-Za-z0-9_-]{20,}/u }),
+	Object.freeze({ name: "stripe-live-key", expression: /(?:sk|rk)_live_[A-Za-z0-9]{16,}/u }),
+	Object.freeze({ name: "jwt-bearer", expression: /Bearer[ \t]+eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}/u }),
+]);
 
 function fail(message) {
 	throw new Error(`P07B-C unit scope check failed: ${message}`);
@@ -176,14 +187,84 @@ async function stagedIndexEntries() {
 
 export function validateReceiptIndexModes(specification, unit, paths, entries) {
 	receiptManifest(specification, unit);
+	validateExactIndexModes(unit, paths, entries);
+}
+
+export function validateExactIndexModes(unit, paths, entries) {
 	if (!Array.isArray(entries)) fail(`${unit}: index entry roster`);
 	for (const path of paths) {
 		const matches = entries.filter((entry) => entry?.path === path);
 		if (matches.length !== 1 || matches[0].mode !== "100644" || matches[0].stage !== 0 ||
 			!(/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/u.test(matches[0].object)) || /^0+$/u.test(matches[0].object)) {
-			fail(`${unit}: receipt path must be one staged regular mode-100644 blob: ${path}`);
+			fail(`${unit}: path must be one staged regular mode-100644 blob: ${path}`);
 		}
 	}
+}
+
+export function credentialPatternFindings(entries) {
+	if (!Array.isArray(entries) || entries.some((entry) => !entry || typeof entry.path !== "string" || typeof entry.text !== "string")) {
+		fail("credential scan entry roster");
+	}
+	const findings = [];
+	for (const entry of entries) {
+		for (const pattern of credentialPatterns) {
+			if (pattern.expression.test(entry.text)) findings.push(Object.freeze({ pattern: pattern.name, path: entry.path }));
+		}
+	}
+	return findings;
+}
+
+async function stagedBlobEntries(paths) {
+	const entries = [];
+	for (const path of paths) {
+		const bytes = await gitOutput(["show", `:${path}`]);
+		let text;
+		try {
+			text = new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+		} catch (error) {
+			fail(`staged blob is not UTF-8 text: ${path} (${error.message})`);
+		}
+		if (bytes.length === 0) fail(`staged blob is empty: ${path}`);
+		entries.push(Object.freeze({ path, text }));
+	}
+	return entries;
+}
+
+async function requireExactStagedSource(specification, unit) {
+	const paths = await stagedPaths();
+	if (paths.length === 0) fail("staged inventory is empty");
+	if (!exactPathsMatch(specification, unit, paths)) fail(`${unit} exact staged roster mismatch`);
+	const entries = await stagedIndexEntries();
+	const repeatedPaths = await stagedPaths();
+	if (JSON.stringify(repeatedPaths) !== JSON.stringify(paths)) fail("staged inventory changed during source inspection");
+	validateExactIndexModes(unit, paths, entries);
+	return paths;
+}
+
+async function runSourceFinalGate(specification, unit) {
+	if (unit !== "C2" || specification.units[unit]?.verification_profile !== "SOURCE_FULL") {
+		fail("source-final-gate is admitted only for C2 SOURCE_FULL");
+	}
+	const paths = await requireExactStagedSource(specification, unit);
+	await gitOutput(["diff", "--no-ext-diff", "--no-textconv", "--ignore-submodules=none", "--cached", "--check", "--"]);
+	const unstaged = await gitOutput(["diff", "--no-ext-diff", "--no-textconv", "--ignore-submodules=none", "--name-only", "-z", "--"]);
+	if (unstaged.length !== 0) fail("unstaged tracked changes are present");
+	const untracked = await gitOutput(["ls-files", "--others", "--exclude-standard", "-z", "--"]);
+	if (untracked.length !== 0) fail("untracked paths are present");
+	const finalPaths = await stagedPaths();
+	if (JSON.stringify(finalPaths) !== JSON.stringify(paths)) fail("staged inventory changed during diff-integrity checks");
+	const digest = createHash("sha256").update(`${paths.join("\n")}\n`, "utf8").digest("hex");
+	console.log(`P07B-C ${unit} final source gate passed: ${paths.length} exact mode-100644 paths, clean staged diff, no unstaged or untracked paths, sorted-newline sha256:${digest}`);
+}
+
+async function runCredentialScan(specification, unit) {
+	if (unit !== "C2" || specification.units[unit]?.verification_profile !== "SOURCE_FULL") {
+		fail("credential-scan is admitted only for C2 SOURCE_FULL");
+	}
+	const paths = await requireExactStagedSource(specification, unit);
+	const findings = credentialPatternFindings(await stagedBlobEntries(paths));
+	if (findings.length > 0) fail(`structured credential-pattern findings: ${JSON.stringify(findings)}`);
+	console.log(`P07B-C ${unit} scoped staged structured credential-pattern scan: 0 findings across ${paths.length} exact paths and ${credentialPatterns.length} named patterns`);
 }
 
 async function runSelfTest() {
@@ -197,6 +278,8 @@ async function runSelfTest() {
 		unexpectedPaths(specification, "C3", ["internal/contractexec/target_evil.go"])[0] === "internal/contractexec/target_evil.go",
 		unexpectedPaths(specification, "C1B", ["spec/verification/p07b-c-c1-receipt.json"]).length === 0,
 		unexpectedPaths(specification, "C1B", ["internal/store/nonhead_contract.go"])[0] === "internal/store/nonhead_contract.go",
+		unexpectedPaths(specification, "C2B", ["spec/verification/p07b-c-c2-receipt.json"]).length === 0,
+		unexpectedPaths(specification, "C2B", ["internal/store/nonhead_contract.go"])[0] === "internal/store/nonhead_contract.go",
 		unexpectedPaths(specification, "C1M", ["internal/world/process_darwin.go"]).length === 0,
 		unexpectedPaths(specification, "C1M", ["spec/verification/p07b-c-c1-receipt.json"])[0] === "spec/verification/p07b-c-c1-receipt.json",
 		exactPathsMatch(specification, "C1M", specification.units.C1M.exact),
@@ -211,12 +294,15 @@ async function runSelfTest() {
 		!exactPathsMatch(specification, "C1E", specification.units.C1E.exact.slice(1)),
 		exactPathsMatch(specification, "C1B", specification.units.C1B.exact),
 		!exactPathsMatch(specification, "C1B", specification.units.C1B.exact.slice(1)),
+		exactPathsMatch(specification, "C2B", specification.units.C2B.exact),
+		!exactPathsMatch(specification, "C2B", specification.units.C2B.exact.slice(1)),
 		unexpectedPaths(specification, "C0A", ["docs/SEMANTICS.md", "README.md"])[0] === "README.md",
 		JSON.stringify(stagedInventoryArgs) === JSON.stringify([
 			"diff", "--no-ext-diff", "--no-textconv", "--ignore-submodules=none", "--cached", "--name-only", "-z", "--no-renames", "--diff-filter=ACDMRTUXB", "--",
 		]),
 		JSON.stringify(stagedIndexArgs) === JSON.stringify(["ls-files", "--stage", "-z", "--"]),
 		receiptManifest(specification, "C1B").length === 7,
+		receiptManifest(specification, "C2B").length === 7,
 	];
 	if (cases.some((value) => !value)) fail("allow/refuse self-test matrix");
 	const unsafePrefix = JSON.parse(JSON.stringify(specification));
@@ -237,22 +323,50 @@ async function runSelfTest() {
 		unsafeReceiptProfileRejected = true;
 	}
 	if (!unsafeReceiptProfileRejected) fail("receipt reconciliation source-scope self-test false negative");
-	const regular = specification.units.C1B.exact.map((path, index) => ({
-		mode: "100644", object: String(index + 1).padStart(40, "0"), stage: 0, path,
-	}));
-	validateReceiptIndexModes(specification, "C1B", specification.units.C1B.exact, regular);
-	for (const [name, mutate] of [
-		["symlink", (entries) => { entries[0].mode = "120000"; }],
-		["executable", (entries) => { entries[0].mode = "100755"; }],
-		["unmerged", (entries) => { entries[0].stage = 2; }],
-		["intent-to-add", (entries) => { entries[0].object = "0".repeat(40); }],
-		["deleted", (entries) => { entries.shift(); }],
-	]) {
-		const hostile = regular.map((entry) => ({ ...entry }));
-		mutate(hostile);
-		let rejected = false;
-		try { validateReceiptIndexModes(specification, "C1B", specification.units.C1B.exact, hostile); } catch { rejected = true; }
-		if (!rejected) fail(`receipt index-mode self-test false negative: ${name}`);
+	const reorderedUnits = JSON.parse(JSON.stringify(specification));
+	const reorderedC2B = reorderedUnits.units.C2B;
+	delete reorderedUnits.units.C2B;
+	reorderedUnits.units.C2B = reorderedC2B;
+	let reorderedUnitsRejected = false;
+	try { validateSpecification(reorderedUnits); } catch { reorderedUnitsRejected = true; }
+	if (!reorderedUnitsRejected) fail("unit order self-test false negative");
+	for (const unit of ["C1B", "C2B"]) {
+		const regular = specification.units[unit].exact.map((path, index) => ({
+			mode: "100644", object: String(index + 1).padStart(40, "0"), stage: 0, path,
+		}));
+		validateReceiptIndexModes(specification, unit, specification.units[unit].exact, regular);
+		for (const [name, mutate] of [
+			["symlink", (entries) => { entries[0].mode = "120000"; }],
+			["executable", (entries) => { entries[0].mode = "100755"; }],
+			["unmerged", (entries) => { entries[0].stage = 2; }],
+			["intent-to-add", (entries) => { entries[0].object = "0".repeat(40); }],
+			["deleted", (entries) => { entries.shift(); }],
+		]) {
+			const hostile = regular.map((entry) => ({ ...entry }));
+			mutate(hostile);
+			let rejected = false;
+			try { validateReceiptIndexModes(specification, unit, specification.units[unit].exact, hostile); } catch { rejected = true; }
+			if (!rejected) fail(`${unit} receipt index-mode self-test false negative: ${name}`);
+		}
+	}
+	const cleanCredentialEntries = [{ path: "fixture", text: "ordinary source text" }];
+	if (credentialPatternFindings(cleanCredentialEntries).length !== 0) fail("credential scan clean self-test false positive");
+	const hostileCredentials = [
+		"-----BEGIN " + "PRIVATE KEY-----",
+		"AK" + "IA" + "A".repeat(16),
+		"gh" + "p_" + "a".repeat(30),
+		"gl" + "pat-" + "a".repeat(20),
+		"xo" + "xb-" + "a".repeat(20),
+		"AI" + "za" + "a".repeat(35),
+		"s" + "k-proj-" + "a".repeat(20),
+		"s" + "k_live_" + "a".repeat(16),
+		"Bearer " + "eyJ" + "a".repeat(10) + "." + "b".repeat(10) + "." + "c".repeat(10),
+	];
+	for (let index = 0; index < hostileCredentials.length; index += 1) {
+		const findings = credentialPatternFindings([{ path: `fixture-${index}`, text: hostileCredentials[index] }]);
+		if (findings.length !== 1 || findings[0].pattern !== credentialPatterns[index].name) {
+			fail(`credential scan hostile self-test false negative: ${credentialPatterns[index].name}`);
+		}
 	}
 	for (const invalid of ["../escape", "./alias", "/absolute", "double//slash", "control\npath"]) {
 		let rejected = false;
@@ -272,10 +386,18 @@ async function main() {
 		return;
 	}
 	if (process.argv.length !== 5 || process.argv[2] !== "--unit" ||
-		!(["--staged", "--exact-staged", "--receipt-manifest"].includes(process.argv[4]))) {
-		fail("usage: check-p07b-c-unit-scope.mjs --unit <C0A|C0B|C1|C1M|C1V|C1E|C1B|C2|C3|C4|C5|C6A|C6B> <--staged|--exact-staged|--receipt-manifest> | --self-test");
+		!(["--staged", "--exact-staged", "--receipt-manifest", "--source-final-gate", "--credential-scan"].includes(process.argv[4]))) {
+		fail("usage: check-p07b-c-unit-scope.mjs --unit <C0A|C0B|C1|C1M|C1V|C1E|C1B|C2|C2B|C3|C4|C5|C6A|C6B> <--staged|--exact-staged|--receipt-manifest|--source-final-gate|--credential-scan> | --self-test");
 	}
 	const specification = await loadSpecification();
+	if (process.argv[4] === "--source-final-gate") {
+		await runSourceFinalGate(specification, process.argv[3]);
+		return;
+	}
+	if (process.argv[4] === "--credential-scan") {
+		await runCredentialScan(specification, process.argv[3]);
+		return;
+	}
 	if (process.argv[4] === "--receipt-manifest") {
 		const claims = receiptManifest(specification, process.argv[3]);
 		console.log(`P07B-C ${process.argv[3]} receipt manifest exact: ${JSON.stringify(claims)}`);

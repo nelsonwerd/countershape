@@ -2,7 +2,7 @@
 
 - **Contract version:** U0 / `state-machines-v1`
 - **Target:** narrowed Darwin reference instrument
-- **Status:** normative separation of implemented and future transitions. U6a is sealed through `RULING`; P07A changes authority inside that transition; P07B-A1 and P07B-A2.1 are sealed substrate; accepted P07B-A2.2 seals pure compiler output; sealed P07B-B source implements terminal publication plus optional retryable native materialization; execution transitions remain future.
+- **Status:** normative separation of implemented and future transitions. Every P07B-A/B boundary plus P07B-C C0, C1, and C1B are sealed and strict-clean. C2's private nonhead/manifest/interlock substrate is active and `UNRECEIPTED`; C3–C6 official-target, physical-run, and classification-publication transitions remain future.
 
 Countershape state is a set of immutable semantic artifacts connected by validated transitions. State names are not presentation copy. The Go domain model, JSON schemas, API DTOs, CLI, studio, generated residue, examples, and tests must agree on these names and preconditions.
 
@@ -60,7 +60,7 @@ Each name denotes a distinct immutable object kind, not a mutable phase field.
 | `CHOICEPOINT_READY` | `RULING` | the local decision session completes against the exact current digest; action and selected/context fields are valid; caller attribution is recorded without human-authenticity proof | typed decision or durable-promotion refusal |
 | `RULING` | `CONTRACT_BUNDLE` | current ruling uses the P07A adapter-bound portable mode; action is compilable; selected fields are nonempty and separate allowed/disallowed tuples; an exact PortableSource reconstructs the same plan/projection/minimized stimulus; the emitter creates one recoverable six-file body; the complete expected head token remains current | legacy/noncompilable/ambiguous/source/profile/stale refusal; no residue and no final directory |
 | `CONTRACT_BUNDLE` | immutable nonhead `CONTRACT_EXECUTION_TARGET` | exact bundle/source reopen; one explicit Git ref is pinned, inspected, privately materialized, and reopened; one Node runtime is measured/revalidated; one fresh conformance marker is durable; target publishes and reopens before spawn | any authority/materialization/runtime/freshness failure refuses target publication; study head remains the same bundle residue |
-| `CONTRACT_EXECUTION_TARGET` | immutable nonhead `FINALIZED_CONTRACT_RUN` | the C4 runner acquires the private boot-session interlock from opaque official-target authority, wins StartClaim/RunPermit once, records conclusive SpawnObservation, makes the full owner witness durable, and only then releases the interlock; process control, projection when present, teardown/drains/orphan checks, revalidation, and all five standalone domains close against the same target/attempt | no permit, missing observation, target/attempt mismatch, or incomplete terminal evidence refuses finalization; ambiguity consumes the target and holds the interlock on that boot; study head remains the same bundle residue |
+| `CONTRACT_EXECUTION_TARGET` | immutable nonhead `FINALIZED_CONTRACT_RUN` | the C4 runner acquires the private boot-session interlock from opaque official-target authority, wins StartClaim/RunPermit once, records conclusive SpawnObservation, closes the physical axes and private manifest, then makes the exact FCR and target-to-run relationship durable and reopens both | no permit, missing observation, target/attempt mismatch, or incomplete terminal evidence refuses FCR publication; a later `CLEAR` or receipt failure cannot roll back an already durable FCR but leaves release incomplete and future admission blocked; study head remains the same bundle residue |
 | `FINALIZED_CONTRACT_RUN` | immutable nonhead `CONTRACT_EXECUTION` | exact official target/run reopen under one literal classifier profile; clean projected process closure plus `COMPLETE` unviolated scope derives conformance/contradiction, while either ineligible axis derives the ineligible class | target/run/profile or derived-result mismatch refuses classification publication; retry performs no spawn; study head remains the same bundle residue |
 
 `REJECT_ALL` and `DEFER` may create a final noncompilable `RULING`/`DecisionRecord`, but neither has an edge to `CONTRACT_BUNDLE`; U6 does not reopen a deferred head. A semantic `REFINE` DecisionRecord may be constructed, but durable promotion returns `REFINE_REQUIRES_SUCCESSOR_STUDY` before object publication or head mutation.
@@ -416,6 +416,8 @@ Go/Node parity disagreement blocks the external P07B ship-and-claim gate, not th
 
 C1 implements only the inert canonical object algebra at the right side of this future physical sequence. It can build and strictly reopen exact target, finalized-run, and execution bodies from already-held semantic inputs; it owns no transition, persistence, filesystem, runtime, spawn, or publication authority. The checked-in schemas are syntax projections rather than alternate state constructors. In particular, a schema-valid body may still fail Go-owned process/spawn/capture, evidence-role, scope-order, aggregate, or private-manifest correlations.
 
+The historical state name `EXECUTION_INTERLOCK_HELD_FOR_TARGET_AND_BOOT_SESSION` remains the coarse semantic checkpoint. C2 refines its storage representation to exact target, boot, and generation identity without granting live-boot, permit, or process authority.
+
 Historical evidence and later exact-target conformance are never merged:
 
 ```text
@@ -425,20 +427,39 @@ EXPLICIT_TARGET_REF_PINNED
   -> NODE_RUNTIME_ADMITTED_AND_REVALIDATED
   -> DARWIN_BOOT_SESSION_ADMITTED
   -> CONFORMANCE_ATTEMPT_MARKER_DURABLE
-  -> CONTRACT_EXECUTION_TARGET_PUBLISHED_AND_REOPENED
-  -> EXECUTION_INTERLOCK_HELD_FOR_TARGET_AND_BOOT_SESSION
-  -> START_INTENT_CLAIMED_AND_RUN_PERMIT_MINTED
+  -> C2_TARGET_STORAGE_RECORD_DURABLE
+  -> C3_OFFICIAL_TARGET_REJOINED_FROM_LIVE_AUTHORITIES
+  -> EXECUTION_INTERLOCK_HELD_FOR_TARGET_BOOT_AND_GENERATION
+  -> START_CLAIM_DURABLY_CREATED
+  -> RUN_PERMIT_CREATED_AND_CONSUMED
   -> SPAWN_ATTEMPTED
-  -> START_ERROR_OBSERVED | CHILD_PID_OBSERVED | SPAWN_OUTCOME_UNKNOWN
+  -> START_ERROR_OBSERVED | CHILD_PID_OBSERVED
   -> PROCESS_AND_STANDALONE_AXES_CLOSED
-  -> TERMINAL_WITNESS_DURABLE
-  -> EXECUTION_INTERLOCK_RELEASED
+  -> PRIVATE_MANIFEST_AND_TERMINAL_PACKAGE_DURABLE
   -> FINALIZED_CONTRACT_RUN_PUBLISHED_AND_REOPENED
+  -> TARGET_TO_RUN_RELATIONSHIP_REOPENED
+  -> CLEAR_STATE_WRITTEN
+  -> CLEAR_RECEIPT_DURABLE
+  -> EXECUTION_INTERLOCK_RELEASED
   -> CONTRACT_EXECUTION_CLASSIFIED_AND_REOPENED
 
 SPAWN_OUTCOME_UNKNOWN
   -> TARGET_PERMANENTLY_CONSUMED_AND_INTERLOCK_HELD
   -> NO_FCR_OR_CLASSIFICATION
+
+HELD_WITH_PROVEN_NO_CLAIM_AND_KNOWN_NO_EFFECT_PRECLAIM_FAILURE
+  -> EXACT_GENERATION_RECONCILIATION_ONLY
+  -> CLEAR_STATE_WRITTEN
+  -> CLEAR_RECEIPT_DURABLE
+  -> ADMISSION_REOPENED
+
+CLEAR_STATE_WITHOUT_EXACT_RECEIPT
+  -> AMBIGUOUS_BLOCKED
+  -> NO_ADMISSION
+
+AMBIGUITY_AFTER_START_CLAIM_BEFORE_CLEAR
+  -> CONSUMED_AND_HELD_ON_BOOT
+  -> NO_PERMIT_OR_SPAWN_OR_SAME_BOOT_RESET
 
 PROCESS_CLEAN + PROJECTED(tuple) + STANDALONE_COMPLETE
   -> ELIGIBLE_CLEAN -> CONFORMS | CONTRADICTS
@@ -448,9 +469,9 @@ PROCESS_CONTROL(primary?, teardown_error?, orphan_risk?) and/or STANDALONE_PARTI
   -> INELIGIBLE_EXECUTION
 ```
 
-`ContractExecutionTarget` is a nonhead pre-spawn object, not proof that a process ran. It is constructed only from the reopened bundle/residue, opaque live `InspectedTree` plus its exact verified materialization, owned admitted Node capability, and fresh durable attempt allocation. C1's stored path, byte digest, mode/count, and measured `process.execPath` identify a checkpointed runtime tuple; they do not prove which filesystem object a later spawn consumed. It is official only through its typed store-private publication witness and exact link. It never routes through the comparison-only `SelectedTreeSet -> WorldPlan -> CandidateExecutionBinding -> WorldInstance` chain. A parsed target, copied OIDs/digests/runtime strings, dirty working-tree bytes, a generic CAS object, or a fake one-member candidate set cannot create execution authority.
+`ContractExecutionTarget` is a nonhead pre-spawn object, not proof that a process ran. It is constructed only from the reopened bundle/residue, opaque live `InspectedTree` plus its exact verified materialization, owned admitted Node capability, and fresh durable attempt allocation. C1's stored path, byte digest, mode/count, and measured `process.execPath` identify a checkpointed runtime tuple; they do not prove which filesystem object a later spawn consumed. C2's typed witness and attempt-to-target link create only an inert storage record. C3 alone rejoins that record with the full live prerequisite graph to return `OfficialTarget`. It never routes through the comparison-only `SelectedTreeSet -> WorldPlan -> CandidateExecutionBinding -> WorldInstance` chain. A parsed target, copied OIDs/digests/runtime strings, dirty working-tree bytes, generic CAS object, copied C2 record, or fake one-member candidate set cannot create execution authority.
 
-One store-private `ExecutionInterlock` is the sole mutable operational exception to the nonhead semantic model. It serializes subject spawn for a measured boot session but cannot author, discover, or select a run/result. Only the C4 contract runner may acquire it from an opaque C3-issued official-target capability. The runner then creates the target-keyed durable `StartClaim`; only the combined durable winner receives one opaque, process-local, single-consumption `RunPermit`. A generic read/publish, C2 test fixture, losing creator, copied owner epoch, lease expiry, or restart never receives another. `SpawnObservation` separately records `START_ERROR` or an observed child PID. C1 closes and round-trips the three start-error code shapes only; C4 must prove their evidence content and chronology. Missing observation is `UNKNOWN`, never `NOT_STARTED`, and cannot enter an FCR. A conclusive terminal witness becomes durable before the interlock releases. Any ambiguity permanently consumes that target and leaves the interlock held on the same boot; a fresh target/attempt is not sufficient retry authority. Reset requires explicit operator action plus a measured boot-session identity demonstrably distinct from the held identity; otherwise no further subject spawn is admitted. This is serialized cooperative at-most-once spawn admission, not exactly-once execution or process-resume authority.
+One store-private `ExecutionInterlock` is the sole mutable operational exception to the nonhead semantic model. It serializes subject spawn for a measured boot session but cannot author, discover, or select a run/result. Only the C4 contract runner may acquire it from an opaque C3-issued official-target capability. The runner then creates the target-keyed durable `StartClaim`; only a newly created and exactly reopened claim beneath that same fresh generation may feed one opaque, process-local, single-consumption `RunPermit`. A generic read/publish, C2 test fixture, existing claim/held state, losing creator, copied generation, lease expiry, ambiguity, or restart never receives another. `SpawnObservation` separately records `START_ERROR` or an observed child PID. C1 closes and round-trips the three start-error code shapes only; C4 must prove their evidence content and chronology. Missing observation is `UNKNOWN`, never `NOT_STARTED`, and cannot enter an FCR. The exact private manifest, FCR, and target-to-run relationship become durable and reopen before the interlock writes `CLEAR`; release is complete only after the matching clear receipt is durable and exact. The only receiptless bootstrap is an absent first state. A persisted receiptless or invalid `CLEAR` is `AMBIGUOUS_BLOCKED`. The receipt reconstructs the exact prior HELD transition but independently proves neither terminal causation nor child absence. Target/caller/StartClaim boot identity joins exactly; historical CLEAR boot remains transition history and does not replace C3/C4 live measurement. An ambiguous operation returns no winner or permit and cannot itself reopen admission. Before `CLEAR`, ambiguity after StartClaim consumes the target and leaves the interlock `HELD`; after a `CLEAR` write, missing or invalid receipt state remains blocked without undoing a durable FCR. Only independently established exact receipt convergence may reopen admission. Proven-no-claim, known-no-effect preclaim reconciliation does not consume the target. Reset otherwise requires explicit operator action plus a measured Darwin boot identity demonstrably distinct from the held identity; without that fence no further subject spawn is admitted. This is serialized cooperative at-most-once spawn admission, not exactly-once execution or process-resume authority.
 
 `FinalizedContractRun` is the nonhead proof boundary for one physical run, not predicate classification. It binds the exact target, attempt, start intent, and owner-produced terminal facts to a bounded canonical `ClosedRunWitness`. One process-control owner preserves at most one primary cause plus independent teardown/orphan controls; cleanup findings cannot overwrite the primary cause, and any retained control makes that axis ineligible. Standalone scope independently closes exactly five domains as `COMPLETE`, `PARTIAL`, or `VIOLATED`; partial/violated scope is ineligible even when a projected tuple exists and is never smuggled into the process `ControlReason` roster. A run from another target/attempt cannot be paired into classification even when tuple bytes match. Raw/large evidence remains private and bounded; default output never implies confidentiality.
 
@@ -513,6 +534,7 @@ A crash may leave finalized immutable semantic objects and nonadvancing partial-
 | generic CAS read, C2 fixture, existing StartClaim, losing interlock/claimant, copied owner epoch, lease expiry, or restart -> RunPermit | `TARGET_START_ALREADY_CLAIMED` or interlock refusal; no permit | only the C4 combined interlock/claim durable winner may receive the one process-local permit |
 | StartClaim -> child started/stopped/absent fact | preserve intent only; spawn outcome remains unknown without owner observation | store intent is not an OS-process transaction |
 | ambiguous/crashed target -> FCR, interlock release, or any same-boot target spawn | refuse; keep interlock held | fresh target identity does not clear survivor uncertainty; only explicit operator reset plus a measured boot-session identity demonstrably distinct from the held identity can reopen admission |
+| receiptless/corrupt/mismatched `CLEAR` -> released interlock or later acquisition | `AMBIGUOUS_BLOCKED`; no admission | only first-ever absent state bootstraps without a receipt; every persisted clear transition must reopen its exact receipt |
 | finalized run for target/attempt A -> classification for target/attempt B | `TARGET_RUN_MISMATCH`; no classification | lifecycle and observation authority cannot be caller-paired across physical attempts |
 | standalone `PARTIAL` or `VIOLATED` plus projected tuple -> eligible conformance | `INELIGIBLE_EXECUTION` | missing or forbidden scope evidence cannot become a behavior conclusion |
 | standalone-scope failure -> process `ControlReason` | preserve a separate scope axis | process control and absence measurement have different truth jurisdictions |
@@ -570,7 +592,7 @@ Additional prohibited transitions include promoting an unqualified `STABLE` labe
 | U6c / P07B-A2.1 | nontransitioning current-ruling compilation preparation | source/ruling/Choicepoint/confirmation/proof equality and selected-tuple partition gates pass; no head advance or durable currentness after return |
 | U6c / P07B-A2.2 | nontransitioning recoverable bundle compilation and strict Go/Node semantic evaluation | sealed parity, recovery, generated-runtime, and pure-boundary gates pass; no head advance |
 | U6c / P07B-B (complete sealed boundary) | exact `RULING -> RESIDUE` terminal transition plus nonsemantic retryable physical materialization | final handoff, receipt reconciliation, and exact-boundary HTML are sealed and strict-clean; no C execution state is inferred |
-| U6c / P07B-C (C0 sealed; C1 inert semantics current) | C1 strict nonhead target/run/classification algebra; later one private boot-session interlock, serialized intent-only at-most-once spawn admission, and separate process/scope axes | C1's own strict gate can establish inert semantics only; C2–C6 store/interlock, Git/runtime, lifecycle, five-domain scope, classification-publication, and cumulative gates remain separate, the interlock has no result authority, and study head remains terminal residue |
+| U6c / P07B-C (C0/C1/C1B sealed; C2 active) | C1 strict nonhead algebra plus active C2 typed persistence, bounded private evidence, and receipt-backed interlock substrate; later C3–C6 live target, physical run, scope, and classification authority | C2 remains `UNRECEIPTED` until its exact source boundary seals; later authorities remain separate, the interlock and receipt have no result/absence authority, and study head remains terminal residue |
 | U7 | complete study lifecycle and both decisive reference lineages | three clean runs preserve semantic bytes while all attempts are new |
 | U8 | authenticated transport and full renderer state matrix | blind leakage, request forgery, presentation obligations, visual/accessibility gates pass |
 | U9 | export/packaging/final claim mapping | exact environment receipts, final strict verify, HTML evidence, honest handoff |

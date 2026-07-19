@@ -195,21 +195,69 @@
         "docs/SEMANTICS.md",
         "docs/STATE_MACHINES.md",
         "docs/THREAT_MODEL.md",
+        "docs/VERIFICATION.md",
+        "docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md",
         "docs/status/P07B-C-C2-PERSISTENCE.md",
         "internal/store/execution_interlock.go",
         "internal/store/execution_interlock_test.go",
         "internal/store/nonhead_contract.go",
         "internal/store/nonhead_contract_test.go",
+        "internal/store/object_store.go",
+        "internal/store/object_store_test.go",
         "internal/store/private_contract_run.go",
         "internal/store/private_contract_run_test.go",
+        "internal/store/public_api_test.go",
         "spec/verification/p07b-c-unit-paths.json",
+        "tools/check-p07b-b-architecture-selftest.mjs",
+        "tools/check-p07b-b-architecture.mjs",
         "tools/check-p07b-c-architecture-selftest.mjs",
         "tools/check-p07b-c-architecture.mjs",
+        "tools/check-p07b-c-plan.mjs",
+        "tools/check-p07b-c-unit-scope.mjs",
         "tools/verify-current-selftest.mjs",
         "tools/verify-current.mjs"
       ],
       "prefixes": [],
       "verification_profile": "SOURCE_FULL"
+    },
+    "C2B": {
+      "exact": [
+        "docs/HANDOFF_MODE_C.md",
+        "docs/status/P07B-C-C2-PERSISTENCE.md",
+        "spec/verification/p07b-c-c2-receipt.json"
+      ],
+      "prefixes": [],
+      "receipt_claims": [
+        {
+          "label": "P07B-C C2B source receipt reconciliation",
+          "type": "tests-pass"
+        },
+        {
+          "label": "P07B-C C2B receipt checker defensive self-test",
+          "type": "tests-pass"
+        },
+        {
+          "label": "P07B-C C2B declared local source-evidence snapshot match",
+          "type": "tests-pass"
+        },
+        {
+          "label": "P07B-C C2B receipt-only Go build",
+          "type": "command-succeeded"
+        },
+        {
+          "label": "P07B-C C2B exact three-path staged scope and diff integrity",
+          "type": "command-succeeded"
+        },
+        {
+          "label": "P07B-C C2B scoped staged credential-pattern scan",
+          "type": "command-succeeded"
+        },
+        {
+          "label": "P07B-C C2B preceding didrun chain integrity",
+          "type": "command-succeeded"
+        }
+      ],
+      "verification_profile": "RECEIPT_RECONCILIATION"
     },
     "C3": {
       "exact": [
@@ -223,6 +271,8 @@
         "internal/contractexec/target_test.go",
         "internal/gitobj/single_target.go",
         "internal/gitobj/single_target_test.go",
+        "internal/store/nonhead_contract.go",
+        "internal/store/nonhead_contract_test.go",
         "spec/verification/p07b-c-unit-paths.json",
         "tools/check-p07b-c-architecture-selftest.mjs",
         "tools/check-p07b-c-architecture.mjs",
@@ -244,6 +294,12 @@
         "docs/STATE_MACHINES.md",
         "docs/THREAT_MODEL.md",
         "docs/status/P07B-C-C4-CLI-PROFILE.md",
+        "internal/store/execution_interlock.go",
+        "internal/store/execution_interlock_test.go",
+        "internal/store/nonhead_contract.go",
+        "internal/store/nonhead_contract_test.go",
+        "internal/store/private_contract_run.go",
+        "internal/store/private_contract_run_test.go",
         "spec/verification/p07b-c-unit-paths.json",
         "tools/check-p07b-c-architecture-selftest.mjs",
         "tools/check-p07b-c-architecture.mjs",

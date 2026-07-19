@@ -23,6 +23,10 @@ const (
 	objectAlgorithm         = "sha256"
 	studyDirectory          = "studies"
 	privateCaptureDirectory = "private-captures"
+	contractDirectory       = "contract-execution"
+	contractLinkDirectory   = "links"
+	contractOpsDirectory    = "operations"
+	contractRunDirectory    = "contract-runs"
 	objectTempPrefix        = ".object-"
 
 	codeInvalidObjectStore      = "INVALID_OBJECT_STORE"
@@ -111,19 +115,28 @@ type objectStoreInstance struct {
 // study-selector namespace used by head CAS. Directory identities are retained
 // so replacement after open fails closed.
 type ObjectStore struct {
-	root            string
-	objects         string
-	digestRoot      string
-	studies         string
-	privateCaptures string
-	rootInfo        os.FileInfo
-	objectsInfo     os.FileInfo
-	digestRootInfo  os.FileInfo
-	studiesInfo     os.FileInfo
-	privateInfo     os.FileInfo
-	shardInfos      map[string]os.FileInfo
-	studyInfos      map[string]os.FileInfo
-	instance        *objectStoreInstance
+	root             string
+	objects          string
+	digestRoot       string
+	studies          string
+	privateCaptures  string
+	contractRoot     string
+	contractLinks    string
+	contractOps      string
+	contractRuns     string
+	rootInfo         os.FileInfo
+	objectsInfo      os.FileInfo
+	digestRootInfo   os.FileInfo
+	studiesInfo      os.FileInfo
+	privateInfo      os.FileInfo
+	contractInfo     os.FileInfo
+	contractLinkInfo os.FileInfo
+	contractOpsInfo  os.FileInfo
+	contractRunInfo  os.FileInfo
+	shardInfos       map[string]os.FileInfo
+	studyInfos       map[string]os.FileInfo
+	contractInfos    map[string]os.FileInfo
+	instance         *objectStoreInstance
 }
 
 type ObjectAuthority struct {
@@ -154,6 +167,10 @@ func OpenObjectStore(root string) (*ObjectStore, error) {
 		filepath.Join(absolute, objectDirectory, objectAlgorithm),
 		filepath.Join(absolute, studyDirectory),
 		filepath.Join(absolute, privateCaptureDirectory),
+		filepath.Join(absolute, contractDirectory),
+		filepath.Join(absolute, contractDirectory, contractLinkDirectory),
+		filepath.Join(absolute, contractDirectory, contractOpsDirectory),
+		filepath.Join(absolute, privateCaptureDirectory, contractRunDirectory),
 	}
 	infos := make([]os.FileInfo, len(paths))
 	for index, path := range paths {
@@ -170,9 +187,12 @@ func OpenObjectStore(root string) (*ObjectStore, error) {
 	}
 	return &ObjectStore{
 		root: absolute, objects: paths[0], digestRoot: paths[1], studies: paths[2], privateCaptures: paths[3],
+		contractRoot: paths[4], contractLinks: paths[5], contractOps: paths[6], contractRuns: paths[7],
 		rootInfo: rootInfo, objectsInfo: infos[0], digestRootInfo: infos[1], studiesInfo: infos[2], privateInfo: infos[3],
+		contractInfo: infos[4], contractLinkInfo: infos[5], contractOpsInfo: infos[6], contractRunInfo: infos[7],
 		shardInfos: make(map[string]os.FileInfo), studyInfos: make(map[string]os.FileInfo),
-		instance: &objectStoreInstance{marker: 1},
+		contractInfos: make(map[string]os.FileInfo),
+		instance:      &objectStoreInstance{marker: 1},
 	}, nil
 }
 
@@ -551,11 +571,25 @@ func (s *ObjectStore) assertReady() error {
 	}{
 		{s.root, s.rootInfo}, {s.objects, s.objectsInfo}, {s.digestRoot, s.digestRootInfo},
 		{s.studies, s.studiesInfo}, {s.privateCaptures, s.privateInfo},
+		{s.contractRoot, s.contractInfo}, {s.contractLinks, s.contractLinkInfo},
+		{s.contractOps, s.contractOpsInfo}, {s.contractRuns, s.contractRunInfo},
 	}
 	for _, check := range checks {
+		if err := rejectPathCaseAlias(check.path); err != nil {
+			return refuse(codeInvalidObjectStore, "owned store directory changed spelling", err)
+		}
 		current, err := exactPrivateDirectoryInfo(check.path)
 		if err != nil || !os.SameFile(check.info, current) {
 			return refuse(codeInvalidObjectStore, "owned store directory changed identity or facts", err)
+		}
+	}
+	for path, retained := range s.contractInfos {
+		if err := rejectPathCaseAlias(path); err != nil {
+			return refuse(codeInvalidObjectStore, "retained contract directory changed spelling", err)
+		}
+		current, err := exactPrivateDirectoryInfo(path)
+		if err != nil || retained == nil || !os.SameFile(retained, current) {
+			return refuse(codeInvalidObjectStore, "retained contract directory changed identity or facts", err)
 		}
 	}
 	return nil
@@ -644,6 +678,10 @@ func rejectCaseAlias(directory, expected string) error {
 		}
 	}
 	return nil
+}
+
+func rejectPathCaseAlias(path string) error {
+	return rejectCaseAlias(filepath.Dir(path), filepath.Base(path))
 }
 
 func sameSemanticObject(left, right SemanticObject) bool {

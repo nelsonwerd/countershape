@@ -54,11 +54,21 @@ function runCleanChecker() {
 
 function requireExactC1PrefixPartition() {
 	const admitted = "internal/contractexec/model/execution.go:ContractExecution";
+	const c2Storage = [
+		"internal/store/nonhead_contract.go:ContractExecutionTarget",
+		"internal/store/nonhead_contract.go:FinalizedContractRun",
+		"internal/store/nonhead_contract.go:ContractExecution",
+	];
 	const modelEvil = "internal/contractexec/model_evil/execution.go:ContractExecution";
+	const c2Lookalikes = [
+		"internal/store/nonhead_contract_copy.go:ContractExecutionTarget",
+		"internal/store/nonhead_contract.go:ContractExecutionTargetCopy",
+		"internal/store/object_store.go:FinalizedContractRun",
+	];
 	const foreign = "internal/future.go:ContractExecutionTarget";
-	const partition = partitionFutureSymbols([admitted, modelEvil, foreign]);
-	if (JSON.stringify(partition.admitted) !== JSON.stringify([admitted]) ||
-		JSON.stringify(partition.foreign) !== JSON.stringify([modelEvil, foreign])) {
+	const partition = partitionFutureSymbols([admitted, ...c2Storage, modelEvil, ...c2Lookalikes, foreign]);
+	if (JSON.stringify(partition.admitted) !== JSON.stringify([admitted, ...c2Storage]) ||
+		JSON.stringify(partition.foreign) !== JSON.stringify([modelEvil, ...c2Lookalikes, foreign])) {
 		fail("P07B_B_SELFTEST_PREFIX_PARTITION", JSON.stringify(partition));
 	}
 }
@@ -118,7 +128,7 @@ async function main() {
 		}
 		requireViolation(facts, test.code, test.id);
 	}
-	process.stdout.write(`P07B B architecture defensive self-test OK (${cases.length} metadata cases; exact C1 prefix partition)\n`);
+	process.stdout.write(`P07B B architecture defensive self-test OK (${cases.length} metadata cases; exact C1 prefix and C2 symbol partition)\n`);
 }
 
 main().catch((error) => {

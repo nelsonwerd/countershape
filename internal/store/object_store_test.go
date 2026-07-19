@@ -165,11 +165,24 @@ func TestObjectStoreUsesOneCreateOncePublisherForDistinctSemanticKinds(t *testin
 			t.Fatal("idempotent publication replaced the immutable inode")
 		}
 	}
-	for _, path := range []string{root, value.objects, value.digestRoot, value.studies, value.privateCaptures} {
+	for _, path := range []string{
+		root, value.objects, value.digestRoot, value.studies, value.privateCaptures,
+		value.contractRoot, value.contractLinks, value.contractOps, value.contractRuns,
+	} {
 		info, err := os.Lstat(path)
 		if err != nil || !info.IsDir() || info.Mode().Perm() != 0o700 || info.Mode()&os.ModeSymlink != 0 {
 			t.Fatalf("private directory %s = %#v, %v", path, info, err)
 		}
+	}
+	retired := value.contractOps + ".retired"
+	if err := os.Rename(value.contractOps, retired); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(value.contractOps, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := value.assertReady(); err == nil {
+		t.Fatal("replacement contract-operation directory retained store authority")
 	}
 }
 
