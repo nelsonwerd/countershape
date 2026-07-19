@@ -1184,7 +1184,7 @@ const C1_SCHEMA_RUNTIME_CASE_NAMES = Object.freeze([
   "scope aggregate",
   "private zero correlation",
 ]);
-const C1_SCHEMA_RUNTIME_CORPUS_DIGEST = "78f5a2c76d38dc2de96b11cf0439f33f73427160fc441ba89f9f39897dab6d4b";
+const C1_SCHEMA_RUNTIME_CORPUS_DIGEST = "a63ffce526e4f960a1567d6c0454afbe88de1aa1eb5b697a97501fbe1d700515";
 
 function c1SchemaRuntimeOverapproximationCases(finalizedRun) {
   const cases = C1_SCHEMA_RUNTIME_CASE_NAMES.map((name) => ({
@@ -1910,7 +1910,7 @@ function validateP07Contracts(root, problems, schemasByFile) {
     && targetAttemptSchema?.properties?.allocation_profile?.const === "PRIVATE_FRESH_ROOT_V1"
     && targetAttemptSchema?.properties?.marker_ordering?.const === "DURABLE_BEFORE_SPAWN"
     && exactObjectSchema(targetBootSchema, ["profile", "identity_digest"])
-    && targetBootSchema?.properties?.profile?.const === "DARWIN_KERN_BOOTTIME_V1"
+    && targetBootSchema?.properties?.profile?.const === "DARWIN_KERN_BOOTSESSIONUUID_V1"
     && digestRef(targetBootSchema?.properties?.identity_digest)
     && exactObjectSchema(targetRuntimeSchema, expectedRuntimeRequired)
     && targetRuntimeSchema?.properties?.authority?.const === "ADMITTED_NODE_PROCESS_EXEC_PATH_V1"
@@ -2441,7 +2441,7 @@ function validateP07Contracts(root, problems, schemasByFile) {
       || target.attempt_binding?.allocation_profile !== "PRIVATE_FRESH_ROOT_V1"
       || !/^[0-9a-f]{64}$/u.test(target.attempt_binding?.instance_nonce ?? "")
       || !/^sha256:[0-9a-f]{64}$/u.test(target.attempt_binding?.attempt_artifact_digest ?? "")
-      || target.boot_session_binding?.profile !== "DARWIN_KERN_BOOTTIME_V1"
+      || target.boot_session_binding?.profile !== "DARWIN_KERN_BOOTSESSIONUUID_V1"
       || !/^sha256:[0-9a-f]{64}$/u.test(target.boot_session_binding?.identity_digest ?? "")
       || !runtimeVersion
       || Number(runtimeVersion[1]) !== runtime?.major
@@ -3204,6 +3204,27 @@ const SELF_TESTS = [
           throw new Error("self-test mutation anchor already exists: optional target self authority");
         }
         schema.properties.contract_execution_target_digest = { $ref: "common.schema.json#/$defs/Digest" };
+      });
+    },
+  },
+  {
+    id: "p07-target-legacy-clock-boot-profile",
+    expectedCode: "P07_EXECUTION_AUTHORITY",
+    mutate(root) {
+      const schemaFile = path.join(root, "spec/schema/v1/contract-execution-target.schema.json");
+      rewriteJsonObject(schemaFile, (schema) => {
+        const profile = schema.properties?.boot_session_binding?.properties?.profile;
+        if (profile?.const !== "DARWIN_KERN_BOOTSESSIONUUID_V1") {
+          throw new Error("self-test mutation anchor is absent: stable Darwin boot-session profile");
+        }
+        profile.const = "DARWIN_KERN_BOOTTIME_V1";
+      });
+      const exampleFile = path.join(root, "spec/examples/v1/contract-execution-target.valid.json");
+      rewriteJsonObject(exampleFile, (target) => {
+        if (target.boot_session_binding?.profile !== "DARWIN_KERN_BOOTSESSIONUUID_V1") {
+          throw new Error("self-test mutation anchor is absent: stable Darwin boot-session example");
+        }
+        target.boot_session_binding.profile = "DARWIN_KERN_BOOTTIME_V1";
       });
     },
   },

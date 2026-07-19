@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 
 export const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const specificationPath = resolve(repositoryRoot, "spec/verification/p07b-c-unit-paths.json");
-const unitOrder = Object.freeze(["C0A", "C0B", "C1", "C1M", "C1V", "C1E", "C1B", "C2", "C2M", "C2B", "C3", "C4", "C5", "C6A", "C6B"]);
+const unitOrder = Object.freeze(["C0A", "C0B", "C1", "C1M", "C1V", "C1E", "C1B", "C2", "C2M", "C2B", "C3P", "C3PB", "C3", "C3B", "C4", "C5", "C6A", "C6B"]);
 const verificationProfiles = new Set(["SOURCE_FULL", "RECEIPT_RECONCILIATION"]);
 const receiptClaimTypes = new Set(["tests-pass", "command-succeeded"]);
 const stagedInventoryArgs = Object.freeze([
@@ -126,7 +126,7 @@ async function loadSpecification() {
 	return validateSpecification(parsed);
 }
 
-async function gitOutput(args) {
+export async function gitOutput(args) {
 	const requested = process.env.COUNTERSHAPE_GIT || "/usr/bin/git";
 	if (!isAbsolute(requested)) fail("COUNTERSHAPE_GIT must be absolute");
 	let git;
@@ -152,7 +152,7 @@ async function gitOutput(args) {
 	return result.stdout ?? Buffer.alloc(0);
 }
 
-async function stagedPaths() {
+export async function stagedPaths() {
 	const bytes = await gitOutput(stagedInventoryArgs);
 	if (bytes.length > 0 && bytes[bytes.length - 1] !== 0) fail("git inventory omitted its final NUL delimiter");
 	let decoded;
@@ -166,7 +166,7 @@ async function stagedPaths() {
 	return parts.sort();
 }
 
-async function stagedIndexEntries() {
+export async function stagedIndexEntries() {
 	const bytes = await gitOutput(stagedIndexArgs);
 	if (bytes.length > 0 && bytes[bytes.length - 1] !== 0) fail("git index inventory omitted its final NUL delimiter");
 	let decoded;
@@ -214,7 +214,7 @@ export function credentialPatternFindings(entries) {
 	return findings;
 }
 
-async function stagedBlobEntries(paths) {
+export async function stagedBlobEntries(paths) {
 	const entries = [];
 	for (const path of paths) {
 		const bytes = await gitOutput(["show", `:${path}`]);
@@ -288,6 +288,10 @@ async function runSelfTest() {
 		unexpectedPaths(specification, "C1B", ["internal/store/nonhead_contract.go"])[0] === "internal/store/nonhead_contract.go",
 		unexpectedPaths(specification, "C2B", ["spec/verification/p07b-c-c2-receipt.json"]).length === 0,
 		unexpectedPaths(specification, "C2B", ["internal/store/nonhead_contract.go"])[0] === "internal/store/nonhead_contract.go",
+		unexpectedPaths(specification, "C3P", ["internal/contractexec/model/target.go"]).length === 0,
+		unexpectedPaths(specification, "C3P", ["internal/hostepoch/epoch.go"])[0] === "internal/hostepoch/epoch.go",
+		unexpectedPaths(specification, "C3PB", ["spec/verification/p07b-c-c3p-receipt.json"]).length === 0,
+		unexpectedPaths(specification, "C3B", ["spec/verification/p07b-c-c3-receipt.json"]).length === 0,
 		unexpectedPaths(specification, "C1M", ["internal/world/process_darwin.go"]).length === 0,
 		unexpectedPaths(specification, "C1M", ["spec/verification/p07b-c-c1-receipt.json"])[0] === "spec/verification/p07b-c-c1-receipt.json",
 		exactPathsMatch(specification, "C1M", specification.units.C1M.exact),
@@ -306,8 +310,11 @@ async function runSelfTest() {
 		!exactPathsMatch(specification, "C2B", specification.units.C2B.exact.slice(1)),
 		exactPathsMatch(specification, "C2M", specification.units.C2M.exact),
 		!exactPathsMatch(specification, "C2M", specification.units.C2M.exact.slice(1)),
+		exactPathsMatch(specification, "C3P", specification.units.C3P.exact),
+		!exactPathsMatch(specification, "C3P", specification.units.C3P.exact.slice(1)),
 		exactSourceGateAdmitted(specification, "C2M"),
-		!exactSourceGateAdmitted(specification, "C3"),
+		exactSourceGateAdmitted(specification, "C3P"),
+		exactSourceGateAdmitted(specification, "C3"),
 		!exactSourceGateAdmitted(specification, "C2B"),
 		unexpectedPaths(specification, "C0A", ["docs/SEMANTICS.md", "README.md"])[0] === "README.md",
 		JSON.stringify(stagedInventoryArgs) === JSON.stringify([
@@ -316,6 +323,8 @@ async function runSelfTest() {
 		JSON.stringify(stagedIndexArgs) === JSON.stringify(["ls-files", "--stage", "-z", "--"]),
 		receiptManifest(specification, "C1B").length === 7,
 		receiptManifest(specification, "C2B").length === 7,
+		receiptManifest(specification, "C3PB").length === 7,
+		receiptManifest(specification, "C3B").length === 7,
 	];
 	if (cases.some((value) => !value)) fail("allow/refuse self-test matrix");
 	const unsafePrefix = JSON.parse(JSON.stringify(specification));
@@ -343,7 +352,7 @@ async function runSelfTest() {
 	let reorderedUnitsRejected = false;
 	try { validateSpecification(reorderedUnits); } catch { reorderedUnitsRejected = true; }
 	if (!reorderedUnitsRejected) fail("unit order self-test false negative");
-	for (const unit of ["C1B", "C2B"]) {
+	for (const unit of ["C1B", "C2B", "C3PB", "C3B"]) {
 		const regular = specification.units[unit].exact.map((path, index) => ({
 			mode: "100644", object: String(index + 1).padStart(40, "0"), stage: 0, path,
 		}));
@@ -400,7 +409,7 @@ async function main() {
 	}
 	if (process.argv.length !== 5 || process.argv[2] !== "--unit" ||
 		!(["--staged", "--exact-staged", "--receipt-manifest", "--source-final-gate", "--credential-scan"].includes(process.argv[4]))) {
-		fail("usage: check-p07b-c-unit-scope.mjs --unit <C0A|C0B|C1|C1M|C1V|C1E|C1B|C2|C2M|C2B|C3|C4|C5|C6A|C6B> <--staged|--exact-staged|--receipt-manifest|--source-final-gate|--credential-scan> | --self-test");
+		fail("usage: check-p07b-c-unit-scope.mjs --unit <C0A|C0B|C1|C1M|C1V|C1E|C1B|C2|C2M|C2B|C3P|C3PB|C3|C3B|C4|C5|C6A|C6B> <--staged|--exact-staged|--receipt-manifest|--source-final-gate|--credential-scan> | --self-test");
 	}
 	const specification = await loadSpecification();
 	if (process.argv[4] === "--source-final-gate") {

@@ -110,7 +110,7 @@
       "additionalProperties": false,
       "required": ["profile", "identity_digest"],
       "properties": {
-        "profile": { "const": "DARWIN_KERN_BOOTTIME_V1" },
+        "profile": { "const": "DARWIN_KERN_BOOTSESSIONUUID_V1" },
         "identity_digest": { "$ref": "common.schema.json#/$defs/Digest" }
       }
     },

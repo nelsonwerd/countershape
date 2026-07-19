@@ -8,7 +8,7 @@
   },
   "boot_session_binding": {
     "identity_digest": "sha256:5555555555555555555555555555555555555555555555555555555555555555",
-    "profile": "DARWIN_KERN_BOOTTIME_V1"
+    "profile": "DARWIN_KERN_BOOTSESSIONUUID_V1"
   },
   "contract_bundle_digest": "sha256:29fe7db464de802f4ac268e8c0a93562d7fc5078753ff6f69d1d77b0d937f763",
   "kind": "ContractExecutionTarget",

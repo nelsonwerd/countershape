@@ -1,8 +1,8 @@
 {
   "classifier_profile": "CONTRACT_EXECUTION_EXACT_TUPLE_V1",
-  "contract_execution_target_digest": "sha256:46ab7870fd14b1b6b6215029dcf4ae450b3e8595a817627c35975a48479da6b9",
+  "contract_execution_target_digest": "sha256:b53bc1a5f6de8c35633d83126d086d8cf9eb44ca9b0e756233cf96f33fa1df34",
   "execution_version": "contract-execution/v1",
-  "finalized_contract_run_digest": "sha256:79a8620f220c223e57f0dd435c05c8f36197b049415f8e3f225e8b222a632a2f",
+  "finalized_contract_run_digest": "sha256:3b1852ee8764415e83e1df6be18da41efe9ccbeb960a384e4aa21013dabe5089",
   "kind": "ContractExecution",
   "publication_scope": "IMMUTABLE_NONHEAD_CLASSIFICATION_V1",
   "result": "CONFORMS",

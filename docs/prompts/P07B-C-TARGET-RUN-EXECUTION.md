@@ -5,11 +5,11 @@
 **Platform scope:** Darwin/arm64/cgo, the exact exercised Node runtime tuple, logical `node`, one exact clean repository-relative JavaScript entrypoint, CLI plus locked child-bind HTTP
 **Validated against:** commit `464e47adbf7f4497dfafa89938a9539239ffd41b` on `codex/countershape-autopilot`
 
-This pack turns the planning-only P07B-C shapes into a capability-only, crash-honest execution spine: three immutable nonhead semantic objects plus one store-private operational interlock that can block spawn but can never author or select a result. It is intentionally split into seven implementation units because target publication, cooperative spawn admission, physical run closure, standalone evidence, and classification are different truths.
+This pack turns the planning-only P07B-C shapes into a capability-only, crash-honest execution spine: three immutable nonhead semantic objects plus one store-private operational interlock that can block spawn but can never author or select a result. Its source units, semantic prerequisites, and receipt descendants remain separate because target publication, cooperative spawn admission, physical run closure, standalone evidence, classification, and evidence reconciliation are different truths.
 
 ## How to use this pack
 
-Execute `C0 → C1 → C2 → C3 → C4 → C5 → C6`, one unit at a time. Every arrow is a fresh didrun ledger or preserved unit-local ledger, exact staging review, commit, seal, Git-note inspection, and `NO_COLOR=1 didrun verify --strict` loop. When exact source-commit identity or grades must enter repository documentation, use a second receipt-document sub-boundary (`Ca` source, then `Cb` reconciliation) rather than creating a self-referential commit. Do not begin the next implementation unit until its last required sub-boundary exits strict with `0`.
+Execute `C0 → C1 → C2 → C2B → C3P → C3PB → C3 → C3B → C4 → C5 → C6`, including any separately declared maintenance boundary at the unit edge where it is introduced. Every arrow is a fresh didrun ledger or preserved unit-local ledger, exact staging review, commit, seal, Git-note inspection, and `NO_COLOR=1 didrun verify --strict` loop. When exact source-commit identity or grades must enter repository documentation, use a second receipt-document sub-boundary (`Ca` source, then `Cb` reconciliation) rather than creating a self-referential commit. Do not begin the next implementation unit until its last required sub-boundary exits strict with `0`.
 
 The user has explicitly authorized commits at verified shippable boundaries. That authorization does not allow pushes, releases, external provider calls, or weakening a failed receipt.
 
@@ -155,12 +155,13 @@ Locked ceilings: every canonical C body remains within the existing 1 MiB object
 | C0 | deep-dive corrections, controlling docs, pack, handoff | planning/scope lock only |
 | C1 | strict semantic model, schemas, examples, exhaustive algebra | inert canonical semantics only |
 | C2 | nonhead storage mechanics, exact mappings, private evidence, interlock/claim substrate with test-only issuers; then a separate narrow C2B source-receipt reconciliation | persistence substrate only; no official target or production permit |
-| C3 | direct single-target Git + Node authority and target publication | exact pre-spawn target authority only |
+| C3P | pre-authority boot-session semantic correction, exact C3 scope, and receipt machinery; then separate C3PB source-receipt reconciliation | inert corrected profile only; no live measurement or target authority |
+| C3 | direct single-target Git + Node/boot authority and target publication; then separate C3B source-receipt reconciliation | exact pre-spawn target authority only |
 | C4 | process mechanics plus contract runner, production interlock/permit, CLI-profile physical closure, FCR, classification | CLI-profile-only native physical slice |
 | C5 | HTTP plus full five-domain standalone evidence | full P07B-C on exact exercised native tuple |
 | C6 | C6a cumulative hostile/fault/parity/expert-surface closure, then C6b receipt reconciliation | exact sealed P07B-C claims only |
 
-Every source boundary that must hand durable grades to a later unit is followed by its separately sealed receipt-reconciliation subunit. C2B may bind only the already-sealed C2 source note, strict result, exact claim map, HTML snapshot, and ignored-ledger manifest; it cannot edit source/checker behavior or grade itself. C3 remains blocked until C2B also seals and verifies strictly.
+Every source boundary that must hand durable grades to a later unit is followed by its separately sealed receipt-reconciliation subunit. C2B, C3PB, and C3B may bind only their already-sealed source note, strict result, exact claim map, HTML snapshot, and ignored-ledger manifest; none may edit source/checker behavior or grade itself. C3 remains blocked until C3P, any separately introduced boundary maintenance, and C3PB all seal and verify strictly. C4 remains blocked until C3B closes.
 
 ## What this pack does not cover
 
@@ -313,10 +314,44 @@ Machine-cleared persistence substrate only. It proves exact typed storage, fixtu
 
 ---
 
+# C3P — correct the runtime epoch before live authority
+
+**Risk:** high semantic prerequisite. The former `DARWIN_KERN_BOOTTIME_V1` label treated a calendar-adjustable value as one stable boot session.
+
+**Exact source scope:** 25 mode-`100644` paths, no prefixes, sorted-newline digest `sha256:8b047704df047cb96f1c5d19418c4cfe8502e4b4746bb4f24c0851dac8d018c0`. The machine roster in `spec/verification/p07b-c-unit-paths.json` is authoritative. The additional verifier pair enrolls the dedicated C3P/C3PB receipt checker in cumulative verification instead of leaving an orphan gate.
+
+## Goal
+
+Freeze the future target profile as `DARWIN_KERN_BOOTSESSIONUUID_V1` before any production `OfficialTarget` exists. C3P changes inert model/schema/example/planning bytes and controlling design only. It performs no live measurement and issues no boot, runtime, Git, attempt, store, target, admission, or process authority.
+
+## Exact semantics
+
+- The private C3 host-epoch owner calls a bounded fixed-name Darwin system-call edge for read-only `kern.bootsessionuuid`; it does not spawn `/usr/sbin/sysctl` and never consults PATH.
+- Parse each sample as exactly 36 ASCII UUID characters with the four fixed hyphens, reject nonhex/all-zero/embedded/trailing data, lowercase its hexadecimal digits, then compare two consecutive canonical values. Sample disagreement refuses.
+- Hash only the canonical UUID bytes under the typed `DarwinBootSessionIdentity` domain and retain only the digest in the canonical target.
+- Expose no public constructor from UUID, digest, timestamp, cached state, or satisfied Boolean. Never fall back to `kern.boottime`, wall clock, uptime, PID, filesystem or process-local state. Unsupported platforms refuse explicitly.
+- C3 remeasures on construction/reopen and C4 independently remeasures immediately before admission. Equality/change means only that the OS reported the same/different UUID. It proves no physical reboot, prior-child absence, VM non-rollback, kernel trust, clone resistance, collision impossibility, or safe reset.
+
+The target schema and all three joined examples change together; the parser and planning hostile cases must reject the retired profile even after an attacker coherently recomputes dependent digests. Historical C1/C2 receipts remain exact evidence for their historical trees and are not rewritten.
+
+## Scope corrections carried into C3
+
+- Replace C3's directory prefixes with an exact forty-path, empty-prefix `SOURCE_FULL` roster at `sha256:c0050817c739e6bf7505105113ebbfd2c2504674f93f14e34daf0609f7fad0fb` so source-final and credential gates are exact.
+- Materialize and reopen the single target directly from opaque `gitobj.InspectedTree`; never manufacture `WorldPlan`, `BoundCandidate`, or `WorldInstance` authority.
+- Include `internal/store/public_api_test.go`; the narrow inert C3 bridge must be compiler-visible and frozen, never hidden behind generic bytes or a private-surface bypass.
+- Declare C3B before C4 as a separate exact three-path `RECEIPT_RECONCILIATION` unit with digest `sha256:3ef17156a2f3051171da70983f9428de2b9bdb5a179602407a36f34200012a67`.
+- C3's in-scope `tools/check-p07b-c-plan.mjs` must implement both absent-receipt and receipt-present C3B validation before the C3 source seals. C3B has no separate checker file and may not invent one outside its exact three paths.
+
+## Evidence boundary
+
+C3P's exact twelve-claim final ledger is declared in its status and checker. Commit as `fix: use stable Darwin boot-session identity`, seal, require the Git note, loop strict verification to exit `0`, emit the exact-commit HTML report, and archive the ledger. Then C3PB may bind only those already-sealed source receipts through its exact three paths, roster digest `sha256:531cbe600cf2747752749890ea9a15c3d0126e498da6838d4f6faeb1a0d7e885`, and standard seven narrow claims. C3PB cannot name or grade itself. C3 remains blocked until both boundaries and any intervening separately declared maintenance unit are strict-clean.
+
+---
+
 # C3 — publish one exact pre-spawn target
 
 **Risk:** high. This joins live Git, private materialization, runtime, attempt, and store authority.
-**Files:** `internal/gitobj/single_target.go`, `internal/noderuntime/**`, `internal/hostepoch/**`, `internal/contractexec/target*.go`, the exact C2 nonhead-store files named in the C3 allowlist, production target-publication owner, tests/checkers/self-tests, cumulative roster, docs/status.
+**Files:** the exact forty-path, empty-prefix machine roster only; no directory wildcard or inferred descendant is admitted.
 
 ## Goal
 
@@ -325,15 +360,15 @@ Make C3 the sole producer of an opaque `OfficialTarget`: one C2-reopened inert t
 ## Exact changes
 
 - Materialize/revalidate directly from opaque `InspectedTree`; share only private mechanics with comparison materialization.
-- Admit one explicit absolute Node path with owned probe and exact identity summaries, plus the stable Darwin boot-session identity used by later admission/reset.
+- Admit one explicit absolute Node path with owned probe and exact identity summaries. Measure `DARWIN_KERN_BOOTSESSIONUUID_V1` with the C3P parser/canonicalization contract and opaque capability; no caller-authored boot material enters.
 - Allocate/sync a fresh CONFORMANCE attempt attachment. Construct the C1 target only from C3-owned live prerequisites, persist it through C2's inert-record mechanics, then reopen the exact typed relationship.
 - Return only sealed `OfficialTarget`. It privately carries the exact C2 record, but that record remains mechanically inert when obtained outside C3. No public C3 API accepts copied target bytes, a digest/OID/runtime-string bag, generic CAS authority, or a prior process-local capability as a substitute.
-- Reopening official authority remeasures and revalidates the full C3 prerequisite graph, including live boot identity. C4 must measure boot again; a stale-boot target is never spawnable.
+- Reopening official authority remeasures and revalidates the full C3 prerequisite graph, including live boot identity. C4 must independently measure boot again; a stale-boot target is never spawnable, while a changed UUID still makes no survivor-absence claim.
 - Enroll the C3 target gate and hostile self-test in the cumulative verifier, and assert study-head inode/bytes remain unchanged.
 
 ## MUST NOT change
 
-- No fake one-member `WorldPlan`, `BoundCandidate`, or `WorldInstance`; no PATH lookup, dirty worktree, arbitrary executable, candidate/subject spawn, run, classification, TAP, interlock acquisition, StartClaim, RunPermit, FCR, execution status, or head advance. One bounded owner-controlled Node runtime-probe subprocess is required and is not a subject run.
+- No fake one-member `WorldPlan`, `BoundCandidate`, or `WorldInstance`; no PATH lookup, `sysctl` subprocess, clock/uptime/PID/file/process-local boot fallback, raw boot constructor, dirty worktree, arbitrary executable, candidate/subject spawn, run, classification, TAP, interlock acquisition, StartClaim, RunPermit, FCR, execution status, or head advance. One bounded owner-controlled Node runtime-probe subprocess is required and is not a subject run.
 
 ## Tests
 
@@ -342,6 +377,8 @@ Make C3 the sole producer of an opaque `OfficialTarget`: one C2-reopened inert t
 ## Gate
 
 Machine-cleared pre-spawn target authority only. Architecture evidence proves C3 is the only production `OfficialTarget` issuer while C2 remains inert. This is the minimum honest cut if later physical evidence cannot be proven.
+
+C3 does not hand durable grades to C4 until the separate exact three-path C3B receipt boundary binds the sealed source note, claim map, HTML snapshot, and ignored ledger, then independently seals and verifies strictly.
 
 ## Commit
 

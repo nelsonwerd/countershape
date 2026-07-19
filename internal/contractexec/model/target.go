@@ -15,7 +15,7 @@ const (
 	executionRootScopeV1     = "PRIVATE_PINNED_MATERIALIZATION_ONLY_V1"
 	attemptAllocationV1      = "PRIVATE_FRESH_ROOT_V1"
 	attemptMarkerOrderingV1  = "DURABLE_BEFORE_SPAWN"
-	bootSessionProfileV1     = "DARWIN_KERN_BOOTTIME_V1"
+	bootSessionProfileV1     = "DARWIN_KERN_BOOTSESSIONUUID_V1"
 	runtimeAuthorityV1       = "ADMITTED_NODE_PROCESS_EXEC_PATH_V1"
 	runtimeChildResolutionV1 = "PROCESS_EXEC_PATH_EQUALS_ADMITTED_RUNTIME_V1"
 )

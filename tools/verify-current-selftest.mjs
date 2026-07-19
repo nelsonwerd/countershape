@@ -36,7 +36,7 @@ import {
 
 const selftestPath = fileURLToPath(import.meta.url);
 const verifierPath = resolve(dirname(selftestPath), "verify-current.mjs");
-const expectedRosterDigest = "ec46d983a8f1f52eabc04d8e9ded6529854e21bfde93ca53734845c8b219cd7e";
+const expectedRosterDigest = "2c108a435bfc92988715e45c6ce526d87d790ce3206ea3f610561c9d1e1e6f5d";
 
 function fail(code, detail) {
 	throw new Error(`${code}: ${detail}`);
@@ -213,6 +213,19 @@ async function inspectRosters() {
 		path: "tools/check-p07b-c-plan.mjs",
 		args: ["--self-test"],
 		marker: "P07B-C evolved plan checker self-test passed:",
+	});
+	exactStep("architecture-p07b-c-c3p-receipt", {
+		tool: "node",
+		tools: ["node", "git"],
+		path: "tools/check-p07b-c-c3p-receipt.mjs",
+		marker: "P07B-C C3P receipt check passed: phase-specific source/receipt, scope, Git-note, and documentation authority are coherent",
+	});
+	exactStep("architecture-p07b-c-c3p-receipt-selftest", {
+		tool: "node",
+		tools: ["node", "git"],
+		path: "tools/check-p07b-c-c3p-receipt.mjs",
+		args: ["--self-test"],
+		marker: "P07B-C C3P receipt checker self-test passed:",
 	});
 
 	const toolEntries = (await readdir(resolve(repositoryRoot, "tools"))).sort();

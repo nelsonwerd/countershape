@@ -42,6 +42,16 @@ func TestTargetPrimitiveBoundsAndDerivedRelations(t *testing.T) {
 			}
 		})
 	}
+	t.Run("legacy clock-derived boot profile", func(t *testing.T) {
+		target := testTarget(t, bundle)
+		legacy := mutateCanonical(t, target.CanonicalBytes(), func(root map[string]any) {
+			root["boot_session_binding"].(map[string]any)["profile"] = "DARWIN_KERN_BOOTTIME_V1"
+		})
+		legacyDigest := digestForBytes(t, TargetKind, legacy)
+		if _, err := ParseContractExecutionTarget(legacy, legacyDigest); !IsCode(err, CodeInvalidTarget) {
+			t.Fatalf("legacy clock-derived profile error = %v", err)
+		}
+	})
 }
 
 func TestClosedEnumBoundsAndTypedRoles(t *testing.T) {

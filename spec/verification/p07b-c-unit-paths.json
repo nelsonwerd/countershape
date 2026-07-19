@@ -272,31 +272,160 @@
       ],
       "verification_profile": "RECEIPT_RECONCILIATION"
     },
-    "C3": {
+    "C3P": {
       "exact": [
         "docs/ARCHITECTURE.md",
+        "docs/CLAIM_VOCABULARY.md",
+        "docs/CONCEPT_BRIEF.md",
         "docs/HANDOFF_MODE_C.md",
+        "docs/PROMPT_PACK.md",
         "docs/SEMANTICS.md",
         "docs/STATE_MACHINES.md",
         "docs/THREAT_MODEL.md",
+        "docs/VERIFICATION.md",
+        "docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md",
+        "docs/status/P07B-C-C3P-RUNTIME-EPOCH.md",
+        "internal/contractexec/model/codec_test.go",
+        "internal/contractexec/model/target.go",
+        "research/deep-dive/p07b-c/11-c3-runtime-epoch-audit.md",
+        "spec/examples/v1/contract-execution-target.valid.json",
+        "spec/examples/v1/contract-execution.valid.json",
+        "spec/examples/v1/finalized-contract-run.valid.json",
+        "spec/schema/v1/contract-execution-target.schema.json",
+        "spec/verification/p07b-c-unit-paths.json",
+      "tools/check-p07b-c-c3p-receipt.mjs",
+      "tools/check-p07b-c-plan.mjs",
+      "tools/check-p07b-c-unit-scope.mjs",
+      "tools/validate-planning.mjs",
+      "tools/verify-current-selftest.mjs",
+      "tools/verify-current.mjs"
+      ],
+      "prefixes": [],
+      "verification_profile": "SOURCE_FULL"
+    },
+    "C3PB": {
+      "exact": [
+        "docs/HANDOFF_MODE_C.md",
+        "docs/status/P07B-C-C3P-RUNTIME-EPOCH.md",
+        "spec/verification/p07b-c-c3p-receipt.json"
+      ],
+      "prefixes": [],
+      "receipt_claims": [
+        {
+          "label": "P07B-C C3PB source receipt reconciliation",
+          "type": "tests-pass"
+        },
+        {
+          "label": "P07B-C C3PB receipt checker defensive self-test",
+          "type": "tests-pass"
+        },
+        {
+          "label": "P07B-C C3PB declared local source-evidence snapshot match",
+          "type": "tests-pass"
+        },
+        {
+          "label": "P07B-C C3PB receipt-only Go build",
+          "type": "command-succeeded"
+        },
+        {
+          "label": "P07B-C C3PB exact three-path staged scope and diff integrity",
+          "type": "command-succeeded"
+        },
+        {
+          "label": "P07B-C C3PB scoped staged credential-pattern scan",
+          "type": "command-succeeded"
+        },
+        {
+          "label": "P07B-C C3PB preceding didrun chain integrity",
+          "type": "command-succeeded"
+        }
+      ],
+      "verification_profile": "RECEIPT_RECONCILIATION"
+    },
+    "C3": {
+      "exact": [
+        "docs/ARCHITECTURE.md",
+        "docs/CLAIM_VOCABULARY.md",
+        "docs/CONCEPT_BRIEF.md",
+        "docs/HANDOFF_MODE_C.md",
+        "docs/PROMPT_PACK.md",
+        "docs/SEMANTICS.md",
+        "docs/STATE_MACHINES.md",
+        "docs/THREAT_MODEL.md",
+        "docs/VERIFICATION.md",
+        "docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md",
         "docs/status/P07B-C-C3-TARGET.md",
         "internal/contractexec/target.go",
         "internal/contractexec/target_test.go",
         "internal/gitobj/single_target.go",
         "internal/gitobj/single_target_test.go",
+        "internal/hostepoch/epoch.go",
+        "internal/hostepoch/epoch_darwin_test.go",
+        "internal/hostepoch/epoch_test.go",
+        "internal/hostepoch/public_api_test.go",
+        "internal/hostepoch/source_darwin_cgo.go",
+        "internal/hostepoch/source_unsupported.go",
+        "internal/noderuntime/identity_darwin.go",
+        "internal/noderuntime/probe_darwin.go",
+        "internal/noderuntime/probe_darwin_test.go",
+        "internal/noderuntime/public_api_test.go",
+        "internal/noderuntime/runtime.go",
+        "internal/noderuntime/runtime_darwin_test.go",
+        "internal/noderuntime/runtime_test.go",
+        "internal/noderuntime/unsupported.go",
         "internal/store/nonhead_contract.go",
         "internal/store/nonhead_contract_test.go",
+        "internal/store/public_api_test.go",
+        "spec/verification/p07b-c-c3-predecessors.json",
         "spec/verification/p07b-c-unit-paths.json",
         "tools/check-p07b-c-architecture-selftest.mjs",
         "tools/check-p07b-c-architecture.mjs",
+        "tools/check-p07b-c-plan.mjs",
+        "tools/check-p07b-c-unit-scope.mjs",
         "tools/verify-current-selftest.mjs",
         "tools/verify-current.mjs"
       ],
-      "prefixes": [
-        "internal/hostepoch/",
-        "internal/noderuntime/"
-      ],
+      "prefixes": [],
       "verification_profile": "SOURCE_FULL"
+    },
+    "C3B": {
+      "exact": [
+        "docs/HANDOFF_MODE_C.md",
+        "docs/status/P07B-C-C3-TARGET.md",
+        "spec/verification/p07b-c-c3-receipt.json"
+      ],
+      "prefixes": [],
+      "receipt_claims": [
+        {
+          "label": "P07B-C C3B source receipt reconciliation",
+          "type": "tests-pass"
+        },
+        {
+          "label": "P07B-C C3B receipt checker defensive self-test",
+          "type": "tests-pass"
+        },
+        {
+          "label": "P07B-C C3B declared local source-evidence snapshot match",
+          "type": "tests-pass"
+        },
+        {
+          "label": "P07B-C C3B receipt-only Go build",
+          "type": "command-succeeded"
+        },
+        {
+          "label": "P07B-C C3B exact three-path staged scope and diff integrity",
+          "type": "command-succeeded"
+        },
+        {
+          "label": "P07B-C C3B scoped staged credential-pattern scan",
+          "type": "command-succeeded"
+        },
+        {
+          "label": "P07B-C C3B preceding didrun chain integrity",
+          "type": "command-succeeded"
+        }
+      ],
+      "verification_profile": "RECEIPT_RECONCILIATION"
     },
     "C4": {
       "exact": [

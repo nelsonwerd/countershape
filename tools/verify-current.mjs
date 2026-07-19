@@ -146,6 +146,14 @@ export const currentSteps = Object.freeze([
 		id: "architecture-p07b-c-unit-scope-selftest", tool: "node", tools: Object.freeze(["node"]), path: "tools/check-p07b-c-unit-scope.mjs",
 		args: Object.freeze(["--self-test"]), marker: "P07B-C unit scope self-test passed:",
 	}),
+	Object.freeze({
+		id: "architecture-p07b-c-c3p-receipt", tool: "node", tools: Object.freeze(["node", "git"]), path: "tools/check-p07b-c-c3p-receipt.mjs",
+		marker: "P07B-C C3P receipt check passed: phase-specific source/receipt, scope, Git-note, and documentation authority are coherent",
+	}),
+	Object.freeze({
+		id: "architecture-p07b-c-c3p-receipt-selftest", tool: "node", tools: Object.freeze(["node", "git"]), path: "tools/check-p07b-c-c3p-receipt.mjs",
+		args: Object.freeze(["--self-test"]), marker: "P07B-C C3P receipt checker self-test passed:",
+	}),
 	Object.freeze({ id: "authority-revalidation", kind: "authority-guard" }),
 	Object.freeze({ id: "verification-resource-finalization", kind: "finalization-guard" }),
 ]);

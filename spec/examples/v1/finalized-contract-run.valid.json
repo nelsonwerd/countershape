@@ -124,7 +124,7 @@
     },
     "witness_version": "closed-run-witness/v1"
   },
-  "contract_execution_target_digest": "sha256:46ab7870fd14b1b6b6215029dcf4ae450b3e8595a817627c35975a48479da6b9",
+  "contract_execution_target_digest": "sha256:b53bc1a5f6de8c35633d83126d086d8cf9eb44ca9b0e756233cf96f33fa1df34",
   "kind": "FinalizedContractRun",
   "publication_scope": "IMMUTABLE_NONHEAD_FINALIZED_RUN_V1",
   "run_version": "finalized-contract-run/v1",
