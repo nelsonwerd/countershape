@@ -205,6 +205,14 @@ async function replaceExact(fixture, path, before, after) {
   await writeFile(absolute, source.replace(before, after), { mode: 0o600 });
 }
 
+async function requireExact(fixture, path, needle) {
+	const source = await readFile(join(fixture, path), "utf8");
+	const first = source.indexOf(needle);
+	if (first < 0 || source.indexOf(needle, first + needle.length) >= 0) {
+		throw new Error(`self-test baseline anchor is not unique: ${path}: ${needle}`);
+	}
+}
+
 async function appendSource(fixture, path, source) {
   const absolute = join(fixture, path);
   const current = await readFile(absolute, "utf8");
@@ -217,32 +225,75 @@ async function writeSource(fixture, path, source) {
   await writeFile(absolute, source, { mode: 0o600 });
 }
 
-async function installC3StoreBridge(fixture) {
-	await replaceExact(
-		fixture,
-		"internal/store/nonhead_contract.go",
-		'\t"github.com/nelsonwerd/countershape/internal/canon"\n\t"github.com/nelsonwerd/countershape/internal/domain"',
-		'\t"github.com/nelsonwerd/countershape/internal/canon"\n\tcontractmodel "github.com/nelsonwerd/countershape/internal/contractexec/model"\n\t"github.com/nelsonwerd/countershape/internal/domain"',
-	);
-	await appendSource(
-		fixture,
-		"internal/store/nonhead_contract.go",
-		String.raw`
-type ConformanceAttemptInput struct {
-	ContractBundleDigest domain.Digest
-	ResidueHeadDigest domain.Digest
-	TreeIdentityDigest domain.Digest
+const c3StoreOwnerPath = "internal/store/nonhead_contract.go";
+const c3StoreModelImport = 'contractmodel "github.com/nelsonwerd/countershape/internal/contractexec/model"';
+const c3StoreInput = String.raw`type ConformanceAttemptInput struct {
+	ContractBundleDigest        domain.Digest
+	ResidueHeadDigest           domain.Digest
+	TreeIdentityDigest          domain.Digest
 	MaterializationPolicyDigest domain.Digest
+}`;
+const c3StoreRoots = "type ConformanceAttemptRoots struct{ roots conformanceAttemptRoots }";
+const c3StoreMethodSignatures = Object.freeze([
+	"func (store *ObjectStore) AllocateConformanceAttempt(ctx context.Context, input ConformanceAttemptInput) (ConformanceAttemptRecord, error)",
+	"func (store *ObjectStore) OpenConformanceAttempt(ctx context.Context, digest domain.Digest) (ConformanceAttemptRecord, error)",
+	"func (store *ObjectStore) PersistContractTargetRecord(ctx context.Context, attempt ConformanceAttemptRecord, target contractmodel.ContractExecutionTarget) (ContractTargetRecord, error)",
+	"func (store *ObjectStore) OpenContractTargetRecord(ctx context.Context, attempt ConformanceAttemptRecord) (ContractTargetRecord, error)",
+]);
+
+async function requireC3StoreBridge(fixture) {
+	for (const needle of [
+		c3StoreModelImport,
+		c3StoreInput,
+		c3StoreRoots,
+		"type ConformanceAttemptRecord struct {",
+		"type ContractTargetRecord struct {",
+		...c3StoreMethodSignatures,
+	]) {
+		await requireExact(fixture, c3StoreOwnerPath, needle);
+	}
 }
-type ConformanceAttemptRoots struct{}
-type ConformanceAttemptRecord struct{}
-type ContractTargetRecord struct{}
-func (store *ObjectStore) AllocateConformanceAttempt(ctx context.Context, input ConformanceAttemptInput) (ConformanceAttemptRecord, error) { return ConformanceAttemptRecord{}, nil }
-func (store *ObjectStore) OpenConformanceAttempt(ctx context.Context, digest domain.Digest) (ConformanceAttemptRecord, error) { return ConformanceAttemptRecord{}, nil }
-func (store *ObjectStore) PersistContractTargetRecord(ctx context.Context, attempt ConformanceAttemptRecord, target contractmodel.ContractExecutionTarget) (ContractTargetRecord, error) { return ContractTargetRecord{}, nil }
-func (store *ObjectStore) OpenContractTargetRecord(ctx context.Context, attempt ConformanceAttemptRecord) (ContractTargetRecord, error) { return ContractTargetRecord{}, nil }
+
+async function ensureC3StoreBridge(fixture) {
+	const source = await readFile(join(fixture, c3StoreOwnerPath), "utf8");
+	if (!source.includes(c3StoreModelImport)) {
+		for (const partial of [
+			"ConformanceAttemptInput",
+			"ConformanceAttemptRoots",
+			"ConformanceAttemptRecord",
+			"ContractTargetRecord",
+		]) {
+			if (source.includes(partial)) {
+				throw new Error(`self-test historical baseline contains partial C3 store surface: ${partial}`);
+			}
+		}
+		await replaceExact(
+			fixture,
+			c3StoreOwnerPath,
+			'\t"github.com/nelsonwerd/countershape/internal/canon"\n\t"github.com/nelsonwerd/countershape/internal/domain"',
+			`\t"github.com/nelsonwerd/countershape/internal/canon"\n\t${c3StoreModelImport}\n\t"github.com/nelsonwerd/countershape/internal/domain"`,
+		);
+		await appendSource(
+			fixture,
+			c3StoreOwnerPath,
+			String.raw`
+${c3StoreInput}
+type conformanceAttemptRoots struct{}
+${c3StoreRoots}
+type ConformanceAttemptRecord struct {
+	marker byte
+}
+type ContractTargetRecord struct {
+	marker byte
+}
+${c3StoreMethodSignatures[0]} { return ConformanceAttemptRecord{}, nil }
+${c3StoreMethodSignatures[1]} { return ConformanceAttemptRecord{}, nil }
+${c3StoreMethodSignatures[2]} { return ContractTargetRecord{}, nil }
+${c3StoreMethodSignatures[3]} { return ContractTargetRecord{}, nil }
 `,
-	);
+		);
+	}
+	await requireC3StoreBridge(fixture);
 }
 
 function runChecker(fixture, args = [], environment = {}) {
@@ -294,10 +345,11 @@ async function exercise(name) {
         );
         break;
 		case "c3-store-bridge":
-			await installC3StoreBridge(fixture);
+			await ensureC3StoreBridge(fixture);
+			await ensureC3StoreBridge(fixture);
 			break;
 		case "c3-store-bridge-raw-import":
-			await installC3StoreBridge(fixture);
+			await ensureC3StoreBridge(fixture);
 			await replaceExact(
 				fixture,
 				"internal/store/nonhead_contract.go",
@@ -306,7 +358,7 @@ async function exercise(name) {
 			);
 			break;
 		case "c3-store-bridge-renamed-identifiers":
-			await installC3StoreBridge(fixture);
+			await ensureC3StoreBridge(fixture);
 			await replaceExact(
 				fixture,
 				"internal/store/nonhead_contract.go",
@@ -333,7 +385,7 @@ async function exercise(name) {
 			);
 			break;
 		case "c3-store-bridge-wrong-import-alias":
-			await installC3StoreBridge(fixture);
+			await ensureC3StoreBridge(fixture);
 			await replaceExact(
 				fixture,
 				"internal/store/nonhead_contract.go",
@@ -343,86 +395,87 @@ async function exercise(name) {
 			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
 			break;
 		case "c3-store-model-import-without-bridge":
+			await ensureC3StoreBridge(fixture);
 			await replaceExact(
 				fixture,
-				"internal/store/nonhead_contract.go",
-				'\t"github.com/nelsonwerd/countershape/internal/canon"\n\t"github.com/nelsonwerd/countershape/internal/domain"',
-				'\t"github.com/nelsonwerd/countershape/internal/canon"\n\tcontractmodel "github.com/nelsonwerd/countershape/internal/contractexec/model"\n\t"github.com/nelsonwerd/countershape/internal/domain"',
+				c3StoreOwnerPath,
+				c3StoreRoots,
+				"type MissingConformanceAttemptRoots struct{ roots conformanceAttemptRoots }",
 			);
 			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
 			break;
 		case "c3-store-bridge-signature-drift":
-			await installC3StoreBridge(fixture);
+			await ensureC3StoreBridge(fixture);
 			await replaceExact(
 				fixture,
-				"internal/store/nonhead_contract.go",
-				"target contractmodel.ContractExecutionTarget",
-				"target SemanticObject",
+				c3StoreOwnerPath,
+				c3StoreMethodSignatures[2],
+				"func (store *ObjectStore) PersistContractTargetRecord(ctx context.Context, attempt ConformanceAttemptRecord, target SemanticObject) (ContractTargetRecord, error)",
 			);
 			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
 			break;
 		case "c3-store-bridge-field-type-drift":
-			await installC3StoreBridge(fixture);
+			await ensureC3StoreBridge(fixture);
 			await replaceExact(
 				fixture,
 				"internal/store/nonhead_contract.go",
-				"ContractBundleDigest domain.Digest",
-				"ContractBundleDigest string",
+				"ContractBundleDigest        domain.Digest",
+				"ContractBundleDigest        string",
 			);
 			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
 			break;
 		case "c3-store-bridge-field-tag":
-			await installC3StoreBridge(fixture);
+			await ensureC3StoreBridge(fixture);
 			await replaceExact(
 				fixture,
 				"internal/store/nonhead_contract.go",
-				"ContractBundleDigest domain.Digest",
-				'ContractBundleDigest domain.Digest `json:"contract_bundle_digest"`',
+				"ContractBundleDigest        domain.Digest",
+				'ContractBundleDigest        domain.Digest `json:"contract_bundle_digest"`',
 			);
 			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
 			break;
 		case "c3-store-bridge-swapped-field-order":
-			await installC3StoreBridge(fixture);
+			await ensureC3StoreBridge(fixture);
 			await replaceExact(
 				fixture,
 				"internal/store/nonhead_contract.go",
-				"ContractBundleDigest domain.Digest\n\tResidueHeadDigest domain.Digest",
-				"ResidueHeadDigest domain.Digest\n\tContractBundleDigest domain.Digest",
+				"ContractBundleDigest        domain.Digest\n\tResidueHeadDigest           domain.Digest",
+				"ResidueHeadDigest           domain.Digest\n\tContractBundleDigest        domain.Digest",
 			);
 			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
 			break;
 		case "c3-store-bridge-hidden-field":
-			await installC3StoreBridge(fixture);
+			await ensureC3StoreBridge(fixture);
 			await replaceExact(
 				fixture,
 				"internal/store/nonhead_contract.go",
 				"MaterializationPolicyDigest domain.Digest\n}",
-				"MaterializationPolicyDigest domain.Digest\n\thidden string\n}",
+				"MaterializationPolicyDigest domain.Digest\n\thidden                     string\n}",
 			);
 			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
 			break;
 		case "c3-store-bridge-exported-fifth-field":
-			await installC3StoreBridge(fixture);
+			await ensureC3StoreBridge(fixture);
 			await replaceExact(
 				fixture,
 				"internal/store/nonhead_contract.go",
 				"MaterializationPolicyDigest domain.Digest\n}",
-				"MaterializationPolicyDigest domain.Digest\n\tExtraDigest domain.Digest\n}",
+				"MaterializationPolicyDigest domain.Digest\n\tExtraDigest                 domain.Digest\n}",
 			);
 			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
 			break;
 		case "c3-store-bridge-extra-parameter":
-			await installC3StoreBridge(fixture);
+			await ensureC3StoreBridge(fixture);
 			await replaceExact(
 				fixture,
 				"internal/store/nonhead_contract.go",
-				"ctx context.Context, input ConformanceAttemptInput",
-				"ctx context.Context, extra string, input ConformanceAttemptInput",
+				c3StoreMethodSignatures[0],
+				"func (store *ObjectStore) AllocateConformanceAttempt(ctx context.Context, extra string, input ConformanceAttemptInput) (ConformanceAttemptRecord, error)",
 			);
 			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
 			break;
 		case "c3-store-bridge-result-drift":
-			await installC3StoreBridge(fixture);
+			await ensureC3StoreBridge(fixture);
 			await replaceExact(
 				fixture,
 				"internal/store/nonhead_contract.go",
@@ -432,7 +485,7 @@ async function exercise(name) {
 			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
 			break;
 		case "c3-store-model-import-foreign-file":
-			await installC3StoreBridge(fixture);
+			await ensureC3StoreBridge(fixture);
 			await replaceExact(
 				fixture,
 				"internal/store/object_store.go",
@@ -442,7 +495,7 @@ async function exercise(name) {
 			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
 			break;
 		case "c3-store-model-import-raw-foreign-file":
-			await installC3StoreBridge(fixture);
+			await ensureC3StoreBridge(fixture);
 			await replaceExact(
 				fixture,
 				"internal/store/object_store.go",
@@ -452,7 +505,7 @@ async function exercise(name) {
 			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
 			break;
 		case "c3-store-model-import-escaped-foreign-file":
-			await installC3StoreBridge(fixture);
+			await ensureC3StoreBridge(fixture);
 			await replaceExact(
 				fixture,
 				"internal/store/object_store.go",
@@ -469,21 +522,16 @@ async function exercise(name) {
 			);
 			break;
 		case "c3-store-bridge-local-shadow":
-			await installC3StoreBridge(fixture);
+			await ensureC3StoreBridge(fixture);
 			await replaceExact(
 				fixture,
-				"internal/store/nonhead_contract.go",
-				String.raw`type ConformanceAttemptInput struct {
-	ContractBundleDigest domain.Digest
-	ResidueHeadDigest domain.Digest
-	TreeIdentityDigest domain.Digest
-	MaterializationPolicyDigest domain.Digest
-}`,
+				c3StoreOwnerPath,
+				c3StoreInput,
 				String.raw`func c3LocalInputShadow() {
 	type ConformanceAttemptInput struct {
-		ContractBundleDigest domain.Digest
-		ResidueHeadDigest domain.Digest
-		TreeIdentityDigest domain.Digest
+		ContractBundleDigest        domain.Digest
+		ResidueHeadDigest           domain.Digest
+		TreeIdentityDigest          domain.Digest
 		MaterializationPolicyDigest domain.Digest
 	}
 	_ = ConformanceAttemptInput{}
@@ -493,23 +541,23 @@ async function exercise(name) {
 			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
 			break;
 		case "c3-store-bridge-type-alias-foreign-owner":
-			await installC3StoreBridge(fixture);
+			await ensureC3StoreBridge(fixture);
 			await replaceExact(
 				fixture,
-				"internal/store/nonhead_contract.go",
-				"type ConformanceAttemptRoots struct{}\n",
+				c3StoreOwnerPath,
+				`${c3StoreRoots}\n`,
 				"",
 			);
 			await appendSource(fixture, "internal/store/object_store.go", "\ntype ConformanceAttemptRoots = SemanticObject\n");
 			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
 			break;
 		case "c3-store-bridge-duplicate-top-level-type":
-			await installC3StoreBridge(fixture);
+			await ensureC3StoreBridge(fixture);
 			await appendSource(fixture, "internal/store/object_store.go", "\ntype ConformanceAttemptRoots struct{}\n");
 			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
 			break;
 		case "c3-store-bridge-duplicate-method":
-			await installC3StoreBridge(fixture);
+			await ensureC3StoreBridge(fixture);
 			await appendSource(
 				fixture,
 				"internal/store/object_store.go",
