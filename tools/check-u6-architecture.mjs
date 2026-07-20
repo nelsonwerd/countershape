@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 const modulePath = fileURLToPath(import.meta.url);
 const root = resolve(dirname(modulePath), "..");
 const modulePrefix = "github.com/nelsonwerd/countershape/";
+const c3StoreModelImport = "internal/contractexec/model";
 
 // Every member below these roots participates. Subdirectories are an exact
 // package map rather than permissive prefixes: a newly invented authority path
@@ -200,17 +201,152 @@ function lexicalViews(source, relativePath) {
   return { code: code.join(""), commentless: commentless.join(""), literals };
 }
 
-function importedPackages(commentless) {
-  const imports = [];
-  const declarations = /(?:^|\n)\s*import\s*(?:\(([\s\S]*?)\)|(?:([._A-Za-z][._A-Za-z0-9]*)\s+)?"([^"]+)")/gu;
-  for (const declaration of commentless.matchAll(declarations)) {
-    if (declaration[3]) {
-      imports.push({ alias: declaration[2] ?? "", path: declaration[3] });
+function decodeGoImportLiteral(raw) {
+  if (raw.startsWith("`") && raw.endsWith("`")) return raw.slice(1, -1).replaceAll("\r", "");
+  if (!raw.startsWith('"') || !raw.endsWith('"')) {
+    throw new ArchitectureError("U6_GO_IMPORT_LITERAL_INVALID", "import path is not a Go string literal");
+  }
+  let decoded = "";
+  const body = raw.slice(1, -1);
+  for (let index = 0; index < body.length; index += 1) {
+    const character = body[index];
+    if (character !== "\\") {
+      if (character === "\n" || character === "\r") {
+        throw new ArchitectureError("U6_GO_IMPORT_LITERAL_INVALID", "newline in interpreted import path");
+      }
+      decoded += character;
       continue;
     }
-    for (const spec of declaration[1].matchAll(/(?:^|\s)(?:([._A-Za-z][._A-Za-z0-9]*)\s+)?"([^"]+)"/gu)) {
-      imports.push({ alias: spec[1] ?? "", path: spec[2] });
+    const escape = body[++index];
+    if (escape === undefined) throw new ArchitectureError("U6_GO_IMPORT_LITERAL_INVALID", "trailing escape");
+    const simple = new Map([
+      ["a", "\x07"], ["b", "\b"], ["f", "\f"], ["n", "\n"], ["r", "\r"],
+      ["t", "\t"], ["v", "\x0b"], ["\\", "\\"], ['"', '"'], ["'", "'"],
+    ]);
+    if (simple.has(escape)) {
+      decoded += simple.get(escape);
+      continue;
     }
+    let digits;
+    let radix;
+    if (/[0-7]/u.test(escape)) {
+      digits = escape + body.slice(index + 1, index + 3);
+      radix = 8;
+      index += 2;
+      if (!/^[0-7]{3}$/u.test(digits)) digits = null;
+    } else if (escape === "x") {
+      digits = body.slice(index + 1, index + 3);
+      radix = 16;
+      index += 2;
+      if (!/^[0-9A-Fa-f]{2}$/u.test(digits)) digits = null;
+    } else if (escape === "u" || escape === "U") {
+      const width = escape === "u" ? 4 : 8;
+      digits = body.slice(index + 1, index + 1 + width);
+      radix = 16;
+      index += width;
+      if (!new RegExp(`^[0-9A-Fa-f]{${width}}$`, "u").test(digits)) digits = null;
+    }
+    if (digits === null || digits === undefined) {
+      throw new ArchitectureError("U6_GO_IMPORT_LITERAL_INVALID", `unsupported escape \\${escape}`);
+    }
+    const value = Number.parseInt(digits, radix);
+    if (value > 0x10ffff || (value >= 0xd800 && value <= 0xdfff)) {
+      throw new ArchitectureError("U6_GO_IMPORT_LITERAL_INVALID", "invalid Unicode scalar");
+    }
+    decoded += String.fromCodePoint(value);
+  }
+  return decoded;
+}
+
+function goSourceTokens(commentless) {
+  const tokens = [];
+  for (let index = 0; index < commentless.length;) {
+    const character = String.fromCodePoint(commentless.codePointAt(index));
+    if (/\s/u.test(character)) {
+      index += character.length;
+      continue;
+    }
+    if (character === '"' || character === "'" || character === "`") {
+      const start = index;
+      const quote = character;
+      index += quote.length;
+      let escaped = false;
+      while (index < commentless.length) {
+        const current = String.fromCodePoint(commentless.codePointAt(index));
+        index += current.length;
+        if (quote === "`") {
+          if (current === "`") break;
+          continue;
+        }
+        if (!escaped && current === quote) break;
+        if (!escaped && current === "\\") escaped = true;
+        else escaped = false;
+      }
+      const raw = commentless.slice(start, index);
+      if (!raw.endsWith(quote)) throw new ArchitectureError("U6_GO_LEXICAL_INVALID", "unterminated literal token");
+      tokens.push({ kind: quote === "'" ? "rune" : "string", raw, value: quote === "'" ? raw : decodeGoImportLiteral(raw) });
+      continue;
+    }
+    if (/[_\p{ID_Start}]/u.test(character)) {
+      const start = index;
+      index += character.length;
+      while (index < commentless.length) {
+        const current = String.fromCodePoint(commentless.codePointAt(index));
+        if (!/[_\p{ID_Continue}]/u.test(current)) break;
+        index += current.length;
+      }
+      tokens.push({ kind: "identifier", value: commentless.slice(start, index) });
+      continue;
+    }
+    tokens.push({ kind: "punctuation", value: character });
+    index += character.length;
+  }
+  return tokens;
+}
+
+function importedPackages(commentless) {
+  const tokens = goSourceTokens(commentless);
+  const imports = [];
+  let braceDepth = 0;
+  const consumeSpecs = (start, end) => {
+    let cursor = start;
+    while (cursor < end) {
+      while (cursor < end && tokens[cursor].kind === "punctuation" && tokens[cursor].value === ";") cursor += 1;
+      if (cursor >= end) break;
+      let alias = "";
+      const candidate = tokens[cursor];
+      if (candidate.kind === "identifier" || (candidate.kind === "punctuation" && candidate.value === ".")) {
+        alias = candidate.value;
+        cursor += 1;
+      }
+      if (cursor >= end || tokens[cursor].kind !== "string") {
+        throw new ArchitectureError("U6_GO_IMPORT_DECLARATION_INVALID", "import spec is not completely consumed");
+      }
+      imports.push({ alias, path: tokens[cursor].value });
+      cursor += 1;
+    }
+  };
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+    if (token.kind === "punctuation" && token.value === "{") braceDepth += 1;
+    else if (token.kind === "punctuation" && token.value === "}") braceDepth -= 1;
+    if (braceDepth !== 0 || token.kind !== "identifier" || token.value !== "import") continue;
+    const next = tokens[index + 1];
+    if (next?.kind === "punctuation" && next.value === "(") {
+      let close = index + 2;
+      while (close < tokens.length && !(tokens[close].kind === "punctuation" && tokens[close].value === ")")) close += 1;
+      if (close >= tokens.length) throw new ArchitectureError("U6_GO_IMPORT_DECLARATION_INVALID", "unterminated import group");
+      consumeSpecs(index + 2, close);
+      index = close;
+      continue;
+    }
+    let end = index + 1;
+    if (tokens[end]?.kind === "identifier" || (tokens[end]?.kind === "punctuation" && tokens[end].value === ".")) end += 1;
+    if (tokens[end]?.kind !== "string") {
+      throw new ArchitectureError("U6_GO_IMPORT_DECLARATION_INVALID", "single import has no path literal");
+    }
+    consumeSpecs(index + 1, end + 1);
+    index = end;
   }
   return imports;
 }
@@ -375,11 +511,25 @@ function exactSet(left, right) {
   return left.length === right.length && [...left].sort().every((value, index) => value === [...right].sort()[index]);
 }
 
+function isTopLevelOffset(code, offset) {
+  let depth = 0;
+  for (let index = 0; index < offset; index += 1) {
+    if (code[index] === "{") depth += 1;
+    else if (code[index] === "}") depth -= 1;
+    if (depth < 0) return false;
+  }
+  return depth === 0;
+}
+
+function topLevelMatches(code, expression) {
+  return [...code.matchAll(expression)].filter((match) => isTopLevelOffset(code, match.index));
+}
+
 function topLevelStructBodies(code, typeName) {
   const escaped = typeName.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
   const pattern = new RegExp(`\\btype\\s+${escaped}\\s+struct\\s*\\{`, "gu");
   const bodies = [];
-  for (const match of code.matchAll(pattern)) {
+  for (const match of topLevelMatches(code, pattern)) {
     const open = match.index + match[0].lastIndexOf("{");
     const block = balancedBlock(code, open);
     if (block) bodies.push(block.body);
@@ -424,8 +574,56 @@ const exactInternalImports = Object.freeze(new Map([
   ["internal/world", ["internal/adapters/cli/model", "internal/adapters/http/model", "internal/canon", "internal/domain", "internal/gitobj", "internal/runnerprofile"]],
 ]));
 
+function admitsC3StoreBridge(manifest, entry, imports) {
+  if (entry.path !== "internal/store/nonhead_contract.go") return false;
+  const modelImports = imports.filter((candidate) => candidate.path === `${modulePrefix}${c3StoreModelImport}`);
+  if (modelImports.length !== 1 || modelImports[0].alias !== "contractmodel") return false;
+  const ownerPath = entry.path;
+  const storeEntries = productionEntries(manifest).filter((candidate) =>
+    candidate.path.startsWith("internal/store/") && candidate.path.slice(0, candidate.path.lastIndexOf("/")) === "internal/store");
+  const declarations = (typeName) => {
+    const escaped = typeName.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+    const expression = new RegExp(`\\btype\\s+${escaped}\\b`, "gu");
+    return storeEntries.flatMap((candidate) =>
+      topLevelMatches(candidate.lexical.code, expression).map(() => ({ path: candidate.path, entry: candidate })));
+  };
+  for (const typeName of ["ConformanceAttemptInput", "ConformanceAttemptRoots", "ConformanceAttemptRecord", "ContractTargetRecord"]) {
+    const found = declarations(typeName);
+    if (found.length !== 1 || found[0].path !== ownerPath || topLevelStructBodies(found[0].entry.lexical.code, typeName).length !== 1) {
+      return false;
+    }
+  }
+  const code = entry.lexical.code;
+  const inputMatches = topLevelMatches(code, /\btype\s+ConformanceAttemptInput\s+struct\s*\{/gu);
+  if (inputMatches.length !== 1) return false;
+  const inputOpen = inputMatches[0].index + inputMatches[0][0].lastIndexOf("{");
+  const inputBlock = balancedBlock(code, inputOpen);
+  if (!inputBlock) return false;
+  const exactInputBody = [
+    "ContractBundleDigest domain.Digest",
+    "ResidueHeadDigest domain.Digest",
+    "TreeIdentityDigest domain.Digest",
+    "MaterializationPolicyDigest domain.Digest",
+  ].join(" ");
+  if (compactCode(entry.lexical.commentless.slice(inputOpen + 1, inputBlock.end - 1)) !== exactInputBody) return false;
+  const methodExpression = /\bfunc\s*\(\s*(?:[_\p{ID_Start}][\p{ID_Continue}_]*\s+)?\*ObjectStore\s*\)\s+(AllocateConformanceAttempt|OpenConformanceAttempt|PersistContractTargetRecord|OpenContractTargetRecord)\s*\(/gu;
+  const methods = storeEntries.flatMap((candidate) =>
+    topLevelMatches(candidate.lexical.code, methodExpression).map((match) => ({ name: match[1], path: candidate.path })));
+  if (methods.some((method) => method.path !== ownerPath) || !exactSet(methods.map((method) => method.name), [
+    "AllocateConformanceAttempt", "OpenConformanceAttempt", "PersistContractTargetRecord", "OpenContractTargetRecord",
+  ])) return false;
+  const exactMethods = [
+    /\bfunc\s*\(\s*(?:[_\p{ID_Start}][\p{ID_Continue}_]*\s+)?\*ObjectStore\s*\)\s+AllocateConformanceAttempt\s*\(\s*(?:[_\p{ID_Start}][\p{ID_Continue}_]*\s+)?context\.Context\s*,\s*(?:[_\p{ID_Start}][\p{ID_Continue}_]*\s+)?ConformanceAttemptInput\s*\)\s*\(\s*ConformanceAttemptRecord\s*,\s*error\s*\)\s*\{/gu,
+    /\bfunc\s*\(\s*(?:[_\p{ID_Start}][\p{ID_Continue}_]*\s+)?\*ObjectStore\s*\)\s+OpenConformanceAttempt\s*\(\s*(?:[_\p{ID_Start}][\p{ID_Continue}_]*\s+)?context\.Context\s*,\s*(?:[_\p{ID_Start}][\p{ID_Continue}_]*\s+)?domain\.Digest\s*\)\s*\(\s*ConformanceAttemptRecord\s*,\s*error\s*\)\s*\{/gu,
+    /\bfunc\s*\(\s*(?:[_\p{ID_Start}][\p{ID_Continue}_]*\s+)?\*ObjectStore\s*\)\s+PersistContractTargetRecord\s*\(\s*(?:[_\p{ID_Start}][\p{ID_Continue}_]*\s+)?context\.Context\s*,\s*(?:[_\p{ID_Start}][\p{ID_Continue}_]*\s+)?ConformanceAttemptRecord\s*,\s*(?:[_\p{ID_Start}][\p{ID_Continue}_]*\s+)?contractmodel\.ContractExecutionTarget\s*\)\s*\(\s*ContractTargetRecord\s*,\s*error\s*\)\s*\{/gu,
+    /\bfunc\s*\(\s*(?:[_\p{ID_Start}][\p{ID_Continue}_]*\s+)?\*ObjectStore\s*\)\s+OpenContractTargetRecord\s*\(\s*(?:[_\p{ID_Start}][\p{ID_Continue}_]*\s+)?context\.Context\s*,\s*(?:[_\p{ID_Start}][\p{ID_Continue}_]*\s+)?ConformanceAttemptRecord\s*\)\s*\(\s*ContractTargetRecord\s*,\s*error\s*\)\s*\{/gu,
+  ];
+  return exactMethods.every((expression) => topLevelMatches(code, expression).length === 1);
+}
+
 function inspectPackageBoundaries(manifest, violations) {
   const aggregate = new Map([...exactInternalImports.keys()].map((key) => [key, new Set()]));
+  let c3StoreBridge = false;
   for (const entry of productionEntries(manifest)) {
     const imports = importedPackages(entry.lexical.commentless);
     const paths = imports.map((candidate) => candidate.path);
@@ -440,6 +638,13 @@ function inspectPackageBoundaries(manifest, violations) {
     const packageDirectory = entry.path.slice(0, entry.path.lastIndexOf("/"));
     if (!aggregate.has(packageDirectory)) violations.push(["U6_INTERNAL_PACKAGE_UNMAPPED", entry.path]);
     for (const imported of internalImports) aggregate.get(packageDirectory)?.add(imported);
+		if (internalImports.includes(c3StoreModelImport)) {
+			if (!admitsC3StoreBridge(manifest, entry, imports) || c3StoreBridge) {
+				violations.push(["U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED", entry.path]);
+			} else {
+				c3StoreBridge = true;
+			}
+		}
 		for (const imported of internalImports.filter((candidate) => candidate.startsWith("internal/adapters/"))) {
 			const translatorOwned = packageDirectory === "internal/projectiontranslate" &&
 				(imported === "internal/adapters/cli" || imported === "internal/adapters/http");
@@ -469,7 +674,10 @@ function inspectPackageBoundaries(manifest, violations) {
   }
   for (const [packageDirectory, expected] of exactInternalImports) {
     const actual = [...(aggregate.get(packageDirectory) ?? [])];
-    if (!exactSet(actual, expected)) {
+		const phaseExpected = packageDirectory === "internal/store" && c3StoreBridge
+			? [...expected, c3StoreModelImport]
+			: expected;
+    if (!exactSet(actual, phaseExpected)) {
       violations.push(["U6_INTERNAL_IMPORT_LATTICE", `${packageDirectory}: ${actual.sort().join(",")}`]);
     }
   }

@@ -8,7 +8,7 @@ import { fileURLToPath } from "node:url";
 
 export const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const specificationPath = resolve(repositoryRoot, "spec/verification/p07b-c-unit-paths.json");
-const unitOrder = Object.freeze(["C0A", "C0B", "C1", "C1M", "C1V", "C1E", "C1B", "C2", "C2M", "C2B", "C3P", "C3V", "C3M", "C3PB", "C3A", "C3", "C3B", "C4", "C5", "C6A", "C6B"]);
+const unitOrder = Object.freeze(["C0A", "C0B", "C1", "C1M", "C1V", "C1E", "C1B", "C2", "C2M", "C2B", "C3P", "C3V", "C3M", "C3PB", "C3A", "C3L", "C3", "C3B", "C4", "C5", "C6A", "C6B"]);
 const verificationProfiles = new Set(["SOURCE_FULL", "RECEIPT_RECONCILIATION"]);
 const receiptClaimTypes = new Set(["tests-pass", "command-succeeded"]);
 const stagedInventoryArgs = Object.freeze([
@@ -51,7 +51,7 @@ export function validateSpecification(specification) {
 		JSON.stringify(Object.keys(specification).sort()) !== JSON.stringify(["schema_version", "units"])) {
 		fail("specification root roster");
 	}
-	if (specification.schema_version !== "countershape/p07b-c-unit-paths/v7") fail("specification version");
+	if (specification.schema_version !== "countershape/p07b-c-unit-paths/v8") fail("specification version");
 	if (!specification.units || typeof specification.units !== "object" || Array.isArray(specification.units) ||
 		JSON.stringify(Object.keys(specification.units)) !== JSON.stringify(unitOrder)) fail("unit roster/order");
 
@@ -297,6 +297,8 @@ async function runSelfTest() {
 		unexpectedPaths(specification, "C3PB", ["spec/verification/p07b-c-c3p-receipt.json"]).length === 0,
 		unexpectedPaths(specification, "C3A", ["tools/check-p07b-b-architecture.mjs"]).length === 0,
 		unexpectedPaths(specification, "C3A", ["internal/contractexec/target.go"])[0] === "internal/contractexec/target.go",
+		unexpectedPaths(specification, "C3L", ["tools/check-u6-architecture.mjs"]).length === 0,
+		unexpectedPaths(specification, "C3L", ["internal/store/nonhead_contract.go"])[0] === "internal/store/nonhead_contract.go",
 		unexpectedPaths(specification, "C3B", ["spec/verification/p07b-c-c3-receipt.json"]).length === 0,
 		unexpectedPaths(specification, "C1M", ["internal/world/process_darwin.go"]).length === 0,
 		unexpectedPaths(specification, "C1M", ["spec/verification/p07b-c-c1-receipt.json"])[0] === "spec/verification/p07b-c-c1-receipt.json",
@@ -324,11 +326,14 @@ async function runSelfTest() {
 		!exactPathsMatch(specification, "C3M", specification.units.C3M.exact.slice(1)),
 		exactPathsMatch(specification, "C3A", specification.units.C3A.exact),
 		!exactPathsMatch(specification, "C3A", specification.units.C3A.exact.slice(1)),
+		exactPathsMatch(specification, "C3L", specification.units.C3L.exact),
+		!exactPathsMatch(specification, "C3L", specification.units.C3L.exact.slice(1)),
 		exactSourceGateAdmitted(specification, "C2M"),
 		exactSourceGateAdmitted(specification, "C3P"),
 		exactSourceGateAdmitted(specification, "C3V"),
 		exactSourceGateAdmitted(specification, "C3M"),
 		exactSourceGateAdmitted(specification, "C3A"),
+		exactSourceGateAdmitted(specification, "C3L"),
 		exactSourceGateAdmitted(specification, "C3"),
 		!exactSourceGateAdmitted(specification, "C2B"),
 		unexpectedPaths(specification, "C0A", ["docs/SEMANTICS.md", "README.md"])[0] === "README.md",
@@ -417,6 +422,25 @@ async function runSelfTest() {
 		unsafeC3APrefixRejected = true;
 	}
 	if (!unsafeC3APrefixRejected) fail("C3A prefix introduction self-test false negative");
+	const unsafeC3LReceiptProfile = JSON.parse(JSON.stringify(specification));
+	unsafeC3LReceiptProfile.units.C3L.verification_profile = "RECEIPT_RECONCILIATION";
+	unsafeC3LReceiptProfile.units.C3L.receipt_claims = JSON.parse(JSON.stringify(specification.units.C3PB.receipt_claims));
+	let unsafeC3LReceiptProfileRejected = false;
+	try {
+		validateSpecification(unsafeC3LReceiptProfile);
+	} catch {
+		unsafeC3LReceiptProfileRejected = true;
+	}
+	if (!unsafeC3LReceiptProfileRejected) fail("C3L receipt-profile substitution self-test false negative");
+	const unsafeC3LPrefix = JSON.parse(JSON.stringify(specification));
+	unsafeC3LPrefix.units.C3L.prefixes = ["docs/"];
+	let unsafeC3LPrefixRejected = false;
+	try {
+		validateSpecification(unsafeC3LPrefix);
+	} catch {
+		unsafeC3LPrefixRejected = true;
+	}
+	if (!unsafeC3LPrefixRejected) fail("C3L prefix introduction self-test false negative");
 	const reorderedUnits = JSON.parse(JSON.stringify(specification));
 	const reorderedC2B = reorderedUnits.units.C2B;
 	delete reorderedUnits.units.C2B;
@@ -442,6 +466,15 @@ async function runSelfTest() {
 	let reorderedC3ARejected = false;
 	try { validateSpecification(reorderedC3AUnits); } catch { reorderedC3ARejected = true; }
 	if (!reorderedC3ARejected) fail("C3A order self-test false negative");
+	const reorderedC3LUnits = JSON.parse(JSON.stringify(specification));
+	const reorderedC3LEntries = Object.entries(reorderedC3LUnits.units);
+	const c3lIndex = reorderedC3LEntries.findIndex(([unit]) => unit === "C3L");
+	const c3AfterLIndex = reorderedC3LEntries.findIndex(([unit]) => unit === "C3");
+	[reorderedC3LEntries[c3lIndex], reorderedC3LEntries[c3AfterLIndex]] = [reorderedC3LEntries[c3AfterLIndex], reorderedC3LEntries[c3lIndex]];
+	reorderedC3LUnits.units = Object.fromEntries(reorderedC3LEntries);
+	let reorderedC3LRejected = false;
+	try { validateSpecification(reorderedC3LUnits); } catch { reorderedC3LRejected = true; }
+	if (!reorderedC3LRejected) fail("C3L order self-test false negative");
 	for (const unit of ["C1B", "C2B", "C3PB", "C3B"]) {
 		const regular = specification.units[unit].exact.map((path, index) => ({
 			mode: "100644", object: String(index + 1).padStart(40, "0"), stage: 0, path,
@@ -499,7 +532,7 @@ async function main() {
 	}
 	if (process.argv.length !== 5 || process.argv[2] !== "--unit" ||
 		!(["--staged", "--exact-staged", "--receipt-manifest", "--source-final-gate", "--credential-scan"].includes(process.argv[4]))) {
-		fail("usage: check-p07b-c-unit-scope.mjs --unit <C0A|C0B|C1|C1M|C1V|C1E|C1B|C2|C2M|C2B|C3P|C3V|C3M|C3PB|C3A|C3|C3B|C4|C5|C6A|C6B> <--staged|--exact-staged|--receipt-manifest|--source-final-gate|--credential-scan> | --self-test");
+		fail("usage: check-p07b-c-unit-scope.mjs --unit <C0A|C0B|C1|C1M|C1V|C1E|C1B|C2|C2M|C2B|C3P|C3V|C3M|C3PB|C3A|C3L|C3|C3B|C4|C5|C6A|C6B> <--staged|--exact-staged|--receipt-manifest|--source-final-gate|--credential-scan> | --self-test");
 	}
 	const specification = await loadSpecification();
 	if (process.argv[4] === "--source-final-gate") {

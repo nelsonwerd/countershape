@@ -37,7 +37,28 @@ const requiredCaseIDs = Object.freeze([
   "clean",
   "arguments",
   "harmless-comment",
-  "harmless-astral-comment",
+	"harmless-astral-comment",
+	"c3-store-bridge",
+	"c3-store-bridge-raw-import",
+	"c3-store-bridge-renamed-identifiers",
+	"c3-store-bridge-wrong-import-alias",
+	"c3-store-model-import-without-bridge",
+	"c3-store-bridge-signature-drift",
+	"c3-store-bridge-field-type-drift",
+	"c3-store-bridge-field-tag",
+	"c3-store-bridge-swapped-field-order",
+	"c3-store-bridge-hidden-field",
+	"c3-store-bridge-exported-fifth-field",
+	"c3-store-bridge-extra-parameter",
+	"c3-store-bridge-result-drift",
+	"c3-store-model-import-foreign-file",
+	"c3-store-model-import-raw-foreign-file",
+	"c3-store-model-import-escaped-foreign-file",
+	"c3-store-import-camouflage-raw-string",
+	"c3-store-bridge-local-shadow",
+	"c3-store-bridge-type-alias-foreign-owner",
+	"c3-store-bridge-duplicate-top-level-type",
+	"c3-store-bridge-duplicate-method",
 	"eligibility-core-capability-import",
 	"eligibility-core-api-opening",
 	"eligibility-owner-bypass",
@@ -161,7 +182,7 @@ const requiredCaseIDs = Object.freeze([
   "manifest-barrier-tamper",
   "manifest-tool-failure",
 ]);
-const requiredRosterDigest = "62a6537651298d06b193073c67b0ab38da7fb5fb7b2db912610a060060dd5423";
+const requiredRosterDigest = "f557e90eea75e1e101581a74d08c82bde7fa822ee34875bed60ac19447c9abfd";
 
 async function copyFixture() {
   const fixture = await mkdtemp(join(tmpdir(), "countershape-u6-architecture-"));
@@ -194,6 +215,34 @@ async function writeSource(fixture, path, source) {
   const absolute = join(fixture, path);
   await mkdir(dirname(absolute), { recursive: true, mode: 0o700 });
   await writeFile(absolute, source, { mode: 0o600 });
+}
+
+async function installC3StoreBridge(fixture) {
+	await replaceExact(
+		fixture,
+		"internal/store/nonhead_contract.go",
+		'\t"github.com/nelsonwerd/countershape/internal/canon"\n\t"github.com/nelsonwerd/countershape/internal/domain"',
+		'\t"github.com/nelsonwerd/countershape/internal/canon"\n\tcontractmodel "github.com/nelsonwerd/countershape/internal/contractexec/model"\n\t"github.com/nelsonwerd/countershape/internal/domain"',
+	);
+	await appendSource(
+		fixture,
+		"internal/store/nonhead_contract.go",
+		String.raw`
+type ConformanceAttemptInput struct {
+	ContractBundleDigest domain.Digest
+	ResidueHeadDigest domain.Digest
+	TreeIdentityDigest domain.Digest
+	MaterializationPolicyDigest domain.Digest
+}
+type ConformanceAttemptRoots struct{}
+type ConformanceAttemptRecord struct{}
+type ContractTargetRecord struct{}
+func (store *ObjectStore) AllocateConformanceAttempt(ctx context.Context, input ConformanceAttemptInput) (ConformanceAttemptRecord, error) { return ConformanceAttemptRecord{}, nil }
+func (store *ObjectStore) OpenConformanceAttempt(ctx context.Context, digest domain.Digest) (ConformanceAttemptRecord, error) { return ConformanceAttemptRecord{}, nil }
+func (store *ObjectStore) PersistContractTargetRecord(ctx context.Context, attempt ConformanceAttemptRecord, target contractmodel.ContractExecutionTarget) (ContractTargetRecord, error) { return ContractTargetRecord{}, nil }
+func (store *ObjectStore) OpenContractTargetRecord(ctx context.Context, attempt ConformanceAttemptRecord) (ContractTargetRecord, error) { return ContractTargetRecord{}, nil }
+`,
+	);
 }
 
 function runChecker(fixture, args = [], environment = {}) {
@@ -244,6 +293,230 @@ async function exercise(name) {
           "package choice\n\n// Astral lexical alignment control: 🧪",
         );
         break;
+		case "c3-store-bridge":
+			await installC3StoreBridge(fixture);
+			break;
+		case "c3-store-bridge-raw-import":
+			await installC3StoreBridge(fixture);
+			await replaceExact(
+				fixture,
+				"internal/store/nonhead_contract.go",
+				'contractmodel "github.com/nelsonwerd/countershape/internal/contractexec/model"',
+				"contractmodel `github.com/nelsonwerd/countershape/internal/contractexec/model`",
+			);
+			break;
+		case "c3-store-bridge-renamed-identifiers":
+			await installC3StoreBridge(fixture);
+			await replaceExact(
+				fixture,
+				"internal/store/nonhead_contract.go",
+				"func (store *ObjectStore) AllocateConformanceAttempt(ctx context.Context, input ConformanceAttemptInput)",
+				"func (repository *ObjectStore) AllocateConformanceAttempt(callContext context.Context, request ConformanceAttemptInput)",
+			);
+			await replaceExact(
+				fixture,
+				"internal/store/nonhead_contract.go",
+				"func (store *ObjectStore) OpenConformanceAttempt(ctx context.Context, digest domain.Digest)",
+				"func (repository *ObjectStore) OpenConformanceAttempt(callContext context.Context, attemptDigest domain.Digest)",
+			);
+			await replaceExact(
+				fixture,
+				"internal/store/nonhead_contract.go",
+				"func (store *ObjectStore) PersistContractTargetRecord(ctx context.Context, attempt ConformanceAttemptRecord, target contractmodel.ContractExecutionTarget)",
+				"func (repository *ObjectStore) PersistContractTargetRecord(callContext context.Context, attemptRecord ConformanceAttemptRecord, executionTarget contractmodel.ContractExecutionTarget)",
+			);
+			await replaceExact(
+				fixture,
+				"internal/store/nonhead_contract.go",
+				"func (store *ObjectStore) OpenContractTargetRecord(ctx context.Context, attempt ConformanceAttemptRecord)",
+				"func (repository *ObjectStore) OpenContractTargetRecord(callContext context.Context, attemptRecord ConformanceAttemptRecord)",
+			);
+			break;
+		case "c3-store-bridge-wrong-import-alias":
+			await installC3StoreBridge(fixture);
+			await replaceExact(
+				fixture,
+				"internal/store/nonhead_contract.go",
+				'contractmodel "github.com/nelsonwerd/countershape/internal/contractexec/model"',
+				'modelalias "github.com/nelsonwerd/countershape/internal/contractexec/model"',
+			);
+			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
+			break;
+		case "c3-store-model-import-without-bridge":
+			await replaceExact(
+				fixture,
+				"internal/store/nonhead_contract.go",
+				'\t"github.com/nelsonwerd/countershape/internal/canon"\n\t"github.com/nelsonwerd/countershape/internal/domain"',
+				'\t"github.com/nelsonwerd/countershape/internal/canon"\n\tcontractmodel "github.com/nelsonwerd/countershape/internal/contractexec/model"\n\t"github.com/nelsonwerd/countershape/internal/domain"',
+			);
+			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
+			break;
+		case "c3-store-bridge-signature-drift":
+			await installC3StoreBridge(fixture);
+			await replaceExact(
+				fixture,
+				"internal/store/nonhead_contract.go",
+				"target contractmodel.ContractExecutionTarget",
+				"target SemanticObject",
+			);
+			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
+			break;
+		case "c3-store-bridge-field-type-drift":
+			await installC3StoreBridge(fixture);
+			await replaceExact(
+				fixture,
+				"internal/store/nonhead_contract.go",
+				"ContractBundleDigest domain.Digest",
+				"ContractBundleDigest string",
+			);
+			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
+			break;
+		case "c3-store-bridge-field-tag":
+			await installC3StoreBridge(fixture);
+			await replaceExact(
+				fixture,
+				"internal/store/nonhead_contract.go",
+				"ContractBundleDigest domain.Digest",
+				'ContractBundleDigest domain.Digest `json:"contract_bundle_digest"`',
+			);
+			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
+			break;
+		case "c3-store-bridge-swapped-field-order":
+			await installC3StoreBridge(fixture);
+			await replaceExact(
+				fixture,
+				"internal/store/nonhead_contract.go",
+				"ContractBundleDigest domain.Digest\n\tResidueHeadDigest domain.Digest",
+				"ResidueHeadDigest domain.Digest\n\tContractBundleDigest domain.Digest",
+			);
+			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
+			break;
+		case "c3-store-bridge-hidden-field":
+			await installC3StoreBridge(fixture);
+			await replaceExact(
+				fixture,
+				"internal/store/nonhead_contract.go",
+				"MaterializationPolicyDigest domain.Digest\n}",
+				"MaterializationPolicyDigest domain.Digest\n\thidden string\n}",
+			);
+			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
+			break;
+		case "c3-store-bridge-exported-fifth-field":
+			await installC3StoreBridge(fixture);
+			await replaceExact(
+				fixture,
+				"internal/store/nonhead_contract.go",
+				"MaterializationPolicyDigest domain.Digest\n}",
+				"MaterializationPolicyDigest domain.Digest\n\tExtraDigest domain.Digest\n}",
+			);
+			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
+			break;
+		case "c3-store-bridge-extra-parameter":
+			await installC3StoreBridge(fixture);
+			await replaceExact(
+				fixture,
+				"internal/store/nonhead_contract.go",
+				"ctx context.Context, input ConformanceAttemptInput",
+				"ctx context.Context, extra string, input ConformanceAttemptInput",
+			);
+			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
+			break;
+		case "c3-store-bridge-result-drift":
+			await installC3StoreBridge(fixture);
+			await replaceExact(
+				fixture,
+				"internal/store/nonhead_contract.go",
+				"func (store *ObjectStore) OpenConformanceAttempt(ctx context.Context, digest domain.Digest) (ConformanceAttemptRecord, error)",
+				"func (store *ObjectStore) OpenConformanceAttempt(ctx context.Context, digest domain.Digest) (ContractTargetRecord, error)",
+			);
+			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
+			break;
+		case "c3-store-model-import-foreign-file":
+			await installC3StoreBridge(fixture);
+			await replaceExact(
+				fixture,
+				"internal/store/object_store.go",
+				'\t"github.com/nelsonwerd/countershape/internal/canon"\n\t"github.com/nelsonwerd/countershape/internal/domain"',
+				'\t"github.com/nelsonwerd/countershape/internal/canon"\n\t_ "github.com/nelsonwerd/countershape/internal/contractexec/model"\n\t"github.com/nelsonwerd/countershape/internal/domain"',
+			);
+			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
+			break;
+		case "c3-store-model-import-raw-foreign-file":
+			await installC3StoreBridge(fixture);
+			await replaceExact(
+				fixture,
+				"internal/store/object_store.go",
+				'\t"github.com/nelsonwerd/countershape/internal/canon"\n\t"github.com/nelsonwerd/countershape/internal/domain"',
+				'\t"github.com/nelsonwerd/countershape/internal/canon"\n\t_ `github.com/nelsonwerd/countershape/internal/contractexec/model`\n\t"github.com/nelsonwerd/countershape/internal/domain"',
+			);
+			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
+			break;
+		case "c3-store-model-import-escaped-foreign-file":
+			await installC3StoreBridge(fixture);
+			await replaceExact(
+				fixture,
+				"internal/store/object_store.go",
+				'\t"github.com/nelsonwerd/countershape/internal/canon"\n\t"github.com/nelsonwerd/countershape/internal/domain"',
+				'\t"github.com/nelsonwerd/countershape/internal/canon"\n\t_ "github.com/nelsonwerd/countershap\\x65/internal/contractexec/model"\n\t"github.com/nelsonwerd/countershape/internal/domain"',
+			);
+			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
+			break;
+		case "c3-store-import-camouflage-raw-string":
+			await appendSource(
+				fixture,
+				"internal/store/object_store.go",
+				'\nvar c3ImportCamouflage = `import contractmodel "github.com/nelsonwerd/countershape/internal/contractexec/model"`\n',
+			);
+			break;
+		case "c3-store-bridge-local-shadow":
+			await installC3StoreBridge(fixture);
+			await replaceExact(
+				fixture,
+				"internal/store/nonhead_contract.go",
+				String.raw`type ConformanceAttemptInput struct {
+	ContractBundleDigest domain.Digest
+	ResidueHeadDigest domain.Digest
+	TreeIdentityDigest domain.Digest
+	MaterializationPolicyDigest domain.Digest
+}`,
+				String.raw`func c3LocalInputShadow() {
+	type ConformanceAttemptInput struct {
+		ContractBundleDigest domain.Digest
+		ResidueHeadDigest domain.Digest
+		TreeIdentityDigest domain.Digest
+		MaterializationPolicyDigest domain.Digest
+	}
+	_ = ConformanceAttemptInput{}
+}`,
+			);
+			await appendSource(fixture, "internal/store/object_store.go", "\ntype ConformanceAttemptInput struct { Wrong string }\n");
+			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
+			break;
+		case "c3-store-bridge-type-alias-foreign-owner":
+			await installC3StoreBridge(fixture);
+			await replaceExact(
+				fixture,
+				"internal/store/nonhead_contract.go",
+				"type ConformanceAttemptRoots struct{}\n",
+				"",
+			);
+			await appendSource(fixture, "internal/store/object_store.go", "\ntype ConformanceAttemptRoots = SemanticObject\n");
+			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
+			break;
+		case "c3-store-bridge-duplicate-top-level-type":
+			await installC3StoreBridge(fixture);
+			await appendSource(fixture, "internal/store/object_store.go", "\ntype ConformanceAttemptRoots struct{}\n");
+			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
+			break;
+		case "c3-store-bridge-duplicate-method":
+			await installC3StoreBridge(fixture);
+			await appendSource(
+				fixture,
+				"internal/store/object_store.go",
+				"\nfunc (repository *ObjectStore) OpenContractTargetRecord(callContext context.Context, attemptRecord ConformanceAttemptRecord) (ContractTargetRecord, error) { return ContractTargetRecord{}, nil }\n",
+			);
+			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
+			break;
 		case "eligibility-core-capability-import":
 			await replaceExact(
 				fixture,
@@ -1281,7 +1554,15 @@ async function main() {
   const observed = [];
   for (const name of requiredCaseIDs) observed.push(await exercise(name));
   if (observed.join("\n") !== requiredCaseIDs.join("\n")) throw new Error("self-test case roster changed during execution");
-	const cleanControls = new Set(["clean", "harmless-comment", "harmless-astral-comment"]);
+	const cleanControls = new Set([
+		"clean",
+		"harmless-comment",
+		"harmless-astral-comment",
+		"c3-store-bridge",
+		"c3-store-bridge-raw-import",
+		"c3-store-bridge-renamed-identifiers",
+		"c3-store-import-camouflage-raw-string",
+	]);
 	const hostile = observed.filter((name) => !cleanControls.has(name)).length;
 	process.stdout.write(`U6 architecture checker self-test OK (${cleanControls.size} clean/comment controls; ${hostile}/${hostile} hostile cases)\n`);
 }
