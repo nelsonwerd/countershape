@@ -36,7 +36,7 @@ import {
 
 const selftestPath = fileURLToPath(import.meta.url);
 const verifierPath = resolve(dirname(selftestPath), "verify-current.mjs");
-const expectedRosterDigest = "2c108a435bfc92988715e45c6ce526d87d790ce3206ea3f610561c9d1e1e6f5d";
+const expectedRosterDigest = "3a94612bcf5a5a616c9bd4914d8554edc96f211d049fa49738019682ce0e5801";
 
 function fail(code, detail) {
 	throw new Error(`${code}: ${detail}`);
@@ -205,6 +205,35 @@ async function inspectRosters() {
 			path: "tools/check-p07b-c-architecture.mjs",
 			args: ["--run-go-json", profile],
 			marker: `P07B-C C2 Go JSON target execution OK (${profile}: ${count} passed, 0 skipped)`,
+		});
+	}
+	exactStep("architecture-p07b-c-c3", {
+		tool: "node",
+		tools: ["node", "go", "git", "sh", "cc", "cxx"],
+		path: "tools/check-p07b-c-architecture.mjs",
+		args: ["--c3"],
+		marker: "P07B-C C3 cumulative architecture boundary OK",
+	});
+	exactStep("architecture-p07b-c-c3-selftest", {
+		tool: "node",
+		tools: ["node", "go", "git", "sh", "cc", "cxx"],
+		path: "tools/check-p07b-c-architecture-selftest.mjs",
+		args: ["--c3"],
+		marker: "P07B-C C3 cumulative architecture defensive self-test OK (12 metadata cases; 35 Go JSON parser cases; 58 raw predecessor/parser cases)",
+	});
+	for (const [id, profile, count] of [
+		["go-json-p07b-c-c3-official-target", "c3-official-target", 10],
+		["go-json-p07b-c-c3-single-target", "c3-single-target", 7],
+		["go-json-p07b-c-c3-hostepoch", "c3-hostepoch", 8],
+		["go-json-p07b-c-c3-noderuntime", "c3-noderuntime", 12],
+		["go-json-p07b-c-c3-store-bridge", "c3-store-bridge", 6],
+	]) {
+		exactStep(id, {
+			tool: "node",
+			tools: ["node", "go", "git", "sh", "cc", "cxx"],
+			path: "tools/check-p07b-c-architecture.mjs",
+			args: ["--run-go-json", profile],
+			marker: `P07B-C C3 Go JSON target execution OK (${profile}: ${count} passed, 0 skipped)`,
 		});
 	}
 	exactStep("architecture-p07b-c-plan-selftest", {

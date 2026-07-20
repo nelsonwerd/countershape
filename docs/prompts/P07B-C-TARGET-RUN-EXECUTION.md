@@ -9,7 +9,7 @@ This pack turns the planning-only P07B-C shapes into a capability-only, crash-ho
 
 ## How to use this pack
 
-Execute `C0 → C1 → C2 → C2B → C3P → C3PB → C3 → C3B → C4 → C5 → C6`, including any separately declared maintenance boundary at the unit edge where it is introduced. Every arrow is a fresh didrun ledger or preserved unit-local ledger, exact staging review, commit, seal, Git-note inspection, and `NO_COLOR=1 didrun verify --strict` loop. When exact source-commit identity or grades must enter repository documentation, use a second receipt-document sub-boundary (`Ca` source, then `Cb` reconciliation) rather than creating a self-referential commit. Do not begin the next implementation unit until its last required sub-boundary exits strict with `0`.
+Execute the core source/receipt sequence `C0 → C1 → C1B → C2 → C2B → C3P → C3PB → C3 → C3B → C4 → C5 → C6`, inserting every separately declared maintenance boundary at its machine-ordered unit edge. Every arrow is a fresh didrun ledger or preserved unit-local ledger, exact staging review, commit, seal, Git-note inspection, and `NO_COLOR=1 didrun verify --strict` loop. When exact source-commit identity or grades must enter repository documentation, use a second receipt-document sub-boundary (`Ca` source, then `Cb` reconciliation) rather than creating a self-referential commit. Do not begin the next implementation unit until its last required sub-boundary exits strict with `0`.
 
 The user has explicitly authorized commits at verified shippable boundaries. That authorization does not allow pushes, releases, external provider calls, or weakening a failed receipt.
 
@@ -154,6 +154,7 @@ Locked ceilings: every canonical C body remains within the existing 1 MiB object
 | --- | --- | --- |
 | C0 | deep-dive corrections, controlling docs, pack, handoff | planning/scope lock only |
 | C1 | strict semantic model, schemas, examples, exhaustive algebra | inert canonical semantics only |
+| C1B | narrow C1 source-receipt reconciliation | sealed C1 receipt only; no source behavior or target authority |
 | C2 | nonhead storage mechanics, exact mappings, private evidence, interlock/claim substrate with test-only issuers; then a separate narrow C2B source-receipt reconciliation | persistence substrate only; no official target or production permit |
 | C3P | pre-authority boot-session semantic correction, exact C3 scope, and receipt machinery; then separate C3PB source-receipt reconciliation | inert corrected profile only; no live measurement or target authority |
 | C3 | direct single-target Git + Node/boot authority and target publication; then separate C3B source-receipt reconciliation | exact pre-spawn target authority only |
@@ -161,7 +162,7 @@ Locked ceilings: every canonical C body remains within the existing 1 MiB object
 | C5 | HTTP plus full five-domain standalone evidence | full P07B-C on exact exercised native tuple |
 | C6 | C6a cumulative hostile/fault/parity/expert-surface closure, then C6b receipt reconciliation | exact sealed P07B-C claims only |
 
-Every source boundary that must hand durable grades to a later unit is followed by its separately sealed receipt-reconciliation subunit. C2B, C3PB, and C3B may bind only their already-sealed source note, strict result, exact claim map, HTML snapshot, and ignored-ledger manifest; none may edit source/checker behavior or grade itself. C3 remains blocked until C3P, any separately introduced boundary maintenance, and C3PB all seal and verify strictly. C4 remains blocked until C3B closes.
+Every source boundary that must hand durable grades to a later unit is followed by its separately sealed receipt-reconciliation subunit. C1B, C2B, C3PB, and C3B may bind only their already-sealed source note, strict result, exact claim map, HTML snapshot, and ignored-ledger manifest; none may edit source/checker behavior or grade itself. C3 began only after C3P, the separately introduced boundary maintenance, and C3PB had all sealed and verified strictly. C4 remains blocked until C3B closes.
 
 ## What this pack does not cover
 
@@ -360,11 +361,15 @@ Make C3 the sole producer of an opaque `OfficialTarget`: one C2-reopened inert t
 ## Exact changes
 
 - Materialize/revalidate directly from opaque `InspectedTree`; share only private mechanics with comparison materialization.
+- Treat content-portable tree identity as object format plus immutable commit/tree OIDs. Keep repository fingerprint, Git version, and display ref as local provenance, open source and materialization repositories independently, and reject symlink or noncanonical roots.
 - Admit one explicit absolute Node path with owned probe and exact identity summaries. Measure `DARWIN_KERN_BOOTSESSIONUUID_V1` with the C3P parser/canonicalization contract and opaque capability; no caller-authored boot material enters.
 - Allocate/sync a fresh CONFORMANCE attempt attachment. Construct the C1 target only from C3-owned live prerequisites, persist it through C2's inert-record mechanics, then reopen the exact typed relationship.
 - Return only sealed `OfficialTarget`. It privately carries the exact C2 record, but that record remains mechanically inert when obtained outside C3. No public C3 API accepts copied target bytes, a digest/OID/runtime-string bag, generic CAS authority, or a prior process-local capability as a substitute.
 - Reopening official authority remeasures and revalidates the full C3 prerequisite graph, including live boot identity. C4 must independently measure boot again; a stale-boot target is never spawnable, while a changed UUID still makes no survivor-absence claim.
+- `OfficialTarget.Valid()` is structural only. A fresh `ReopenOfficialTarget` must refuse target/runtime/link/executable/materialization/boot drift and is the only authority C4 may consume adjacent to physical admission. The owned probe binds the cooperating executable's reported tuple and probe digest, not Node vendor authenticity.
+- The attempt-to-target relationship is create-once and first-durable-writer-wins. C3 allocates one attempt per publication; restart rebuilds every live capability instead of trusting stored locator fields. Exercise a 24-phase pre-spawn fault seam without exporting it as production authority.
 - Enroll the C3 target gate and hostile self-test in the cumulative verifier, and assert study-head inode/bytes remain unchanged.
+- Bind the exact C3S/C3F/C3L/C3A predecessor authority manifest, including parents, trees, subjects, note blob types/identities/raw-body digests, ordered claims, argv previews, and complete coverage.
 
 ## MUST NOT change
 
@@ -373,6 +378,12 @@ Make C3 the sole producer of an opaque `OfficialTarget`: one C2-reopened inert t
 ## Tests
 
 - Moving-ref pin, copied OID/body/generic-record refusal, dirty-worktree exclusion, unsupported tree forms, target-link mutation, runtime symlink/byte/probe mismatch, attempt reuse, boot mismatch, closed capability, restart full-live-authority rebuild, and pre-spawn fault matrix. Offline store clones remain an explicit nonclaim.
+- The live-parent matrix snapshots every scoped store path before refusal and proves exact names, modes, inode identities, ownership, link counts, sizes, and regular-file hashes are unchanged; an independently opened exact-content repository is the positive portable-identity control.
+- `OfficialTarget.Valid()` is snapshot-only and performs no storage repair. Hostile materialization and relationship mutations leave structural capability validity distinct from durable `ContractTargetRecord.Valid()`, while only physical reopen may refresh or refuse the graph.
+- Run exactly `TestC3OfficialTargetClosedCapabilityAndDefensiveGetters`, `TestC3HostEpochConcurrentMeasurementsNeverCache`, `TestC3NodeRuntimeCopiedCapabilitiesSerializeRevalidation`, and `TestC3ConformanceAttemptConcurrentValidationAndReopenAreRaceFree` under `-race`, `-p=1`, and `-timeout=20m` across their four owning packages. This is the direct-goroutine/sync/atomic C3 test-source roster; the five complete non-race authority profiles retain every other C3 behavior, including Git materialization.
+- The sole-issuer check uses the current Darwin/arm64/cgo Go build selection and import-qualified module-wide named-type and function graphs. It carries source-ordered lexical block/function/receiver generic scopes and structurally substitutes binding-sensitive instantiated arguments through output-bearing positions, including union terms and dependent/renamed receiver constraints. Known generic function call/value results and direct or shallowest-promoted generic method call/value/expression results are checked positionally; parenthesized callee and built-in forms normalize before resolution; omitted inferred output parameters fail closed; indexed module function/method call multi-results are tuple-positioned; and input-only generic consumers remain allowed. Hostile cases cover exported variables plus nested/indexed/shallowest-promoted selected fields, inferred conversion/make/new/identifier initializers, multiple dot imports, function-local and cross-package wrappers (including true declared import names), repeated nested generic instantiations, and held factories; unresolved external generic calls with target-bearing type arguments remain conservatively refused. Local value/function shadowing and non-call comma-ok tuple projection are not modeled exactly, and the check remains an explicit cooperating-code shape policy rather than whole-program dataflow proof.
+- Treat C3's verifier and verifier-self-test edits as roster-only enrollment of the seven C3 steps, not as an execution-setting change: cache lifetime, parallelism, package classification, child environment, lock semantics, and the repetition helper remain unchanged, while sequential verification work materially increases. Record this as an explicit superseding exception to C3V's blanket future-byte trigger, not literal satisfaction. The 52-case C1V load-sensitive qualification matrix is not rerun; the dedicated verifier self-test plus one cumulative pass establish only the evolved roster and one composition snapshot, not repeated load-flake stability or a new performance ceiling. Any later change to those execution authorities must rerun the complete matrix.
+- The final source boundary uses one private eighteen-claim source ledger. The later exact three-path boundary uses a separate seven-claim C3B receipt ledger and validates both receipt-absent C3 and receipt-present C3B documentation without reusing a source event.
 
 ## Gate
 

@@ -3,6 +3,8 @@ package store
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -12,6 +14,7 @@ import (
 	"strings"
 
 	"github.com/nelsonwerd/countershape/internal/canon"
+	contractmodel "github.com/nelsonwerd/countershape/internal/contractexec/model"
 	"github.com/nelsonwerd/countershape/internal/domain"
 )
 
@@ -29,6 +32,9 @@ const (
 	contractClaimKind     = "StartClaim"
 	contractProfileKind   = "ContractExecutionClassifierProfile"
 	contractProfileV1     = "CONTRACT_EXECUTION_EXACT_TUPLE_V1"
+	contractAttemptV1     = "contract-conformance-attempt/v1"
+	contractAttemptsDir   = "conformance-attempts"
+	contractAttemptMarker = "attempt.marker.json"
 
 	relationAttemptTarget = "CONFORMANCE_ATTEMPT_TO_TARGET"
 	relationTargetRun     = "TARGET_TO_FINALIZED_RUN"
@@ -121,13 +127,593 @@ type attemptStorageRecord struct {
 	storeInstance *objectStoreInstance
 	digest        domain.Digest
 	seal          *attemptRecordSeal
+	state         *conformanceAttemptState
 }
 
 type attemptRecordSeal struct{ marker byte }
 
 func (record attemptStorageRecord) validFor(store *ObjectStore) bool {
-	return store != nil && record.storeInstance == store.instance && record.seal != nil &&
-		record.seal.marker == 1 && record.digest.Valid()
+	if store == nil || store.instance == nil {
+		return false
+	}
+	store.instance.mu.Lock()
+	defer store.instance.mu.Unlock()
+	return record.validForLocked(store)
+}
+
+func (record attemptStorageRecord) validForLocked(store *ObjectStore) bool {
+	if store == nil || record.storeInstance != store.instance || record.seal == nil ||
+		record.seal.marker != 1 || !record.digest.Valid() {
+		return false
+	}
+	return record.state == nil || record.state.validForLocked(store, record.digest)
+}
+
+// ConformanceAttemptInput binds a fresh inert attempt root to the live facts
+// C3 has already reopened. The store generates the nonce; callers cannot pick
+// a durable attempt identity.
+type ConformanceAttemptInput struct {
+	ContractBundleDigest        domain.Digest
+	ResidueHeadDigest           domain.Digest
+	TreeIdentityDigest          domain.Digest
+	MaterializationPolicyDigest domain.Digest
+}
+
+type conformanceAttemptRoots struct {
+	attempt, candidateParent, fixture, home, temporary string
+	xdgConfig, xdgCache, xdgData, xdgState, state      string
+	evidence, marker                                   string
+}
+
+// ConformanceAttemptRoots exposes only fixed private paths derived by the
+// store. Paths confer no attempt or target authority on their own.
+type ConformanceAttemptRoots struct{ roots conformanceAttemptRoots }
+
+func (roots ConformanceAttemptRoots) AttemptRoot() string     { return roots.roots.attempt }
+func (roots ConformanceAttemptRoots) CandidateParent() string { return roots.roots.candidateParent }
+func (roots ConformanceAttemptRoots) FixtureRoot() string     { return roots.roots.fixture }
+func (roots ConformanceAttemptRoots) HomeRoot() string        { return roots.roots.home }
+func (roots ConformanceAttemptRoots) TemporaryRoot() string   { return roots.roots.temporary }
+func (roots ConformanceAttemptRoots) XDGConfigRoot() string   { return roots.roots.xdgConfig }
+func (roots ConformanceAttemptRoots) XDGCacheRoot() string    { return roots.roots.xdgCache }
+func (roots ConformanceAttemptRoots) XDGDataRoot() string     { return roots.roots.xdgData }
+func (roots ConformanceAttemptRoots) XDGStateRoot() string    { return roots.roots.xdgState }
+func (roots ConformanceAttemptRoots) StateRoot() string       { return roots.roots.state }
+func (roots ConformanceAttemptRoots) EvidenceRoot() string    { return roots.roots.evidence }
+func (roots ConformanceAttemptRoots) MarkerPath() string      { return roots.roots.marker }
+
+type conformanceAttemptState struct {
+	input     ConformanceAttemptInput
+	nonce     string
+	canonical []byte
+	object    SemanticObject
+	authority ObjectAuthority
+	roots     conformanceAttemptRoots
+	dirs      map[string]os.FileInfo
+	marker    os.FileInfo
+	seal      *attemptRecordSeal
+}
+
+// ConformanceAttemptRecord is a durable but inert store-bound attachment. It
+// cannot issue OfficialTarget, process, interlock, or permit authority.
+type ConformanceAttemptRecord struct {
+	store  *ObjectStore
+	record attemptStorageRecord
+}
+
+func (record ConformanceAttemptRecord) Valid() bool {
+	return record.store != nil && record.record.validFor(record.store) && record.record.state != nil
+}
+func (record ConformanceAttemptRecord) Digest() domain.Digest {
+	if !record.Valid() {
+		return ""
+	}
+	return record.record.digest
+}
+func (record ConformanceAttemptRecord) ContractBundleDigest() domain.Digest {
+	if !record.Valid() {
+		return ""
+	}
+	return record.record.state.input.ContractBundleDigest
+}
+func (record ConformanceAttemptRecord) ResidueHeadDigest() domain.Digest {
+	if !record.Valid() {
+		return ""
+	}
+	return record.record.state.input.ResidueHeadDigest
+}
+func (record ConformanceAttemptRecord) TreeIdentityDigest() domain.Digest {
+	if !record.Valid() {
+		return ""
+	}
+	return record.record.state.input.TreeIdentityDigest
+}
+func (record ConformanceAttemptRecord) MaterializationPolicyDigest() domain.Digest {
+	if !record.Valid() {
+		return ""
+	}
+	return record.record.state.input.MaterializationPolicyDigest
+}
+func (record ConformanceAttemptRecord) InstanceNonce() string {
+	if !record.Valid() {
+		return ""
+	}
+	return record.record.state.nonce
+}
+func (record ConformanceAttemptRecord) Roots() ConformanceAttemptRoots {
+	if !record.Valid() {
+		return ConformanceAttemptRoots{}
+	}
+	return ConformanceAttemptRoots{roots: record.record.state.roots}
+}
+
+// ContractTargetRecord is the public inert wrapper over C2's exact typed
+// relationship. It exposes identity only, never semantic bytes or issuance.
+type ContractTargetRecord struct {
+	store  *ObjectStore
+	record targetStorageRecord
+}
+
+func (record ContractTargetRecord) Valid() bool {
+	return record.store != nil && record.record.validFor(record.store)
+}
+func (record ContractTargetRecord) Digest() domain.Digest {
+	if !record.Valid() {
+		return ""
+	}
+	return record.record.record.object.Digest()
+}
+func (record ContractTargetRecord) AttemptDigest() domain.Digest {
+	if !record.Valid() {
+		return ""
+	}
+	return record.record.record.relation.attemptDigest
+}
+
+var conformanceAttemptRootNames = [...]string{
+	"candidate-parent", "evidence", "fixture", "home", "state", "tmp",
+	"xdg-cache", "xdg-config", "xdg-data", "xdg-state",
+}
+
+func buildConformanceAttempt(
+	input ConformanceAttemptInput,
+	nonce string,
+) (SemanticObject, []byte, error) {
+	if !input.ContractBundleDigest.Valid() || !input.ResidueHeadDigest.Valid() ||
+		!input.TreeIdentityDigest.Valid() || !input.MaterializationPolicyDigest.Valid() ||
+		len(nonce) != 64 || strings.ToLower(nonce) != nonce {
+		return SemanticObject{}, nil, refuse(codeContractRecordRefused, "attempt input is incomplete", nil)
+	}
+	if decoded, err := hex.DecodeString(nonce); err != nil || len(decoded) != 32 {
+		return SemanticObject{}, nil, refuse(codeContractRecordRefused, "attempt nonce is malformed", err)
+	}
+	digest, exact, err := canon.DigestTyped(contractAttemptKind, map[string]any{
+		"schema_version": domain.SchemaVersion, "kind": contractAttemptKind, "attempt_version": contractAttemptV1,
+		"attempt_purpose": "CONFORMANCE", "contract_bundle_digest": input.ContractBundleDigest.String(),
+		"residue_head_digest": input.ResidueHeadDigest.String(), "tree_identity_digest": input.TreeIdentityDigest.String(),
+		"materialization_policy_digest": input.MaterializationPolicyDigest.String(), "instance_nonce": nonce,
+		"allocation_profile": "PRIVATE_FRESH_ROOT_V1", "root_names": append([]string(nil), conformanceAttemptRootNames[:]...),
+		"marker_ordering": "DURABLE_BEFORE_SPAWN",
+	})
+	if err != nil {
+		return SemanticObject{}, nil, refuse(codeContractRecordRefused, "attempt marker could not be encoded", err)
+	}
+	parsed, err := domain.ParseDigest(digest.String())
+	if err != nil {
+		return SemanticObject{}, nil, err
+	}
+	object, err := NewSemanticObject(contractAttemptKind, parsed, exact)
+	return object, append([]byte(nil), exact...), err
+}
+
+// AllocateConformanceAttempt creates a new private root exactly once. Any
+// partial failure leaves only inert orphan storage and returns no record.
+func (store *ObjectStore) AllocateConformanceAttempt(ctx context.Context, input ConformanceAttemptInput) (ConformanceAttemptRecord, error) {
+	if store == nil || store.instance == nil {
+		return ConformanceAttemptRecord{}, refuse(codeInvalidObjectStore, "store is zero or uninitialized", nil)
+	}
+	if err := storeContextRefusal(ctx, codeContractRecordRefused); err != nil {
+		return ConformanceAttemptRecord{}, err
+	}
+	var random [32]byte
+	if _, err := rand.Read(random[:]); err != nil {
+		return ConformanceAttemptRecord{}, refuse(codeContractRecordRefused, "fresh attempt nonce allocation failed", err)
+	}
+	nonce := hex.EncodeToString(random[:])
+	object, exact, err := buildConformanceAttempt(input, nonce)
+	if err != nil {
+		return ConformanceAttemptRecord{}, err
+	}
+	store.instance.mu.Lock()
+	defer store.instance.mu.Unlock()
+	if err := store.assertReady(); err != nil {
+		return ConformanceAttemptRecord{}, err
+	}
+	lock, err := openAndLockStudy(ctx, filepath.Join(store.contractRoot, contractNamespaceLock), true)
+	if err != nil {
+		return ConformanceAttemptRecord{}, refuse(codeContractRecordRefused, "attempt namespace lock failed", err)
+	}
+	defer lock.release()
+	base, err := store.ensureContractDirectoryLocked(store.contractRuns, contractAttemptsDir)
+	if err != nil {
+		return ConformanceAttemptRecord{}, err
+	}
+	hexDigest, err := strictDigestHex(object.Digest())
+	if err != nil {
+		return ConformanceAttemptRecord{}, err
+	}
+	if err := rejectCaseAlias(base, hexDigest); err != nil {
+		return ConformanceAttemptRecord{}, refuse(codeContractRecordConflict, "attempt root aliases an existing name", err)
+	}
+	attemptRoot := filepath.Join(base, hexDigest)
+	if err := os.Mkdir(attemptRoot, 0o700); err != nil {
+		return ConformanceAttemptRecord{}, refuse(codeContractRecordConflict, "fresh attempt root already exists or cannot be created", err)
+	}
+	if err := os.Chmod(attemptRoot, 0o700); err != nil {
+		return ConformanceAttemptRecord{}, refuse(codeContractRecordAmbiguous, "fresh attempt root mode failed", err)
+	}
+	if err := syncDirectory(base); err != nil {
+		return ConformanceAttemptRecord{}, refuse(codeContractRecordAmbiguous, "fresh attempt-root parent sync failed", err)
+	}
+	dirs := make(map[string]os.FileInfo, len(conformanceAttemptRootNames)+1)
+	rootInfo, err := exactPrivateDirectoryInfo(attemptRoot)
+	if err != nil {
+		return ConformanceAttemptRecord{}, err
+	}
+	dirs[attemptRoot] = rootInfo
+	for _, name := range conformanceAttemptRootNames {
+		path := filepath.Join(attemptRoot, name)
+		if err := os.Mkdir(path, 0o700); err != nil {
+			return ConformanceAttemptRecord{}, refuse(codeContractRecordAmbiguous, "fresh attempt child allocation failed", err)
+		}
+		if err := os.Chmod(path, 0o700); err != nil {
+			return ConformanceAttemptRecord{}, refuse(codeContractRecordAmbiguous, "fresh attempt child mode failed", err)
+		}
+		if err := syncDirectory(attemptRoot); err != nil {
+			return ConformanceAttemptRecord{}, refuse(codeContractRecordAmbiguous, "fresh attempt child parent sync failed", err)
+		}
+		info, err := exactPrivateDirectoryInfo(path)
+		if err != nil {
+			return ConformanceAttemptRecord{}, err
+		}
+		dirs[path] = info
+	}
+	authority, err := store.publishLocked(ctx, object)
+	if err != nil {
+		return ConformanceAttemptRecord{}, refuse(codeContractRecordAmbiguous, "attempt object publication failed", err)
+	}
+	roots := rootsAt(attemptRoot)
+	if _, err := createExactPrivateFile(roots.evidence, contractAttemptMarker, exact, nil); err != nil {
+		return ConformanceAttemptRecord{}, refuse(codeContractRecordAmbiguous, "attempt marker publication failed", err)
+	}
+	marker, err := exactObjectInfo(roots.marker, int64(len(exact)))
+	if err != nil {
+		return ConformanceAttemptRecord{}, refuse(codeContractRecordAmbiguous, "attempt marker did not reopen", err)
+	}
+	if err := syncDirectory(attemptRoot); err != nil {
+		return ConformanceAttemptRecord{}, refuse(codeContractRecordAmbiguous, "attempt root durability sync failed", err)
+	}
+	state := &conformanceAttemptState{
+		input: input, nonce: nonce, canonical: exact, object: object, authority: authority,
+		roots: roots, dirs: dirs, marker: marker, seal: &attemptRecordSeal{marker: 1},
+	}
+	internal := attemptStorageRecord{storeInstance: store.instance, digest: object.Digest(), seal: state.seal, state: state}
+	if !state.validForLocked(store, object.Digest()) {
+		return ConformanceAttemptRecord{}, refuse(codeContractRecordAmbiguous, "fresh attempt failed exact reopen", nil)
+	}
+	return ConformanceAttemptRecord{store: store, record: internal}, nil
+}
+
+// OpenConformanceAttempt reconstructs inert attempt authority from its exact
+// digest after a process restart. It does not discover or select attempts.
+func (store *ObjectStore) OpenConformanceAttempt(ctx context.Context, digest domain.Digest) (ConformanceAttemptRecord, error) {
+	if store == nil || store.instance == nil || !digest.Valid() {
+		return ConformanceAttemptRecord{}, refuse(codeContractRecordRefused, "store and exact attempt digest are required", nil)
+	}
+	store.instance.mu.Lock()
+	defer store.instance.mu.Unlock()
+	if err := storeContextRefusal(ctx, codeContractRecordRefused); err != nil {
+		return ConformanceAttemptRecord{}, err
+	}
+	if err := store.assertReady(); err != nil {
+		return ConformanceAttemptRecord{}, err
+	}
+	lock, err := openAndLockStudy(ctx, filepath.Join(store.contractRoot, contractNamespaceLock), true)
+	if err != nil {
+		return ConformanceAttemptRecord{}, refuse(codeContractRecordRefused, "attempt namespace lock failed", err)
+	}
+	defer lock.release()
+	record, err := store.openConformanceAttemptLocked(digest)
+	if err != nil {
+		return ConformanceAttemptRecord{}, err
+	}
+	return ConformanceAttemptRecord{store: store, record: record}, nil
+}
+
+func (store *ObjectStore) openConformanceAttemptLocked(digest domain.Digest) (attemptStorageRecord, error) {
+	hexDigest, err := strictDigestHex(digest)
+	if err != nil {
+		return attemptStorageRecord{}, err
+	}
+	base := filepath.Join(store.contractRuns, contractAttemptsDir)
+	baseInfo, err := exactPrivateDirectoryInfo(base)
+	if err != nil {
+		return attemptStorageRecord{}, refuse(codeContractRecordRefused, "attempt namespace is absent or changed", err)
+	}
+	store.contractInfos[base] = baseInfo
+	if err := rejectCaseAlias(base, hexDigest); err != nil {
+		return attemptStorageRecord{}, refuse(codeContractRecordRefused, "attempt root changed exact spelling", err)
+	}
+	attemptRoot := filepath.Join(base, hexDigest)
+	roots := rootsAt(attemptRoot)
+	exact, err := readExactPrivateFile(roots.marker, -1)
+	if err != nil {
+		return attemptStorageRecord{}, refuse(codeContractRecordRefused, "attempt marker is absent or invalid", err)
+	}
+	input, nonce, err := parseConformanceAttempt(exact, digest)
+	if err != nil {
+		return attemptStorageRecord{}, err
+	}
+	object, err := NewSemanticObject(contractAttemptKind, digest, exact)
+	if err != nil {
+		return attemptStorageRecord{}, err
+	}
+	objectPath, _, err := store.existingObjectPath(digest)
+	if err != nil {
+		return attemptStorageRecord{}, err
+	}
+	reopened, err := reopenExactObject(objectPath, object)
+	if err != nil || !sameSemanticObject(reopened, object) {
+		return attemptStorageRecord{}, refuse(codeContractRecordRefused, "attempt object did not reopen", err)
+	}
+	dirs, marker, err := inspectAttemptRoots(roots, exact)
+	if err != nil {
+		return attemptStorageRecord{}, err
+	}
+	seal := &attemptRecordSeal{marker: 1}
+	state := &conformanceAttemptState{
+		input: input, nonce: nonce, canonical: exact, object: object, authority: store.authority(object),
+		roots: roots, dirs: dirs, marker: marker, seal: seal,
+	}
+	record := attemptStorageRecord{storeInstance: store.instance, digest: digest, seal: seal, state: state}
+	if !state.validForLocked(store, digest) {
+		return attemptStorageRecord{}, refuse(codeContractRecordRefused, "attempt graph failed exact reconstruction", nil)
+	}
+	return record, nil
+}
+
+// PersistContractTargetRecord preserves one valid inert model target through
+// C2's object/witness/relation mechanics and returns only an opaque record. If
+// cooperating callers race different valid children for one attempt, the first
+// exact durable relationship wins; this layer does not arbitrate semantic intent.
+func (store *ObjectStore) PersistContractTargetRecord(ctx context.Context, attempt ConformanceAttemptRecord, target contractmodel.ContractExecutionTarget) (ContractTargetRecord, error) {
+	if store == nil || attempt.store != store || !attempt.Valid() || !target.Valid() ||
+		!attemptJoinsTarget(attempt.record.state, target) {
+		return ContractTargetRecord{}, refuse(codeContractRecordRefused, "attempt and inert target do not join", nil)
+	}
+	object, err := NewSemanticObject(contractTargetKind, target.Digest(), target.CanonicalBytes())
+	if err != nil {
+		return ContractTargetRecord{}, err
+	}
+	_, _, persistErr := persistTargetRecord(ctx, store, targetStorageInput{attempt: attempt.record, object: object}, nil)
+	reopened, openErr := openTargetByAttempt(ctx, store, attempt.record)
+	if openErr != nil || reopened.record.object.Digest() != target.Digest() ||
+		!bytes.Equal(reopened.record.object.CanonicalBytes(), target.CanonicalBytes()) {
+		return ContractTargetRecord{}, refuse(codeContractRecordAmbiguous, "target publication did not reconcile exactly", errors.Join(persistErr, openErr))
+	}
+	return ContractTargetRecord{store: store, record: reopened}, nil
+}
+
+// OpenContractTargetRecord reopens only the typed child of one live attempt
+// attachment; it performs no discovery and issues no OfficialTarget.
+func (store *ObjectStore) OpenContractTargetRecord(ctx context.Context, attempt ConformanceAttemptRecord) (ContractTargetRecord, error) {
+	if store == nil || attempt.store != store || !attempt.Valid() {
+		return ContractTargetRecord{}, refuse(codeContractRecordRefused, "live attempt attachment is required", nil)
+	}
+	record, err := openTargetByAttempt(ctx, store, attempt.record)
+	if err != nil {
+		return ContractTargetRecord{}, err
+	}
+	target, err := contractmodel.ParseContractExecutionTarget(record.record.object.CanonicalBytes(), record.record.object.Digest())
+	if err != nil || !attemptJoinsTarget(attempt.record.state, target) {
+		return ContractTargetRecord{}, refuse(codeContractRecordRefused, "reopened target differs from its attempt graph", err)
+	}
+	return ContractTargetRecord{store: store, record: record}, nil
+}
+
+func attemptJoinsTarget(state *conformanceAttemptState, target contractmodel.ContractExecutionTarget) bool {
+	if state == nil || !target.Valid() {
+		return false
+	}
+	input := target.Input()
+	return input.ContractBundleDigest == state.input.ContractBundleDigest &&
+		input.TerminalResidue.HeadDigest == state.input.ResidueHeadDigest &&
+		input.Tree.TreeIdentityDigest == state.input.TreeIdentityDigest &&
+		input.Tree.MaterializationPolicyDigest == state.input.MaterializationPolicyDigest &&
+		input.Attempt.ArtifactDigest == state.object.Digest() && input.Attempt.InstanceNonce == state.nonce
+}
+
+func rootsAt(attemptRoot string) conformanceAttemptRoots {
+	return conformanceAttemptRoots{
+		attempt: attemptRoot, candidateParent: filepath.Join(attemptRoot, "candidate-parent"),
+		fixture: filepath.Join(attemptRoot, "fixture"), home: filepath.Join(attemptRoot, "home"),
+		temporary: filepath.Join(attemptRoot, "tmp"), xdgConfig: filepath.Join(attemptRoot, "xdg-config"),
+		xdgCache: filepath.Join(attemptRoot, "xdg-cache"), xdgData: filepath.Join(attemptRoot, "xdg-data"),
+		xdgState: filepath.Join(attemptRoot, "xdg-state"), state: filepath.Join(attemptRoot, "state"),
+		evidence: filepath.Join(attemptRoot, "evidence"),
+		marker:   filepath.Join(attemptRoot, "evidence", contractAttemptMarker),
+	}
+}
+
+func attemptRootPaths(roots conformanceAttemptRoots) []string {
+	return []string{
+		roots.attempt, roots.candidateParent, roots.evidence, roots.fixture, roots.home,
+		roots.state, roots.temporary, roots.xdgCache, roots.xdgConfig, roots.xdgData, roots.xdgState,
+	}
+}
+
+func inspectAttemptRoots(
+	roots conformanceAttemptRoots,
+	exact []byte,
+) (map[string]os.FileInfo, os.FileInfo, error) {
+	dirs := make(map[string]os.FileInfo, len(conformanceAttemptRootNames)+1)
+	for _, path := range attemptRootPaths(roots) {
+		info, err := exactPrivateDirectoryInfo(path)
+		if err != nil {
+			return nil, nil, refuse(codeContractRecordRefused, "attempt directory facts differ", err)
+		}
+		dirs[path] = info
+	}
+	entries, err := os.ReadDir(roots.attempt)
+	if err != nil || len(entries) != len(conformanceAttemptRootNames) {
+		return nil, nil, refuse(codeContractRecordRefused, "attempt root roster differs", err)
+	}
+	names := make([]string, len(entries))
+	for index, entry := range entries {
+		names[index] = entry.Name()
+	}
+	sort.Strings(names)
+	if !stringRosterEqual(names, conformanceAttemptRootNames[:]) {
+		return nil, nil, refuse(codeContractRecordRefused, "attempt root names differ", nil)
+	}
+	evidenceEntries, err := os.ReadDir(roots.evidence)
+	if err != nil || len(evidenceEntries) != 1 || evidenceEntries[0].Name() != contractAttemptMarker {
+		return nil, nil, refuse(codeContractRecordRefused, "attempt evidence roster differs", err)
+	}
+	marker, err := exactObjectInfo(roots.marker, int64(len(exact)))
+	if err != nil {
+		return nil, nil, refuse(codeContractRecordRefused, "attempt marker facts differ", err)
+	}
+	body, err := readExactPrivateFile(roots.marker, int64(len(exact)))
+	if err != nil || !bytes.Equal(body, exact) {
+		return nil, nil, refuse(codeContractRecordRefused, "attempt marker bytes differ", err)
+	}
+	return dirs, marker, nil
+}
+
+func (state *conformanceAttemptState) validForLocked(store *ObjectStore, digest domain.Digest) bool {
+	if state == nil || store == nil || state.seal == nil || state.seal.marker != 1 ||
+		!state.object.Valid() || state.object.Kind() != contractAttemptKind || state.object.Digest() != digest ||
+		state.authority.storeInstance != store.instance || !sameSemanticObject(state.authority.object, state.object) ||
+		!bytes.Equal(state.canonical, state.object.CanonicalBytes()) || state.nonce == "" || store.assertReady() != nil {
+		return false
+	}
+	hexDigest, err := strictDigestHex(digest)
+	base := filepath.Join(store.contractRuns, contractAttemptsDir)
+	if err != nil || rejectCaseAlias(base, hexDigest) != nil || state.roots.attempt != filepath.Join(base, hexDigest) ||
+		state.roots != rootsAt(state.roots.attempt) {
+		return false
+	}
+	input, nonce, err := parseConformanceAttempt(state.canonical, digest)
+	if err != nil || input != state.input || nonce != state.nonce {
+		return false
+	}
+	currentDirs, currentMarker, err := inspectAttemptRoots(state.roots, state.canonical)
+	if err != nil || len(currentDirs) != len(state.dirs) || state.marker == nil || !os.SameFile(state.marker, currentMarker) {
+		return false
+	}
+	for path, retained := range state.dirs {
+		current, present := currentDirs[path]
+		if !present || retained == nil || !os.SameFile(retained, current) {
+			return false
+		}
+	}
+	objectPath, _, err := store.existingObjectPath(digest)
+	if err != nil {
+		return false
+	}
+	reopened, err := reopenExactObject(objectPath, state.object)
+	return err == nil && sameSemanticObject(reopened, state.object)
+}
+
+func parseConformanceAttempt(
+	exact []byte,
+	expected domain.Digest,
+) (ConformanceAttemptInput, string, error) {
+	value, err := canon.Parse(exact)
+	if err != nil {
+		return ConformanceAttemptInput{}, "", refuse(codeContractRecordRefused, "attempt marker is not canonical JSON", err)
+	}
+	canonical, err := value.CanonicalChecked()
+	members, object := value.Members()
+	if err != nil || !object || len(members) != 12 || !bytes.Equal(canonical, exact) {
+		return ConformanceAttemptInput{}, "", refuse(codeContractRecordRefused, "attempt marker roster or canonical bytes differ", err)
+	}
+	text := func(name string) (string, bool) {
+		member, present := value.LookupMember(name)
+		if !present {
+			return "", false
+		}
+		return member.Text()
+	}
+	schema, schemaOK := text("schema_version")
+	kind, kindOK := text("kind")
+	version, versionOK := text("attempt_version")
+	purpose, purposeOK := text("attempt_purpose")
+	allocation, allocationOK := text("allocation_profile")
+	ordering, orderingOK := text("marker_ordering")
+	nonce, nonceOK := text("instance_nonce")
+	if !schemaOK || !kindOK || !versionOK || !purposeOK || !allocationOK || !orderingOK || !nonceOK ||
+		schema != domain.SchemaVersion || kind != contractAttemptKind || version != contractAttemptV1 ||
+		purpose != "CONFORMANCE" || allocation != "PRIVATE_FRESH_ROOT_V1" || ordering != "DURABLE_BEFORE_SPAWN" {
+		return ConformanceAttemptInput{}, "", refuse(codeContractRecordRefused, "attempt marker constants differ", nil)
+	}
+	parseDigest := func(name string) (domain.Digest, error) {
+		raw, ok := text(name)
+		if !ok {
+			return "", errors.New("attempt digest member is absent")
+		}
+		return domain.ParseDigest(raw)
+	}
+	input := ConformanceAttemptInput{}
+	input.ContractBundleDigest, err = parseDigest("contract_bundle_digest")
+	if err != nil {
+		return ConformanceAttemptInput{}, "", err
+	}
+	input.ResidueHeadDigest, err = parseDigest("residue_head_digest")
+	if err != nil {
+		return ConformanceAttemptInput{}, "", err
+	}
+	input.TreeIdentityDigest, err = parseDigest("tree_identity_digest")
+	if err != nil {
+		return ConformanceAttemptInput{}, "", err
+	}
+	input.MaterializationPolicyDigest, err = parseDigest("materialization_policy_digest")
+	if err != nil {
+		return ConformanceAttemptInput{}, "", err
+	}
+	rootsValue, present := value.LookupMember("root_names")
+	elements, array := rootsValue.Elements()
+	if !present || !array || len(elements) != len(conformanceAttemptRootNames) {
+		return ConformanceAttemptInput{}, "", refuse(codeContractRecordRefused, "attempt root-name roster differs", nil)
+	}
+	rootNames := make([]string, len(elements))
+	for index, element := range elements {
+		rootNames[index], present = element.Text()
+		if !present {
+			return ConformanceAttemptInput{}, "", refuse(codeContractRecordRefused, "attempt root name is not text", nil)
+		}
+	}
+	if !stringRosterEqual(rootNames, conformanceAttemptRootNames[:]) {
+		return ConformanceAttemptInput{}, "", refuse(codeContractRecordRefused, "attempt root-name order differs", nil)
+	}
+	rebuilt, _, err := buildConformanceAttempt(input, nonce)
+	if err != nil || rebuilt.Digest() != expected || !bytes.Equal(rebuilt.CanonicalBytes(), exact) {
+		return ConformanceAttemptInput{}, "", refuse(codeContractRecordRefused, "attempt marker digest differs", err)
+	}
+	return input, nonce, nil
+}
+
+func stringRosterEqual(left, right []string) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for index := range left {
+		if left[index] != right[index] {
+			return false
+		}
+	}
+	return true
 }
 
 type targetStorageInput struct {

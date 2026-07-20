@@ -6,9 +6,14 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+	collectC3PredecessorAuthority,
+	collectC3PredecessorRecordAuthority,
 	collectC2Facts,
+	collectC3Facts,
 	collectFacts,
+	inspectC3DidrunNote,
 	validateC2Facts,
+	validateC3Facts,
 	validateFacts,
 	validateGoJSONTranscript,
 } from "./check-p07b-c-architecture.mjs";
@@ -27,7 +32,7 @@ const cases = Object.freeze([
 	Object.freeze({ id: "dependency-closure", code: "P07B_C1_DEPENDENCY_CLOSURE" }),
 	Object.freeze({ id: "ignored-production", code: "P07B_C1_PRODUCTION_TOPOLOGY" }),
 	Object.freeze({ id: "foreign-build-input", code: "P07B_C1_PRODUCTION_TOPOLOGY" }),
-	Object.freeze({ id: "premature-importer", code: "P07B_C1_PREMATURE_IMPORTER" }),
+	Object.freeze({ id: "premature-importer", code: "P07B_C1_IMPORTER_ROSTER" }),
 	Object.freeze({ id: "schema-closure", code: "P07B_C1_SCHEMA_CLOSURE" }),
 	Object.freeze({ id: "schema-required-roster", code: "P07B_C1_SCHEMA_REQUIRED_ROSTER" }),
 	Object.freeze({ id: "target-root", code: "P07B_C1_OBJECT_ROSTER" }),
@@ -40,7 +45,7 @@ const cases = Object.freeze([
 	Object.freeze({ id: "c0-authority", code: "P07B_C1_C0_AUTHORITY" }),
 	Object.freeze({ id: "topology", code: "P07B_C1_PRODUCTION_TOPOLOGY" }),
 ]);
-const expectedRosterDigest = "70ceb6322134b002aeff648c01267d4a95b98eb00bbe0a8c7f1ea5f4ff19c044";
+const expectedRosterDigest = "061b6b305f56685e757864b6ed5fda600819a8ffa3b1f5a90f924e1eb0547b3b";
 const c2Cases = Object.freeze([
 	Object.freeze({ id: "store-production-files", code: "P07B_C2_STORE_TOPOLOGY" }),
 	Object.freeze({ id: "store-directory-entry", code: "P07B_C2_STORE_TOPOLOGY" }),
@@ -90,6 +95,21 @@ const c2Cases = Object.freeze([
 	Object.freeze({ id: "private-identity-tests", code: "P07B_C2_PRIVATE_EVIDENCE" }),
 ]);
 const expectedC2RosterDigest = "9cffa462cff50a197afe3733529a0eba6ebc6d29a5399ea33ee6d33019fd885f";
+const c3Cases = Object.freeze([
+	Object.freeze({ id: "package-topology", code: "P07B_C3_PACKAGE_TOPOLOGY" }),
+	Object.freeze({ id: "build-tags", code: "P07B_C3_BUILD_TAG_ROSTER" }),
+	Object.freeze({ id: "source-import", code: "P07B_C3_IMPORT_ROSTER" }),
+	Object.freeze({ id: "exported-surface", code: "P07B_C3_EXPORTED_SURFACE" }),
+	Object.freeze({ id: "test-file-roster", code: "P07B_C3_TEST_FILE_ROSTER" }),
+	Object.freeze({ id: "inherited-c2", code: "P07B_C3_INHERITED_C2" }),
+	Object.freeze({ id: "store-bridge", code: "P07B_C3_STORE_BRIDGE" }),
+	Object.freeze({ id: "git-target", code: "P07B_C3_GIT_TARGET" }),
+	Object.freeze({ id: "host-epoch", code: "P07B_C3_HOST_EPOCH" }),
+	Object.freeze({ id: "node-runtime", code: "P07B_C3_NODE_RUNTIME" }),
+	Object.freeze({ id: "official-target", code: "P07B_C3_OFFICIAL_TARGET" }),
+	Object.freeze({ id: "predecessor", code: "P07B_C3_PREDECESSOR" }),
+]);
+const expectedC3RosterDigest = "d4e3f7a08fadd7e09022d7113aec267cc7dd66de41829a2bbe687d4c86350740";
 
 function rosterDigest(roster = cases) {
 	const hash = createHash("sha256");
@@ -113,13 +133,21 @@ function requireC2Violation(facts, code, id) {
 	}
 }
 
+function requireC3Violation(facts, code, id) {
+	const problems = validateC3Facts(facts);
+	if (!problems.some((problem) => problem.code === code)) {
+		fail("P07B_C3_SELFTEST_FALSE_NEGATIVE", `${id}:${problems.map((problem) => problem.code).join(",")}`);
+	}
+}
+
 function runCleanChecker(phase = "c1") {
-	const args = phase === "c2" ? [checker, "--c2"] : [checker];
-	const marker = phase === "c2" ? "P07B-C C2 cumulative architecture boundary OK" : "P07B-C C1 architecture boundary OK";
+	const args = phase === "c3" ? [checker, "--c3"] : phase === "c2" ? [checker, "--c2"] : [checker];
+	const marker = phase === "c3" ? "P07B-C C3 cumulative architecture boundary OK" :
+		phase === "c2" ? "P07B-C C2 cumulative architecture boundary OK" : "P07B-C C1 architecture boundary OK";
 	const result = spawnSync(process.execPath, args, {
 		cwd: root,
 		encoding: "utf8",
-		timeout: phase === "c2" ? 420_000 : 180_000,
+		timeout: phase === "c3" ? 1_200_000 : phase === "c2" ? 420_000 : 180_000,
 		maxBuffer: 32 * 1024 * 1024,
 		env: {
 			...process.env,
@@ -129,7 +157,8 @@ function runCleanChecker(phase = "c1") {
 		},
 	});
 	if (result.error || result.signal || result.status !== 0 || result.stderr !== "" || result.stdout.trim() !== marker) {
-		fail(phase === "c2" ? "P07B_C2_SELFTEST_CLEAN_CHECKER" : "P07B_C1_SELFTEST_CLEAN_CHECKER",
+		fail(phase === "c3" ? "P07B_C3_SELFTEST_CLEAN_CHECKER" :
+			phase === "c2" ? "P07B_C2_SELFTEST_CLEAN_CHECKER" : "P07B_C1_SELFTEST_CLEAN_CHECKER",
 			`${result.status ?? result.signal}: ${result.stderr || result.stdout || result.error}`);
 	}
 }
@@ -208,6 +237,213 @@ function inspectC2GoJSONTranscriptParser() {
 	return hostile.length + 1;
 }
 
+const c3ParserProfiles = Object.freeze([
+	Object.freeze({
+		name: "c3-official-target",
+		packagePath: "github.com/nelsonwerd/countershape/internal/contractexec",
+		tests: Object.freeze([
+			"TestC3OfficialTargetAttemptsAreFreshAndDistinct",
+			"TestC3OfficialTargetClosedCapabilityAndDefensiveGetters",
+			"TestC3OfficialTargetInvalidPreSpawnInputsReturnNoAuthority",
+			"TestC3OfficialTargetLinkedRelationshipMutationRefusesReopen",
+			"TestC3OfficialTargetMaterializationMutationRefusesReopen",
+			"TestC3OfficialTargetMovingRefCannotRetargetReopen",
+			"TestC3OfficialTargetPublicSurfaceAndSoleIssuer",
+			"TestC3OpenOfficialTargetRebuildsFullAuthorityAcrossRestart",
+			"TestC3OpenOfficialTargetLiveParentMatrix",
+			"TestC3PublishOfficialTargetJoinsExactLivePrerequisiteGraph",
+		]),
+	}),
+	Object.freeze({
+		name: "c3-single-target",
+		packagePath: "github.com/nelsonwerd/countershape/internal/gitobj",
+		tests: Object.freeze([
+			"TestC3SingleTargetAmbiguityRequiresExplicitReopen",
+			"TestC3SingleTargetCannotPublishTwiceIntoOnePrivateParent",
+			"TestC3SingleTargetExcludesDirtyWorktreeBytes",
+			"TestC3SingleTargetMaterializesDirectlyFromInspectedAuthority",
+			"TestC3SingleTargetMovingRefCannotChangePinnedBytes",
+			"TestC3SingleTargetRefusesUnsupportedTreeFormsBeforePublication",
+			"TestC3SingleTargetReopenRefusesEveryPublishedMutation",
+		]),
+	}),
+	Object.freeze({
+		name: "c3-hostepoch",
+		packagePath: "github.com/nelsonwerd/countershape/internal/hostepoch",
+		tests: Object.freeze([
+			"TestC3HostEpochCanonicalMeasurement",
+			"TestC3HostEpochConcurrentMeasurementsNeverCache",
+			"TestC3HostEpochContextAndForgedAuthorityRefuse",
+			"TestC3HostEpochDarwinLiveMeasurement",
+			"TestC3HostEpochFaultAndInstabilityRefuse",
+			"TestC3HostEpochMalformedSamplesRefuse",
+			"TestC3HostEpochPublicSurfaceIsClosed",
+			"TestC3HostEpochRevalidationRequiresSameFreshMeasurement",
+		]),
+	}),
+	Object.freeze({
+		name: "c3-noderuntime",
+		packagePath: "github.com/nelsonwerd/countershape/internal/noderuntime",
+		tests: Object.freeze([
+			"TestC3NodeRuntimeCopiedCapabilitiesSerializeRevalidation",
+			"TestC3NodeRuntimeDarwinLiveAdmissionAndRevalidation",
+			"TestC3NodeRuntimeDarwinRejectsNonNodeExecutable",
+			"TestC3NodeRuntimeDarwinRejectsNonPrivateProbeParent",
+			"TestC3NodeRuntimeFaultMatrixRefusesAuthority",
+			"TestC3NodeRuntimeMeasureProbeMeasureAdmission",
+			"TestC3NodeRuntimeProbeParserIsClosed",
+			"TestC3NodeRuntimeProbeProgramDigestIsExact",
+			"TestC3NodeRuntimeProbeWritersDrainAfterBounds",
+			"TestC3NodeRuntimePublicSurfaceAndSoleSpawnEdge",
+			"TestC3NodeRuntimeRejectsAmbientOrForgedInputs",
+			"TestC3NodeRuntimeRevalidationIsFreshAndExact",
+		]),
+	}),
+	Object.freeze({
+		name: "c3-store-bridge",
+		packagePath: "github.com/nelsonwerd/countershape/internal/store",
+		tests: Object.freeze([
+			"TestC3ConformanceAttemptConcurrentValidationAndReopenAreRaceFree",
+			"TestC3ConformanceAttemptIsFreshDurableAndRestartReopenable",
+			"TestC3ConformanceAttemptMarkerMutationRefusesReopen",
+			"TestC3ConformanceAttemptRejectsCrossStoreAndRootReplacement",
+			"TestC3ContractTargetBridgeConvergesExactAndRejectsReuse",
+			"TestC3StoreBridgeExportsOnlyInertAttemptAndTargetRecords",
+		]),
+	}),
+]);
+
+function inspectC3GoJSONTranscriptParser() {
+	const encode = (events) => Buffer.from(`${events.map((event) => JSON.stringify(event)).join("\n")}\n`, "utf8");
+	let count = 0;
+	for (const profile of c3ParserProfiles) {
+		const clean = [
+			{ Action: "start", Package: profile.packagePath },
+			...profile.tests.flatMap((Test) => [
+				{ Action: "run", Package: profile.packagePath, Test },
+				{ Action: "pass", Package: profile.packagePath, Test },
+			]),
+			{ Action: "pass", Package: profile.packagePath },
+		];
+		validateGoJSONTranscript(profile.name, encode(clean));
+		count += 1;
+		const first = profile.tests[0];
+		const last = profile.tests.at(-1);
+		const hostile = [
+			clean.filter((event) => !(event.Action === "pass" && event.Test === last)),
+			clean.map((event) => event.Action === "pass" && event.Test === first ? { ...event, Action: "skip" } : event),
+			[...clean.slice(0, -1),
+				{ Action: "run", Package: profile.packagePath, Test: "TestC3Unexpected" },
+				{ Action: "pass", Package: profile.packagePath, Test: "TestC3Unexpected" },
+				clean.at(-1)],
+			[...clean.slice(0, 3), clean[2], ...clean.slice(3)],
+			clean.map((event) => event.Action === "pass" && !event.Test ? { ...event, Action: "fail" } : event),
+			clean.map((event, index) => index === 0 ? { ...event, Package: "example.invalid/foreign" } : event),
+		];
+		for (const [index, events] of hostile.entries()) {
+			let rejected = false;
+			try {
+				validateGoJSONTranscript(profile.name, encode(events));
+			} catch {
+				rejected = true;
+			}
+			if (!rejected) fail("P07B_C3_SELFTEST_GO_JSON_FALSE_NEGATIVE", `${profile.name}:${index + 1}`);
+			count += 1;
+		}
+	}
+	return count;
+}
+
+function inspectC3PredecessorAuthorityParser() {
+	const cleanNotes = new Map();
+	for (const unit of ["C3S", "C3F", "C3L", "C3A"]) {
+		collectC3PredecessorRecordAuthority(unit, (args, result) => {
+			if (args[0] === "cat-file" && args[1] === "blob") {
+				cleanNotes.set(unit, Buffer.from(result.stdout));
+			}
+			return result;
+		});
+	}
+	for (const unit of ["C3S", "C3F", "C3L", "C3A"]) {
+		if (!Buffer.isBuffer(cleanNotes.get(unit))) fail("P07B_C3_SELFTEST_PREDECESSOR_FIXTURE", `${unit} note body was not captured`);
+		inspectC3DidrunNote(unit, cleanNotes.get(unit));
+	}
+	const cleanC3SNote = cleanNotes.get("C3S");
+	let count = 8;
+	const requireRejected = (name, action) => {
+		let rejected = false;
+		try { action(); } catch { rejected = true; }
+		if (!rejected) fail("P07B_C3_SELFTEST_PREDECESSOR_FALSE_NEGATIVE", name);
+		count += 1;
+	};
+	const rawMutation = (name, matches, stdout) => requireRejected(name, () => {
+		collectC3PredecessorRecordAuthority("C3S", (args, result) => matches(args)
+			? { ...result, stdout: typeof stdout === "function" ? stdout(result.stdout) : Buffer.from(stdout) }
+			: result);
+	});
+	const line = (value) => Buffer.from(`${value}\n`, "utf8");
+	rawMutation("invalid UTF-8 scalar", (args) => args[0] === "show" && args.includes("--format=%s"), Buffer.from([0xff, 0x0a]));
+	rawMutation("commit identity", (args) => args[0] === "rev-parse" && args.at(-1).endsWith("^{commit}"), line("0".repeat(40)));
+	rawMutation("tree identity", (args) => args[0] === "rev-parse" && args.at(-1).endsWith("^{tree}"), line("0".repeat(40)));
+	rawMutation("wrong parent", (args) => args[0] === "show" && args.includes("--format=%P"), line("0".repeat(40)));
+	rawMutation("merge parent cardinality", (args) => args[0] === "show" && args.includes("--format=%P"), line(`${"0".repeat(40)} ${"1".repeat(40)}`));
+	rawMutation("subject identity", (args) => args[0] === "show" && args.includes("--format=%s"), line("altered subject"));
+	rawMutation("subject trailing space", (args) => args[0] === "show" && args.includes("--format=%s"), line("fix: make U6 C3 fixture phase-stable "));
+	rawMutation("subject extra LF", (args) => args[0] === "show" && args.includes("--format=%s"), Buffer.from("fix: make U6 C3 fixture phase-stable\n\n", "utf8"));
+	rawMutation("subject CRLF", (args) => args[0] === "show" && args.includes("--format=%s"), Buffer.from("fix: make U6 C3 fixture phase-stable\r\n", "utf8"));
+	rawMutation("parent repeated separator", (args) => args[0] === "show" && args.includes("--format=%P"), line(" 63038644ba347d7b934a5557a490af95bb4428a4"));
+	rawMutation("note blob identity", (args) => args[0] === "notes", line("0".repeat(40)));
+	rawMutation("note object type", (args) => args[0] === "cat-file" && args[1] === "-t", line("tree"));
+	rawMutation("raw note body digest", (args) => args[0] === "cat-file" && args[1] === "blob", (body) => Buffer.concat([body, Buffer.from(" ")]));
+
+	requireRejected("invalid UTF-8 note", () => inspectC3DidrunNote("C3S", Buffer.from([0xff])));
+	requireRejected("malformed note JSON", () => inspectC3DidrunNote("C3S", Buffer.from("{", "utf8")));
+	const mutateNote = (name, mutate) => requireRejected(name, () => {
+		const note = JSON.parse(cleanC3SNote.toString("utf8"));
+		mutate(note);
+		inspectC3DidrunNote("C3S", Buffer.from(`${JSON.stringify(note)}\n`, "utf8"));
+	});
+	mutateNote("note version", (note) => { note.version = 2; });
+	mutateNote("note commit", (note) => { note.commit = "0".repeat(40); });
+	mutateNote("note tree", (note) => { note.tree = "0".repeat(40); });
+	mutateNote("note secrets disclosure", (note) => { note.secrets_override = false; });
+	mutateNote("note claim count", (note) => { note.claims.pop(); });
+	mutateNote("note claim order", (note) => { [note.claims[0], note.claims[1]] = [note.claims[1], note.claims[0]]; });
+	mutateNote("note claim label", (note) => { note.claims[0].claim.label += " altered"; });
+	mutateNote("note claim type", (note) => { note.claims[0].claim.ctype = "command-succeeded"; });
+	mutateNote("note claim index", (note) => { note.claims[0].claim.declared_at_index = 1; });
+	mutateNote("note root field roster", (note) => { note.extra = true; });
+	mutateNote("note coverage field roster", (note) => { note.coverage.extra = true; });
+	mutateNote("note recorded claim field roster", (note) => { note.claims[0].extra = true; });
+	mutateNote("note claim field roster", (note) => { note.claims[0].claim.extra = true; });
+	mutateNote("note event indices", (note) => { note.claims[0].claim.event_indices = [1]; });
+	mutateNote("note supporting event index", (note) => { note.claims[0].supporting_event_index = 1; });
+	mutateNote("note pathspecs", (note) => { note.claims[0].claim.pathspecs = ["."]; });
+	mutateNote("note delta", (note) => { note.claims[0].delta = ["changed"]; });
+	mutateNote("note exit code", (note) => { note.claims[0].exit_code = 1; });
+	mutateNote("note grade", (note) => { note.claims[0].grade = "scope-exact"; });
+	mutateNote("note reason", (note) => { note.claims[0].reason = "changed"; });
+	mutateNote("empty note argv", (note) => { note.claims[0].claim.argv_preview = []; });
+	mutateNote("non-string note argv", (note) => { note.claims[0].claim.argv_preview[0] = 7; });
+	mutateNote("note argv command insertion", (note) => { note.claims[0].claim.argv_preview.splice(39, 0, "/usr/bin/true"); });
+	mutateNote("note argv cache prefix", (note) => { note.claims[0].claim.argv_preview[6] += "-altered"; });
+	mutateNote("note argv tool binding", (note) => { note.claims[0].claim.argv_preview[31] += "-altered"; });
+	mutateNote("note argv tail substitution", (note) => { note.claims[0].claim.argv_preview[note.claims[0].claim.argv_preview.length - 1] += "-altered"; });
+	mutateNote("note argv appended argument", (note) => { note.claims[0].claim.argv_preview.push("--extra"); });
+	mutateNote("note total coverage", (note) => { note.coverage.total_events -= 1; });
+	mutateNote("note complete coverage", (note) => { note.coverage.by_coverage.complete -= 1; });
+	mutateNote("note extra coverage class", (note) => { note.coverage.by_coverage.partial = 1; });
+	const chainMutation = (name, mutate) => requireRejected(name, () => {
+		collectC3PredecessorAuthority((args, result) => args[0] === "merge-base" ? mutate(result) : result);
+	});
+	chainMutation("ancestry false status", (result) => ({ ...result, status: 1 }));
+	chainMutation("ancestry unexpected status", (result) => ({ ...result, status: 2 }));
+	chainMutation("ancestry nonempty stdout", (result) => ({ ...result, stdout: Buffer.from("unexpected\n", "utf8") }));
+	chainMutation("ancestry stderr", (result) => ({ ...result, stderr: Buffer.from("unexpected\n", "utf8") }));
+	chainMutation("ancestry malformed stdout", (result) => ({ ...result, stdout: "" }));
+	return count;
+}
+
 async function runC2Selftest() {
 	const digest = rosterDigest(c2Cases);
 	if (digest !== expectedC2RosterDigest) fail("P07B_C2_SELFTEST_ROSTER_DRIFT", `${digest} != ${expectedC2RosterDigest}`);
@@ -273,7 +509,79 @@ async function runC2Selftest() {
 	process.stdout.write(`P07B-C C2 cumulative architecture defensive self-test OK (${c2Cases.length} metadata cases; ${goJSONCases} Go JSON parser cases)\n`);
 }
 
+async function runC3Selftest() {
+	const digest = rosterDigest(c3Cases);
+	if (digest !== expectedC3RosterDigest) fail("P07B_C3_SELFTEST_ROSTER_DRIFT", `${digest} != ${expectedC3RosterDigest}`);
+	runCleanChecker("c3");
+	const clean = await collectC3Facts();
+	const cleanProblems = validateC3Facts(clean);
+	if (cleanProblems.length > 0) fail("P07B_C3_SELFTEST_CLEAN_FACTS", cleanProblems.map((problem) => problem.code).join(","));
+
+	for (const test of c3Cases) {
+		const facts = structuredClone(clean);
+		switch (test.id) {
+		case "package-topology":
+			facts.packages["github.com/nelsonwerd/countershape/internal/contractexec"].go.pop();
+			break;
+		case "build-tags":
+			facts.buildTags["internal/contractexec/target_test.go"] = "darwin";
+			break;
+		case "source-import":
+			facts.sourceImports["internal/contractexec/target.go"].push("net/http");
+			facts.sourceImports["internal/contractexec/target.go"].sort();
+			break;
+		case "exported-surface":
+			facts.sourceSurfaces["internal/contractexec/target.go"].pop();
+			break;
+		case "test-file-roster":
+			facts.testFiles["internal/contractexec/target_test.go"].pop();
+			break;
+		case "inherited-c2":
+			facts.c2Problems.push({ code: "P07B_C2_SELFTEST_SENTINEL", detail: "forced" });
+			break;
+		case "store-bridge":
+			facts.storeBridge.noIssuerOrProcessEdge = false;
+			break;
+		case "git-target":
+			facts.gitTarget.reopenOrder = false;
+			break;
+		case "host-epoch":
+			facts.hostEpoch.noFallbackOrProcess = false;
+			break;
+		case "node-runtime":
+			facts.nodeRuntime.spawnOwners.push("internal/contractexec/target.go");
+			facts.nodeRuntime.spawnOwners.sort();
+			break;
+		case "official-target":
+			facts.officialTarget.faultCoverage = false;
+			break;
+		case "predecessor": {
+			facts.predecessor.source_parent.commit = "0".repeat(40);
+			requireC3Violation(facts, test.code, test.id);
+			const authorityFacts = structuredClone(clean);
+			authorityFacts.predecessorAuthority.source_parent.note_blob = "0".repeat(40);
+			requireC3Violation(authorityFacts, "P07B_C3_PREDECESSOR_AUTHORITY", "predecessor-authority");
+			const chainFacts = structuredClone(clean);
+			chainFacts.predecessorAuthority.chain.source_parent_is_ancestor_of_head = false;
+			requireC3Violation(chainFacts, "P07B_C3_PREDECESSOR_CHAIN", "predecessor-chain");
+			continue;
+		}
+		default:
+			fail("P07B_C3_SELFTEST_UNKNOWN_CASE", test.id);
+		}
+		requireC3Violation(facts, test.code, test.id);
+	}
+	const goJSONCases = inspectC3GoJSONTranscriptParser();
+	const predecessorCases = inspectC3PredecessorAuthorityParser();
+	process.stdout.write(`P07B-C C3 cumulative architecture defensive self-test OK (${c3Cases.length} metadata cases; ${goJSONCases} Go JSON parser cases; ${predecessorCases} raw predecessor/parser cases)\n`);
+}
+
 async function main() {
+	if (process.argv[2] === "--c3") {
+		if (process.argv.length !== 3) fail("P07B_C3_SELFTEST_ARGUMENTS", "--c3 accepts no other arguments");
+		await runC3Selftest();
+		return;
+	}
 	if (process.argv[2] === "--c2") {
 		if (process.argv.length !== 3) fail("P07B_C2_SELFTEST_ARGUMENTS", "--c2 accepts no other arguments");
 		await runC2Selftest();

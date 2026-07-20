@@ -5,11 +5,16 @@ import { spawnSync } from "node:child_process";
 import { readFile, readdir, lstat } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { TextDecoder } from "node:util";
 
 const checkerPath = fileURLToPath(import.meta.url);
 const repositoryRoot = resolve(dirname(checkerPath), "..");
 const modulePath = "github.com/nelsonwerd/countershape";
 const packagePath = `${modulePath}/internal/contractexec/model`;
+const contractPackagePath = `${modulePath}/internal/contractexec`;
+const gitPackagePath = `${modulePath}/internal/gitobj`;
+const hostEpochPackagePath = `${modulePath}/internal/hostepoch`;
+const nodeRuntimePackagePath = `${modulePath}/internal/noderuntime`;
 const storePackagePath = `${modulePath}/internal/store`;
 const goExecutable = process.env.COUNTERSHAPE_GO ?? "/opt/homebrew/bin/go";
 
@@ -28,8 +33,8 @@ const expectedC2Imports = Object.freeze({
 		`${modulePath}/internal/domain`, "os", "path/filepath", "sync",
 	]),
 	"nonhead_contract.go": Object.freeze([
-		"bytes", "context", "errors", "fmt", `${modulePath}/internal/canon`,
-		`${modulePath}/internal/domain`, "io", "os", "path/filepath", "sort", "strings",
+		"bytes", "context", "crypto/rand", "encoding/hex", "errors", "fmt", `${modulePath}/internal/canon`,
+		`${modulePath}/internal/contractexec/model`, `${modulePath}/internal/domain`, "io", "os", "path/filepath", "sort", "strings",
 	]),
 	"object_store.go": Object.freeze([
 		"bytes", "context", "errors", "fmt", `${modulePath}/internal/canon`,
@@ -41,9 +46,9 @@ const expectedC2Imports = Object.freeze({
 	]),
 });
 const expectedC2PackageImports = Object.freeze([
-	"bytes", "context", "encoding/json", "errors", "fmt", `${modulePath}/internal/canon`,
+	"bytes", "context", "crypto/rand", "encoding/hex", "encoding/json", "errors", "fmt", `${modulePath}/internal/canon`,
 	`${modulePath}/internal/choice/promotion/authority`, `${modulePath}/internal/compare`,
-	`${modulePath}/internal/confirmation/authority`, `${modulePath}/internal/domain`,
+	`${modulePath}/internal/confirmation/authority`, `${modulePath}/internal/contractexec/model`, `${modulePath}/internal/domain`,
 	`${modulePath}/internal/emit/node/authority`, `${modulePath}/internal/reduce`, "io", "os",
 	"path/filepath", "sort", "strconv", "strings", "sync", "syscall", "time", "unicode", "unicode/utf8",
 ]);
@@ -76,11 +81,31 @@ const c2PublicTests = Object.freeze([
 	"TestC2StoreExportsNoOfficialIssuerOrRunPermit",
 	"TestC2StoreExportsNoListLatestTraversalStatusOrHeadMutationSurface",
 ]);
+const c3StoreTests = Object.freeze([
+	"TestC3ConformanceAttemptConcurrentValidationAndReopenAreRaceFree",
+	"TestC3ConformanceAttemptIsFreshDurableAndRestartReopenable",
+	"TestC3ConformanceAttemptMarkerMutationRefusesReopen",
+	"TestC3ConformanceAttemptRejectsCrossStoreAndRootReplacement",
+	"TestC3ContractTargetBridgeConvergesExactAndRejectsReuse",
+	"TestC3StoreBridgeExportsOnlyInertAttemptAndTargetRecords",
+]);
 const expectedC2TestSymbols = Object.freeze([
 	...c2NonheadTests, ...c2InterlockTests, ...c2PrivateTests, ...c2PublicTests,
 ].sort());
 const expectedC2StructFields = Object.freeze({
-	attemptStorageRecord: Object.freeze(["storeInstance", "digest", "seal"]),
+	attemptStorageRecord: Object.freeze(["storeInstance", "digest", "seal", "state"]),
+	conformanceAttemptRoots: Object.freeze([
+		"attempt", "candidateParent", "fixture", "home", "temporary", "xdgConfig", "xdgCache", "xdgData", "xdgState",
+		"state", "evidence", "marker",
+	]),
+	conformanceAttemptState: Object.freeze([
+		"input", "nonce", "canonical", "object", "authority", "roots", "dirs", "marker", "seal",
+	]),
+	ConformanceAttemptInput: Object.freeze([
+		"ContractBundleDigest", "ResidueHeadDigest", "TreeIdentityDigest", "MaterializationPolicyDigest",
+	]),
+	ConformanceAttemptRecord: Object.freeze(["store", "record"]),
+	ContractTargetRecord: Object.freeze(["store", "record"]),
 	targetStorageInput: Object.freeze(["attempt", "object"]),
 	runStorageInput: Object.freeze(["target", "claim", "object", "manifest"]),
 	executionStorageInput: Object.freeze(["run", "object"]),
@@ -130,6 +155,410 @@ const expectedC2TestFilesByProfile = Object.freeze({
 	"internal/store/execution_interlock_test.go": c2InterlockTests,
 	"internal/store/private_contract_run_test.go": c2PrivateTests,
 	"internal/store/public_api_test.go": c2PublicTests,
+});
+const expectedC3StoreFilesByProfile = Object.freeze({
+	"internal/store/nonhead_contract_test.go": Object.freeze(c3StoreTests.filter((name) => name !== "TestC3StoreBridgeExportsOnlyInertAttemptAndTargetRecords")),
+	"internal/store/public_api_test.go": Object.freeze(["TestC3StoreBridgeExportsOnlyInertAttemptAndTargetRecords"]),
+});
+const expectedC3StoreSurface = Object.freeze([
+	"ConformanceAttemptInput", "ConformanceAttemptRecord", "ConformanceAttemptRecord.ContractBundleDigest",
+	"ConformanceAttemptRecord.Digest", "ConformanceAttemptRecord.InstanceNonce",
+	"ConformanceAttemptRecord.MaterializationPolicyDigest", "ConformanceAttemptRecord.ResidueHeadDigest",
+	"ConformanceAttemptRecord.Roots", "ConformanceAttemptRecord.TreeIdentityDigest", "ConformanceAttemptRecord.Valid",
+	"ConformanceAttemptRoots", "ConformanceAttemptRoots.AttemptRoot", "ConformanceAttemptRoots.CandidateParent",
+	"ConformanceAttemptRoots.EvidenceRoot", "ConformanceAttemptRoots.FixtureRoot", "ConformanceAttemptRoots.HomeRoot",
+	"ConformanceAttemptRoots.MarkerPath", "ConformanceAttemptRoots.StateRoot", "ConformanceAttemptRoots.TemporaryRoot",
+	"ConformanceAttemptRoots.XDGCacheRoot", "ConformanceAttemptRoots.XDGConfigRoot",
+	"ConformanceAttemptRoots.XDGDataRoot", "ConformanceAttemptRoots.XDGStateRoot", "ContractTargetRecord",
+	"ContractTargetRecord.AttemptDigest", "ContractTargetRecord.Digest", "ContractTargetRecord.Valid",
+	"ObjectStore.AllocateConformanceAttempt", "ObjectStore.OpenConformanceAttempt",
+	"ObjectStore.OpenContractTargetRecord", "ObjectStore.PersistContractTargetRecord",
+].sort());
+
+const c3OfficialTargetTests = Object.freeze([
+	"TestC3OfficialTargetAttemptsAreFreshAndDistinct",
+	"TestC3OfficialTargetClosedCapabilityAndDefensiveGetters",
+	"TestC3OfficialTargetInvalidPreSpawnInputsReturnNoAuthority",
+	"TestC3OfficialTargetLinkedRelationshipMutationRefusesReopen",
+	"TestC3OfficialTargetMaterializationMutationRefusesReopen",
+	"TestC3OfficialTargetMovingRefCannotRetargetReopen",
+	"TestC3OfficialTargetPublicSurfaceAndSoleIssuer",
+	"TestC3OpenOfficialTargetRebuildsFullAuthorityAcrossRestart",
+	"TestC3OpenOfficialTargetLiveParentMatrix",
+	"TestC3PublishOfficialTargetJoinsExactLivePrerequisiteGraph",
+]);
+const c3SingleTargetTests = Object.freeze([
+	"TestC3SingleTargetAmbiguityRequiresExplicitReopen",
+	"TestC3SingleTargetCannotPublishTwiceIntoOnePrivateParent",
+	"TestC3SingleTargetExcludesDirtyWorktreeBytes",
+	"TestC3SingleTargetMaterializesDirectlyFromInspectedAuthority",
+	"TestC3SingleTargetMovingRefCannotChangePinnedBytes",
+	"TestC3SingleTargetRefusesUnsupportedTreeFormsBeforePublication",
+	"TestC3SingleTargetReopenRefusesEveryPublishedMutation",
+]);
+const c3HostEpochTests = Object.freeze([
+	"TestC3HostEpochCanonicalMeasurement",
+	"TestC3HostEpochConcurrentMeasurementsNeverCache",
+	"TestC3HostEpochContextAndForgedAuthorityRefuse",
+	"TestC3HostEpochDarwinLiveMeasurement",
+	"TestC3HostEpochFaultAndInstabilityRefuse",
+	"TestC3HostEpochMalformedSamplesRefuse",
+	"TestC3HostEpochPublicSurfaceIsClosed",
+	"TestC3HostEpochRevalidationRequiresSameFreshMeasurement",
+]);
+const c3NodeRuntimeTests = Object.freeze([
+	"TestC3NodeRuntimeCopiedCapabilitiesSerializeRevalidation",
+	"TestC3NodeRuntimeDarwinLiveAdmissionAndRevalidation",
+	"TestC3NodeRuntimeDarwinRejectsNonNodeExecutable",
+	"TestC3NodeRuntimeDarwinRejectsNonPrivateProbeParent",
+	"TestC3NodeRuntimeFaultMatrixRefusesAuthority",
+	"TestC3NodeRuntimeMeasureProbeMeasureAdmission",
+	"TestC3NodeRuntimeProbeParserIsClosed",
+	"TestC3NodeRuntimeProbeProgramDigestIsExact",
+	"TestC3NodeRuntimeProbeWritersDrainAfterBounds",
+	"TestC3NodeRuntimePublicSurfaceAndSoleSpawnEdge",
+	"TestC3NodeRuntimeRejectsAmbientOrForgedInputs",
+	"TestC3NodeRuntimeRevalidationIsFreshAndExact",
+]);
+const c3ReviewedPaths = Object.freeze([
+	"internal/contractexec/target.go",
+	"internal/contractexec/target_test.go",
+	"internal/gitobj/single_target.go",
+	"internal/gitobj/single_target_test.go",
+	"internal/hostepoch/epoch.go",
+	"internal/hostepoch/epoch_darwin_test.go",
+	"internal/hostepoch/epoch_test.go",
+	"internal/hostepoch/public_api_test.go",
+	"internal/hostepoch/source_darwin_cgo.go",
+	"internal/hostepoch/source_unsupported.go",
+	"internal/noderuntime/identity_darwin.go",
+	"internal/noderuntime/probe_darwin.go",
+	"internal/noderuntime/probe_darwin_test.go",
+	"internal/noderuntime/public_api_test.go",
+	"internal/noderuntime/runtime.go",
+	"internal/noderuntime/runtime_darwin_test.go",
+	"internal/noderuntime/runtime_test.go",
+	"internal/noderuntime/unsupported.go",
+	"internal/store/nonhead_contract.go",
+	"internal/store/nonhead_contract_test.go",
+	"internal/store/public_api_test.go",
+	"spec/verification/p07b-c-c3-predecessors.json",
+]);
+const expectedC3BuildTags = Object.freeze({
+	"internal/contractexec/target.go": "",
+	"internal/contractexec/target_test.go": "darwin && arm64 && cgo",
+	"internal/gitobj/single_target.go": "",
+	"internal/gitobj/single_target_test.go": "darwin && cgo",
+	"internal/hostepoch/epoch.go": "",
+	"internal/hostepoch/epoch_darwin_test.go": "darwin && arm64 && cgo",
+	"internal/hostepoch/epoch_test.go": "",
+	"internal/hostepoch/public_api_test.go": "",
+	"internal/hostepoch/source_darwin_cgo.go": "darwin && arm64 && cgo",
+	"internal/hostepoch/source_unsupported.go": "!darwin || !arm64 || !cgo",
+	"internal/noderuntime/identity_darwin.go": "darwin && arm64 && cgo",
+	"internal/noderuntime/probe_darwin.go": "darwin && arm64 && cgo",
+	"internal/noderuntime/probe_darwin_test.go": "darwin && arm64 && cgo",
+	"internal/noderuntime/public_api_test.go": "",
+	"internal/noderuntime/runtime.go": "",
+	"internal/noderuntime/runtime_darwin_test.go": "darwin && arm64 && cgo",
+	"internal/noderuntime/runtime_test.go": "darwin && arm64 && cgo",
+	"internal/noderuntime/unsupported.go": "!darwin || !arm64 || !cgo",
+});
+const expectedC3SourceImports = Object.freeze({
+	"internal/contractexec/target.go": Object.freeze([
+		"context", "errors", "fmt", `${modulePath}/internal/contractexec/model`, `${modulePath}/internal/domain`,
+		`${modulePath}/internal/emit/node`, `${modulePath}/internal/emit/node/model`, `${modulePath}/internal/gitobj`,
+		`${modulePath}/internal/hostepoch`, `${modulePath}/internal/noderuntime`, `${modulePath}/internal/store`,
+		"path/filepath", "strings", "sync",
+	].sort()),
+	"internal/gitobj/single_target.go": Object.freeze(["context", "errors", "io", "os", "path/filepath", "sort", "strings"]),
+	"internal/hostepoch/epoch.go": Object.freeze([
+		"bytes", "context", "errors", "fmt", `${modulePath}/internal/canon`, `${modulePath}/internal/domain`,
+	].sort()),
+	"internal/hostepoch/source_darwin_cgo.go": Object.freeze(["C", "errors", "unsafe"]),
+	"internal/hostepoch/source_unsupported.go": Object.freeze([]),
+	"internal/noderuntime/identity_darwin.go": Object.freeze([
+		"crypto/sha256", "encoding/hex", "errors", "fmt", `${modulePath}/internal/domain`, "io", "os", "path/filepath",
+		"syscall", "unsafe",
+	].sort()),
+	"internal/noderuntime/probe_darwin.go": Object.freeze([
+		"bytes", "context", "errors", `${modulePath}/internal/canon`, `${modulePath}/internal/domain`, "os", "os/exec",
+		"path/filepath", "syscall", "time",
+	].sort()),
+	"internal/noderuntime/runtime.go": Object.freeze([
+		"context", "errors", "fmt", `${modulePath}/internal/domain`, "path/filepath", "regexp", "strconv", "strings", "sync",
+		"unicode/utf8",
+	].sort()),
+	"internal/noderuntime/unsupported.go": Object.freeze([
+		"context", `${modulePath}/internal/domain`,
+	].sort()),
+});
+const expectedC3Surfaces = Object.freeze({
+	"internal/contractexec/target.go": Object.freeze([
+		"CodeInvalidOfficialTarget", "CodeOfficialTargetChanged", "CodeOfficialTargetClosed", "Error", "Error.Error",
+		"Error.Unwrap", "IsCode", "OpenOfficialTarget", "OpenOfficialTargetRequest", "OfficialTarget",
+		"OfficialTarget.CandidateRoot", "OfficialTarget.Close", "OfficialTarget.ContractBundle", "OfficialTarget.Digest",
+		"OfficialTarget.Model", "OfficialTarget.Roots", "OfficialTarget.TargetRecord", "OfficialTarget.Valid",
+		"PublishOfficialTarget", "PublishOfficialTargetRequest", "ReopenOfficialTarget",
+	].sort()),
+	"internal/gitobj/single_target.go": Object.freeze(["MaterializeSingleTarget", "ReopenSingleTarget"]),
+	"internal/hostepoch/epoch.go": Object.freeze([
+		"CodeInvalidMeasurement", "CodeUnstableMeasurement", "CodeUnsupportedPlatform", "Epoch", "Epoch.Digest",
+		"Epoch.Revalidate", "Epoch.Valid", "Error", "Error.Error", "Error.Unwrap", "IsCode", "Measure",
+	].sort()),
+	"internal/noderuntime/runtime.go": Object.freeze([
+		"Admit", "CodeInvalidRuntime", "CodeProbeFailed", "CodeRuntimeChanged", "CodeUnsupportedPlatform", "Error",
+		"Error.Error", "Error.Unwrap", "IsCode", "Runtime", "Runtime.Architecture", "Runtime.ExecutableByteCount",
+		"Runtime.ExecutableBytesDigest", "Runtime.ExecutableMode", "Runtime.Major", "Runtime.Path", "Runtime.Platform",
+		"Runtime.ProbeProgramDigest", "Runtime.Revalidate", "Runtime.Valid", "Runtime.Version",
+	].sort()),
+});
+const expectedC3Packages = Object.freeze({
+	[contractPackagePath]: Object.freeze({
+		name: "contractexec", go: ["target.go"], cgo: [], test: ["target_test.go"], xtest: [], ignored: [],
+		imports: expectedC3SourceImports["internal/contractexec/target.go"],
+	}),
+	[gitPackagePath]: Object.freeze({
+		name: "gitobj",
+		go: [
+			"errors.go", "filesystem.go", "filesystem_darwin.go", "git.go", "inspect.go", "materialize.go",
+			"single_target.go", "types.go", "validate.go",
+		],
+		cgo: ["publish_darwin.go"],
+		test: ["fuzz_test.go", "inspect_test.go", "mutation_contract_test.go", "publish_darwin_test.go", "single_target_test.go"],
+		xtest: ["helpers_external_test.go", "identity_external_test.go", "materialize_external_test.go", "refusal_external_test.go"],
+		ignored: ["filesystem_unsupported.go", "publish_unsupported.go"],
+		imports: [
+			"C", "bytes", "context", "crypto/sha1", "crypto/sha256", "encoding/hex", "errors", "fmt",
+			`${modulePath}/internal/canon`, `${modulePath}/internal/domain`, "hash", "io", "math", "os", "os/exec", "path",
+			"path/filepath", "sort", "strconv", "strings", "sync", "sync/atomic", "syscall", "unicode", "unicode/utf8", "unsafe",
+		].sort(),
+	}),
+	[hostEpochPackagePath]: Object.freeze({
+		name: "hostepoch", go: ["epoch.go"], cgo: ["source_darwin_cgo.go"],
+		test: ["epoch_darwin_test.go", "epoch_test.go"], xtest: ["public_api_test.go"], ignored: ["source_unsupported.go"],
+		imports: ["C", "bytes", "context", "errors", "fmt", `${modulePath}/internal/canon`, `${modulePath}/internal/domain`, "unsafe"].sort(),
+	}),
+	[nodeRuntimePackagePath]: Object.freeze({
+		name: "noderuntime", go: ["identity_darwin.go", "probe_darwin.go", "runtime.go"], cgo: [],
+		test: ["probe_darwin_test.go", "runtime_darwin_test.go", "runtime_test.go"], xtest: ["public_api_test.go"],
+		ignored: ["unsupported.go"],
+		imports: [
+			"bytes", "context", "crypto/sha256", "encoding/hex", "errors", "fmt", `${modulePath}/internal/canon`,
+			`${modulePath}/internal/domain`, "io", "os", "os/exec", "path/filepath", "regexp", "strconv", "strings", "sync",
+			"syscall", "time", "unicode/utf8", "unsafe",
+		].sort(),
+	}),
+});
+function predecessorClaims(rows) {
+	return rows.map(([label, type], index) => ({ index, label, type, grade: "TREE-EXACT" }));
+}
+
+function sealedPredecessorRecord({
+	unit, commit, tree, subject, parent, scopeDigest, noteBlob, noteBodySHA256, claims,
+}) {
+	return Object.freeze({
+		unit,
+		commit,
+		tree,
+		subject,
+		parent,
+		scope_digest: scopeDigest,
+		note_ref: "refs/notes/didrun",
+		note_type: "blob",
+		note_blob: noteBlob,
+		note_body_sha256: noteBodySHA256,
+		claim_count: claims.length,
+		event_coverage: { complete: claims.length, total_events: claims.length },
+		secrets_override: true,
+		claims: predecessorClaims(claims),
+	});
+}
+
+const expectedC3SPredecessor = sealedPredecessorRecord({
+	unit: "C3S",
+	commit: "47a65b45a50c0f39fc39e1336fc7744a97a72b8f",
+	tree: "fce8593ad1fe7af1474b4e113f03e82a9a052f79",
+	subject: "fix: make U6 C3 fixture phase-stable",
+	parent: "63038644ba347d7b934a5557a490af95bb4428a4",
+	scopeDigest: "sha256:1d5f793e70caea0ad7379e92bbf781da50846276c28a2aca2d3e7e2ed8c17a26",
+	noteBlob: "7dff66800e79dc5b1a149ffe16df4dbf9178836a",
+	noteBodySHA256: "b65f71e25dd53509f8df876a28fb4027559464f77861a34d1aa0c5854bfdbae6",
+	claims: [
+		["P07B-C C3S cumulative-selftest plan coherence", "tests-pass"],
+		["P07B-C C3S cumulative-selftest plan defensive self-test", "tests-pass"],
+		["P07B-C C3S historical U6 architecture compatibility", "tests-pass"],
+		["P07B-C C3S U6 phase-stable fixture defensive self-test", "tests-pass"],
+		["P07B-C C3S unit-scope defensive self-test", "tests-pass"],
+		["P07B-C C3S cumulative verifier self-test", "tests-pass"],
+		["P07B-C C3S cumulative verification", "tests-pass"],
+		["P07B-C C3S exact eight-path staged scope and diff integrity", "command-succeeded"],
+		["P07B-C C3S scoped staged credential-pattern scan", "command-succeeded"],
+		["P07B-C C3S sealed-C3F predecessor and preceding didrun chain integrity", "command-succeeded"],
+	],
+});
+
+const expectedC3FPredecessor = sealedPredecessorRecord({
+	unit: "C3F",
+	commit: "63038644ba347d7b934a5557a490af95bb4428a4",
+	tree: "3b4c39cfa907c2907d01dcd21399cafe52075872",
+	subject: "fix: admit exact C3 target codec surface through B",
+	parent: "efa918928246c7793f4ad7201c003020e3a42193",
+	scopeDigest: "sha256:f64293895a1b824faafddf236757d381c813b59c40286225bb1c352d5c812c1a",
+	noteBlob: "098958ba7a9b2d9d237cee901a34279424b68128",
+	noteBodySHA256: "a23982f84573505fc966378dbcc4f825daf11da8a08b2bfd24f7f71de588d315",
+	claims: [
+		["P07B-C C3F B future-surface plan coherence", "tests-pass"],
+		["P07B-C C3F B future-surface plan defensive self-test", "tests-pass"],
+		["P07B-C C3F historical B architecture compatibility", "tests-pass"],
+		["P07B-C C3F B conditional future-surface defensive self-test", "tests-pass"],
+		["P07B-C C3F unit-scope defensive self-test", "tests-pass"],
+		["P07B-C C3F cumulative verifier self-test", "tests-pass"],
+		["P07B-C C3F cumulative verification", "tests-pass"],
+		["P07B-C C3F exact ten-path staged scope and diff integrity", "command-succeeded"],
+		["P07B-C C3F scoped staged credential-pattern scan", "command-succeeded"],
+		["P07B-C C3F sealed-C3L predecessor and preceding didrun chain integrity", "command-succeeded"],
+	],
+});
+
+const expectedC3LPredecessor = sealedPredecessorRecord({
+	unit: "C3L",
+	commit: "efa918928246c7793f4ad7201c003020e3a42193",
+	tree: "d9187c6449392c269a385b53c563ba4411112460",
+	subject: "fix: admit exact C3 store model edge through U6",
+	parent: "2b84d2841971568784d2ac955775b4a99ca7f0f6",
+	scopeDigest: "sha256:b3624e1337681e0909e6c074246103e066118a5924e8f790e7d1f42359da9dc0",
+	noteBlob: "b21365e156719fbc84e480108a7e8672644f5a71",
+	noteBodySHA256: "d4721b344adb95442c5273e596c83ea9cb1b855d26655198a9803771f83e2e9d",
+	claims: [
+		["P07B-C C3L legacy-lattice plan coherence", "tests-pass"],
+		["P07B-C C3L legacy-lattice plan defensive self-test", "tests-pass"],
+		["P07B-C C3L historical U6 architecture compatibility", "tests-pass"],
+		["P07B-C C3L U6 phase-admission defensive self-test", "tests-pass"],
+		["P07B-C C3L cumulative B architecture compatibility", "tests-pass"],
+		["P07B-C C3L B defensive self-test", "tests-pass"],
+		["P07B-C C3L unit-scope defensive self-test", "tests-pass"],
+		["P07B-C C3L cumulative verifier self-test", "tests-pass"],
+		["P07B-C C3L cumulative verification", "tests-pass"],
+		["P07B-C C3L exact nine-path staged scope and diff integrity", "command-succeeded"],
+		["P07B-C C3L scoped staged credential-pattern scan", "command-succeeded"],
+		["P07B-C C3L sealed-C3A predecessor and preceding didrun chain integrity", "command-succeeded"],
+	],
+});
+
+const expectedC3APredecessor = sealedPredecessorRecord({
+	unit: "C3A",
+	commit: "2b84d2841971568784d2ac955775b4a99ca7f0f6",
+	tree: "b8d858033431fe51c262ce725b9d9b051ba9e8c9",
+	subject: "fix: align pre-C3 architecture and runtime bounds",
+	parent: "13369122ba7d5557eba1949095c1135a41843070",
+	scopeDigest: "sha256:cc9bb98ceeb2f281336d3e235377d3cdb8920664f833baea830a84b847621188",
+	noteBlob: "3e516946f4b86e536ae9ea0124938bd534573983",
+	noteBodySHA256: "07a0d04dc667963ea16ec6bb458b929d3a7659637e705bb642b5267766609a8c",
+	claims: [
+		["P07B-C C3A cumulative-admission plan coherence", "tests-pass"],
+		["P07B-C C3A cumulative-admission plan defensive self-test", "tests-pass"],
+		["P07B-C C3A runtime-version exact 128-byte model boundary", "tests-pass"],
+		["P07B-C C3A cumulative B architecture compatibility", "tests-pass"],
+		["P07B-C C3A B admission and entrypoint defensive self-test", "tests-pass"],
+		["P07B-C C3A unit-scope defensive self-test", "tests-pass"],
+		["P07B-C C3A cumulative verifier self-test", "tests-pass"],
+		["P07B-C C3A cumulative verification", "tests-pass"],
+		["P07B-C C3A exact thirteen-path staged scope and diff integrity", "command-succeeded"],
+		["P07B-C C3A scoped staged credential-pattern scan", "command-succeeded"],
+		["P07B-C C3A preceding didrun chain integrity", "command-succeeded"],
+	],
+});
+
+const expectedC3Predecessor = Object.freeze({
+	schema_version: "p07b-c-c3-predecessors/v3",
+	unit: "C3",
+	source_parent: expectedC3SPredecessor,
+	ancestry: [expectedC3FPredecessor, expectedC3LPredecessor, expectedC3APredecessor],
+});
+const expectedC3PredecessorsByUnit = Object.freeze({
+	C3S: expectedC3SPredecessor,
+	C3F: expectedC3FPredecessor,
+	C3L: expectedC3LPredecessor,
+	C3A: expectedC3APredecessor,
+});
+const c3Redacted = "«redacted:high-entropy»";
+const c3RedactedPair = `${c3Redacted}.${c3Redacted}`;
+const c3SealedPredecessorRepositoryRoot = "/Users/drewnelson/Documents/codex-ap-dev-stresstest-creative";
+function expectedC3SealedArgvPrefix(unit) {
+	const slug = unit.toLowerCase();
+	const prefix = [
+		"/usr/bin/env", "-i", c3RedactedPair, `PWD=${c3SealedPredecessorRepositoryRoot}`, c3RedactedPair, c3RedactedPair,
+		`${c3Redacted}.countershape/p07bc-${slug}-final/gocache`, c3RedactedPair, c3RedactedPair,
+		"GOENV=off", "GOWORK=off", "GOTOOLCHAIN=local", "GOPROXY=off", "GOSUMDB=off", "GOVCS=*:off",
+		"GOFLAGS=-mod=readonly -buildvcs=false -p=1", "CGO_ENABLED=1", "GOMAXPROCS=2",
+		"LANG=C", "LC_ALL=C", "TZ=UTC", "NO_COLOR=1", "NODE_OPTIONS=", "NODE_PATH=",
+		"PATH=/opt/homebrew/bin:/usr/bin:/bin", "SHELL=/bin/sh", "GIT_CONFIG_NOSYSTEM=1",
+		"GIT_CONFIG_GLOBAL=/dev/null", "GIT_NO_LAZY_FETCH=1", "GIT_OPTIONAL_LOCKS=0", "GIT_TERMINAL_PROMPT=0",
+		c3Redacted, c3Redacted, c3Redacted, "COUNTERSHAPE_SH=/bin/sh", c3Redacted, c3Redacted,
+		"CC=/usr/bin/clang", "CXX=/usr/bin/clang++",
+	];
+	if (prefix.length !== 39) throw new Error("P07B-C C3 sealed argv prefix invariant");
+	return Object.freeze(prefix);
+}
+const expectedC3ClaimArgvPrefixesByUnit = Object.freeze({
+	C3S: expectedC3SealedArgvPrefix("C3S"),
+	C3F: expectedC3SealedArgvPrefix("C3F"),
+	C3L: expectedC3SealedArgvPrefix("C3L"),
+	C3A: expectedC3SealedArgvPrefix("C3A"),
+});
+const expectedC3ClaimArgvTailsByUnit = Object.freeze({
+	C3S: Object.freeze([
+		["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs"],
+		["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--self-test"],
+		["/opt/homebrew/bin/node", "tools/check-u6-architecture.mjs"],
+		["/opt/homebrew/bin/node", "tools/check-u6-architecture-selftest.mjs"],
+		["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--self-test"],
+		["/opt/homebrew/bin/node", "tools/verify-current-selftest.mjs"],
+		["/opt/homebrew/bin/node", "tools/verify-current.mjs"],
+		["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C3S", "--source-final-gate"],
+		["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C3S", "--credential-scan"],
+		["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--verify-c3s-preseal-ledger"],
+	].map((tail) => Object.freeze(tail))),
+	C3F: Object.freeze([
+		["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs"],
+		["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--self-test"],
+		["/opt/homebrew/bin/node", "tools/check-p07b-b-architecture.mjs"],
+		["/opt/homebrew/bin/node", "tools/check-p07b-b-architecture-selftest.mjs"],
+		["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--self-test"],
+		["/opt/homebrew/bin/node", "tools/verify-current-selftest.mjs"],
+		["/opt/homebrew/bin/node", "tools/verify-current.mjs"],
+		["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C3F", "--source-final-gate"],
+		["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C3F", "--credential-scan"],
+		["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--verify-c3f-preseal-ledger"],
+	].map((tail) => Object.freeze(tail))),
+	C3L: Object.freeze([
+		["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs"],
+		["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--self-test"],
+		["/opt/homebrew/bin/node", "tools/check-u6-architecture.mjs"],
+		["/opt/homebrew/bin/node", "tools/check-u6-architecture-selftest.mjs"],
+		["/opt/homebrew/bin/node", "tools/check-p07b-b-architecture.mjs"],
+		["/opt/homebrew/bin/node", "tools/check-p07b-b-architecture-selftest.mjs"],
+		["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--self-test"],
+		["/opt/homebrew/bin/node", "tools/verify-current-selftest.mjs"],
+		["/opt/homebrew/bin/node", "tools/verify-current.mjs"],
+		["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C3L", "--source-final-gate"],
+		["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C3L", "--credential-scan"],
+		["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--verify-c3l-preseal-ledger"],
+	].map((tail) => Object.freeze(tail))),
+	C3A: Object.freeze([
+		["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs"],
+		["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--self-test"],
+		["/opt/homebrew/bin/go", "test", "-mod=readonly", "-buildvcs=false", "-p=1", "-count=1", "-run", "^TestTargetPrimitiveBoundsAndDerivedRelations$", "./internal/contractexec/model"],
+		["/opt/homebrew/bin/node", "tools/check-p07b-b-architecture.mjs"],
+		["/opt/homebrew/bin/node", "tools/check-p07b-b-architecture-selftest.mjs"],
+		["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--self-test"],
+		["/opt/homebrew/bin/node", "tools/verify-current-selftest.mjs"],
+		["/opt/homebrew/bin/node", "tools/verify-current.mjs"],
+		["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C3A", "--source-final-gate"],
+		["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C3A", "--credential-scan"],
+		["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--verify-c3a-preseal-ledger"],
+	].map((tail) => Object.freeze(tail))),
 });
 
 const expectedProductionFiles = Object.freeze([
@@ -258,6 +687,26 @@ const goJSONProfiles = Object.freeze({
 	"c2-public-surface": Object.freeze({
 		packagePath: storePackagePath, packageArgument: "./internal/store",
 		pass: c2PublicTests, skip: Object.freeze([]),
+	}),
+	"c3-official-target": Object.freeze({
+		packagePath: contractPackagePath, packageArgument: "./internal/contractexec",
+		pass: c3OfficialTargetTests, skip: Object.freeze([]),
+	}),
+	"c3-single-target": Object.freeze({
+		packagePath: gitPackagePath, packageArgument: "./internal/gitobj",
+		pass: c3SingleTargetTests, skip: Object.freeze([]),
+	}),
+	"c3-hostepoch": Object.freeze({
+		packagePath: hostEpochPackagePath, packageArgument: "./internal/hostepoch",
+		pass: c3HostEpochTests, skip: Object.freeze([]),
+	}),
+	"c3-noderuntime": Object.freeze({
+		packagePath: nodeRuntimePackagePath, packageArgument: "./internal/noderuntime",
+		pass: c3NodeRuntimeTests, skip: Object.freeze([]),
+	}),
+	"c3-store-bridge": Object.freeze({
+		packagePath: storePackagePath, packageArgument: "./internal/store",
+		pass: c3StoreTests, skip: Object.freeze([]),
 	}),
 });
 const expectedLocalDependencies = Object.freeze([
@@ -423,11 +872,11 @@ function parseJSONStream(source) {
 	return values;
 }
 
-function run(executable, args, code) {
+function run(executable, args, code, timeout = 180_000) {
 	const result = spawnSync(executable, args, {
 		cwd: repositoryRoot,
 		encoding: "utf8",
-		timeout: 180_000,
+		timeout,
 		maxBuffer: 32 * 1024 * 1024,
 		env: {
 			...process.env,
@@ -440,6 +889,244 @@ function run(executable, args, code) {
 		throw new ArchitectureError(code, `${result.status ?? result.signal}: ${result.stderr || result.stdout || result.error}`);
 	}
 	return result.stdout;
+}
+
+const c3GitEnvironment = Object.freeze({
+	HOME: "/",
+	PATH: "/usr/bin:/bin",
+	LANG: "C",
+	LC_ALL: "C",
+	TZ: "UTC",
+	NO_COLOR: "1",
+	GIT_CONFIG_NOSYSTEM: "1",
+	GIT_CONFIG_GLOBAL: "/dev/null",
+	GIT_NO_LAZY_FETCH: "1",
+	GIT_OPTIONAL_LOCKS: "0",
+	GIT_TERMINAL_PROMPT: "0",
+});
+const fatalUTF8 = new TextDecoder("utf-8", { fatal: true });
+
+function runC3Git(args, acceptedStatuses = [0]) {
+	const result = spawnSync("/usr/bin/git", ["--no-replace-objects", ...args], {
+		cwd: repositoryRoot,
+		timeout: 30_000,
+		maxBuffer: 4 * 1024 * 1024,
+		env: c3GitEnvironment,
+	});
+	if (result.error || result.signal || !acceptedStatuses.includes(result.status) || (result.stderr?.length ?? 0) !== 0) {
+		throw new ArchitectureError(
+			"P07B_C3_PREDECESSOR_AUTHORITY",
+			`git ${args[0]} failed (status=${result.status}, signal=${result.signal}, error=${result.error?.message ?? "none"})`,
+		);
+	}
+	return Object.freeze({
+		status: result.status,
+		stdout: result.stdout ?? Buffer.alloc(0),
+		stderr: result.stderr ?? Buffer.alloc(0),
+	});
+}
+
+function decodeC3Git(bytes, operation) {
+	try {
+		return fatalUTF8.decode(bytes);
+	} catch (error) {
+		throw new ArchitectureError("P07B_C3_PREDECESSOR_AUTHORITY", `${operation} is not UTF-8 (${error.message})`);
+	}
+}
+
+function decodeC3GitLine(bytes, operation) {
+	const text = decodeC3Git(bytes, operation);
+	if (text.length === 0 || !text.endsWith("\n") || text.slice(0, -1).includes("\n") || text.includes("\r")) {
+		throw new ArchitectureError(
+			"P07B_C3_PREDECESSOR_AUTHORITY",
+			`${operation} did not emit one exact LF-terminated line`,
+		);
+	}
+	return text.slice(0, -1);
+}
+
+function c3GitLine(args) {
+	return decodeC3GitLine(runC3Git(args).stdout, `git ${args[0]}`);
+}
+
+function requireExactKeys(value, expected, detail) {
+	if (!value || typeof value !== "object" || Array.isArray(value) || !exact(Object.keys(value).sort(), [...expected].sort())) {
+		throw new ArchitectureError("P07B_C3_PREDECESSOR_AUTHORITY", `${detail} field roster`);
+	}
+}
+
+function normalizeC3DidrunNote(rawBody, expectedRecord, reopenedTree) {
+	let note;
+	try {
+		note = JSON.parse(decodeC3Git(rawBody, `${expectedRecord.unit} didrun note`));
+	} catch (error) {
+		if (error instanceof ArchitectureError) throw error;
+		throw new ArchitectureError("P07B_C3_PREDECESSOR_AUTHORITY", `${expectedRecord.unit} didrun note JSON (${error.message})`);
+	}
+	requireExactKeys(note, ["claims", "commit", "coverage", "secrets_override", "tree", "version"], `${expectedRecord.unit} note`);
+	if (note.version !== 1 || note.commit !== expectedRecord.commit || note.tree !== reopenedTree || note.secrets_override !== true ||
+		!Array.isArray(note.claims) || note.claims.length !== expectedRecord.claim_count) {
+		throw new ArchitectureError("P07B_C3_PREDECESSOR_AUTHORITY", `${expectedRecord.unit} note identity or claim count`);
+	}
+	requireExactKeys(note.coverage, ["by_coverage", "total_events"], `${expectedRecord.unit} note coverage`);
+	requireExactKeys(note.coverage.by_coverage, ["complete"], `${expectedRecord.unit} note coverage class`);
+	if (note.coverage.by_coverage.complete !== expectedRecord.event_coverage.complete ||
+		note.coverage.total_events !== expectedRecord.event_coverage.total_events) {
+		throw new ArchitectureError("P07B_C3_PREDECESSOR_AUTHORITY", `${expectedRecord.unit} note coverage counts`);
+	}
+	const claims = note.claims.map((recorded, index) => {
+		requireExactKeys(recorded, ["claim", "delta", "exit_code", "grade", "reason", "supporting_event_index"], `${expectedRecord.unit} recorded claim ${index}`);
+		requireExactKeys(recorded.claim, ["argv_preview", "ctype", "declared_at_index", "event_indices", "label", "pathspecs"], `${expectedRecord.unit} claim ${index}`);
+		const expectedClaim = expectedRecord.claims[index];
+		const expectedArgvTail = expectedC3ClaimArgvTailsByUnit[expectedRecord.unit]?.[index];
+		const expectedArgvPrefix = expectedC3ClaimArgvPrefixesByUnit[expectedRecord.unit];
+		const expectedArgv = expectedArgvTail === undefined || expectedArgvPrefix === undefined
+			? undefined
+			: [...expectedArgvPrefix, ...expectedArgvTail];
+		if (!Array.isArray(recorded.claim.argv_preview) || recorded.claim.argv_preview.some((argument) => typeof argument !== "string") ||
+			expectedArgv === undefined || !exact(recorded.claim.argv_preview, expectedArgv) ||
+			recorded.claim.declared_at_index !== index || !exact(recorded.claim.event_indices, [index]) ||
+			recorded.claim.label !== expectedClaim.label || recorded.claim.ctype !== expectedClaim.type ||
+			!exact(recorded.claim.pathspecs, []) || !exact(recorded.delta, []) || recorded.exit_code !== 0 ||
+			recorded.grade !== "tree-exact" || recorded.reason !== "self-stable command ran against the sealed tree" ||
+			recorded.supporting_event_index !== index) {
+			throw new ArchitectureError("P07B_C3_PREDECESSOR_AUTHORITY", `${expectedRecord.unit} claim ${index} didrun shape`);
+		}
+		return { index, label: recorded.claim.label, type: recorded.claim.ctype, grade: "TREE-EXACT" };
+	});
+	return Object.freeze({
+		commit: note.commit,
+		tree: note.tree,
+		secrets_override: note.secrets_override,
+		claim_count: claims.length,
+		event_coverage: { complete: note.coverage.by_coverage.complete, total_events: note.coverage.total_events },
+		claims,
+	});
+}
+
+export function inspectC3DidrunNote(unit, rawBody) {
+	const expectedRecord = expectedC3PredecessorsByUnit[unit];
+	if (expectedRecord === undefined || !Buffer.isBuffer(rawBody)) {
+		throw new ArchitectureError("P07B_C3_PREDECESSOR_AUTHORITY", "C3 didrun-note fixture unit or body is invalid");
+	}
+	return normalizeC3DidrunNote(rawBody, expectedRecord, expectedRecord.tree);
+}
+
+export function collectC3PredecessorRecordAuthority(unitOrRecord, transform = (_args, result) => result) {
+	const expectedRecord = typeof unitOrRecord === "string" ? expectedC3PredecessorsByUnit[unitOrRecord] : unitOrRecord;
+	if (expectedRecord === undefined || typeof transform !== "function") {
+		throw new ArchitectureError("P07B_C3_PREDECESSOR_AUTHORITY", "C3 predecessor fixture unit or transformer is invalid");
+	}
+	const read = (args, acceptedStatuses = [0]) => {
+		const original = runC3Git(args, acceptedStatuses);
+		const result = transform(Object.freeze([...args]), original);
+		if (!result || typeof result !== "object" || !exact(Object.keys(result).sort(), ["status", "stderr", "stdout"]) ||
+			!Number.isInteger(result.status) || !Buffer.isBuffer(result.stdout) || !Buffer.isBuffer(result.stderr) ||
+			result.stderr.length !== 0 || !acceptedStatuses.includes(result.status)) {
+			throw new ArchitectureError("P07B_C3_PREDECESSOR_AUTHORITY", `${expectedRecord.unit} hostile Git fixture shape`);
+		}
+		return result;
+	};
+	const line = (args) => decodeC3GitLine(read(args).stdout, `git ${args[0]}`);
+	const commit = line(["rev-parse", "--verify", `${expectedRecord.commit}^{commit}`]);
+	const tree = line(["rev-parse", "--verify", `${expectedRecord.commit}^{tree}`]);
+	const parentLine = line(["show", "-s", "--format=%P", expectedRecord.commit]);
+	const parents = parentLine === "" ? [] : parentLine.split(" ");
+	const subject = line(["show", "-s", "--format=%s", expectedRecord.commit]);
+	const noteBlob = line(["notes", "--ref=refs/notes/didrun", "list", expectedRecord.commit]);
+	const noteType = line(["cat-file", "-t", noteBlob]);
+	const noteBody = read(["cat-file", "blob", noteBlob]).stdout;
+	const noteBodySHA256 = createHash("sha256").update(noteBody).digest("hex");
+	if (commit !== expectedRecord.commit || parents.length !== 1 || parents.some((parent) => !/^[0-9a-f]{40}$/u.test(parent))) {
+		throw new ArchitectureError("P07B_C3_PREDECESSOR_AUTHORITY", `${expectedRecord.unit} commit identity or parent cardinality`);
+	}
+	const authority = Object.freeze({
+		unit: expectedRecord.unit,
+		commit,
+		tree,
+		subject,
+		parents,
+		note_ref: "refs/notes/didrun",
+		note_type: noteType,
+		note_blob: noteBlob,
+		note_body_sha256: noteBodySHA256,
+		note: normalizeC3DidrunNote(noteBody, expectedRecord, tree),
+	});
+	if (!exact(authority, expectedC3PredecessorRecordAuthority(expectedRecord))) {
+		throw new ArchitectureError("P07B_C3_PREDECESSOR_AUTHORITY", `${expectedRecord.unit} raw predecessor authority mismatch`);
+	}
+	return authority;
+}
+
+function expectedC3PredecessorRecordAuthority(record) {
+	return Object.freeze({
+		unit: record.unit,
+		commit: record.commit,
+		tree: record.tree,
+		subject: record.subject,
+		parents: [record.parent],
+		note_ref: record.note_ref,
+		note_type: record.note_type,
+		note_blob: record.note_blob,
+		note_body_sha256: record.note_body_sha256,
+			note: {
+			commit: record.commit,
+			tree: record.tree,
+			secrets_override: record.secrets_override,
+			claim_count: record.claim_count,
+			event_coverage: record.event_coverage,
+			claims: record.claims,
+		},
+	});
+}
+
+const expectedC3PredecessorAuthority = Object.freeze({
+	source_parent: expectedC3PredecessorRecordAuthority(expectedC3SPredecessor),
+	ancestry: [
+		expectedC3PredecessorRecordAuthority(expectedC3FPredecessor),
+		expectedC3PredecessorRecordAuthority(expectedC3LPredecessor),
+		expectedC3PredecessorRecordAuthority(expectedC3APredecessor),
+	],
+	chain: {
+		source_parent_is_ancestor_of_head: true,
+		exact_parent_chain: true,
+	},
+});
+
+export function collectC3PredecessorAuthority(transform = (_args, result) => result) {
+	if (typeof transform !== "function") {
+		throw new ArchitectureError("P07B_C3_PREDECESSOR_AUTHORITY", "C3 predecessor chain transformer is invalid");
+	}
+	const sourceParent = collectC3PredecessorRecordAuthority(expectedC3SPredecessor, transform);
+	const ancestry = [
+		collectC3PredecessorRecordAuthority(expectedC3FPredecessor, transform),
+		collectC3PredecessorRecordAuthority(expectedC3LPredecessor, transform),
+		collectC3PredecessorRecordAuthority(expectedC3APredecessor, transform),
+	];
+	const ancestorArgs = ["merge-base", "--is-ancestor", expectedC3SPredecessor.commit, "HEAD"];
+	const ancestorResult = transform(Object.freeze([...ancestorArgs]), runC3Git(ancestorArgs, [0, 1]));
+	if (!ancestorResult || typeof ancestorResult !== "object" ||
+		!exact(Object.keys(ancestorResult).sort(), ["status", "stderr", "stdout"]) ||
+		!Number.isInteger(ancestorResult.status) || ![0, 1].includes(ancestorResult.status) ||
+		!Buffer.isBuffer(ancestorResult.stdout) || ancestorResult.stdout.length !== 0 ||
+		!Buffer.isBuffer(ancestorResult.stderr) || ancestorResult.stderr.length !== 0) {
+		throw new ArchitectureError("P07B_C3_PREDECESSOR_AUTHORITY", "C3 predecessor ancestry result is malformed");
+	}
+	const authority = Object.freeze({
+		source_parent: sourceParent,
+		ancestry,
+		chain: {
+			source_parent_is_ancestor_of_head: ancestorResult.status === 0,
+			exact_parent_chain: sourceParent.parents[0] === ancestry[0].commit &&
+				ancestry[0].parents[0] === ancestry[1].commit &&
+				ancestry[1].parents[0] === ancestry[2].commit &&
+				ancestry[2].parents[0] === expectedC3APredecessor.parent,
+		},
+	});
+	if (!exact(authority, expectedC3PredecessorAuthority)) {
+		throw new ArchitectureError("P07B_C3_PREDECESSOR_AUTHORITY", "C3 predecessor chain authority mismatch");
+	}
+	return authority;
 }
 
 function goList(args) {
@@ -540,7 +1227,8 @@ export function runGoJSONProfile(profileName) {
 	const pattern = `^(?:${profile.pass.join("|")})$`;
 	const output = run(goExecutable, [
 		"test", "-mod=readonly", "-buildvcs=false", "-p=1", "-count=1", "-json", "-run", pattern, profile.packageArgument,
-	], "P07B_C2_GO_JSON_RUN");
+	], profileName.startsWith("c3-") ? "P07B_C3_GO_JSON_RUN" : "P07B_C2_GO_JSON_RUN",
+	profileName.startsWith("c3-") ? 900_000 : 180_000);
 	return validateGoJSONTranscript(profileName, Buffer.from(output, "utf8"));
 }
 
@@ -670,6 +1358,72 @@ function goImports(source) {
 	return sorted(imports);
 }
 
+function goBuildTag(source) {
+	return /^\/\/go:build\s+([^\r\n]+)$/mu.exec(source)?.[1] ?? "";
+}
+
+function packageBuildFacts(value) {
+	return {
+		name: value?.Name,
+		modulePath: value?.Module?.Path,
+		moduleMain: value?.Module?.Main === true,
+		go: sorted(value?.GoFiles ?? []),
+		cgo: sorted(value?.CgoFiles ?? []),
+		test: sorted(value?.TestGoFiles ?? []),
+		xtest: sorted(value?.XTestGoFiles ?? []),
+		ignored: sorted(value?.IgnoredGoFiles ?? []),
+		invalid: sorted(value?.InvalidGoFiles ?? []),
+		imports: sorted(value?.Imports ?? []),
+	};
+}
+
+// Preserve code positions while blanking comments and literals. Authority-
+// symbol checks must be satisfied by executable Go, never prose or test data.
+function goCodeOnly(source) {
+	const output = source.split("");
+	let state = "code";
+	for (let index = 0; index < source.length; index += 1) {
+		const character = source[index];
+		const next = source[index + 1] ?? "";
+		if (state === "code") {
+			if (character === "/" && next === "/") {
+				output[index] = output[index + 1] = " ";
+				index += 1;
+				state = "line-comment";
+			} else if (character === "/" && next === "*") {
+				output[index] = output[index + 1] = " ";
+				index += 1;
+				state = "block-comment";
+			} else if (character === '"' || character === "'" || character === "`") {
+				output[index] = " ";
+				state = character === '"' ? "string" : character === "'" ? "rune" : "raw-string";
+			}
+		} else if (state === "line-comment") {
+			output[index] = character === "\n" ? "\n" : " ";
+			if (character === "\n") state = "code";
+		} else if (state === "block-comment") {
+			output[index] = character === "\n" ? "\n" : " ";
+			if (character === "*" && next === "/") {
+				output[index + 1] = " ";
+				index += 1;
+				state = "code";
+			}
+		} else if (state === "raw-string") {
+			output[index] = character === "\n" ? "\n" : " ";
+			if (character === "`") state = "code";
+		} else {
+			output[index] = character === "\n" ? "\n" : " ";
+			if (character === "\\") {
+				if (index + 1 < source.length) output[index + 1] = source[index + 1] === "\n" ? "\n" : " ";
+				index += 1;
+			} else if ((state === "string" && character === '"') || (state === "rune" && character === "'")) {
+				state = "code";
+			}
+		}
+	}
+	return output.join("");
+}
+
 function balancedBody(source, expression) {
 	const match = expression.exec(source);
 	if (!match) return "";
@@ -699,7 +1453,10 @@ function methodBody(source, receiver, name) {
 function structFields(source, name) {
 	const body = balancedBody(source, new RegExp(`^type\\s+${name}\\s+struct\\s*`, "mu"));
 	return body.split(/\r?\n/u).map((line) => line.trim()).filter(Boolean)
-		.map((line) => /^([A-Za-z_][A-Za-z0-9_]*)\b/u.exec(line)?.[1]).filter(Boolean);
+		.flatMap((line) => {
+			const names = /^([A-Za-z_][A-Za-z0-9_]*(?:\s*,\s*[A-Za-z_][A-Za-z0-9_]*)*)\s+/u.exec(line)?.[1];
+			return names ? names.split(/\s*,\s*/u) : [];
+		});
 }
 
 function exportedSurface(source) {
@@ -823,6 +1580,7 @@ export async function collectC2Facts() {
 	const sources = Object.fromEntries(entries.map((entry) => [entry.path, entry.source]));
 	const newProduction = c2ProductionPaths.map((path) => sources[path]).join("\n");
 	const changedProduction = c2ImportPaths.map((path) => sources[path]).join("\n");
+	const changedProductionCode = goCodeOnly(changedProduction);
 	const allTests = Object.entries(sources).filter(([path]) => path.endsWith("_test.go"))
 		.map(([, source]) => source).join("\n");
 	const nonhead = sources["internal/store/nonhead_contract.go"];
@@ -840,6 +1598,11 @@ export async function collectC2Facts() {
 	];
 	const structSources = {
 		attemptStorageRecord: nonhead,
+		conformanceAttemptRoots: nonhead,
+		conformanceAttemptState: nonhead,
+		ConformanceAttemptInput: nonhead,
+		ConformanceAttemptRecord: nonhead,
+		ContractTargetRecord: nonhead,
 		targetStorageInput: nonhead,
 		runStorageInput: nonhead,
 		executionStorageInput: nonhead,
@@ -853,11 +1616,10 @@ export async function collectC2Facts() {
 	};
 	const privateKindsBody = /var\s+privateEvidenceKindOrder\s*=\s*\[\.\.\.\]string\s*\{([^]*?)\n\}/mu.exec(privateRun)?.[1] ?? "";
 	const testFiles = {};
-	for (const path of Object.keys(expectedC2TestFilesByProfile)) {
-		testFiles[path] = sorted([...sources[path].matchAll(/^func\s+(TestC2[A-Za-z0-9_]+)\s*\(/gmu)].map((match) => match[1]));
+	for (const path of new Set([...Object.keys(expectedC2TestFilesByProfile), ...Object.keys(expectedC3StoreFilesByProfile)])) {
+		testFiles[path] = sorted([...sources[path].matchAll(/^func\s+(TestC[23][A-Za-z0-9_]+)\s*\(/gmu)].map((match) => match[1]));
 	}
 	const forbiddenPatterns = [
-		["semantic-model-import", /internal\/contractexec\/model/u],
 		["process-start", /\b(?:exec\.Command|os\.StartProcess)\s*\(/u],
 		["production-capability", /\b(?:OfficialTarget|RunPermit)\b/u],
 		["semantic-head", /\b(?:CreateStudy|OpenHead|AdvanceBaseline|AdvanceDivergence|AdvanceReduction|AdvanceConfirmation|AdvanceChoicepoint|AdvanceRuling|AdvanceResidue|ConfirmResiduePublication)\s*\(/u],
@@ -878,6 +1640,7 @@ export async function collectC2Facts() {
 		},
 		directoryEntries: sorted(directoryEntries),
 		imports: Object.fromEntries(c2ImportPaths.map((path) => [path.split("/").at(-1), goImports(sources[path])])),
+		modelImporters: c2ImportPaths.filter((path) => goImports(sources[path]).includes(`${modulePath}/internal/contractexec/model`)),
 		newProductionExports: Object.fromEntries(c2ProductionPaths.map((path) => [path, exportedSurface(sources[path])])),
 		objectStoreExports: exportedSurface(objectStore),
 		compilerParsedSurface: [
@@ -890,7 +1653,7 @@ export async function collectC2Facts() {
 		structs: Object.fromEntries(Object.entries(structSources).map(([name, source]) => [name, structFields(source, name)])),
 		testSymbols: goTestC2Symbols(),
 		testFiles,
-		forbiddenSurface: forbiddenPatterns.filter(([, expression]) => expression.test(changedProduction)).map(([name]) => name),
+		forbiddenSurface: forbiddenPatterns.filter(([, expression]) => expression.test(changedProductionCode)).map(([name]) => name),
 		namespaces: {
 			fields: structFields(objectStore, "ObjectStore"),
 			paths: [
@@ -1058,6 +1821,162 @@ export async function collectC2Facts() {
 	});
 }
 
+export async function collectC3Facts() {
+	const packageValues = goList([
+		"./internal/contractexec", "./internal/gitobj", "./internal/hostepoch", "./internal/noderuntime",
+	]);
+	const entries = await Promise.all(c3ReviewedPaths.map(readC2Source));
+	const sources = Object.fromEntries(entries.map((entry) => [entry.path, entry.source]));
+	const c2Facts = await collectC2Facts();
+	const productionPaths = Object.keys(expectedC3SourceImports);
+	const target = sources["internal/contractexec/target.go"];
+	const targetTest = sources["internal/contractexec/target_test.go"];
+	const singleTarget = sources["internal/gitobj/single_target.go"];
+	const singleTargetTest = sources["internal/gitobj/single_target_test.go"];
+	const epoch = sources["internal/hostepoch/epoch.go"];
+	const epochSource = sources["internal/hostepoch/source_darwin_cgo.go"];
+	const runtime = sources["internal/noderuntime/runtime.go"];
+	const runtimeIdentity = sources["internal/noderuntime/identity_darwin.go"];
+	const runtimeProbe = sources["internal/noderuntime/probe_darwin.go"];
+	const storeBridge = sources["internal/store/nonhead_contract.go"];
+	const c3TestFiles = Object.fromEntries(entries
+		.filter((entry) => entry.path.endsWith("_test.go"))
+		.map((entry) => [
+			entry.path,
+			sorted([...entry.source.matchAll(/^func\s+(TestC3[A-Za-z0-9_]+)\s*\(/gmu)].map((match) => match[1])),
+		]));
+	const packageFacts = Object.fromEntries(packageValues.map((value) => [value.ImportPath, packageBuildFacts(value)]));
+	const sourceImports = Object.fromEntries(productionPaths.map((path) => [path, goImports(sources[path])]));
+	const sourceSurfaces = Object.fromEntries(productionPaths.map((path) => [path, exportedSurface(sources[path])]));
+	const targetCompositionBodies = [
+		functionBody(target, "PublishOfficialTarget"), functionBody(target, "publishOfficialTarget"),
+		functionBody(target, "OpenOfficialTarget"),
+		functionBody(target, "rejoinOfficial"),
+	].join("\n");
+	const targetPublicationBodies = [
+		functionBody(target, "publishOfficialTarget"), functionBody(target, "rejoinOfficial"),
+	].join("\n");
+	return structuredClone({
+		packages: packageFacts,
+		buildTags: Object.fromEntries(Object.keys(expectedC3BuildTags).map((path) => [path, goBuildTag(sources[path])])),
+		sourceImports,
+		sourceSurfaces,
+		testFiles: c3TestFiles,
+		c2Problems: validateC2Facts(c2Facts),
+		storeBridge: {
+			modelImporters: c2Facts.modelImporters,
+			exports: c2Facts.newProductionExports?.["internal/store/nonhead_contract.go"],
+			rootRoster: ordered(storeBridge, [
+				'"candidate-parent"', '"evidence"', '"fixture"', '"home"', '"state"', '"tmp"',
+				'"xdg-cache"', '"xdg-config"', '"xdg-data"', '"xdg-state"',
+			]),
+			markerContract: [
+				'contractAttemptV1     = "contract-conformance-attempt/v1"',
+				'contractAttemptsDir   = "conformance-attempts"',
+				'contractAttemptMarker = "attempt.marker.json"',
+				'"allocation_profile": "PRIVATE_FRESH_ROOT_V1"',
+				'"marker_ordering": "DURABLE_BEFORE_SPAWN"',
+			].every((anchor) => storeBridge.includes(anchor)),
+			freshNonce: functionBody(storeBridge, "AllocateConformanceAttempt").includes("rand.Read(random[:])") &&
+				functionBody(storeBridge, "buildConformanceAttempt").includes("hex.DecodeString(nonce)"),
+			exactReopen: ordered(functionBody(storeBridge, "openConformanceAttemptLocked"), [
+				"readExactPrivateFile", "parseConformanceAttempt", "NewSemanticObject", "reopenExactObject",
+				"inspectAttemptRoots", "validForLocked",
+			]),
+			targetJoin: ordered(functionBody(storeBridge, "PersistContractTargetRecord"), [
+				"attemptJoinsTarget", "NewSemanticObject", "persistTargetRecord", "openTargetByAttempt",
+			]) && ordered(functionBody(storeBridge, "OpenContractTargetRecord"), [
+				"openTargetByAttempt", "ParseContractExecutionTarget", "attemptJoinsTarget",
+			]),
+			noIssuerOrProcessEdge: !/\b(?:exec\.Command(?:Context)?|os\.StartProcess|RunPermit|StartClaimWinner)\s*\(/u.test(storeBridge),
+		},
+		gitTarget: {
+			directOpaqueSource: /source\s+InspectedTree/u.test(goCodeOnly(singleTarget)) &&
+				!["WorldPlan", "BoundCandidate", "WorldInstance"].some((anchor) => goCodeOnly(singleTarget).includes(anchor)),
+			publicationOrder: ordered(functionBody(singleTarget, "materializeSingleTarget"), [
+				"requirePrivateEmptyParent", "Inspect", "sameInspectedTree", "requirePrivateEmptyParent",
+				"os.MkdirTemp", "reserveTopology", "writeVerifiedBlob", "stagedPortableDigest",
+				"buildMaterializationManifest", "syncTreeDirectories", "writeDurableExclusiveFile",
+				"publishStagedDirectory", "ReopenSingleTarget",
+			]),
+			reopenOrder: ordered(functionBody(singleTarget, "ReopenSingleTarget"), [
+				"exactPublishedParent", "requireExactParentRoster", "Inspect", "sameInspectedTree",
+				"requireExactParentRoster", "buildMaterializationManifest", "validateSingleTargetManifest",
+				"validateSingleTargetTopology", "syncTreeDirectories", "syncDirectory", "requireExactParentRoster",
+				"materializationReceiptSeal",
+			]),
+			ambiguousRecovery: count(singleTarget, /CodePublicationAmbiguous/gu) >= 4 &&
+				["syncFailure", "rollbackFailure", "rollbackSyncFailure", "ReopenSingleTarget"].every((anchor) => singleTargetTest.includes(anchor)),
+			dirtyWorktreeTest: singleTargetTest.includes("TestC3SingleTargetExcludesDirtyWorktreeBytes") &&
+				singleTargetTest.includes("untracked-secret.txt"),
+		},
+		hostEpoch: {
+			twoSamples: count(functionBody(epoch, "measureWithSource"), /\bsource\s*\(\)/gu) === 2,
+			canonicalUUID: ["len(raw) != len(canonical)", "index == 8 || index == 13 || index == 18 || index == 23",
+				"value + ('a' - 'A')", "!nonzero"].every((anchor) => functionBody(epoch, "canonicalUUID").includes(anchor)),
+			typedDigest: functionBody(epoch, "measureWithSource").includes('canon.DigestBytes("DarwinBootSessionIdentity", first[:])'),
+			fixedDarwinSource: epochSource.includes('sysctlbyname("kern.bootsessionuuid"') &&
+				epochSource.includes("int(length) != len(buffer)") && epochSource.includes("buffer[len(buffer)-1] != 0"),
+			noFallbackOrProcess: !/(?:kern\.boottime|os\/exec|exec\.Command|StartProcess|time\.Now|os\.Getpid)/u.test(`${epoch}\n${epochSource}`),
+		},
+		nodeRuntime: {
+			spawnOwners: productionPaths.filter((path) => goImports(sources[path]).includes("os/exec")),
+			noAmbientPath: !/(?:\bLookPath\b|"PATH=)/u.test(`${runtime}\n${runtimeIdentity}\n${runtimeProbe}`),
+			measureProbeMeasure: ordered(functionBody(runtime, "measureProbeMeasure"), [
+				"resolvePrivateProbeParent", "operations.measure", "operations.probe", "operations.measure",
+				"resolvePrivateProbeParent", "before.equal(after)", "measured.valid(resolved)", "nodeProbeDigest()",
+			]),
+			fixedProbe: runtimeProbe.includes("exec.CommandContext(probeContext, executable, \"--eval\", nodeProbeProgram)") &&
+				runtimeProbe.includes('command.Env = []string{"HOME=" + home, "TMPDIR=" + tmp, "LANG=C", "LC_ALL=C", "TZ=UTC", "NO_COLOR=1"}') &&
+				runtimeProbe.includes("context.WithTimeout(ctx, 5*time.Second)") &&
+				runtimeProbe.includes("stdout := &boundedBuffer{limit: 8192}") &&
+				runtimeProbe.includes("stderr := &boundedBuffer{limit: 4096}") &&
+				runtimeProbe.includes("command.WaitDelay = time.Second"),
+			executableIdentity: ["syscall.O_NOFOLLOW", "syscall.Fstat", "descriptorPath", "io.LimitReader",
+				"executableIdentityFromStat(after) != identity"].every((anchor) => runtimeIdentity.includes(anchor)),
+		},
+		officialTarget: {
+			publishOrder: ordered(functionBody(target, "publishOfficialTarget"), [
+				"reopenResidueHead", "policyForResidue", "Repository.Pin", "AllocateConformanceAttempt", "gitobj.Inspect",
+				"sourceProfileJoinsTree", "gitobj.MaterializeSingleTarget", "gitobj.ReopenSingleTarget", "noderuntime.Admit",
+				"runtimeAuthority.Revalidate", "hostepoch.Measure", "reopenResidueHead", "buildTarget",
+				"PersistContractTargetRecord", "rejoinOfficial",
+			]),
+			openOrder: ordered(functionBody(target, "OpenOfficialTarget"), [
+				"reopenResidueHead", "policyForResidue", "Store.Read", "Store.Validate", "ParseContractExecutionTarget",
+				"OpenConformanceAttempt", "OpenContractTargetRecord", "Repository.Pin", "gitobj.Inspect",
+				"sourceProfileJoinsTree", "gitobj.ReopenSingleTarget", "treeBindingMatches", "noderuntime.Admit",
+				"runtimeBindingMatches", "hostepoch.Measure", "rejoinOfficial",
+			]),
+			finalRejoin: ordered(functionBody(target, "rejoinOfficial"), [
+				"reopenResidueHead", "policyForResidue", "gitobj.ReopenSingleTarget", "runtime.Revalidate",
+				"epoch.Revalidate", "OpenConformanceAttempt", "OpenContractTargetRecord", "issuedOfficialTargetSeal",
+			]),
+			faultCoverage: ordered(targetPublicationBodies, [
+				"officialFaultAfterInputsValidated", "officialFaultAfterInitialResidueReopen",
+				"officialFaultAfterPolicyDerivation", "officialFaultAfterTreePin", "officialFaultAfterAttemptAllocation",
+				"officialFaultAfterTreeInspection", "officialFaultAfterEntrypointJoin", "officialFaultAfterMaterialization",
+				"officialFaultAfterMaterializationReopen", "officialFaultAfterRuntimeAdmission",
+				"officialFaultAfterRuntimeRevalidation", "officialFaultAfterEpochMeasurement",
+				"officialFaultAfterTerminalResidueJoin", "officialFaultAfterTargetBuild",
+				"officialFaultAfterTargetRecordPersistence", "officialFaultAfterProvisionalValidation",
+				"officialFaultAfterFinalResidueJoin", "officialFaultAfterFinalPolicyJoin",
+				"officialFaultAfterFinalMaterializationJoin", "officialFaultAfterFinalRuntimeJoin",
+				"officialFaultAfterFinalEpochJoin", "officialFaultAfterFinalAttemptJoin",
+				"officialFaultAfterFinalTargetRecordJoin", "officialFaultBeforeAuthoritySeal",
+			]),
+			treeJoinClosed: [
+				"receipt.PublishedRoot", "receipt.ManifestPath", "receipt.PortableTreeDigest", "receipt.PolicyDigest",
+				"receipt.ObjectFormat", "receipt.RepositoryFingerprint", "receipt.Entries[index]", "sourceEntries[index]",
+			].every((anchor) => functionBody(target, "treeBindingMatches").includes(anchor)),
+			preSpawnOnly: !/\b(?:exec\.Command(?:Context)?|os\.StartProcess|acquireInterlock|RunPermit|StartClaim|persistFinalizedRun|persistExecution)\s*\(/u.test(targetCompositionBodies),
+			headPreservationTest: ["c3HeadSnapshot", "os.SameFile(beforeInfo, afterInfo)", "bytes.Equal(beforeBytes, afterBytes)"].every((anchor) => targetTest.includes(anchor)),
+		},
+		predecessor: JSON.parse(sources["spec/verification/p07b-c-c3-predecessors.json"]),
+		predecessorAuthority: collectC3PredecessorAuthority(),
+	});
+}
+
 function violation(code, detail) { return Object.freeze({ code, detail }); }
 
 export function validateC2Facts(facts) {
@@ -1083,7 +2002,12 @@ export function validateC2Facts(facts) {
 	for (const [file, expected] of Object.entries(expectedC2Imports)) {
 		if (!exact(facts.imports?.[file], expected)) add("P07B_C2_IMPORT_ROSTER", `${file}:${JSON.stringify(facts.imports?.[file])}`);
 	}
-	if (Object.values(facts.newProductionExports ?? {}).some((surface) => surface.length !== 0) ||
+	const expectedNewProductionExports = {
+		"internal/store/execution_interlock.go": [],
+		"internal/store/nonhead_contract.go": expectedC3StoreSurface,
+		"internal/store/private_contract_run.go": [],
+	};
+	if (!exact(facts.newProductionExports, expectedNewProductionExports) ||
 		!exact(facts.objectStoreExports, expectedC2ObjectStoreSurface) || facts.compilerParsedSurface !== true) {
 		add("P07B_C2_EXPORTED_SURFACE", JSON.stringify({
 			new: facts.newProductionExports, store: facts.objectStoreExports, compilerParsed: facts.compilerParsedSurface,
@@ -1094,7 +2018,11 @@ export function validateC2Facts(facts) {
 	}
 	if (!exact(facts.testSymbols, expectedC2TestSymbols)) add("P07B_C2_TEST_SYMBOL_ROSTER", JSON.stringify(facts.testSymbols));
 	for (const [path, expected] of Object.entries(expectedC2TestFilesByProfile)) {
-		if (!exact(facts.testFiles?.[path], sorted(expected))) add("P07B_C2_TEST_FILE_ROSTER", `${path}:${JSON.stringify(facts.testFiles?.[path])}`);
+		const combined = [...expected, ...(expectedC3StoreFilesByProfile[path] ?? [])];
+		if (!exact(facts.testFiles?.[path], sorted(combined))) add("P07B_C2_TEST_FILE_ROSTER", `${path}:${JSON.stringify(facts.testFiles?.[path])}`);
+	}
+	if (!exact(facts.modelImporters, ["internal/store/nonhead_contract.go"])) {
+		add("P07B_C2_MODEL_IMPORTER_ROSTER", JSON.stringify(facts.modelImporters));
 	}
 	if ((facts.forbiddenSurface ?? []).length !== 0) add("P07B_C2_FORBIDDEN_PRODUCTION_SURFACE", facts.forbiddenSurface.join(","));
 	if (!facts.namespaces?.paths || !facts.namespaces?.retained || !facts.namespaces?.replacementTest ||
@@ -1114,7 +2042,7 @@ export function validateC2Facts(facts) {
 		!facts.interlock?.clearReceiptConvergence || !facts.interlock?.clearReceiptFaults || !facts.interlock?.identityBoundary) {
 		add("P07B_C2_INTERLOCK_PROTOCOL", JSON.stringify(facts.interlock));
 	}
-	if (!exact(facts.interlock?.productionSeals, { attempt: 0, terminal: 0, reset: 0, lease: 1, winner: 1, manifest: 2 }) ||
+	if (!exact(facts.interlock?.productionSeals, { attempt: 2, terminal: 0, reset: 0, lease: 1, winner: 1, manifest: 2 }) ||
 		!exact(facts.interlock?.testSeals, { attempt: 1, terminal: 1, reset: 1 })) {
 		add("P07B_C2_SEAL_OWNERSHIP", JSON.stringify({ production: facts.interlock?.productionSeals, test: facts.interlock?.testSeals }));
 	}
@@ -1134,6 +2062,90 @@ export function validateC2Facts(facts) {
 	return problems;
 }
 
+export function validateC3Facts(facts) {
+	const problems = [];
+	const add = (code, detail) => problems.push(violation(code, detail));
+	for (const [importPath, expected] of Object.entries(expectedC3Packages)) {
+		const actual = facts.packages?.[importPath];
+		if (actual?.name !== expected.name || actual?.modulePath !== modulePath || actual?.moduleMain !== true ||
+			!exact(actual?.go, expected.go) || !exact(actual?.cgo, expected.cgo) || !exact(actual?.test, expected.test) ||
+			!exact(actual?.xtest, expected.xtest) || !exact(actual?.ignored, expected.ignored) ||
+			(actual?.invalid ?? []).length !== 0 || !exact(actual?.imports, expected.imports)) {
+			add("P07B_C3_PACKAGE_TOPOLOGY", `${importPath}:${JSON.stringify(actual)}`);
+		}
+	}
+	if (!exact(facts.buildTags, expectedC3BuildTags)) {
+		add("P07B_C3_BUILD_TAG_ROSTER", JSON.stringify(facts.buildTags));
+	}
+	for (const [path, expected] of Object.entries(expectedC3SourceImports)) {
+		if (!exact(facts.sourceImports?.[path], expected)) {
+			add("P07B_C3_IMPORT_ROSTER", `${path}:${JSON.stringify(facts.sourceImports?.[path])}`);
+		}
+		const expectedSurface = expectedC3Surfaces[path] ?? [];
+		if (!exact(facts.sourceSurfaces?.[path], expectedSurface)) {
+			add("P07B_C3_EXPORTED_SURFACE", `${path}:${JSON.stringify(facts.sourceSurfaces?.[path])}`);
+		}
+	}
+	const expectedTestFiles = {
+		"internal/contractexec/target_test.go": c3OfficialTargetTests,
+		"internal/gitobj/single_target_test.go": c3SingleTargetTests,
+		"internal/hostepoch/epoch_darwin_test.go": ["TestC3HostEpochDarwinLiveMeasurement"],
+		"internal/hostepoch/epoch_test.go": c3HostEpochTests.filter((name) =>
+			!["TestC3HostEpochDarwinLiveMeasurement", "TestC3HostEpochPublicSurfaceIsClosed"].includes(name)),
+		"internal/hostepoch/public_api_test.go": ["TestC3HostEpochPublicSurfaceIsClosed"],
+		"internal/noderuntime/probe_darwin_test.go": c3NodeRuntimeTests.filter((name) => name.startsWith("TestC3NodeRuntimeProbe")),
+		"internal/noderuntime/public_api_test.go": ["TestC3NodeRuntimePublicSurfaceAndSoleSpawnEdge"],
+		"internal/noderuntime/runtime_darwin_test.go": c3NodeRuntimeTests.filter((name) => name.startsWith("TestC3NodeRuntimeDarwin")),
+		"internal/noderuntime/runtime_test.go": c3NodeRuntimeTests.filter((name) =>
+			!name.startsWith("TestC3NodeRuntimeProbe") && !name.startsWith("TestC3NodeRuntimeDarwin") &&
+			name !== "TestC3NodeRuntimePublicSurfaceAndSoleSpawnEdge"),
+		"internal/store/nonhead_contract_test.go": expectedC3StoreFilesByProfile["internal/store/nonhead_contract_test.go"],
+		"internal/store/public_api_test.go": expectedC3StoreFilesByProfile["internal/store/public_api_test.go"],
+	};
+	for (const [path, expected] of Object.entries(expectedTestFiles)) {
+		if (!exact(facts.testFiles?.[path], sorted(expected))) {
+			add("P07B_C3_TEST_FILE_ROSTER", `${path}:${JSON.stringify(facts.testFiles?.[path])}`);
+		}
+	}
+	if ((facts.c2Problems ?? []).length !== 0) add("P07B_C3_INHERITED_C2", JSON.stringify(facts.c2Problems));
+	if (!exact(facts.storeBridge?.modelImporters, ["internal/store/nonhead_contract.go"]) ||
+		!exact(facts.storeBridge?.exports, expectedC3StoreSurface) || !facts.storeBridge?.rootRoster ||
+		!facts.storeBridge?.markerContract || !facts.storeBridge?.freshNonce || !facts.storeBridge?.exactReopen ||
+		!facts.storeBridge?.targetJoin || !facts.storeBridge?.noIssuerOrProcessEdge) {
+		add("P07B_C3_STORE_BRIDGE", JSON.stringify(facts.storeBridge));
+	}
+	if (!facts.gitTarget?.directOpaqueSource || !facts.gitTarget?.publicationOrder || !facts.gitTarget?.reopenOrder ||
+		!facts.gitTarget?.ambiguousRecovery || !facts.gitTarget?.dirtyWorktreeTest) {
+		add("P07B_C3_GIT_TARGET", JSON.stringify(facts.gitTarget));
+	}
+	if (!facts.hostEpoch?.twoSamples || !facts.hostEpoch?.canonicalUUID || !facts.hostEpoch?.typedDigest ||
+		!facts.hostEpoch?.fixedDarwinSource || !facts.hostEpoch?.noFallbackOrProcess) {
+		add("P07B_C3_HOST_EPOCH", JSON.stringify(facts.hostEpoch));
+	}
+	if (!exact(facts.nodeRuntime?.spawnOwners, ["internal/noderuntime/probe_darwin.go"]) ||
+		!facts.nodeRuntime?.noAmbientPath || !facts.nodeRuntime?.measureProbeMeasure || !facts.nodeRuntime?.fixedProbe ||
+		!facts.nodeRuntime?.executableIdentity) {
+		add("P07B_C3_NODE_RUNTIME", JSON.stringify(facts.nodeRuntime));
+	}
+	if (!facts.officialTarget?.publishOrder || !facts.officialTarget?.openOrder || !facts.officialTarget?.finalRejoin ||
+		!facts.officialTarget?.faultCoverage ||
+		!facts.officialTarget?.treeJoinClosed || !facts.officialTarget?.preSpawnOnly ||
+		!facts.officialTarget?.headPreservationTest) {
+		add("P07B_C3_OFFICIAL_TARGET", JSON.stringify(facts.officialTarget));
+	}
+	if (!exact(facts.predecessor, expectedC3Predecessor)) {
+		add("P07B_C3_PREDECESSOR", JSON.stringify(facts.predecessor));
+	}
+	if (!exact(facts.predecessorAuthority?.source_parent, expectedC3PredecessorAuthority.source_parent) ||
+		!exact(facts.predecessorAuthority?.ancestry, expectedC3PredecessorAuthority.ancestry)) {
+		add("P07B_C3_PREDECESSOR_AUTHORITY", JSON.stringify(facts.predecessorAuthority));
+	}
+	if (!exact(facts.predecessorAuthority?.chain, expectedC3PredecessorAuthority.chain)) {
+		add("P07B_C3_PREDECESSOR_CHAIN", JSON.stringify(facts.predecessorAuthority?.chain));
+	}
+	return problems;
+}
+
 export function validateFacts(facts) {
 	const problems = [];
 	const add = (code, detail) => problems.push(violation(code, detail));
@@ -1149,7 +2161,7 @@ export function validateFacts(facts) {
 	if (!exact(facts.package?.testFiles, expectedTestFiles) || !exact(facts.package?.xTestFiles, [])) {
 		add("P07B_C1_TEST_TOPOLOGY", JSON.stringify({ test: facts.package?.testFiles, xTest: facts.package?.xTestFiles }));
 	}
-	if (!exact(facts.topology?.contractexecEntries, ["model:directory"])) {
+	if (!exact(facts.topology?.contractexecEntries, ["model:directory", "target.go:file", "target_test.go:file"])) {
 		add("P07B_C1_PRODUCTION_TOPOLOGY", JSON.stringify(facts.topology?.contractexecEntries));
 	}
 	if (!exact(facts.topology?.modelEntries, expectedModelEntries)) {
@@ -1172,8 +2184,8 @@ export function validateFacts(facts) {
 	if (!exact(facts.localDependencies, expectedLocalDependencies) || (facts.externalDependencies ?? []).length > 0) {
 		add("P07B_C1_DEPENDENCY_CLOSURE", JSON.stringify({ local: facts.localDependencies, external: facts.externalDependencies }));
 	}
-	if ((facts.productionImporters ?? []).length > 0) {
-		add("P07B_C1_PREMATURE_IMPORTER", JSON.stringify(facts.productionImporters));
+	if (!exact(facts.productionImporters, [contractPackagePath, storePackagePath])) {
+		add("P07B_C1_IMPORTER_ROSTER", JSON.stringify(facts.productionImporters));
 	}
 	if ((facts.schema?.unclosedObjects ?? []).length > 0) add("P07B_C1_SCHEMA_CLOSURE", facts.schema.unclosedObjects.join(","));
 	if ((facts.schema?.incompleteRequiredObjects ?? []).length > 0) {
@@ -1293,27 +2305,58 @@ async function runC2Boundary() {
 	process.stdout.write("P07B-C C2 cumulative architecture boundary OK\n");
 }
 
+async function runC3Boundary() {
+	const before = await snapshot(c3ReviewedPaths);
+	runInheritedB();
+	const facts = await collectC3Facts();
+	const predecessorAuthorityBefore = structuredClone(facts.predecessorAuthority);
+	const problems = validateC3Facts(facts);
+	if (problems.length > 0) {
+		for (const problem of problems) process.stderr.write(`${problem.code}: ${problem.detail}\n`);
+		process.exitCode = 1;
+		return;
+	}
+	for (const profile of [
+		"c3-official-target", "c3-single-target", "c3-hostepoch", "c3-noderuntime", "c3-store-bridge",
+	]) runGoJSONProfile(profile);
+	const predecessorAuthorityAfter = collectC3PredecessorAuthority();
+	if (!exact(predecessorAuthorityBefore, predecessorAuthorityAfter)) {
+		throw new ArchitectureError("P07B_C3_PREDECESSOR_CHANGED", "C3 predecessor commit or notes authority changed during cumulative checks");
+	}
+	const after = await snapshot(c3ReviewedPaths);
+	if (!exact(before, after)) {
+		throw new ArchitectureError("P07B_C3_SNAPSHOT_CHANGED", "C3 reviewed inputs changed during cumulative checks");
+	}
+	process.stdout.write("P07B-C C3 cumulative architecture boundary OK\n");
+}
+
 async function main() {
 	if (process.argv[2] === "--assert-go-json") {
 		if (process.argv.length !== 4) {
 			throw new ArchitectureError("P07B_C1_ARGUMENTS", "--assert-go-json requires one exact profile");
 		}
 		const result = validateGoJSONTranscript(process.argv[3], await readStandardInput());
-		const phase = result.profile.startsWith("c2-") ? "C2" : "C1";
+		const phase = result.profile.startsWith("c3-") ? "C3" : result.profile.startsWith("c2-") ? "C2" : "C1";
 		process.stdout.write(`P07B-C ${phase} Go JSON target execution OK (${result.profile}: ${result.passed} passed, ${result.skipped} skipped)\n`);
 		return;
 	}
 	if (process.argv[2] === "--run-go-json") {
-		if (process.argv.length !== 4 || !process.argv[3].startsWith("c2-")) {
-			throw new ArchitectureError("P07B_C2_ARGUMENTS", "--run-go-json requires one exact C2 profile");
+		if (process.argv.length !== 4 || !/^c[23]-/u.test(process.argv[3])) {
+			throw new ArchitectureError("P07B_C_GO_JSON_ARGUMENTS", "--run-go-json requires one exact C2 or C3 profile");
 		}
 		const result = runGoJSONProfile(process.argv[3]);
-		process.stdout.write(`P07B-C C2 Go JSON target execution OK (${result.profile}: ${result.passed} passed, ${result.skipped} skipped)\n`);
+		const phase = result.profile.startsWith("c3-") ? "C3" : "C2";
+		process.stdout.write(`P07B-C ${phase} Go JSON target execution OK (${result.profile}: ${result.passed} passed, ${result.skipped} skipped)\n`);
 		return;
 	}
 	if (process.argv[2] === "--c2") {
 		if (process.argv.length !== 3) throw new ArchitectureError("P07B_C2_ARGUMENTS", "--c2 accepts no other arguments");
 		await runC2Boundary();
+		return;
+	}
+	if (process.argv[2] === "--c3") {
+		if (process.argv.length !== 3) throw new ArchitectureError("P07B_C3_ARGUMENTS", "--c3 accepts no other arguments");
+		await runC3Boundary();
 		return;
 	}
 	if (process.argv.length !== 2) throw new ArchitectureError("P07B_C1_ARGUMENTS", "no arguments accepted");

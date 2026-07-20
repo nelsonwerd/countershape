@@ -1,0 +1,344 @@
+{
+  "schema_version": "p07b-c-c3-predecessors/v3",
+  "unit": "C3",
+  "source_parent": {
+    "unit": "C3S",
+    "commit": "47a65b45a50c0f39fc39e1336fc7744a97a72b8f",
+    "tree": "fce8593ad1fe7af1474b4e113f03e82a9a052f79",
+    "subject": "fix: make U6 C3 fixture phase-stable",
+    "parent": "63038644ba347d7b934a5557a490af95bb4428a4",
+    "scope_digest": "sha256:1d5f793e70caea0ad7379e92bbf781da50846276c28a2aca2d3e7e2ed8c17a26",
+    "note_ref": "refs/notes/didrun",
+    "note_type": "blob",
+    "note_blob": "7dff66800e79dc5b1a149ffe16df4dbf9178836a",
+    "note_body_sha256": "b65f71e25dd53509f8df876a28fb4027559464f77861a34d1aa0c5854bfdbae6",
+    "claim_count": 10,
+    "event_coverage": {
+      "complete": 10,
+      "total_events": 10
+    },
+    "secrets_override": true,
+    "claims": [
+      {
+        "index": 0,
+        "label": "P07B-C C3S cumulative-selftest plan coherence",
+        "type": "tests-pass",
+        "grade": "TREE-EXACT"
+      },
+      {
+        "index": 1,
+        "label": "P07B-C C3S cumulative-selftest plan defensive self-test",
+        "type": "tests-pass",
+        "grade": "TREE-EXACT"
+      },
+      {
+        "index": 2,
+        "label": "P07B-C C3S historical U6 architecture compatibility",
+        "type": "tests-pass",
+        "grade": "TREE-EXACT"
+      },
+      {
+        "index": 3,
+        "label": "P07B-C C3S U6 phase-stable fixture defensive self-test",
+        "type": "tests-pass",
+        "grade": "TREE-EXACT"
+      },
+      {
+        "index": 4,
+        "label": "P07B-C C3S unit-scope defensive self-test",
+        "type": "tests-pass",
+        "grade": "TREE-EXACT"
+      },
+      {
+        "index": 5,
+        "label": "P07B-C C3S cumulative verifier self-test",
+        "type": "tests-pass",
+        "grade": "TREE-EXACT"
+      },
+      {
+        "index": 6,
+        "label": "P07B-C C3S cumulative verification",
+        "type": "tests-pass",
+        "grade": "TREE-EXACT"
+      },
+      {
+        "index": 7,
+        "label": "P07B-C C3S exact eight-path staged scope and diff integrity",
+        "type": "command-succeeded",
+        "grade": "TREE-EXACT"
+      },
+      {
+        "index": 8,
+        "label": "P07B-C C3S scoped staged credential-pattern scan",
+        "type": "command-succeeded",
+        "grade": "TREE-EXACT"
+      },
+      {
+        "index": 9,
+        "label": "P07B-C C3S sealed-C3F predecessor and preceding didrun chain integrity",
+        "type": "command-succeeded",
+        "grade": "TREE-EXACT"
+      }
+    ]
+  },
+  "ancestry": [
+    {
+      "unit": "C3F",
+      "commit": "63038644ba347d7b934a5557a490af95bb4428a4",
+      "tree": "3b4c39cfa907c2907d01dcd21399cafe52075872",
+      "subject": "fix: admit exact C3 target codec surface through B",
+      "parent": "efa918928246c7793f4ad7201c003020e3a42193",
+      "scope_digest": "sha256:f64293895a1b824faafddf236757d381c813b59c40286225bb1c352d5c812c1a",
+      "note_ref": "refs/notes/didrun",
+      "note_type": "blob",
+      "note_blob": "098958ba7a9b2d9d237cee901a34279424b68128",
+      "note_body_sha256": "a23982f84573505fc966378dbcc4f825daf11da8a08b2bfd24f7f71de588d315",
+      "claim_count": 10,
+      "event_coverage": {
+        "complete": 10,
+        "total_events": 10
+      },
+      "secrets_override": true,
+      "claims": [
+        {
+          "index": 0,
+          "label": "P07B-C C3F B future-surface plan coherence",
+          "type": "tests-pass",
+          "grade": "TREE-EXACT"
+        },
+        {
+          "index": 1,
+          "label": "P07B-C C3F B future-surface plan defensive self-test",
+          "type": "tests-pass",
+          "grade": "TREE-EXACT"
+        },
+        {
+          "index": 2,
+          "label": "P07B-C C3F historical B architecture compatibility",
+          "type": "tests-pass",
+          "grade": "TREE-EXACT"
+        },
+        {
+          "index": 3,
+          "label": "P07B-C C3F B conditional future-surface defensive self-test",
+          "type": "tests-pass",
+          "grade": "TREE-EXACT"
+        },
+        {
+          "index": 4,
+          "label": "P07B-C C3F unit-scope defensive self-test",
+          "type": "tests-pass",
+          "grade": "TREE-EXACT"
+        },
+        {
+          "index": 5,
+          "label": "P07B-C C3F cumulative verifier self-test",
+          "type": "tests-pass",
+          "grade": "TREE-EXACT"
+        },
+        {
+          "index": 6,
+          "label": "P07B-C C3F cumulative verification",
+          "type": "tests-pass",
+          "grade": "TREE-EXACT"
+        },
+        {
+          "index": 7,
+          "label": "P07B-C C3F exact ten-path staged scope and diff integrity",
+          "type": "command-succeeded",
+          "grade": "TREE-EXACT"
+        },
+        {
+          "index": 8,
+          "label": "P07B-C C3F scoped staged credential-pattern scan",
+          "type": "command-succeeded",
+          "grade": "TREE-EXACT"
+        },
+        {
+          "index": 9,
+          "label": "P07B-C C3F sealed-C3L predecessor and preceding didrun chain integrity",
+          "type": "command-succeeded",
+          "grade": "TREE-EXACT"
+        }
+      ]
+    },
+    {
+      "unit": "C3L",
+      "commit": "efa918928246c7793f4ad7201c003020e3a42193",
+      "tree": "d9187c6449392c269a385b53c563ba4411112460",
+      "subject": "fix: admit exact C3 store model edge through U6",
+      "parent": "2b84d2841971568784d2ac955775b4a99ca7f0f6",
+      "scope_digest": "sha256:b3624e1337681e0909e6c074246103e066118a5924e8f790e7d1f42359da9dc0",
+      "note_ref": "refs/notes/didrun",
+      "note_type": "blob",
+      "note_blob": "b21365e156719fbc84e480108a7e8672644f5a71",
+      "note_body_sha256": "d4721b344adb95442c5273e596c83ea9cb1b855d26655198a9803771f83e2e9d",
+      "claim_count": 12,
+      "event_coverage": {
+        "complete": 12,
+        "total_events": 12
+      },
+      "secrets_override": true,
+      "claims": [
+        {
+          "index": 0,
+          "label": "P07B-C C3L legacy-lattice plan coherence",
+          "type": "tests-pass",
+          "grade": "TREE-EXACT"
+        },
+        {
+          "index": 1,
+          "label": "P07B-C C3L legacy-lattice plan defensive self-test",
+          "type": "tests-pass",
+          "grade": "TREE-EXACT"
+        },
+        {
+          "index": 2,
+          "label": "P07B-C C3L historical U6 architecture compatibility",
+          "type": "tests-pass",
+          "grade": "TREE-EXACT"
+        },
+        {
+          "index": 3,
+          "label": "P07B-C C3L U6 phase-admission defensive self-test",
+          "type": "tests-pass",
+          "grade": "TREE-EXACT"
+        },
+        {
+          "index": 4,
+          "label": "P07B-C C3L cumulative B architecture compatibility",
+          "type": "tests-pass",
+          "grade": "TREE-EXACT"
+        },
+        {
+          "index": 5,
+          "label": "P07B-C C3L B defensive self-test",
+          "type": "tests-pass",
+          "grade": "TREE-EXACT"
+        },
+        {
+          "index": 6,
+          "label": "P07B-C C3L unit-scope defensive self-test",
+          "type": "tests-pass",
+          "grade": "TREE-EXACT"
+        },
+        {
+          "index": 7,
+          "label": "P07B-C C3L cumulative verifier self-test",
+          "type": "tests-pass",
+          "grade": "TREE-EXACT"
+        },
+        {
+          "index": 8,
+          "label": "P07B-C C3L cumulative verification",
+          "type": "tests-pass",
+          "grade": "TREE-EXACT"
+        },
+        {
+          "index": 9,
+          "label": "P07B-C C3L exact nine-path staged scope and diff integrity",
+          "type": "command-succeeded",
+          "grade": "TREE-EXACT"
+        },
+        {
+          "index": 10,
+          "label": "P07B-C C3L scoped staged credential-pattern scan",
+          "type": "command-succeeded",
+          "grade": "TREE-EXACT"
+        },
+        {
+          "index": 11,
+          "label": "P07B-C C3L sealed-C3A predecessor and preceding didrun chain integrity",
+          "type": "command-succeeded",
+          "grade": "TREE-EXACT"
+        }
+      ]
+    },
+    {
+      "unit": "C3A",
+      "commit": "2b84d2841971568784d2ac955775b4a99ca7f0f6",
+      "tree": "b8d858033431fe51c262ce725b9d9b051ba9e8c9",
+      "subject": "fix: align pre-C3 architecture and runtime bounds",
+      "parent": "13369122ba7d5557eba1949095c1135a41843070",
+      "scope_digest": "sha256:cc9bb98ceeb2f281336d3e235377d3cdb8920664f833baea830a84b847621188",
+      "note_ref": "refs/notes/didrun",
+      "note_type": "blob",
+      "note_blob": "3e516946f4b86e536ae9ea0124938bd534573983",
+      "note_body_sha256": "07a0d04dc667963ea16ec6bb458b929d3a7659637e705bb642b5267766609a8c",
+      "claim_count": 11,
+      "event_coverage": {
+        "complete": 11,
+        "total_events": 11
+      },
+      "secrets_override": true,
+      "claims": [
+        {
+          "index": 0,
+          "label": "P07B-C C3A cumulative-admission plan coherence",
+          "type": "tests-pass",
+          "grade": "TREE-EXACT"
+        },
+        {
+          "index": 1,
+          "label": "P07B-C C3A cumulative-admission plan defensive self-test",
+          "type": "tests-pass",
+          "grade": "TREE-EXACT"
+        },
+        {
+          "index": 2,
+          "label": "P07B-C C3A runtime-version exact 128-byte model boundary",
+          "type": "tests-pass",
+          "grade": "TREE-EXACT"
+        },
+        {
+          "index": 3,
+          "label": "P07B-C C3A cumulative B architecture compatibility",
+          "type": "tests-pass",
+          "grade": "TREE-EXACT"
+        },
+        {
+          "index": 4,
+          "label": "P07B-C C3A B admission and entrypoint defensive self-test",
+          "type": "tests-pass",
+          "grade": "TREE-EXACT"
+        },
+        {
+          "index": 5,
+          "label": "P07B-C C3A unit-scope defensive self-test",
+          "type": "tests-pass",
+          "grade": "TREE-EXACT"
+        },
+        {
+          "index": 6,
+          "label": "P07B-C C3A cumulative verifier self-test",
+          "type": "tests-pass",
+          "grade": "TREE-EXACT"
+        },
+        {
+          "index": 7,
+          "label": "P07B-C C3A cumulative verification",
+          "type": "tests-pass",
+          "grade": "TREE-EXACT"
+        },
+        {
+          "index": 8,
+          "label": "P07B-C C3A exact thirteen-path staged scope and diff integrity",
+          "type": "command-succeeded",
+          "grade": "TREE-EXACT"
+        },
+        {
+          "index": 9,
+          "label": "P07B-C C3A scoped staged credential-pattern scan",
+          "type": "command-succeeded",
+          "grade": "TREE-EXACT"
+        },
+        {
+          "index": 10,
+          "label": "P07B-C C3A preceding didrun chain integrity",
+          "type": "command-succeeded",
+          "grade": "TREE-EXACT"
+        }
+      ]
+    }
+  ]
+}

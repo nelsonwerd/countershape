@@ -2,7 +2,9 @@
 
 - **Contract version:** U0 / `state-machines-v1`
 - **Target:** narrowed Darwin reference instrument
-- **Status:** normative separation of implemented and future transitions. P07B-C through C2B is sealed and strict-clean. C3P is the active `UNRECEIPTED` boot-session semantic prerequisite; C3–C6 official-target, physical-run, and classification-publication transitions remain future.
+- **Status:** normative separation of implemented and future transitions. P07B-C through C3S is sealed and strict-clean. C3 exact-target publication is active and `UNRECEIPTED`; C4–C6 physical-run and classification-publication transitions remain future.
+
+For the active target transition, `OfficialTarget.Valid()` is structural only. `ReopenOfficialTarget` repeats the live prerequisite graph, and C4 must consume a fresh reopen adjacent to physical admission. A conflicting same-attempt target link is first-durable-writer-wins and carries no semantic arbitration.
 
 Countershape state is a set of immutable semantic artifacts connected by validated transitions. State names are not presentation copy. The Go domain model, JSON schemas, API DTOs, CLI, studio, generated residue, examples, and tests must agree on these names and preconditions.
 
@@ -594,7 +596,7 @@ Additional prohibited transitions include promoting an unqualified `STABLE` labe
 | U6c / P07B-A2.1 | nontransitioning current-ruling compilation preparation | source/ruling/Choicepoint/confirmation/proof equality and selected-tuple partition gates pass; no head advance or durable currentness after return |
 | U6c / P07B-A2.2 | nontransitioning recoverable bundle compilation and strict Go/Node semantic evaluation | sealed parity, recovery, generated-runtime, and pure-boundary gates pass; no head advance |
 | U6c / P07B-B (complete sealed boundary) | exact `RULING -> RESIDUE` terminal transition plus nonsemantic retryable physical materialization | final handoff, receipt reconciliation, and exact-boundary HTML are sealed and strict-clean; no C execution state is inferred |
-| U6c / P07B-C (through C2B sealed; C3P active) | C1 strict nonhead algebra plus C2 typed persistence, bounded private evidence, and receipt-backed interlock substrate; C3P corrects the inert boot profile before later C3–C6 live target, physical run, scope, and classification authority | C3P/C3PB must close before C3 and C3/C3B before C4; later authorities remain separate, the interlock and receipt have no result/absence authority, and study head remains terminal residue |
+| U6c / P07B-C (through C3S sealed; C3 active) | sealed C1/C2 nonhead algebra, typed persistence, bounded private evidence, receipt-backed interlock substrate, corrected boot profile, and the C3A/C3L/C3F/C3S maintenance chain; C3 now composes the exact pre-spawn target without physical run authority | C3 must strict-close before C3B, C3B before C4, and every later physical/scope/classification authority remains separate; the interlock and receipt have no result/absence authority, and study head remains terminal residue |
 | U7 | complete study lifecycle and both decisive reference lineages | three clean runs preserve semantic bytes while all attempts are new |
 | U8 | authenticated transport and full renderer state matrix | blind leakage, request forgery, presentation obligations, visual/accessibility gates pass |
 | U9 | export/packaging/final claim mapping | exact environment receipts, final strict verify, HTML evidence, honest handoff |

@@ -2,7 +2,7 @@
 
 - **Working name:** Countershape (package, domain, trademark, and legal clearance not performed)
 - **Mode:** open-source-first experimental infrastructure
-- **State:** deep dive and adversarial red team complete; P07B-C through C2B is sealed and strict-clean; C3P is the active pre-C3 runtime-epoch correction and remains `UNRECEIPTED`
+- **State:** deep dive and adversarial red team complete; P07B-C through C3S is sealed and strict-clean; C3 exact-target publication is active and remains `UNRECEIPTED`
 - **Last updated:** 2026-07-19
 - **Founder persona:** Soren Vale
 - **Confidence:** 8/10 in the truth kernel; 6/10 in the bounded reference instrument; 3/10 in review compression; 3/10 in adoption
@@ -163,7 +163,7 @@ Every persisted Countershape object has a schema version, kind, canonical bytes,
 
 The normative objects are:
 
-1. `TreeIdentity`: repository fingerprint, object format, immutable commit/tree OIDs, display ref, and Git version.
+1. `TreeIdentity`: content-portable object format plus immutable commit/tree OIDs. Repository fingerprint, display ref, and Git version are separately retained local provenance/revalidation facts, not serialized selection identity or clone resistance.
 2. `MaterializationManifest`: policy, sorted regular/executable entry records, blob/object verification, portable tree digest, target-filesystem facts, and typed refusal details.
 3. `WorldPlan`: deterministic argv, roots policy, sparse environment, fixture/readiness, `HOST_ALLOWED`, capture/projection, repeats, schedule, tools, and all budgets.
 4. `CandidateExecutionBinding`: opaque tree/materialization/plan/adapter/runner/projection identity. `CandidateExecutionKey` is its wire/display reference and cannot allocate evidence by itself.
@@ -179,7 +179,7 @@ The normative objects are:
 14. `DecisionRecord`: blind/reveal facts, local-caller-attributed action, selected and nonasserted fields, exact scope, rationale, the explicit `AUTHENTICITY_NOT_ESTABLISHED_IN_U6` nonclaim, and verbatim receipt references. Derived wire booleans such as `compilable` are reconstructed, never emitter inputs. A legacy whole-projection record remains historical but cannot authorize standalone emission.
 15. `PortableSource`: an implemented P07B-A1 live exact reconstruction witness, not a ruling or self-authenticating serialized claim. Its closed adapter constructor retains bounded runnable bytes and reproduces its supplied exact plan, projection binding/definition, minimized stimulus, profile, runner/start/readiness/capture authorities, and execution binding. Equality to the current Choicepoint/FreshConfirmation remains an A2 application-service obligation.
 16. `ContractBundle`: deterministic recoverable six-file Node-core source, typed exact predicate, and every exact file byte. Its domain-separated digest is external to its canonical body.
-17. `ContractExecutionTarget`: immutable nonhead pre-spawn authority over the reopened bundle/source profile, one explicit Git-pinned inspected and verified private materialization, one fresh durable conformance attempt, and one admitted/revalidated Node runtime. Its external typed digest is absent from its body; parsed bytes are inert.
+17. `ContractExecutionTarget`: immutable nonhead pre-spawn authority over the reopened bundle/source profile, one explicit Git-pinned inspected and verified private materialization, one fresh durable conformance attempt, and one admitted/revalidated Node runtime. Its external typed digest is absent from its body; parsed bytes are inert. A conflicting same-attempt target race is first durable writer wins, not semantic arbitration, so the issuer allocates one fresh attempt per publication.
 18. `FinalizedContractRun`: immutable nonhead physical-run authority bound to one exact target/attempt/start intent, with a bounded closed-run witness whose single process-control owner preserves at most one primary cause plus independent teardown/orphan controls, independent `COMPLETE | PARTIAL | VIOLATED` standalone scope over five named checks, and the exact projected tuple when present. Raw/large evidence remains private, may contain secrets, and establishes no confidentiality. Its external typed digest is absent from its body.
 19. `ContractExecution`: separately published classifier-profile-bound conformance/contradiction or ineligible conclusion over one exact official target and finalized run. It accepts neither tuple nor process/scope reason, duplicates no physical authority, supports classification-only retry without spawn, and never freshens the Choicepoint or changes the terminal study head.
 
@@ -439,7 +439,7 @@ Each unit is separately verified, claimed, committed, sealed, and gated on `NO_C
 10. **U6c/P07B-A2.1 — compilation authority (sealed):** current-revalidated ruling snapshot, exact source/Choicepoint/confirmation/proof joins, selected-tuple partition revalidation, and one sealed preparation with a private authority-narrowed input; no generated files or store writes.
 11. **U6c/P07B-A2.2 — recoverable compiler (sealed):** deterministic recoverable six-file bundle, strict parser, fixed Node-core runtime assets, Go/Node raw-wire corpus, physical generated-contract evidence, and bounded recovery/fuzz/architecture gates; no residue or product materializer.
 12. **U6c/P07B-B — terminal publication/materialization (sealed source):** opaque node-issued publication, stale-safe terminal residue, full predecessor restart, and retryable exact Darwin/arm64/cgo six-file publication; no execution target or classification.
-13. **U6c/P07B-C — standalone execution (through C2B sealed; C3P runtime-epoch correction active):** strict three-object semantics; exact UUID-profile prerequisite and separately receipted typed nonhead publication; a private boot-session interlock plus intent-only serialized cooperative at-most-once spawn admission; direct single-target Git and Node authority; bounded finalized run with separate process and five-domain standalone axes; classifier-profile-bound immutable execution; no semantic execution head or process resume.
+13. **U6c/P07B-C — standalone execution (through C3S sealed; C3 exact-target publication active):** strict three-object semantics; exact UUID-profile prerequisite and separately receipted typed nonhead publication; a private boot-session interlock plus intent-only serialized cooperative at-most-once spawn admission; direct single-target Git and Node authority; bounded finalized run with separate process and five-domain standalone axes; classifier-profile-bound immutable execution; no semantic execution head or process resume.
 14. **U7 — complete CLI and reference studies:** safe next actions, both end-to-end proofs, allow-many, custom none-conforms, reject/defer, three clean reproductions, named-machine timings.
 15. **U8 — secure decision bench:** authenticated loopback API, complete state renderer, 1440/375 flows, at least three full visual passes, Playwright/axe/manual checks, and a real different-model screenshot critic.
 16. **U9 — local export, packaging, and hardening:** minimized evidence export, embedded assets/single binary, docs/license/contributor path, adversarial suite, performance/limitations ledger, final strict verify, didrun HTML evidence, receipts handoff.
@@ -505,7 +505,7 @@ didrun references remain opaque verbatim receipt grades associated with their ex
 
 ### Strong engineering inferences still to test
 
-- C3 can rejoin the sealed inert C1/C2 semantics to exact direct Git materialization, fresh attempt, normalized Darwin boot-session UUID, and admitted Node runtime without creating an alternate authority path; C3P and its receipt descendant must close first.
+- C3 can rejoin the sealed inert C1/C2 semantics to exact direct Git materialization, fresh attempt, normalized Darwin boot-session UUID, and admitted Node runtime without creating an alternate authority path; the required C3P source and receipt descendant are already sealed, while C3 itself remains an unreceipted engineering inference.
 - A designed human-facing blind-first selected-field UX can make the now-implemented semantic session comprehensible without leaking candidate identity.
 
 ### Unvalidated technical/product/market bets

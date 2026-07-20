@@ -139,6 +139,41 @@ export const currentSteps = Object.freeze([
 		marker: "P07B-C C2 Go JSON target execution OK (c2-public-surface: 2 passed, 0 skipped)",
 	}),
 	Object.freeze({
+		id: "architecture-p07b-c-c3", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
+		path: "tools/check-p07b-c-architecture.mjs", args: Object.freeze(["--c3"]),
+		marker: "P07B-C C3 cumulative architecture boundary OK",
+	}),
+	Object.freeze({
+		id: "architecture-p07b-c-c3-selftest", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
+		path: "tools/check-p07b-c-architecture-selftest.mjs", args: Object.freeze(["--c3"]),
+		marker: "P07B-C C3 cumulative architecture defensive self-test OK (12 metadata cases; 35 Go JSON parser cases; 58 raw predecessor/parser cases)",
+	}),
+	Object.freeze({
+		id: "go-json-p07b-c-c3-official-target", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
+		path: "tools/check-p07b-c-architecture.mjs", args: Object.freeze(["--run-go-json", "c3-official-target"]),
+		marker: "P07B-C C3 Go JSON target execution OK (c3-official-target: 10 passed, 0 skipped)",
+	}),
+	Object.freeze({
+		id: "go-json-p07b-c-c3-single-target", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
+		path: "tools/check-p07b-c-architecture.mjs", args: Object.freeze(["--run-go-json", "c3-single-target"]),
+		marker: "P07B-C C3 Go JSON target execution OK (c3-single-target: 7 passed, 0 skipped)",
+	}),
+	Object.freeze({
+		id: "go-json-p07b-c-c3-hostepoch", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
+		path: "tools/check-p07b-c-architecture.mjs", args: Object.freeze(["--run-go-json", "c3-hostepoch"]),
+		marker: "P07B-C C3 Go JSON target execution OK (c3-hostepoch: 8 passed, 0 skipped)",
+	}),
+	Object.freeze({
+		id: "go-json-p07b-c-c3-noderuntime", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
+		path: "tools/check-p07b-c-architecture.mjs", args: Object.freeze(["--run-go-json", "c3-noderuntime"]),
+		marker: "P07B-C C3 Go JSON target execution OK (c3-noderuntime: 12 passed, 0 skipped)",
+	}),
+	Object.freeze({
+		id: "go-json-p07b-c-c3-store-bridge", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
+		path: "tools/check-p07b-c-architecture.mjs", args: Object.freeze(["--run-go-json", "c3-store-bridge"]),
+		marker: "P07B-C C3 Go JSON target execution OK (c3-store-bridge: 6 passed, 0 skipped)",
+	}),
+	Object.freeze({
 		id: "architecture-p07b-c-plan-selftest", tool: "node", tools: Object.freeze(["node", "git"]), path: "tools/check-p07b-c-plan.mjs",
 		args: Object.freeze(["--self-test"]), marker: "P07B-C evolved plan checker self-test passed:",
 	}),

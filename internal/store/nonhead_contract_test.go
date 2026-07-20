@@ -7,6 +7,8 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
+	"sync"
 	"testing"
 
 	"github.com/nelsonwerd/countershape/internal/canon"
@@ -102,6 +104,400 @@ func c2Target(t testing.TB, bundle emitmodel.ContractBundle, attempt domain.Dige
 
 func issueC2AttemptFixture(store *ObjectStore, digest domain.Digest) attemptStorageRecord {
 	return attemptStorageRecord{storeInstance: store.instance, digest: digest, seal: &attemptRecordSeal{marker: 1}}
+}
+
+func c3AttemptAndTarget(
+	t testing.TB,
+	store *ObjectStore,
+) (ConformanceAttemptRecord, contractmodel.ContractExecutionTarget) {
+	t.Helper()
+	bundle := c2Bundle(t)
+	template := c2Target(t, bundle, c2Digest('8'), '9')
+	templateInput := template.Input()
+	attempt, err := store.AllocateConformanceAttempt(context.Background(), ConformanceAttemptInput{
+		ContractBundleDigest:        templateInput.ContractBundleDigest,
+		ResidueHeadDigest:           templateInput.TerminalResidue.HeadDigest,
+		TreeIdentityDigest:          templateInput.Tree.TreeIdentityDigest,
+		MaterializationPolicyDigest: templateInput.Tree.MaterializationPolicyDigest,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	templateInput.Attempt = contractmodel.AttemptBinding{
+		ArtifactDigest: attempt.Digest(), InstanceNonce: attempt.InstanceNonce(),
+	}
+	target, err := contractmodel.NewContractExecutionTarget(templateInput)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return attempt, target
+}
+
+type c3AttemptHandle struct {
+	store   *ObjectStore
+	attempt ConformanceAttemptRecord
+}
+
+func c3OpenAttemptHandles(t testing.TB, root string, attemptDigest domain.Digest, count int) []c3AttemptHandle {
+	t.Helper()
+	handles := make([]c3AttemptHandle, count)
+	for index := range handles {
+		objectStore, err := OpenObjectStore(root)
+		if err != nil {
+			t.Fatal(err)
+		}
+		attempt, err := objectStore.OpenConformanceAttempt(context.Background(), attemptDigest)
+		if err != nil || !attempt.Valid() {
+			t.Fatalf("open independent attempt handle %d: %v", index, err)
+		}
+		handles[index] = c3AttemptHandle{store: objectStore, attempt: attempt}
+	}
+	return handles
+}
+
+func TestC3ConformanceAttemptIsFreshDurableAndRestartReopenable(t *testing.T) {
+	objectStore, root := newObjectStoreForTest(t)
+	first, firstTarget := c3AttemptAndTarget(t, objectStore)
+	second, _ := c3AttemptAndTarget(t, objectStore)
+	if !first.Valid() || !second.Valid() || first.Digest() == second.Digest() ||
+		first.InstanceNonce() == second.InstanceNonce() || first.Digest() != firstTarget.AttemptArtifactDigest() {
+		t.Fatal("fresh attempts did not produce distinct exact authority")
+	}
+	roots := first.Roots()
+	for name, path := range map[string]string{
+		"attempt": roots.AttemptRoot(), "candidate": roots.CandidateParent(), "fixture": roots.FixtureRoot(),
+		"home": roots.HomeRoot(), "temporary": roots.TemporaryRoot(), "xdg-config": roots.XDGConfigRoot(),
+		"xdg-cache": roots.XDGCacheRoot(), "xdg-data": roots.XDGDataRoot(), "xdg-state": roots.XDGStateRoot(),
+		"state": roots.StateRoot(), "evidence": roots.EvidenceRoot(),
+	} {
+		info, err := os.Lstat(path)
+		if err != nil || !info.IsDir() || info.Mode().Perm() != 0o700 || info.Mode()&os.ModeSymlink != 0 {
+			t.Fatalf("%s root facts differ: %#v %v", name, info, err)
+		}
+	}
+	marker, err := os.Lstat(roots.MarkerPath())
+	if err != nil || !marker.Mode().IsRegular() || marker.Mode().Perm() != 0o600 || marker.Size() < 1 {
+		t.Fatalf("attempt marker facts differ: %#v %v", marker, err)
+	}
+	markerBytes, err := os.ReadFile(roots.MarkerPath())
+	if err != nil {
+		t.Fatal(err)
+	}
+	markerValue, err := canon.Parse(markerBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	purpose, present := markerValue.LookupMember("attempt_purpose")
+	purposeText, isText := purpose.Text()
+	if !present || !isText || purposeText != "CONFORMANCE" {
+		t.Fatal("attempt marker does not freeze the exact CONFORMANCE purpose member")
+	}
+	if _, legacy := markerValue.LookupMember("purpose"); legacy {
+		t.Fatal("attempt marker retained the ambiguous legacy purpose member")
+	}
+	restarted, err := OpenObjectStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reopened, err := restarted.OpenConformanceAttempt(context.Background(), first.Digest())
+	if err != nil || !reopened.Valid() || reopened.Digest() != first.Digest() ||
+		reopened.InstanceNonce() != first.InstanceNonce() || reopened.Roots().CandidateParent() != roots.CandidateParent() {
+		t.Fatalf("attempt restart reopen failed: %v", err)
+	}
+	restore := c2CaseAliasPath(t, roots.AttemptRoot())
+	if first.Valid() || reopened.Valid() {
+		t.Fatal("case-aliased attempt root retained live authority")
+	}
+	if aliased, err := restarted.OpenConformanceAttempt(context.Background(), first.Digest()); err == nil || aliased.Valid() {
+		t.Fatalf("case-aliased attempt root reopened authority: %v", err)
+	}
+	restore()
+}
+
+func TestC3ConformanceAttemptRejectsCrossStoreAndRootReplacement(t *testing.T) {
+	objectStore, _ := newObjectStoreForTest(t)
+	attempt, target := c3AttemptAndTarget(t, objectStore)
+	foreign, _ := newObjectStoreForTest(t)
+	if record, err := foreign.PersistContractTargetRecord(context.Background(), attempt, target); err == nil || record.Valid() {
+		t.Fatalf("cross-store attempt published a target: %v", err)
+	}
+	candidate := attempt.Roots().CandidateParent()
+	if err := os.Remove(candidate); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Mkdir(candidate, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if attempt.Valid() {
+		t.Fatal("replaced attempt child retained authority")
+	}
+	if record, err := objectStore.PersistContractTargetRecord(context.Background(), attempt, target); err == nil || record.Valid() {
+		t.Fatalf("replaced attempt root published a target: %v", err)
+	}
+}
+
+func TestC3ConformanceAttemptConcurrentValidationAndReopenAreRaceFree(t *testing.T) {
+	objectStore, root := newObjectStoreForTest(t)
+	attempt, target := c3AttemptAndTarget(t, objectStore)
+	var wait sync.WaitGroup
+	for worker := 0; worker < 16; worker++ {
+		wait.Add(1)
+		go func() {
+			defer wait.Done()
+			for iteration := 0; iteration < 20; iteration++ {
+				if !attempt.Valid() || !attempt.Digest().Valid() || !attempt.ContractBundleDigest().Valid() ||
+					!attempt.ResidueHeadDigest().Valid() || !attempt.TreeIdentityDigest().Valid() ||
+					!attempt.MaterializationPolicyDigest().Valid() || attempt.InstanceNonce() == "" ||
+					attempt.Roots().AttemptRoot() == "" {
+					t.Error("concurrent attempt validation lost exact authority")
+					return
+				}
+				reopened, err := objectStore.OpenConformanceAttempt(context.Background(), attempt.Digest())
+				if err != nil || !reopened.Valid() || reopened.Digest() != attempt.Digest() {
+					t.Errorf("concurrent attempt reopen failed: %v", err)
+					return
+				}
+				published, err := objectStore.PersistContractTargetRecord(context.Background(), reopened, target)
+				if err != nil || !published.Valid() || published.Digest() != target.Digest() {
+					t.Errorf("concurrent exact target convergence failed: %v", err)
+					return
+				}
+			}
+		}()
+	}
+	wait.Wait()
+
+	t.Run("independent handles converge one exact target", func(t *testing.T) {
+		independentAttempt, independentTarget := c3AttemptAndTarget(t, objectStore)
+		handles := c3OpenAttemptHandles(t, root, independentAttempt.Digest(), 8)
+		type result struct {
+			record ContractTargetRecord
+			err    error
+		}
+		results := make(chan result, len(handles))
+		launch := make(chan struct{})
+		for _, handle := range handles {
+			go func(handle c3AttemptHandle) {
+				<-launch
+				record, err := handle.store.PersistContractTargetRecord(context.Background(), handle.attempt, independentTarget)
+				results <- result{record: record, err: err}
+			}(handle)
+		}
+		close(launch)
+		for range handles {
+			result := <-results
+			if result.err != nil || !result.record.Valid() || result.record.Digest() != independentTarget.Digest() ||
+				result.record.AttemptDigest() != independentAttempt.Digest() {
+				t.Fatalf("independent exact convergence failed: record=%#v err=%v", result.record, result.err)
+			}
+		}
+	})
+
+	t.Run("independent handles preserve one conflicting winner", func(t *testing.T) {
+		conflictAttempt, firstTarget := c3AttemptAndTarget(t, objectStore)
+		alternateInput := firstTarget.Input()
+		alternateInput.BootSession.IdentityDigest = c2Digest('a')
+		secondTarget, err := contractmodel.NewContractExecutionTarget(alternateInput)
+		if err != nil || secondTarget.Digest() == firstTarget.Digest() {
+			t.Fatalf("conflicting target fixture failed: %v", err)
+		}
+		handles := c3OpenAttemptHandles(t, root, conflictAttempt.Digest(), 8)
+		type result struct {
+			requested domain.Digest
+			record    ContractTargetRecord
+			err       error
+		}
+		results := make(chan result, len(handles))
+		launch := make(chan struct{})
+		for index, handle := range handles {
+			candidate := firstTarget
+			if index >= len(handles)/2 {
+				candidate = secondTarget
+			}
+			go func(handle c3AttemptHandle, candidate contractmodel.ContractExecutionTarget) {
+				<-launch
+				record, err := handle.store.PersistContractTargetRecord(context.Background(), handle.attempt, candidate)
+				results <- result{requested: candidate.Digest(), record: record, err: err}
+			}(handle, candidate)
+		}
+		close(launch)
+		successes := map[domain.Digest]int{}
+		failures := map[domain.Digest]int{}
+		for range handles {
+			result := <-results
+			if result.err == nil && result.record.Valid() {
+				if result.record.Digest() != result.requested {
+					t.Fatalf("successful conflicting publication returned another digest: got %s want %s", result.record.Digest(), result.requested)
+				}
+				successes[result.requested]++
+				continue
+			}
+			if result.err == nil || result.record.Valid() {
+				t.Fatalf("conflicting publication returned incoherent refusal: %#v %v", result.record, result.err)
+			}
+			failures[result.requested]++
+		}
+		if len(successes) != 1 {
+			t.Fatalf("conflicting publications produced %d winners: %v", len(successes), successes)
+		}
+		var winnerDigest domain.Digest
+		for digest, count := range successes {
+			winnerDigest = digest
+			if count != 4 {
+				t.Fatalf("winning candidate did not converge for every matching caller: %s count=%d", digest, count)
+			}
+		}
+		loserDigest := firstTarget.Digest()
+		winnerTarget := firstTarget
+		if winnerDigest == firstTarget.Digest() {
+			loserDigest = secondTarget.Digest()
+		} else if winnerDigest == secondTarget.Digest() {
+			winnerTarget = secondTarget
+		} else {
+			t.Fatalf("winner digest was not one of the exact candidates: %s", winnerDigest)
+		}
+		if failures[loserDigest] != 4 || failures[winnerDigest] != 0 {
+			t.Fatalf("conflicting result partition differs: successes=%v failures=%v", successes, failures)
+		}
+		freshHandle := c3OpenAttemptHandles(t, root, conflictAttempt.Digest(), 1)[0]
+		reopened, err := freshHandle.store.OpenContractTargetRecord(context.Background(), freshHandle.attempt)
+		if err != nil || !reopened.Valid() || reopened.Digest() != winnerDigest ||
+			!bytes.Equal(reopened.record.record.object.CanonicalBytes(), winnerTarget.CanonicalBytes()) {
+			t.Fatalf("fresh handle did not reopen the exact conflict winner: %v", err)
+		}
+		expectedRelation, expectedPath, err := contractRelationMaterial(freshHandle.store, reopened.record.record.relation)
+		if err != nil || expectedPath != reopened.record.record.relationPath ||
+			!bytes.Equal(expectedRelation, reopened.record.record.relationBytes) {
+			t.Fatalf("conflict winner relation material differs: %v", err)
+		}
+		physical, err := readExactPrivateFile(expectedPath, int64(len(expectedRelation)))
+		if err != nil || !bytes.Equal(physical, expectedRelation) {
+			t.Fatalf("conflict winner relation did not reopen as exact durable bytes: %v", err)
+		}
+	})
+}
+
+func TestC3ContractTargetBridgeConvergesExactAndRejectsReuse(t *testing.T) {
+	objectStore, root := newObjectStoreForTest(t)
+	attempt, target := c3AttemptAndTarget(t, objectStore)
+	record, err := objectStore.PersistContractTargetRecord(context.Background(), attempt, target)
+	if err != nil || !record.Valid() || record.Digest() != target.Digest() || record.AttemptDigest() != attempt.Digest() {
+		t.Fatalf("exact target bridge failed: %v", err)
+	}
+	reopened, err := objectStore.OpenContractTargetRecord(context.Background(), attempt)
+	if err != nil || !reopened.Valid() || reopened.Digest() != record.Digest() {
+		t.Fatalf("exact target relation did not reopen: %v", err)
+	}
+	if converged, err := objectStore.PersistContractTargetRecord(context.Background(), attempt, target); err != nil || !converged.Valid() || converged.Digest() != record.Digest() {
+		t.Fatalf("exact retry did not reconcile: %v", err)
+	}
+	relationPath := record.record.record.relationPath
+	relationBytes := append([]byte(nil), record.record.record.relationBytes...)
+	relationDigest, err := canon.DigestBytes("ContractStorageRelation", relationBytes)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mutations := map[string]func(*contractmodel.TargetInput){
+		"contract bundle": func(input *contractmodel.TargetInput) { input.ContractBundleDigest = c2Digest('0') },
+		"residue study": func(input *contractmodel.TargetInput) {
+			input.TerminalResidue.StudyID = "study:" + strings.Repeat("3", 64)
+		},
+		"residue revision":         func(input *contractmodel.TargetInput) { input.TerminalResidue.HeadRevision++ },
+		"residue head":             func(input *contractmodel.TargetInput) { input.TerminalResidue.HeadDigest = c2Digest('0') },
+		"residue lineage":          func(input *contractmodel.TargetInput) { input.TerminalResidue.LineageRootDigest = c2Digest('3') },
+		"portable tree":            func(input *contractmodel.TargetInput) { input.Tree.PortableTreeDigest = c2Digest('0') },
+		"materialization policy":   func(input *contractmodel.TargetInput) { input.Tree.MaterializationPolicyDigest = c2Digest('0') },
+		"materialization manifest": func(input *contractmodel.TargetInput) { input.Tree.MaterializationManifestDigest = c2Digest('0') },
+		"attempt artifact":         func(input *contractmodel.TargetInput) { input.Attempt.ArtifactDigest = c2Digest('0') },
+		"attempt nonce":            func(input *contractmodel.TargetInput) { input.Attempt.InstanceNonce = strings.Repeat("a", 64) },
+		"boot session":             func(input *contractmodel.TargetInput) { input.BootSession.IdentityDigest = c2Digest('a') },
+		"runtime version":          func(input *contractmodel.TargetInput) { input.Runtime.Version = "25.2.2" },
+		"runtime bytes":            func(input *contractmodel.TargetInput) { input.Runtime.ExecutableBytesDigest = c2Digest('a') },
+		"runtime mode":             func(input *contractmodel.TargetInput) { input.Runtime.ExecutableMode = "100555" },
+		"runtime byte count":       func(input *contractmodel.TargetInput) { input.Runtime.ExecutableByteCount++ },
+		"runtime probe":            func(input *contractmodel.TargetInput) { input.Runtime.ProbeProgramDigest = c2Digest('a') },
+	}
+	for name, mutate := range mutations {
+		t.Run(name, func(t *testing.T) {
+			alternateInput := target.Input()
+			mutate(&alternateInput)
+			alternate, err := contractmodel.NewContractExecutionTarget(alternateInput)
+			if err != nil || alternate.Digest() == target.Digest() {
+				t.Fatalf("valid alternate target fixture failed: %v", err)
+			}
+			if conflicting, err := objectStore.PersistContractTargetRecord(context.Background(), attempt, alternate); err == nil || conflicting.Valid() {
+				t.Fatalf("attempt reuse published alternate target: %v", err)
+			}
+			if !record.Valid() || record.Digest() != target.Digest() {
+				t.Fatal("refused alternate invalidated the exact target record")
+			}
+			physical, err := readExactPrivateFile(relationPath, int64(len(relationBytes)))
+			if err != nil || !bytes.Equal(physical, relationBytes) {
+				t.Fatalf("refused alternate changed relation bytes: %v", err)
+			}
+			physicalDigest, err := canon.DigestBytes("ContractStorageRelation", physical)
+			if err != nil || physicalDigest != relationDigest {
+				t.Fatalf("refused alternate changed relation digest: got %s want %s err=%v", physicalDigest, relationDigest, err)
+			}
+			reopened, err := objectStore.OpenContractTargetRecord(context.Background(), attempt)
+			if err != nil || !reopened.Valid() || reopened.Digest() != target.Digest() ||
+				!bytes.Equal(reopened.record.record.object.CanonicalBytes(), target.CanonicalBytes()) {
+				t.Fatalf("refused alternate displaced exact target authority: %v", err)
+			}
+		})
+	}
+	restarted, err := OpenObjectStore(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	restartedAttempt, err := restarted.OpenConformanceAttempt(context.Background(), attempt.Digest())
+	if err != nil {
+		t.Fatal(err)
+	}
+	restartedTarget, err := restarted.OpenContractTargetRecord(context.Background(), restartedAttempt)
+	if err != nil || !restartedTarget.Valid() || restartedTarget.Digest() != target.Digest() {
+		t.Fatalf("restart target relation failed: %v", err)
+	}
+}
+
+func TestC3ConformanceAttemptMarkerMutationRefusesReopen(t *testing.T) {
+	tests := map[string]func(*testing.T, string){
+		"bytes": func(t *testing.T, marker string) {
+			if err := os.WriteFile(marker, []byte("{}"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+		},
+		"mode": func(t *testing.T, marker string) {
+			if err := os.Chmod(marker, 0o644); err != nil {
+				t.Fatal(err)
+			}
+		},
+		"symlink": func(t *testing.T, marker string) {
+			if err := os.Remove(marker); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.Symlink("missing", marker); err != nil {
+				t.Fatal(err)
+			}
+		},
+	}
+	for name, mutate := range tests {
+		t.Run(name, func(t *testing.T) {
+			objectStore, root := newObjectStoreForTest(t)
+			attempt, _ := c3AttemptAndTarget(t, objectStore)
+			mutate(t, attempt.Roots().MarkerPath())
+			if attempt.Valid() {
+				t.Fatal("mutated marker retained live authority")
+			}
+			restarted, err := OpenObjectStore(root)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if reopened, err := restarted.OpenConformanceAttempt(context.Background(), attempt.Digest()); err == nil || reopened.Valid() {
+				t.Fatalf("mutated marker reopened authority: %v", err)
+			}
+		})
+	}
 }
 
 func c2SemanticObject(t testing.TB, kind string, digest domain.Digest, body []byte) SemanticObject {

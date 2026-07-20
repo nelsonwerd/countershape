@@ -11,6 +11,27 @@ const specificationPath = resolve(repositoryRoot, "spec/verification/p07b-c-unit
 const unitOrder = Object.freeze(["C0A", "C0B", "C1", "C1M", "C1V", "C1E", "C1B", "C2", "C2M", "C2B", "C3P", "C3V", "C3M", "C3PB", "C3A", "C3L", "C3F", "C3S", "C3", "C3B", "C4", "C5", "C6A", "C6B"]);
 const verificationProfiles = new Set(["SOURCE_FULL", "RECEIPT_RECONCILIATION"]);
 const receiptClaimTypes = new Set(["tests-pass", "command-succeeded"]);
+const c3FrozenUnitContracts = Object.freeze({
+	C3: Object.freeze({
+		verification_profile: "SOURCE_FULL",
+		prefixes: Object.freeze([]),
+		exact_roster_sha256: "c0050817c739e6bf7505105113ebbfd2c2504674f93f14e34daf0609f7fad0fb",
+	}),
+	C3B: Object.freeze({
+		verification_profile: "RECEIPT_RECONCILIATION",
+		prefixes: Object.freeze([]),
+		exact_roster_sha256: "3ef17156a2f3051171da70983f9428de2b9bdb5a179602407a36f34200012a67",
+		receipt_claims: Object.freeze([
+			Object.freeze({ label: "P07B-C C3B source receipt reconciliation", type: "tests-pass" }),
+			Object.freeze({ label: "P07B-C C3B receipt checker defensive self-test", type: "tests-pass" }),
+			Object.freeze({ label: "P07B-C C3B declared local source-evidence snapshot match", type: "tests-pass" }),
+			Object.freeze({ label: "P07B-C C3B receipt-only Go build", type: "command-succeeded" }),
+			Object.freeze({ label: "P07B-C C3B exact three-path staged scope and diff integrity", type: "command-succeeded" }),
+			Object.freeze({ label: "P07B-C C3B scoped staged credential-pattern scan", type: "command-succeeded" }),
+			Object.freeze({ label: "P07B-C C3B preceding didrun chain integrity", type: "command-succeeded" }),
+		]),
+	}),
+});
 const stagedInventoryArgs = Object.freeze([
 	"diff", "--no-ext-diff", "--no-textconv", "--ignore-submodules=none", "--cached", "--name-only", "-z", "--no-renames", "--diff-filter=ACDMRTUXB", "--",
 ]);
@@ -46,12 +67,16 @@ function sortedUnique(values) {
 		JSON.stringify(values) === JSON.stringify([...values].sort());
 }
 
+function exactRosterDigest(paths) {
+	return createHash("sha256").update(`${paths.join("\n")}\n`, "utf8").digest("hex");
+}
+
 export function validateSpecification(specification) {
 	if (!specification || typeof specification !== "object" || Array.isArray(specification) ||
 		JSON.stringify(Object.keys(specification).sort()) !== JSON.stringify(["schema_version", "units"])) {
 		fail("specification root roster");
 	}
-	if (specification.schema_version !== "countershape/p07b-c-unit-paths/v10") fail("specification version");
+	if (specification.schema_version !== "countershape/p07b-c-unit-paths/v11") fail("specification version");
 	if (!specification.units || typeof specification.units !== "object" || Array.isArray(specification.units) ||
 		JSON.stringify(Object.keys(specification.units)) !== JSON.stringify(unitOrder)) fail("unit roster/order");
 
@@ -89,6 +114,13 @@ export function validateSpecification(specification) {
 		}
 		for (const exact of entry.exact) {
 			if (entry.prefixes.some((prefix) => exact.startsWith(prefix))) fail(`${unit}: exact path redundantly covered by prefix: ${exact}`);
+		}
+		const frozen = c3FrozenUnitContracts[unit];
+		if (frozen !== undefined && (entry.verification_profile !== frozen.verification_profile ||
+			JSON.stringify(entry.prefixes) !== JSON.stringify(frozen.prefixes) ||
+			exactRosterDigest(entry.exact) !== frozen.exact_roster_sha256 ||
+			(frozen.receipt_claims !== undefined && JSON.stringify(entry.receipt_claims) !== JSON.stringify(frozen.receipt_claims)))) {
+			fail(`${unit}: frozen exact unit contract`);
 		}
 	}
 	return specification;
@@ -273,6 +305,14 @@ async function runCredentialScan(specification, unit) {
 	console.log(`P07B-C ${unit} scoped staged structured credential-pattern scan: 0 findings across ${paths.length} exact paths and ${credentialPatterns.length} named patterns`);
 }
 
+function requireSpecificationMutationRejected(specification, label, mutate) {
+	const hostile = JSON.parse(JSON.stringify(specification));
+	mutate(hostile);
+	let rejected = false;
+	try { validateSpecification(hostile); } catch { rejected = true; }
+	if (!rejected) fail(`${label} self-test false negative`);
+}
+
 async function runSelfTest() {
 	const specification = await loadSpecification();
 	const cases = [
@@ -304,7 +344,10 @@ async function runSelfTest() {
 		unexpectedPaths(specification, "C3S", ["tools/check-u6-architecture-selftest.mjs"]).length === 0,
 		unexpectedPaths(specification, "C3S", ["tools/check-u6-architecture.mjs"])[0] === "tools/check-u6-architecture.mjs",
 		unexpectedPaths(specification, "C3S", ["internal/store/nonhead_contract.go"])[0] === "internal/store/nonhead_contract.go",
+		unexpectedPaths(specification, "C3", ["internal/contractexec/target.go"]).length === 0,
+		unexpectedPaths(specification, "C3", ["spec/verification/p07b-c-c3-receipt.json"])[0] === "spec/verification/p07b-c-c3-receipt.json",
 		unexpectedPaths(specification, "C3B", ["spec/verification/p07b-c-c3-receipt.json"]).length === 0,
+		unexpectedPaths(specification, "C3B", ["internal/contractexec/target.go"])[0] === "internal/contractexec/target.go",
 		unexpectedPaths(specification, "C1M", ["internal/world/process_darwin.go"]).length === 0,
 		unexpectedPaths(specification, "C1M", ["spec/verification/p07b-c-c1-receipt.json"])[0] === "spec/verification/p07b-c-c1-receipt.json",
 		exactPathsMatch(specification, "C1M", specification.units.C1M.exact),
@@ -337,6 +380,12 @@ async function runSelfTest() {
 		!exactPathsMatch(specification, "C3F", specification.units.C3F.exact.slice(1)),
 		exactPathsMatch(specification, "C3S", specification.units.C3S.exact),
 		!exactPathsMatch(specification, "C3S", specification.units.C3S.exact.slice(1)),
+		exactPathsMatch(specification, "C3", specification.units.C3.exact),
+		!exactPathsMatch(specification, "C3", specification.units.C3.exact.slice(1)),
+		exactPathsMatch(specification, "C3B", specification.units.C3B.exact),
+		!exactPathsMatch(specification, "C3B", specification.units.C3B.exact.slice(1)),
+		!exactPathsMatch(specification, "C3", specification.units.C3B.exact),
+		!exactPathsMatch(specification, "C3B", specification.units.C3.exact),
 		exactSourceGateAdmitted(specification, "C2M"),
 		exactSourceGateAdmitted(specification, "C3P"),
 		exactSourceGateAdmitted(specification, "C3V"),
@@ -347,6 +396,9 @@ async function runSelfTest() {
 		exactSourceGateAdmitted(specification, "C3S"),
 		exactSourceGateAdmitted(specification, "C3"),
 		!exactSourceGateAdmitted(specification, "C2B"),
+		!exactSourceGateAdmitted(specification, "C3B"),
+		specification.units.C3.verification_profile === "SOURCE_FULL" && specification.units.C3.prefixes.length === 0,
+		specification.units.C3B.verification_profile === "RECEIPT_RECONCILIATION" && specification.units.C3B.prefixes.length === 0,
 		unexpectedPaths(specification, "C0A", ["docs/SEMANTICS.md", "README.md"])[0] === "README.md",
 		JSON.stringify(stagedInventoryArgs) === JSON.stringify([
 			"diff", "--no-ext-diff", "--no-textconv", "--ignore-submodules=none", "--cached", "--name-only", "-z", "--no-renames", "--diff-filter=ACDMRTUXB", "--",
@@ -356,8 +408,47 @@ async function runSelfTest() {
 		receiptManifest(specification, "C2B").length === 7,
 		receiptManifest(specification, "C3PB").length === 7,
 		receiptManifest(specification, "C3B").length === 7,
+		JSON.stringify(receiptManifest(specification, "C3B")) === JSON.stringify(c3FrozenUnitContracts.C3B.receipt_claims),
 	];
 	if (cases.some((value) => !value)) fail("allow/refuse self-test matrix");
+	let c3ReceiptManifestRejected = false;
+	try { receiptManifest(specification, "C3"); } catch { c3ReceiptManifestRejected = true; }
+	if (!c3ReceiptManifestRejected) fail("C3 source profile receipt-manifest self-test false negative");
+	requireSpecificationMutationRejected(specification, "C3 receipt-profile substitution", (hostile) => {
+		hostile.units.C3.verification_profile = "RECEIPT_RECONCILIATION";
+		hostile.units.C3.receipt_claims = [
+			{ label: "P07B-C C3 source receipt reconciliation", type: "tests-pass" },
+			{ label: "P07B-C C3 receipt checker defensive self-test", type: "tests-pass" },
+			{ label: "P07B-C C3 declared local evidence snapshot match", type: "tests-pass" },
+			{ label: "P07B-C C3 receipt-only Go build", type: "command-succeeded" },
+			{ label: "P07B-C C3 exact receipt staged scope and diff integrity", type: "command-succeeded" },
+			{ label: "P07B-C C3 scoped staged credential-pattern scan", type: "command-succeeded" },
+			{ label: "P07B-C C3 preceding didrun chain integrity", type: "command-succeeded" },
+		];
+	});
+	requireSpecificationMutationRejected(specification, "C3 prefix introduction", (hostile) => { hostile.units.C3.prefixes = ["foreign/"]; });
+	requireSpecificationMutationRejected(specification, "C3B source-profile substitution", (hostile) => {
+		hostile.units.C3B.verification_profile = "SOURCE_FULL";
+		delete hostile.units.C3B.receipt_claims;
+	});
+	requireSpecificationMutationRejected(specification, "C3B prefix introduction", (hostile) => { hostile.units.C3B.prefixes = ["foreign/"]; });
+	requireSpecificationMutationRejected(specification, "C3B claim order", (hostile) => {
+		[hostile.units.C3B.receipt_claims[0], hostile.units.C3B.receipt_claims[1]] =
+			[hostile.units.C3B.receipt_claims[1], hostile.units.C3B.receipt_claims[0]];
+	});
+	requireSpecificationMutationRejected(specification, "C3B claim type", (hostile) => {
+		hostile.units.C3B.receipt_claims[0].type = "command-succeeded";
+	});
+	requireSpecificationMutationRejected(specification, "C3B claim label", (hostile) => {
+		hostile.units.C3B.receipt_claims[0].label = "P07B-C C3B altered source receipt reconciliation";
+	});
+	requireSpecificationMutationRejected(specification, "C3/C3B unit order", (hostile) => {
+		const entries = Object.entries(hostile.units);
+		const c3 = entries.findIndex(([unit]) => unit === "C3");
+		const c3b = entries.findIndex(([unit]) => unit === "C3B");
+		[entries[c3], entries[c3b]] = [entries[c3b], entries[c3]];
+		hostile.units = Object.fromEntries(entries);
+	});
 	const unsafePrefix = JSON.parse(JSON.stringify(specification));
 	unsafePrefix.units.C4.prefixes = ["internal/processmechanics"];
 	let unsafePrefixRejected = false;

@@ -179,9 +179,24 @@ func objectStorePublicMethods() []string {
 
 func TestC2StoreExportsNoOfficialIssuerOrRunPermit(t *testing.T) {
 	wantPackageSurface := []string{
+		"ConformanceAttemptInput", "ConformanceAttemptInput.ContractBundleDigest",
+		"ConformanceAttemptInput.MaterializationPolicyDigest", "ConformanceAttemptInput.ResidueHeadDigest",
+		"ConformanceAttemptInput.TreeIdentityDigest", "ConformanceAttemptRecord",
+		"ConformanceAttemptRecord.ContractBundleDigest", "ConformanceAttemptRecord.Digest",
+		"ConformanceAttemptRecord.InstanceNonce", "ConformanceAttemptRecord.MaterializationPolicyDigest",
+		"ConformanceAttemptRecord.ResidueHeadDigest", "ConformanceAttemptRecord.Roots",
+		"ConformanceAttemptRecord.TreeIdentityDigest", "ConformanceAttemptRecord.Valid",
+		"ConformanceAttemptRoots", "ConformanceAttemptRoots.AttemptRoot", "ConformanceAttemptRoots.CandidateParent",
+		"ConformanceAttemptRoots.EvidenceRoot", "ConformanceAttemptRoots.FixtureRoot", "ConformanceAttemptRoots.HomeRoot",
+		"ConformanceAttemptRoots.MarkerPath", "ConformanceAttemptRoots.StateRoot", "ConformanceAttemptRoots.TemporaryRoot",
+		"ConformanceAttemptRoots.XDGCacheRoot", "ConformanceAttemptRoots.XDGConfigRoot",
+		"ConformanceAttemptRoots.XDGDataRoot", "ConformanceAttemptRoots.XDGStateRoot",
+		"ContractTargetRecord", "ContractTargetRecord.AttemptDigest", "ContractTargetRecord.Digest", "ContractTargetRecord.Valid",
 		"Error", "Error.Cause", "Error.Code", "Error.Detail", "Error.Error", "Error.Unwrap",
 		"NewSemanticObject", "ObjectAuthority", "ObjectStore",
-		"ObjectStore.Open", "ObjectStore.Publish", "ObjectStore.Read", "ObjectStore.Validate",
+		"ObjectStore.AllocateConformanceAttempt", "ObjectStore.Open", "ObjectStore.OpenConformanceAttempt",
+		"ObjectStore.OpenContractTargetRecord", "ObjectStore.PersistContractTargetRecord",
+		"ObjectStore.Publish", "ObjectStore.Read", "ObjectStore.Validate",
 		"ObjectStore.ValidateExternalPublicationPath", "OpenObjectStore", "SemanticObject",
 		"SemanticObject.CanonicalBytes", "SemanticObject.Digest", "SemanticObject.Kind", "SemanticObject.Valid",
 	}
@@ -222,12 +237,33 @@ var _, _ = os.ErrNotExist, launcher.ErrNotFound
 	})
 	want := []string{
 		"AdvanceBaseline", "AdvanceChoicepoint", "AdvanceConfirmation", "AdvanceDivergence",
-		"AdvanceReduction", "AdvanceResidue", "AdvanceRuling", "ConfirmResiduePublication",
-		"CreateStudy", "Open", "OpenHead", "Publish", "Read", "Validate",
+		"AdvanceReduction", "AdvanceResidue", "AdvanceRuling", "AllocateConformanceAttempt",
+		"ConfirmResiduePublication", "CreateStudy", "Open", "OpenConformanceAttempt",
+		"OpenContractTargetRecord", "OpenHead", "PersistContractTargetRecord", "Publish", "Read", "Validate",
 		"ValidateExternalPublicationPath",
 	}
 	if actual := objectStorePublicMethods(); !reflect.DeepEqual(actual, want) {
 		t.Fatalf("C2 changed the exported ObjectStore surface: got %v, want %v", actual, want)
+	}
+}
+
+func TestC3StoreBridgeExportsOnlyInertAttemptAndTargetRecords(t *testing.T) {
+	for _, value := range []any{
+		store.ConformanceAttemptRecord{}, store.ConformanceAttemptRoots{}, store.ContractTargetRecord{},
+	} {
+		typeOfValue := reflect.TypeOf(value)
+		for index := 0; index < typeOfValue.NumField(); index++ {
+			if typeOfValue.Field(index).IsExported() {
+				t.Fatalf("%s exposes authority-bearing field %s", typeOfValue, typeOfValue.Field(index).Name)
+			}
+		}
+	}
+	for _, forbidden := range []string{"official", "permit", "process", "spawn", "interlock", "latest", "list", "status"} {
+		for _, method := range objectStorePublicMethods() {
+			if strings.Contains(strings.ToLower(method), forbidden) {
+				t.Fatalf("store bridge exposes forbidden %s method %q", forbidden, method)
+			}
+		}
 	}
 }
 

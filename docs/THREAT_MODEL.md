@@ -2,7 +2,7 @@
 
 - **Contract version:** U0 / `threat-model-v1`
 - **Target:** single-user, trusted-local, narrowed Darwin reference instrument
-- **Status:** design contract; P07B-C through C2B is sealed and strict-clean, C3P is the active `UNRECEIPTED` prerequisite, and no security control is validated beyond its exact command/environment receipt
+- **Status:** design contract; P07B-C through C3S is sealed and strict-clean, C3 exact-target publication is active and `UNRECEIPTED`, and no security control is validated beyond its exact command/environment receipt
 - **Review trigger:** update before any new source form, adapter, runtime OS, network mode, multi-user surface, or export field
 
 ## Security posture
@@ -252,7 +252,7 @@ A copied canonical body, copied C2 relationship file, or complete filesystem cop
 
 **Refusal.** Legacy ruling, source/world/profile mismatch, nonportable start profile, generic repository executable, vector disagreement, stale publication, unrecoverable file body, manifest mismatch, copied or parsed target authority, OID/tree-identity mismatch, missing verified materialization, dirty working-tree execution, reused attempt, unadmitted runtime, target/run mismatch, forbidden dependency resolution, an observed forbidden binding under the named service-binding detector, or harness/control ambiguity blocks the applicable target, execution, or standalone claim. Post-residue materialization failure remains a typed retryable export failure and cannot be reported as if no residue was published.
 
-**Residual risk.** Hashes prove byte integrity, not authorship, authenticity, confidentiality, or long-term maintainability. The target-inventory check is not host-wide absence, network denial, registry denial, or containment. Node runtime compromise, repository integration changes, and coordinated path/object substitution after a checkpoint remain outside the C1 artifact digest and require later physical controls plus an explicit residual-risk disclosure.
+**Residual risk.** Hashes prove byte integrity, not authorship, authenticity, confidentiality, or long-term maintainability. `OfficialTarget.Valid()` is structural, not fresh; C4 must immediately reopen it at the physical boundary. The fixed runtime probe proves the explicitly selected cooperating executable reported the admitted tuple, not that it is vendor-authentic Node or unable to emulate the response. A conflicting same-attempt target race is first-durable-writer-wins and has no semantic arbitration. The target-inventory check is not host-wide absence, network denial, registry denial, or containment. Node runtime compromise, repository integration changes, and coordinated path/object substitution after a checkpoint remain outside the C1 artifact digest and require later physical controls plus an explicit residual-risk disclosure.
 
 ### T16 — Receipt or provenance overstatement
 
