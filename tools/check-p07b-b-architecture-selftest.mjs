@@ -25,9 +25,10 @@ const cases = Object.freeze([
 	Object.freeze({ id: "native-policy", code: "P07B_B_NATIVE_PUBLICATION_POLICY" }),
 	Object.freeze({ id: "c1-semantic-boundary", code: "P07B_B_C1_SEMANTIC_BOUNDARY" }),
 	Object.freeze({ id: "prefix-partition", code: "P07B_B_SELFTEST_PREFIX_PARTITION" }),
+	Object.freeze({ id: "c3-surface-bundle", code: "P07B_B_SELFTEST_C3_SURFACE_BUNDLE" }),
 	Object.freeze({ id: "future-surface", code: "P07B_B_PREMATURE_C_SURFACE" }),
 ]);
-const expectedRosterDigest = "252825c79567fd8751bc5ea48a380eeea2918f37156b4e8875c040ca6fabd7a2";
+const expectedRosterDigest = "d5745ef69f205bbe4ce445448e6189ba244adacc36fe3e44fdf56f9485100ef2";
 
 function rosterDigest() {
 	const hash = createHash("sha256");
@@ -77,7 +78,12 @@ function requireExactC1PrefixPartition() {
 		"internal/store/nonhead_contract.go:ContractExecution",
 	];
 	const c2Support = "internal/store/nonhead_contract.go:ContractExecutionClassifierProfile";
-	const c3Official = "internal/contractexec/target.go:ContractExecutionTarget";
+	const c3Official = [
+		"internal/contractexec/target.go:ContractExecutionTarget",
+		"internal/contractexec/target.go:NewContractExecutionTarget",
+		"internal/contractexec/target.go:ParseContractExecutionTarget",
+		"internal/store/nonhead_contract.go:ParseContractExecutionTarget",
+	];
 	const modelEvil = "internal/contractexec/model_evil/execution.go:ContractExecution";
 	const c2Lookalikes = [
 		"internal/store/nonhead_contract_copy.go:ContractExecutionTarget",
@@ -89,6 +95,12 @@ function requireExactC1PrefixPartition() {
 		"internal/contractexec/target.go:ContractExecutionTargetCopy",
 		"internal/contractexec/target.go:CopyContractExecutionTarget",
 		"internal/contractexec/target.go:ContractExecutionTargetβ",
+		"internal/contractexec/target_copy.go:NewContractExecutionTarget",
+		"internal/contractexec/target_copy.go:ParseContractExecutionTarget",
+		"internal/contractexec/target.go:NewContractExecutionTargetCopy",
+		"internal/contractexec/target.go:ParseContractExecutionTargetCopy",
+		"internal/store/object_store.go:ParseContractExecutionTarget",
+		"internal/store/nonhead_contract.go:ParseContractExecutionTargetCopy",
 		"internal/contractexec/runner/target.go:ContractExecutionTarget",
 		"internal/contractexecx/target.go:ContractExecutionTarget",
 	];
@@ -103,17 +115,22 @@ function requireExactC1PrefixPartition() {
 		"internal/future.go:ContractExecutionClassifierProfile",
 	];
 	const foreign = "internal/future.go:ContractExecutionTarget";
-	const partition = partitionFutureSymbols([admitted, ...c2Storage, c2Support, c3Official, modelEvil, ...c2Lookalikes, ...c3Lookalikes, ...semanticFamilyLookalikes, foreign]);
-	if (JSON.stringify(partition.admitted) !== JSON.stringify([admitted, ...c2Storage, c2Support, c3Official]) ||
+	const partition = partitionFutureSymbols([admitted, ...c2Storage, c2Support, ...c3Official, modelEvil, ...c2Lookalikes, ...c3Lookalikes, ...semanticFamilyLookalikes, foreign]);
+	if (JSON.stringify(partition.admitted) !== JSON.stringify([admitted, ...c2Storage, c2Support, ...c3Official]) ||
 		JSON.stringify(partition.foreign) !== JSON.stringify([modelEvil, ...c2Lookalikes, ...c3Lookalikes, ...semanticFamilyLookalikes, foreign])) {
 		fail("P07B_B_SELFTEST_PREFIX_PARTITION", JSON.stringify(partition));
 	}
 	const scannerControls = [
 		["", []],
-		["type ContractExecutionTarget struct{}", [c3Official]],
+		["type ContractExecutionTarget struct{}", [c3Official[0]]],
+		["func NewContractExecutionTarget() {}", [c3Official[1]]],
+		["func ParseContractExecutionTarget() {}", [c3Official[2]]],
 		["type ContractExecutionTargetCopy struct{}", ["internal/contractexec/target.go:ContractExecutionTargetCopy"]],
 		["type CopyContractExecutionTarget struct{}", ["internal/contractexec/target.go:CopyContractExecutionTarget"]],
 		["type ContractExecutionTargetβ struct{}", ["internal/contractexec/target.go:ContractExecutionTargetβ"]],
+		["func NewContractExecutionTargetCopy() {}", ["internal/contractexec/target.go:NewContractExecutionTargetCopy"]],
+		["func ParseContractExecutionTargetCopy() {}", ["internal/contractexec/target.go:ParseContractExecutionTargetCopy"]],
+		["func ParseContractExecutionTargetβ() {}", ["internal/contractexec/target.go:ParseContractExecutionTargetβ"]],
 		["type FinalizedContractRunCopy struct{}", ["internal/contractexec/target.go:FinalizedContractRunCopy"]],
 		["type CopyFinalizedContractRun struct{}", ["internal/contractexec/target.go:CopyFinalizedContractRun"]],
 		["type FinalizedContractRunβ struct{}", ["internal/contractexec/target.go:FinalizedContractRunβ"]],
@@ -128,6 +145,13 @@ function requireExactC1PrefixPartition() {
 		if (JSON.stringify(observed) !== JSON.stringify(expected)) {
 			fail("P07B_B_SELFTEST_SYMBOL_SCANNER", JSON.stringify({ source, observed, expected }));
 		}
+	}
+	const storeParserObserved = futureSymbolsInSource(
+		"internal/store/nonhead_contract.go",
+		"func reopen() { contractmodel.ParseContractExecutionTarget() }",
+	);
+	if (JSON.stringify(storeParserObserved) !== JSON.stringify([c3Official[3]])) {
+		fail("P07B_B_SELFTEST_SYMBOL_SCANNER", JSON.stringify({ storeParserObserved }));
 	}
 	const supportObserved = futureSymbolsInSource("internal/store/nonhead_contract.go", "const ContractExecutionClassifierProfile = 1");
 	const supportPartition = partitionFutureSymbols(supportObserved);
@@ -148,6 +172,59 @@ function requireExactC1PrefixPartition() {
 	}
 }
 
+function requireExactC3SurfaceBundle() {
+	const exact = [
+		"internal/contractexec/target.go:ContractExecutionTarget",
+		"internal/contractexec/target.go:NewContractExecutionTarget",
+		"internal/contractexec/target.go:ParseContractExecutionTarget",
+		"internal/store/nonhead_contract.go:ParseContractExecutionTarget",
+	];
+	const assertRejected = (name, values) => {
+		const partition = partitionFutureSymbols(values);
+		if (partition.admitted.length !== 0 || JSON.stringify(partition.foreign) !== JSON.stringify(values)) {
+			fail("P07B_B_SELFTEST_C3_SURFACE_BUNDLE", `${name}:${JSON.stringify(partition)}`);
+		}
+	};
+	const absent = partitionFutureSymbols([]);
+	if (absent.admitted.length !== 0 || absent.foreign.length !== 0) {
+		fail("P07B_B_SELFTEST_C3_SURFACE_BUNDLE", `historical:${JSON.stringify(absent)}`);
+	}
+	const complete = partitionFutureSymbols(exact);
+	if (JSON.stringify(complete.admitted) !== JSON.stringify(exact) || complete.foreign.length !== 0) {
+		fail("P07B_B_SELFTEST_C3_SURFACE_BUNDLE", `complete:${JSON.stringify(complete)}`);
+	}
+	const oneShot = partitionFutureSymbols((function* () { yield* exact; })());
+	if (JSON.stringify(oneShot.admitted) !== JSON.stringify(exact) || oneShot.foreign.length !== 0) {
+		fail("P07B_B_SELFTEST_C3_SURFACE_BUNDLE", `one-shot:${JSON.stringify(oneShot)}`);
+	}
+	for (let mask = 1; mask < (1 << exact.length) - 1; mask += 1) {
+		assertRejected(`partial-${mask.toString(2).padStart(exact.length, "0")}`,
+			exact.filter((_, index) => (mask & (1 << index)) !== 0));
+	}
+	for (const [name, index, replacement] of [
+		["new-relocated", 1, "internal/contractexec/target_copy.go:NewContractExecutionTarget"],
+		["target-parser-relocated", 2, "internal/contractexec/target_copy.go:ParseContractExecutionTarget"],
+		["store-parser-relocated", 3, "internal/store/object_store.go:ParseContractExecutionTarget"],
+		["new-renamed", 1, "internal/contractexec/target.go:NewContractExecutionTargetCopy"],
+		["target-parser-renamed", 2, "internal/contractexec/target.go:ParseContractExecutionTargetCopy"],
+		["store-parser-renamed", 3, "internal/store/nonhead_contract.go:ParseContractExecutionTargetβ"],
+	]) {
+		const candidate = [...exact];
+		candidate[index] = replacement;
+		assertRejected(name, candidate);
+	}
+	for (const extra of [
+		"internal/contractexec/target.go:ParseFinalizedContractRun",
+		"internal/future.go:ParseContractExecutionTarget",
+	]) {
+		const partition = partitionFutureSymbols([...exact, extra]);
+		if (JSON.stringify(partition.admitted) !== JSON.stringify(exact) ||
+			JSON.stringify(partition.foreign) !== JSON.stringify([extra])) {
+			fail("P07B_B_SELFTEST_C3_SURFACE_BUNDLE", `extra:${JSON.stringify(partition)}`);
+		}
+	}
+}
+
 async function main() {
 	if (process.argv.length !== 2) fail("P07B_B_SELFTEST_ARGUMENTS", "no arguments accepted");
 	const digest = rosterDigest();
@@ -162,6 +239,10 @@ async function main() {
 	for (const test of cases) {
 		if (test.id === "prefix-partition") {
 			requireExactC1PrefixPartition();
+			continue;
+		}
+		if (test.id === "c3-surface-bundle") {
+			requireExactC3SurfaceBundle();
 			continue;
 		}
 		const facts = structuredClone(clean);
@@ -203,7 +284,7 @@ async function main() {
 		}
 		requireViolation(facts, test.code, test.id);
 	}
-	process.stdout.write(`P07B B architecture defensive self-test OK (${cases.length} metadata cases; exact C1 prefix, C2 storage symbols, C3 issuer symbol, and symlink entrypoint)\n`);
+	process.stdout.write(`P07B B architecture defensive self-test OK (${cases.length} metadata cases; exact C1 prefix, C2 storage symbols, all-or-none C3 target surface, and symlink entrypoint)\n`);
 }
 
 main().catch((error) => {

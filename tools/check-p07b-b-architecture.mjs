@@ -19,8 +19,11 @@ const c2StorageSymbols = new Set([
 const c2SupportSymbols = new Set([
 	"internal/store/nonhead_contract.go:ContractExecutionClassifierProfile",
 ]);
-const c3OfficialTargetSymbols = new Set([
+const c3OfficialTargetSurface = new Set([
 	"internal/contractexec/target.go:ContractExecutionTarget",
+	"internal/contractexec/target.go:NewContractExecutionTarget",
+	"internal/contractexec/target.go:ParseContractExecutionTarget",
+	"internal/store/nonhead_contract.go:ParseContractExecutionTarget",
 ]);
 const futureSemanticFamilies = Object.freeze([
 	"ContractExecutionTarget",
@@ -177,8 +180,12 @@ function count(source, expression) { return source.match(expression)?.length ?? 
 export function partitionFutureSymbols(values) {
 	const admitted = [];
 	const foreign = [];
-	for (const value of values) {
-		if (value.startsWith(c1SemanticPrefix) || c2StorageSymbols.has(value) || c2SupportSymbols.has(value) || c3OfficialTargetSymbols.has(value)) admitted.push(value);
+	const inventory = [...values];
+	const observed = new Set(inventory);
+	const completeC3Surface = [...c3OfficialTargetSurface].every((value) => observed.has(value));
+	for (const value of inventory) {
+		if (value.startsWith(c1SemanticPrefix) || c2StorageSymbols.has(value) || c2SupportSymbols.has(value) ||
+			(completeC3Surface && c3OfficialTargetSurface.has(value))) admitted.push(value);
 		else foreign.push(value);
 	}
 	return Object.freeze({ admitted: Object.freeze(admitted), foreign: Object.freeze(foreign) });
