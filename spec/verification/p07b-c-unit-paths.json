@@ -1,5 +1,5 @@
 {
-  "schema_version": "countershape/p07b-c-unit-paths/v14",
+  "schema_version": "countershape/p07b-c-unit-paths/v15",
   "units": {
     "C0A": {
       "exact": [
@@ -510,6 +510,19 @@
         "docs/PROMPT_PACK.md",
         "docs/VERIFICATION.md",
         "docs/status/P07B-C-C3T-PHASE-SELFTEST-MAINTENANCE.md",
+        "spec/verification/p07b-c-unit-paths.json",
+        "tools/check-p07b-c-plan.mjs",
+        "tools/check-p07b-c-unit-scope.mjs"
+      ],
+      "prefixes": [],
+      "verification_profile": "SOURCE_FULL"
+    },
+    "C3U": {
+      "exact": [
+        "docs/HANDOFF_MODE_C.md",
+        "docs/PROMPT_PACK.md",
+        "docs/VERIFICATION.md",
+        "docs/status/P07B-C-C3U-CROSS-PHASE-RECEIPT-FIXTURE-MAINTENANCE.md",
         "spec/verification/p07b-c-unit-paths.json",
         "tools/check-p07b-c-plan.mjs",
         "tools/check-p07b-c-unit-scope.mjs"
