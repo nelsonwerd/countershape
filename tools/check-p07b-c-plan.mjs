@@ -84,6 +84,7 @@ const c3sStatusPath = "docs/status/P07B-C-C3S-CUMULATIVE-SELFTEST-MAINTENANCE.md
 const c3StatusPath = "docs/status/P07B-C-C3-TARGET.md";
 const c3rStatusPath = "docs/status/P07B-C-C3R-NOTE-PREVIEW-MAINTENANCE.md";
 const c3qStatusPath = "docs/status/P07B-C-C3Q-SELF-RECEIPT-MAINTENANCE.md";
+const c3tStatusPath = "docs/status/P07B-C-C3T-PHASE-SELFTEST-MAINTENANCE.md";
 const c3pReceiptBlockStart = "<!-- P07B-C-C3P-SOURCE-RECEIPTS:START -->";
 const c3pReceiptBlockEnd = "<!-- P07B-C-C3P-SOURCE-RECEIPTS:END -->";
 const c3ReceiptBlockStart = "<!-- P07B-C-C3-SOURCE-RECEIPTS:START -->";
@@ -189,6 +190,16 @@ const sealedC3RIdentity = Object.freeze({
 	noteType: "blob",
 	noteBlob: "7d0c90aaec4f1a36d8603e5c1ff6195a02221314",
 	noteBodySHA256: "dcd8991ef2446da78137319d7069d89999eda9748338fbdb5f8927bb4460e09d",
+});
+const sealedC3QIdentity = Object.freeze({
+	commit: "818ed90ebbf99ae38916307d9f2342921d38ebbf",
+	tree: "157241ac2ea7c390b2f67a788b26b9f7666b2893",
+	parent: sealedC3RIdentity.commit,
+	subject: "fix: close C3B external self-receipt checks",
+	noteRef: "refs/notes/didrun",
+	noteType: "blob",
+	noteBlob: "06cd81c05ce2e6f2348d0765298846ac048caf7e",
+	noteBodySHA256: "b61f53351614361f3646186827ed96e7aace8980bcd3be52f470a366a59fe855",
 });
 const c0ClaimLabels = Object.freeze([
 	"P07B C0 authority plan coherence",
@@ -467,7 +478,7 @@ const requiredText = Object.freeze({
 		"`RECEIPT_RECONCILIATION` is admitted only for an exact empty-prefix roster",
 	],
 	"spec/verification/p07b-c-unit-paths.json": [
-		"countershape/p07b-c-unit-paths/v13",
+		"countershape/p07b-c-unit-paths/v14",
 		"\"C0A\"",
 		"\"C1M\"",
 		"\"C1V\"",
@@ -854,7 +865,7 @@ const requiredC1EvidenceMaintenanceText = Object.freeze({
 			"later independently sealed, delimited handoff/receipt descendant",
 	],
 		"spec/verification/p07b-c-unit-paths.json": [
-			"countershape/p07b-c-unit-paths/v13",
+			"countershape/p07b-c-unit-paths/v14",
 		"\"C1E\"",
 	],
 		"tools/check-p07b-c-plan.mjs": [
@@ -1325,7 +1336,8 @@ const c3sStatusUnreceiptedLine = "Every intended C3S grade remains `UNRECEIPTED`
 const c3ActiveHandoffState = `C3 exact-target publication is the active exact forty-path \`SOURCE_FULL\` unit and remains \`UNRECEIPTED\`; sealed C3S commit \`${sealedC3SIdentity.commit}\`, tree \`${sealedC3SIdentity.tree}\`, is the direct source parent. C3B stays blocked until C3 independently closes.`;
 const c3rActiveHandoffState = `C3R note-preview checker maintenance is the active exact seven-path \`SOURCE_FULL\` unit and remains \`UNRECEIPTED\`; sealed C3 commit \`${sealedC3Identity.commit}\`, tree \`${sealedC3Identity.tree}\`, is the closed source boundary. C3B stays blocked until C3R independently closes.`;
 const c3qActiveHandoffState = `C3Q self-receipt checker maintenance is the active exact seven-path \`SOURCE_FULL\` unit and remains \`UNRECEIPTED\`; sealed C3R commit \`${sealedC3RIdentity.commit}\`, tree \`${sealedC3RIdentity.tree}\`, is the closed checker prerequisite. C3B stays blocked until C3Q independently closes.`;
-const c3bActiveHandoffState = (receipt) => `C3B receipt reconciliation is the active exact three-path \`RECEIPT_RECONCILIATION\` unit and remains \`UNRECEIPTED\`; sealed C3 source commit \`${receipt.source_commit}\`, tree \`${receipt.source_tree}\`, is the closed source boundary, and sealed C3Q is the immediate checker prerequisite. C4 stays blocked until C3B independently closes.`;
+const c3tActiveHandoffState = `C3T phase-transition self-test maintenance is the active exact seven-path \`SOURCE_FULL\` unit and remains \`UNRECEIPTED\`; sealed C3Q commit \`${sealedC3QIdentity.commit}\`, tree \`${sealedC3QIdentity.tree}\`, is the closed checker prerequisite. C3B stays blocked until C3T independently closes.`;
+const c3bActiveHandoffState = (receipt) => `C3B receipt reconciliation is the active exact three-path \`RECEIPT_RECONCILIATION\` unit and remains \`UNRECEIPTED\`; sealed C3 source commit \`${receipt.source_commit}\`, tree \`${receipt.source_tree}\`, is the closed source boundary, and sealed C3T is the immediate checker prerequisite. C4 stays blocked until C3B independently closes.`;
 const c3pbHandoffTransitions = Object.freeze([
 	Object.freeze({
 		name: "active state",
@@ -1338,6 +1350,7 @@ const c3pbHandoffTransitions = Object.freeze([
 		c3: c3ActiveHandoffState,
 		c3r: c3rActiveHandoffState,
 		c3q: c3qActiveHandoffState,
+		c3t: c3tActiveHandoffState,
 		c3b: c3bActiveHandoffState,
 	}),
 	Object.freeze({
@@ -1351,6 +1364,7 @@ const c3pbHandoffTransitions = Object.freeze([
 		c3: "The dirty tree is limited to C3's exact forty-path roster at `sha256:c0050817c739e6bf7505105113ebbfd2c2504674f93f14e34daf0609f7fad0fb`; sealed C3S retains its exact eight-path roster at `sha256:1d5f793e70caea0ad7379e92bbf781da50846276c28a2aca2d3e7e2ed8c17a26`, and C3B remains frozen at `sha256:3ef17156a2f3051171da70983f9428de2b9bdb5a179602407a36f34200012a67`.",
 		c3r: "The dirty tree is limited to C3R's exact seven-path roster at `sha256:fe14d9f9985771cce0525edfca47c001b5912dacc4c2d6fef182458d3b44f58e`; the sealed C3 source roster remains `sha256:c0050817c739e6bf7505105113ebbfd2c2504674f93f14e34daf0609f7fad0fb`, and C3B remains frozen at `sha256:3ef17156a2f3051171da70983f9428de2b9bdb5a179602407a36f34200012a67`.",
 		c3q: "The dirty tree is limited to C3Q's exact seven-path roster at `sha256:f5f27e661c1ace6516aba4b9d5766f4c6ab50b6602dbcb101bff9b6a4ebfe6fc`; sealed C3R retains its exact seven-path roster at `sha256:fe14d9f9985771cce0525edfca47c001b5912dacc4c2d6fef182458d3b44f58e`, and C3B remains frozen at `sha256:3ef17156a2f3051171da70983f9428de2b9bdb5a179602407a36f34200012a67`.",
+		c3t: "The dirty tree is limited to C3T's exact seven-path roster at `sha256:496788860db6c42f5acc50de0de02be8a63bcb8e11f99fb24d59d9c0e016477e`; sealed C3Q retains its exact seven-path roster at `sha256:f5f27e661c1ace6516aba4b9d5766f4c6ab50b6602dbcb101bff9b6a4ebfe6fc`, and C3B remains frozen at `sha256:3ef17156a2f3051171da70983f9428de2b9bdb5a179602407a36f34200012a67`.",
 		c3b: "The receipt-only dirty tree is limited to C3B's exact three-path roster at `sha256:3ef17156a2f3051171da70983f9428de2b9bdb5a179602407a36f34200012a67`; the sealed C3 source roster remains `sha256:c0050817c739e6bf7505105113ebbfd2c2504674f93f14e34daf0609f7fad0fb`.",
 	}),
 	Object.freeze({
@@ -1364,7 +1378,8 @@ const c3pbHandoffTransitions = Object.freeze([
 		c3: "C3 uses a zero-claim development ledger and a separate fresh eighteen-claim final ledger; no C3S event is reused.",
 		c3r: "C3R uses a zero-claim development ledger and a separate fresh nine-claim final ledger; no C3 event is reused.",
 		c3q: "C3Q uses a zero-claim development ledger and a separate fresh nine-claim final ledger; no C3R event is reused.",
-		c3b: "C3B uses a separate fresh seven-claim receipt ledger; no C3Q event is reused.",
+		c3t: "C3T uses a zero-claim development ledger and a separate fresh nine-claim final ledger; no C3Q event is reused.",
+		c3b: "C3B uses a separate fresh seven-claim receipt ledger; no C3T event is reused.",
 	}),
 	Object.freeze({
 		name: "verification battery",
@@ -1377,6 +1392,7 @@ const c3pbHandoffTransitions = Object.freeze([
 		c3: "C3 publishes one exact inert pre-spawn target, exercises its five exact authority profiles plus the focused race suite, and then runs B compatibility and the full cumulative verifier through didrun. A direct pass has no didrun grade. OfficialTarget.Valid is structural only; C4 must freshly reopen immediately before process start.",
 		c3r: "C3R admits only one exact didrun note-preview projection for C3 claim eight while preserving byte-exact raw-ledger argv authority, then runs plan/scope self-tests and the full cumulative verifier through didrun. A direct pass has no didrun grade. C3R changes no product, verifier, didrun install, sealed C3 note, or frozen C3B scope.",
 		c3q: "C3Q closes active-unit self-receipt rejection across the exact plan-authority Markdown corpus in both C3Q-active and C3B-active phases, then runs plan/scope self-tests and the full cumulative verifier through didrun. A direct pass has no didrun grade. C3Q changes no product, verifier roster, didrun install, sealed C3/C3R evidence, or frozen C3B scope.",
+		c3t: "C3T reconstructs one validated receipt-absent C3T fixture before every hostile receipt mutation, proves absent-to-present and present-to-absent-to-present byte stability, and then runs plan/scope self-tests plus the full cumulative verifier through didrun. A direct pass has no didrun grade. C3T changes no product, verifier roster, didrun install, sealed C3/C3R/C3Q evidence, or frozen C3B scope.",
 		c3b: "C3B keeps source and verifier code byte-for-byte unchanged and runs only its explicit narrow receipt gates through didrun. It binds the already-sealed C3 source evidence and cannot claim cumulative execution, runtime freshness, or C4 authority.",
 	}),
 	Object.freeze({
@@ -1390,6 +1406,7 @@ const c3pbHandoffTransitions = Object.freeze([
 		c3: "### Active C3 exact-target publication",
 		c3r: "### Active C3R note-preview checker maintenance",
 		c3q: "### Active C3Q self-receipt checker maintenance",
+		c3t: "### Active C3T phase-transition self-test maintenance",
 		c3b: "### Active C3B source receipt reconciliation",
 	}),
 	Object.freeze({
@@ -1403,7 +1420,8 @@ const c3pbHandoffTransitions = Object.freeze([
 		c3: "The C3P receipt declaration and one exact source-receipt block remain closed source evidence. C3F and C3S are independently sealed; active C3 changes neither payload nor any predecessor grade, and no C3 source receipt exists yet.",
 		c3r: "The C3P receipt declaration and one exact source-receipt block remain closed source evidence. C3 is independently sealed; active C3R changes neither C3 payload nor any source grade, and no C3 source receipt exists yet.",
 		c3q: "The C3P receipt declaration and one exact source-receipt block remain closed source evidence. C3 and C3R are independently sealed; active C3Q changes neither C3 payload nor any source grade, and no C3 source receipt exists yet.",
-		c3b: "The C3P and C3 receipt declarations and their two exact source-receipt blocks remain closed source evidence. C3, C3R, and C3Q are independently sealed; C3B changes neither payload nor any source grade.",
+		c3t: "The C3P receipt declaration and one exact source-receipt block remain closed source evidence. C3, C3R, and C3Q are independently sealed; active C3T changes neither C3 payload nor any source grade, and no C3 source receipt exists yet.",
+		c3b: "The C3P and C3 receipt declarations and their two exact source-receipt blocks remain closed source evidence. C3, C3R, C3Q, and C3T are independently sealed; C3B changes neither payload nor any source grade.",
 	}),
 ]);
 const c3pbPhaseMetadata = Object.freeze({
@@ -1452,9 +1470,14 @@ const c3pbPhaseMetadata = Object.freeze({
 		ledger: ".didrun-history/2026-07-20-p07b-c-c3r-final/.didrun/",
 		html: ".countershape/evidence/p07b-c-c3r-final-424273b000f8.html",
 	}),
+	c3t: Object.freeze({
+		sealedThrough: "C3Q", identity: sealedC3QIdentity, active: "C3T",
+		ledger: ".didrun-history/2026-07-20-p07b-c-c3q-final/.didrun/",
+		html: ".countershape/evidence/p07b-c-c3q-final-818ed90ebbf9.html",
+	}),
 });
 
-function c3pbPhaseMetadataFor(field, c3Receipt, c3rAuthority, c3qAuthority) {
+function c3pbPhaseMetadataFor(field, c3Receipt, c3rAuthority, c3qAuthority, c3tAuthority) {
 	if (field !== "c3b") return c3pbPhaseMetadata[field];
 	if (c3Receipt === undefined) throw new Error("C3B lifecycle metadata requires the validated C3 receipt");
 	if (!c3rAuthority || typeof c3rAuthority !== "object") {
@@ -1463,12 +1486,15 @@ function c3pbPhaseMetadataFor(field, c3Receipt, c3rAuthority, c3qAuthority) {
 	if (!c3qAuthority || typeof c3qAuthority !== "object") {
 		throw new Error("C3B lifecycle metadata requires validated C3Q authority");
 	}
+	if (!c3tAuthority || typeof c3tAuthority !== "object") {
+		throw new Error("C3B lifecycle metadata requires validated C3T authority");
+	}
 	return Object.freeze({
-		sealedThrough: "C3Q",
-		identity: Object.freeze({ commit: c3qAuthority.commit, tree: c3qAuthority.tree }),
+		sealedThrough: "C3T",
+		identity: Object.freeze({ commit: c3tAuthority.commit, tree: c3tAuthority.tree }),
 		active: "C3B",
-		ledger: ".didrun-history/2026-07-20-p07b-c-c3q-final/.didrun/",
-		html: `.countershape/evidence/p07b-c-c3q-final-${c3qAuthority.commit.slice(0, 12)}.html`,
+		ledger: ".didrun-history/2026-07-20-p07b-c-c3t-final/.didrun/",
+		html: `.countershape/evidence/p07b-c-c3t-final-${c3tAuthority.commit.slice(0, 12)}.html`,
 	});
 }
 
@@ -1494,6 +1520,17 @@ function c3qSealOutcomeDisclosure(c3qAuthority) {
 		throw new Error("C3B lifecycle metadata requires exact C3Q note identity and secrets override disclosure");
 	}
 	return `Sealed C3Q's Git note blob is \`${noteBlob}\`, its body SHA-256 is \`${noteBodyDigest}\`, and it records \`secrets_override: ${outcome}\`; these are exact recorded note disclosures, not proof of plain-seal-first sequencing, refusal, review, secret absence, a general credential audit, or publication authority.`;
+}
+
+function c3tSealOutcomeDisclosure(c3tAuthority) {
+	const outcome = c3tAuthority?.note?.secrets_override;
+	const noteBlob = c3tAuthority?.note_blob_oid;
+	const noteBodyDigest = c3tAuthority?.note_body_sha256;
+	if (!/^[0-9a-f]{40}$/u.test(noteBlob ?? "") || !/^[0-9a-f]{64}$/u.test(noteBodyDigest ?? "") ||
+		typeof outcome !== "boolean") {
+		throw new Error("C3B lifecycle metadata requires exact C3T note identity and secrets override disclosure");
+	}
+	return `Sealed C3T's Git note blob is \`${noteBlob}\`, its body SHA-256 is \`${noteBodyDigest}\`, and it records \`secrets_override: ${outcome}\`; these are exact recorded note disclosures, not proof of plain-seal-first sequencing, refusal, review, secret absence, a general credential audit, or publication authority.`;
 }
 
 function currentStateSubsectionRange(body, heading) {
@@ -1540,7 +1577,40 @@ function replaceCurrentStateSubsection(body, heading, replacement) {
 	]).toString("utf8");
 }
 
-function c3bActiveMaintenanceSection(receipt, c3rAuthority, c3qAuthority) {
+function c3tActiveMaintenanceSection() {
+	const receiptPresence = c3pbTransitionValue(
+		c3pbHandoffTransitions.find(({ name }) => name === "receipt presence"),
+		"c3t",
+	);
+	if (typeof receiptPresence !== "string") {
+		throw new Error("C3T active maintenance section requires the canonical receipt-absence ruling");
+	}
+	return [
+		"### Active C3T phase-transition self-test maintenance",
+		"",
+		`C3T is the active exact seven-path \`SOURCE_FULL\` defect repair at \`${requiredC3TDigest}\` and remains \`UNRECEIPTED\`. Its direct parent is sealed C3Q commit \`${sealedC3QIdentity.commit}\`, tree \`${sealedC3QIdentity.tree}\`; C3B's exact three-path roster, receipt profile, and seven labels/types remain frozen.`,
+		"",
+		`Sealed C3Q's note blob is \`${sealedC3QIdentity.noteBlob}\` and its note-body SHA-256 is \`${sealedC3QIdentity.noteBodySHA256}\`. Current C3T/C3B refusal authority covers 43 exact Markdown paths at \`sha256:52e78638d70f4e229e0b54c0a8311b6e0d1d2acc0d4e439cacf10cde65c62959\`: 2 phases × 43 paths × 15 positive forms, or 1,290 required rejections, plus 430 accepted controls.`,
+		"",
+		`The permanent trigger ledger \`.didrun-history/2026-07-20-p07b-c-c3b-build-loop-post-c3q-selftest-red/.didrun/\` records a successful C3B plan event followed by the failed outer receipt self-test event. That event exited \`1\` at \`P07B-C phase fixture C3 absent downgrade active state anchor count 0\`; an operator shell-control mistake then declared the failed event. Neither event nor claim is relabeled, and the ledger supports no C3B, C3T, or C3Q claim.`,
+		"",
+		"C3Q's production active-unit refusal helper and synthetic receipt renderer were exercised on its sealed C3Q-active tree. The later failure narrows—not erases—that evidence: the outer C3 receipt self-test obtained its nominal absent fixture by hiding only the receipt declaration while retaining live C3B status and handoff bytes, so several absent mutations were invalid-baseline false positives and the first exact C3Q transition anchor was absent.",
+		"",
+		"The sealed C3Q matrix remains exact historical evidence on its sealed tree: it repaired phase-asymmetric self-receipt enforcement across the exact plan-authority Markdown corpus at `sha256:16d63155a00c9e87b7eec79707ad6d47d6f5d70205d18243b8bc687e401e4b66`, with 2 phases × 42 paths × 15 positive forms, 1,260 required rejections, 420 controls, eight supplemental source-identity aliases, and two strict-zero prohibition controls. Its direct synthetic transition used visible-Markdown heading boundaries. That bounded result does not make the outer receipt self-test phase-neutral after later lifecycle evolution. The earlier stashes `1d677db4b9049084ea066263b1bb6c25ab62e5f0` and `fc02f6722716f0600b1e1d7af28cb91925d1047c`, plus red ledger `.didrun-history/2026-07-20-p07b-c-c3b-build-loop-pre-c3q/.didrun/`, remain permanent history and support no current claim.",
+		"",
+		"C3T repairs the fixture boundary, not the refusal policy. It inverse-renders only the lifecycle-owned C3B subsection and metadata, the exact C3 status receipt projection, and the terminal receipt declaration/block into one validated C3T-active absent fixture. Every absent hostile mutation starts from that passing fixture. The forward renderer then proves absent → present and present → absent → present byte stability across the three controlled receipt paths, with exact-one anchors and visible-Markdown topology.",
+		"",
+		"Receipt-present inputs must use the canonical one-line receipt declaration and exact terminal handoff block. Ordinary sealed-descendant plan coherence accepts exact C3T ancestry after C3B commits; only the dedicated C3B preseal chain gate requires C3T to be current `HEAD`.",
+		"",
+		"Every intended C3T grade remains `UNRECEIPTED` until its exact nine-command full profile runs through a fresh ledger, commit, seal, and strict-clean boundary. No C3B receipt, C3 runtime freshness, process-start, C4, general Markdown, or general security claim is implied.",
+		"",
+		receiptPresence,
+		"",
+		"",
+	].join("\n");
+}
+
+function c3bActiveMaintenanceSection(receipt, c3rAuthority, c3qAuthority, c3tAuthority) {
 	const receiptPresence = c3pbTransitionValue(
 		c3pbHandoffTransitions.find(({ name }) => name === "receipt presence"),
 		"c3b",
@@ -1554,11 +1624,17 @@ function c3bActiveMaintenanceSection(receipt, c3rAuthority, c3qAuthority) {
 		"",
 		`C3B is the active exact three-path \`RECEIPT_RECONCILIATION\` unit at \`${requiredC3BDigest}\` and remains \`UNRECEIPTED\`. It may reconcile only sealed C3 source commit \`${receipt.source_commit}\`, tree \`${receipt.source_tree}\`; source and verifier bytes remain unchanged, and no cumulative execution, runtime freshness, or C4 authority is claimed.`,
 		"",
-		`Sealed C3Q commit \`${c3qAuthority.commit}\`, tree \`${c3qAuthority.tree}\`, is the unique direct child of sealed C3R commit \`${c3rAuthority.commit}\` and the immediate checker predecessor. ${c3qSealOutcomeDisclosure(c3qAuthority)}`,
+		`Sealed C3T commit \`${c3tAuthority.commit}\`, tree \`${c3tAuthority.tree}\`, is the unique direct child of sealed C3Q commit \`${c3qAuthority.commit}\` and the immediate checker predecessor. ${c3tSealOutcomeDisclosure(c3tAuthority)}`,
 		"",
-		`The closed C3Q repair remains a phase-neutral checker ruling: it repaired the phase-asymmetric self-receipt enforcement defect across the exact plan-authority Markdown corpus at sorted-newline digest \`${planAuthorityMarkdownDigest}\`. Its bounded declaration was 2 phases × 42 paths × 15 positive forms, or 1,260 required rejections, plus 420 positive controls; eight supplemental source-identity, verification-passed, and claim-count aliases reject, while two strict-zero prohibition controls remain accepted. The lifecycle transition uses visible-Markdown heading boundaries. This is positive-form refusal only, not a general Markdown or security audit.`,
+		`Sealed C3Q remains the exact direct child of sealed C3R commit \`${c3rAuthority.commit}\`. ${c3qSealOutcomeDisclosure(c3qAuthority)}`,
 		"",
-		"The preserved C3B draft remains stash object `1d677db4b9049084ea066263b1bb6c25ab62e5f0`; the earlier byte-oriented checkpoint `fc02f6722716f0600b1e1d7af28cb91925d1047c` also remains retained without dropping. The permanent failed pre-C3Q development ledger remains `.didrun-history/2026-07-20-p07b-c-c3b-build-loop-pre-c3q/.didrun/`; it supports no C3B or C3Q claim and is not relabeled.",
+		"The sealed C3Q matrix remains exact historical evidence on its sealed tree: it repaired phase-asymmetric self-receipt enforcement across the exact plan-authority Markdown corpus at `sha256:16d63155a00c9e87b7eec79707ad6d47d6f5d70205d18243b8bc687e401e4b66`, with 2 phases × 42 paths × 15 positive forms, 1,260 required rejections, 420 controls, eight supplemental source-identity aliases, and two strict-zero prohibition controls. Its direct synthetic transition used visible-Markdown heading boundaries. Earlier red ledger `.didrun-history/2026-07-20-p07b-c-c3b-build-loop-pre-c3q/.didrun/` remains permanent and supports no current claim.",
+		"",
+		`C3Q's production refusal logic and synthetic C3Q/C3B renderer passed on its sealed tree, but the later outer C3 receipt self-test fixture remained phase-coupled. C3T repaired that invocation by reconstructing one validated C3T-active absent fixture before every hostile mutation and requiring the controlled absent → present and present → absent → present round trips to be byte-stable. The permanent post-C3Q rehearsal failed at \`P07B-C phase fixture C3 absent downgrade active state anchor count 0\`. Current authority covers 2 phases × 43 paths × 15 positive forms over corpus \`${planAuthorityMarkdownDigest}\`, or 1,290 required rejections plus 430 controls; this is bounded checker evidence, not a general Markdown or security audit.`,
+		"",
+		"Receipt-present inputs use the canonical one-line receipt declaration and exact terminal handoff block. Ordinary sealed-descendant plan coherence accepts exact C3T ancestry after this C3B commit; the dedicated C3B preseal chain gate alone required C3T to be current `HEAD`.",
+		"",
+		"The preserved post-C3Q C3B draft remains stash object `eab9839c902abf52e9729144a2244740228a41eb`; earlier checkpoints `1d677db4b9049084ea066263b1bb6c25ab62e5f0` and `fc02f6722716f0600b1e1d7af28cb91925d1047c` remain retained without dropping. The permanent failed post-C3Q rehearsal ledger remains `.didrun-history/2026-07-20-p07b-c-c3b-build-loop-post-c3q-selftest-red/.didrun/`; its failed self-test and mistakenly declared failed-event claim support no C3B, C3T, or C3Q claim and are not relabeled.",
 		"",
 		"Every intended C3B grade remains `UNRECEIPTED` until its exact seven narrow receipt commands run through a fresh ledger, commit, seal, and strict-clean boundary.",
 		"",
@@ -1571,20 +1647,22 @@ function c3bActiveMaintenanceSection(receipt, c3rAuthority, c3qAuthority) {
 const c3pbMetadataLineContracts = Object.freeze({
 	"active state": Object.freeze({
 		prefix: "- **Pipeline phase:**",
-		render: (value, field, c3Receipt, c3rAuthority, c3qAuthority) => `- **Pipeline phase:** U0–U6, P07A/U6b, every P07B-A/B boundary, and P07B-C through ${c3pbPhaseMetadataFor(field, c3Receipt, c3rAuthority, c3qAuthority).sealedThrough} are sealed and strict-clean. ${value}`,
+		render: (value, field, c3Receipt, c3rAuthority, c3qAuthority, c3tAuthority) => `- **Pipeline phase:** U0–U6, P07A/U6b, every P07B-A/B boundary, and P07B-C through ${c3pbPhaseMetadataFor(field, c3Receipt, c3rAuthority, c3qAuthority, c3tAuthority).sealedThrough} are sealed and strict-clean. ${value}`,
 	}),
 	"dirty scope": Object.freeze({
 		prefix: "- **Git:**",
-		render: (value, field, c3Receipt, c3rAuthority, c3qAuthority) => {
-			const metadata = c3pbPhaseMetadataFor(field, c3Receipt, c3rAuthority, c3qAuthority);
+		render: (value, field, c3Receipt, c3rAuthority, c3qAuthority, c3tAuthority) => {
+			const metadata = c3pbPhaseMetadataFor(field, c3Receipt, c3rAuthority, c3qAuthority, c3tAuthority);
 			const stashState = field === "c3"
 				? "Applied C3 stash object `5d50090882888c115c54a5bee9edb9411c826832` and earlier checkpoints `f7160bbbc09245a1026eb6396ac76282ab913192`, `fa737661e61c36c10ce793f64852836edec20065`, and `3e766715609680adaef4678fc9aeaa9e3a8bae09` remain retained without dropping; older receipt-history stashes remain untouched."
 				: field === "c3r"
 					? "C3B draft stash object `fc02f6722716f0600b1e1d7af28cb91925d1047c` and earlier checkpoints remain retained without dropping; older receipt-history stashes remain untouched."
 					: field === "c3q"
 						? "C3B draft stash objects `1d677db4b9049084ea066263b1bb6c25ab62e5f0` and `fc02f6722716f0600b1e1d7af28cb91925d1047c` and earlier checkpoints remain retained without dropping; the permanent red pre-C3Q development ledger remains archived."
+					: field === "c3t"
+						? "Post-C3Q C3B draft stash object `eab9839c902abf52e9729144a2244740228a41eb` and earlier checkpoints remain retained without dropping; the permanent red post-C3Q C3B rehearsal ledger remains archived."
 					: field === "c3b"
-						? "Applied C3B draft stash object `1d677db4b9049084ea066263b1bb6c25ab62e5f0` without dropping; original stash `fc02f6722716f0600b1e1d7af28cb91925d1047c` and earlier checkpoints remain retained."
+						? "Applied post-C3Q C3B draft stash object `eab9839c902abf52e9729144a2244740228a41eb` without dropping; earlier stashes `1d677db4b9049084ea066263b1bb6c25ab62e5f0` and `fc02f6722716f0600b1e1d7af28cb91925d1047c` remain retained."
 				: field === "c3s"
 					? "C3 stash object `5d50090882888c115c54a5bee9edb9411c826832` and earlier checkpoints `f7160bbbc09245a1026eb6396ac76282ab913192`, `fa737661e61c36c10ce793f64852836edec20065`, and `3e766715609680adaef4678fc9aeaa9e3a8bae09` remain retained without dropping; older receipt-history stashes remain untouched."
 					: field === "c3f"
@@ -1597,10 +1675,10 @@ const c3pbMetadataLineContracts = Object.freeze({
 	}),
 	"ledger profile": Object.freeze({
 		prefix: "- **didrun:**",
-		render: (value, field, c3Receipt, c3rAuthority, c3qAuthority) => {
-			const metadata = c3pbPhaseMetadataFor(field, c3Receipt, c3rAuthority, c3qAuthority);
+		render: (value, field, c3Receipt, c3rAuthority, c3qAuthority, c3tAuthority) => {
+			const metadata = c3pbPhaseMetadataFor(field, c3Receipt, c3rAuthority, c3qAuthority, c3tAuthority);
 			const predecessorSealDisclosure = field === "c3b"
-				? ` ${c3rSealOutcomeDisclosure(c3rAuthority)} ${c3qSealOutcomeDisclosure(c3qAuthority)}`
+				? ` ${c3rSealOutcomeDisclosure(c3rAuthority)} ${c3qSealOutcomeDisclosure(c3qAuthority)} ${c3tSealOutcomeDisclosure(c3tAuthority)}`
 				: "";
 			const liveLedgerState = field === "c3b"
 				? "Before final-ledger rotation, any live `.didrun/` is C3B development evidence only; after explicit rotation, the fresh seven-claim ledger is C3B final receipt evidence pending commit, seal, and strict closure."
@@ -1608,6 +1686,8 @@ const c3pbMetadataLineContracts = Object.freeze({
 					? "Before final-ledger rotation, any live `.didrun/` is C3R development evidence only; after explicit rotation, the fresh nine-claim ledger is C3R final evidence pending commit, seal, and strict closure."
 					: field === "c3q"
 						? "Before final-ledger rotation, any live `.didrun/` is C3Q development evidence only; after explicit rotation, the fresh nine-claim ledger is C3Q final evidence pending commit, seal, and strict closure."
+					: field === "c3t"
+						? "Before final-ledger rotation, any live `.didrun/` is C3T development evidence only; after explicit rotation, the fresh nine-claim ledger is C3T final evidence pending commit, seal, and strict closure."
 				: field === "c3"
 					? "Before final-ledger rotation, any live `.didrun/` is C3 development evidence only; after explicit rotation, the fresh eighteen-claim ledger is C3 final evidence pending commit, seal, and strict closure."
 					: field === "c3s"
@@ -2107,6 +2187,44 @@ const c3qFinalRunDirectories = Object.freeze([
 	c3qFinalRunRoot,
 	...["home", "tmp", "gotmp", "gocache", "gopath", "gomodcache"]
 		.map((name) => resolve(c3qFinalRunRoot, name)),
+]);
+const c3tClaimLabels = Object.freeze([
+	"P07B-C C3T phase-selftest plan coherence",
+	"P07B-C C3T receipt-phase fixture defensive self-test",
+	"P07B-C C3T sealed-C3Q Git-note and ancestry compatibility",
+	"P07B-C C3T unit-scope defensive self-test",
+	"P07B-C C3T cumulative verifier self-test",
+	"P07B-C C3T cumulative verification",
+	"P07B-C C3T exact seven-path staged scope and diff integrity",
+	"P07B-C C3T scoped staged credential-pattern scan",
+	"P07B-C C3T sealed-C3Q predecessor and preceding didrun chain integrity",
+]);
+const c3tClaimTypes = Object.freeze([
+	...Array(6).fill("tests-pass"),
+	...Array(3).fill("command-succeeded"),
+]);
+const c3tFinalRunRoot = resolve(repositoryRoot, ".countershape/p07bc-c3t-final");
+const c3tHermeticArgvPrefix = Object.freeze(c3qHermeticArgvPrefix.map((argument) =>
+	argument.replaceAll(c3qFinalRunRoot, c3tFinalRunRoot)));
+const c3tHermeticArgv = (...tail) => Object.freeze([...c3tHermeticArgvPrefix, ...tail]);
+const c3tFinalCommandTails = Object.freeze([
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--self-test"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--verify-c3t-sealed-c3q-note"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--self-test"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current-selftest.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C3T", "--source-final-gate"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C3T", "--credential-scan"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--verify-c3t-preseal-ledger"]),
+]);
+const c3tExpectedClaimArgv = Object.freeze(c3tFinalCommandTails.map((tail) => c3tHermeticArgv(...tail)));
+const c3tFinalCommandOrderMarkdown = c3tFinalCommandTails
+	.map((tail, index) => `${index + 1}. \`${tail.join(" ")}\``).join("\n");
+const c3tFinalRunDirectories = Object.freeze([
+	c3tFinalRunRoot,
+	...["home", "tmp", "gotmp", "gocache", "gopath", "gomodcache"]
+		.map((name) => resolve(c3tFinalRunRoot, name)),
 ]);
 const c3bClaimLabels = Object.freeze([
 	"P07B-C C3B source receipt reconciliation",
@@ -2782,6 +2900,24 @@ const c3qSourceSubject = "fix: close C3B external self-receipt checks";
 const c3qStatusBoundaryLine = "- **Boundary:** active pre-seal `SOURCE_FULL` checker maintenance after sealed C3R and before the unchanged frozen C3B receipt unit. Classification: `DEFECT_REPAIR`.";
 const c3qStatusParentLine = `- **Parent:** sealed C3R commit \`${sealedC3RIdentity.commit}\`, tree \`${sealedC3RIdentity.tree}\`, is note-present with note blob \`${sealedC3RIdentity.noteBlob}\`, note-body SHA-256 \`${sealedC3RIdentity.noteBodySHA256}\`, \`9/9 claims recorded-exact\`, strict exit \`0\`, and recorded \`secrets_override: true\`.`;
 const c3qStatusUnreceiptedLine = "Every intended C3Q grade remains `UNRECEIPTED` until one exact staged tree runs the declared commands through a fresh didrun ledger, commits, seals, exposes a readable Git note, and passes `NO_COLOR=1 didrun verify --strict`. This status cannot receipt C3Q itself.";
+const requiredC3TPaths = Object.freeze([
+	"docs/HANDOFF_MODE_C.md",
+	"docs/PROMPT_PACK.md",
+	"docs/VERIFICATION.md",
+	"docs/status/P07B-C-C3T-PHASE-SELFTEST-MAINTENANCE.md",
+	"spec/verification/p07b-c-unit-paths.json",
+	"tools/check-p07b-c-plan.mjs",
+	"tools/check-p07b-c-unit-scope.mjs",
+]);
+const requiredC3TDigest = "sha256:496788860db6c42f5acc50de0de02be8a63bcb8e11f99fb24d59d9c0e016477e";
+const requiredC3TRosterText = requiredC3TPaths
+	.map((path, index) => `${index === requiredC3TPaths.length - 1 ? "and " : ""}\`${path}\``)
+	.join(", ");
+const requiredC3TDeclaration = `C3T owns exactly these ${requiredC3TPaths.length} paths: ${requiredC3TRosterText}. Their sorted-newline roster digest is \`${requiredC3TDigest}\`.`;
+const c3tSourceSubject = "fix: make C3 receipt self-test phase-stable";
+const c3tStatusBoundaryLine = "- **Boundary:** active pre-seal `SOURCE_FULL` checker maintenance after sealed C3Q and before the unchanged frozen C3B receipt unit. Classification: `DEFECT_REPAIR`.";
+const c3tStatusParentLine = `- **Parent:** sealed C3Q commit \`${sealedC3QIdentity.commit}\`, tree \`${sealedC3QIdentity.tree}\`, is note-present with note blob \`${sealedC3QIdentity.noteBlob}\`, note-body SHA-256 \`${sealedC3QIdentity.noteBodySHA256}\`, \`9/9 claims recorded-exact\`, strict exit \`0\`, and recorded \`secrets_override: true\`.`;
+const c3tStatusUnreceiptedLine = "Every intended C3T grade remains `UNRECEIPTED` until one exact staged tree runs the declared commands through a fresh didrun ledger, commits, seals, exposes a readable Git note, and passes `NO_COLOR=1 didrun verify --strict`. This status cannot receipt C3T itself.";
 const requiredC3BPaths = Object.freeze([
 	"docs/HANDOFF_MODE_C.md",
 	"docs/status/P07B-C-C3-TARGET.md",
@@ -2986,7 +3122,7 @@ const requiredC3AText = Object.freeze({
 	"tools/check-p07b-c-plan.mjs": [
 		"requiredC3APaths", "C3A_ACTIVE", "--verify-c3a-preseal-ledger", "requirePrivateC3AFinalRunDirectories",
 	],
-	"tools/check-p07b-c-unit-scope.mjs": ["\"C3A\"", "p07b-c-unit-paths/v13"],
+	"tools/check-p07b-c-unit-scope.mjs": ["\"C3A\"", "p07b-c-unit-paths/v14"],
 });
 const requiredC3LText = Object.freeze({
 	"docs/HANDOFF_MODE_C.md": [
@@ -3039,7 +3175,7 @@ const requiredC3LText = Object.freeze({
 		"requiredC3LPaths", "C3L_ACTIVE", "--verify-c3l-preseal-ledger", "requirePrivateC3LFinalRunDirectories",
 		"requireSealedC3APredecessorAuthority", "validateSealedC3ANote",
 	],
-	"tools/check-p07b-c-unit-scope.mjs": ["\"C3L\"", "p07b-c-unit-paths/v13"],
+	"tools/check-p07b-c-unit-scope.mjs": ["\"C3L\"", "p07b-c-unit-paths/v14"],
 	"tools/check-u6-architecture.mjs": [
 		"admitsC3StoreBridge", "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED", "decodeGoImportLiteral", "goSourceTokens", "topLevelMatches",
 	],
@@ -3117,7 +3253,7 @@ const requiredC3FText = Object.freeze({
 		c3fStatusUnreceiptedLine,
 		...c3fClaimLabels.map((label) => `\`${label}\``),
 	],
-	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v13", "\"C3F\""],
+	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v14", "\"C3F\""],
 	"tools/check-p07b-b-architecture.mjs": [
 		"c3OfficialTargetSurface", "completeC3Surface", "partitionFutureSymbols",
 		"internal/store/nonhead_contract.go:ParseContractExecutionTarget",
@@ -3130,7 +3266,7 @@ const requiredC3FText = Object.freeze({
 		"requiredC3FPaths", "C3F_ACTIVE", "--verify-c3f-preseal-ledger", "requirePrivateC3FFinalRunDirectories",
 		"requireSealedC3LPredecessorAuthority", "validateSealedC3LNote",
 	],
-	"tools/check-p07b-c-unit-scope.mjs": ["\"C3F\"", "p07b-c-unit-paths/v13"],
+	"tools/check-p07b-c-unit-scope.mjs": ["\"C3F\"", "p07b-c-unit-paths/v14"],
 });
 const requiredC3SText = Object.freeze({
 	"docs/HANDOFF_MODE_C.md": [
@@ -3177,12 +3313,12 @@ const requiredC3SText = Object.freeze({
 		c3sStatusUnreceiptedLine,
 		...c3sClaimLabels.map((label) => `\`${label}\``),
 	],
-	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v13", "\"C3S\""],
+	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v14", "\"C3S\""],
 	"tools/check-p07b-c-plan.mjs": [
 		"requiredC3SPaths", "C3S_ACTIVE", "--verify-c3s-preseal-ledger", "requirePrivateC3SFinalRunDirectories",
 		"requireSealedC3FPredecessorAuthority", "validateSealedC3FNote",
 	],
-	"tools/check-p07b-c-unit-scope.mjs": ["\"C3S\"", "p07b-c-unit-paths/v13"],
+	"tools/check-p07b-c-unit-scope.mjs": ["\"C3S\"", "p07b-c-unit-paths/v14"],
 	"tools/check-u6-architecture-selftest.mjs": [
 		"requireExact", "c3StoreModelImport", "c3StoreInput", "c3StoreRoots", "c3StoreMethodSignatures",
 		"requireC3StoreBridge", "ensureC3StoreBridge",
@@ -3308,7 +3444,7 @@ const requiredC3Text = Object.freeze({
 	],
 	"tools/check-p07b-c-architecture.mjs": ["c3-official-target", "predecessorAuthority", "P07B_C3_"],
 	"tools/check-p07b-c-architecture-selftest.mjs": ["--c3", "c3-official-target"],
-	"tools/check-p07b-c-unit-scope.mjs": ["\"C3\"", "\"C3R\"", "\"C3Q\"", "\"C3B\"", "p07b-c-unit-paths/v13"],
+	"tools/check-p07b-c-unit-scope.mjs": ["\"C3\"", "\"C3R\"", "\"C3Q\"", "\"C3T\"", "\"C3B\"", "p07b-c-unit-paths/v14"],
 	"tools/verify-current.mjs": ["c3-official-target", "c3-single-target", "c3-hostepoch", "c3-noderuntime", "c3-store-bridge"],
 });
 const requiredC3RText = Object.freeze({
@@ -3369,13 +3505,13 @@ const requiredC3RText = Object.freeze({
 		"does not prove plain-seal-first sequencing",
 		...c3rClaimLabels.map((label) => `\`${label}\``),
 	],
-	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v13", "\"C3R\""],
+	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v14", "\"C3R\""],
 	"tools/check-p07b-c-plan.mjs": [
 		"requiredC3RPaths", "C3R_ACTIVE", "validateC3RClaimPreview", "validateC3RAuthority",
 		"c3rSealOutcomeDisclosure",
 		"--verify-c3r-sealed-c3-note", "--verify-c3r-preseal-ledger", "verifyC3RPresealLedger",
 	],
-	"tools/check-p07b-c-unit-scope.mjs": ["\"C3R\"", "p07b-c-unit-paths/v13"],
+	"tools/check-p07b-c-unit-scope.mjs": ["\"C3R\"", "p07b-c-unit-paths/v14"],
 });
 const requiredC3QText = Object.freeze({
 	"docs/HANDOFF_MODE_C.md": [
@@ -3388,7 +3524,7 @@ const requiredC3QText = Object.freeze({
 		".didrun-history/2026-07-20-p07b-c-c3b-build-loop-pre-c3q/.didrun/",
 		"phase-asymmetric self-receipt enforcement",
 		"exact plan-authority Markdown corpus",
-		"closed C3Q repair remains a phase-neutral checker ruling",
+		"sealed C3Q matrix remains exact historical evidence on its sealed tree",
 		"visible-Markdown heading boundaries",
 		"eight supplemental source-identity",
 		"two strict-zero prohibition controls",
@@ -3450,7 +3586,7 @@ const requiredC3QText = Object.freeze({
 		"C3Q changes no verifier roster",
 		...c3qClaimLabels.map((label) => `\`${label}\``),
 	],
-	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v13", "\"C3Q\""],
+	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v14", "\"C3Q\""],
 	"tools/check-p07b-c-plan.mjs": [
 		"requiredC3QPaths", "C3Q_ACTIVE", "validateC3QClaimPreview", "validateC3QAuthority",
 		"planAuthorityMarkdownPaths", "planAuthorityMarkdownDigest", "computedPlanAuthorityMarkdownDigest",
@@ -3458,12 +3594,64 @@ const requiredC3QText = Object.freeze({
 		"--print-plan-authority-corpus", "rejectActiveUnitSelfReceipts",
 		"runActiveUnitSelfReceiptMatrixSelfTest", "c3qSealOutcomeDisclosure", "c3bActiveMaintenanceSection",
 		"currentStateSubsection", "replaceCurrentStateSubsection",
-		"active-phases=C3Q,C3B", "result=positive-form refusal only, not a general Markdown or security audit",
+		"active-phases=C3T,C3B", "result=positive-form refusal only, not a general Markdown or security audit",
 		"supplemental-aliases=", "supplemental-controls=", "visible Markdown subsection projection",
 		"declared sealed-C3R identity",
 		"--verify-c3q-sealed-c3r-note", "--verify-c3q-preseal-ledger", "verifyC3QPresealLedger",
 	],
-	"tools/check-p07b-c-unit-scope.mjs": ["\"C3Q\"", "p07b-c-unit-paths/v13"],
+	"tools/check-p07b-c-unit-scope.mjs": ["\"C3Q\"", "p07b-c-unit-paths/v14"],
+});
+
+const requiredC3TText = Object.freeze({
+	"docs/HANDOFF_MODE_C.md": [
+		requiredC3TDigest, requiredC3BDigest,
+		sealedC3QIdentity.commit, sealedC3QIdentity.tree,
+		sealedC3QIdentity.noteBlob, sealedC3QIdentity.noteBodySHA256,
+		"eab9839c902abf52e9729144a2244740228a41eb",
+		".didrun-history/2026-07-20-p07b-c-c3b-build-loop-post-c3q-selftest-red/.didrun/",
+		"P07B-C phase fixture C3 absent downgrade active state anchor count 0",
+		"validated C3T-active absent fixture", "present → absent → present",
+		"canonical one-line receipt declaration", "exact terminal handoff block", "sealed-descendant plan coherence",
+		"sha256:52e78638d70f4e229e0b54c0a8311b6e0d1d2acc0d4e439cacf10cde65c62959",
+		"2 phases × 43 paths × 15 positive forms",
+	],
+	"docs/PROMPT_PACK.md": [
+		"P07B-C C3T receipt-phase self-test maintenance", requiredC3TDigest,
+		sealedC3QIdentity.commit, "countershape/p07b-c-unit-paths/v14",
+		"sha256:52e78638d70f4e229e0b54c0a8311b6e0d1d2acc0d4e439cacf10cde65c62959",
+		"C3B remains frozen to three paths",
+	],
+	"docs/VERIFICATION.md": [
+		"## C3T receipt-phase self-test maintenance", requiredC3TDeclaration,
+		"countershape/p07b-c-unit-paths/v14", "validated C3T-active absent fixture",
+		"present → absent → present", "2 phases × 43 paths × 15 positive forms",
+		"canonical one-line receipt declaration", "exact terminal handoff block", "sealed-descendant plan coherence",
+		"1,290 required rejections", "430", "nine-claim final ledger",
+		"C3T changes no verifier roster",
+	],
+	[c3tStatusPath]: [
+		"# P07B-C C3T — receipt-phase self-test maintenance", "Classification: `DEFECT_REPAIR`",
+		requiredC3TDeclaration, c3tStatusBoundaryLine, c3tStatusParentLine, c3tStatusUnreceiptedLine,
+		`- **Commit subject:** \`${c3tSourceSubject}\``, "countershape/p07b-c-unit-paths/v14",
+		"eab9839c902abf52e9729144a2244740228a41eb",
+		".didrun-history/2026-07-20-p07b-c-c3b-build-loop-post-c3q-selftest-red/.didrun/",
+		".countershape/history/p07bc-c3b-post-c3q-selftest-red-root",
+		"P07B-C phase fixture C3 absent downgrade active state anchor count 0",
+		"validated C3T-active absent fixture", "present → absent → present",
+		"canonical one-line receipt declaration", "exact terminal handoff block", "sealed-descendant plan coherence",
+		"sha256:52e78638d70f4e229e0b54c0a8311b6e0d1d2acc0d4e439cacf10cde65c62959",
+		"2 phases × 43 paths × 15 positive forms", "1,290 required rejections", "430",
+		"## Final command order", c3tFinalCommandOrderMarkdown,
+		...c3tClaimLabels.map((label) => `\`${label}\``),
+	],
+	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v14", "\"C3T\""],
+	"tools/check-p07b-c-plan.mjs": [
+		"requiredC3TPaths", "C3T_ACTIVE", "syntheticC3AbsentPlanFixture",
+		"validateC3TClaimPreview", "validateC3TAuthority", "loadC3TAuthorityWithRunner",
+		"active-phases=C3T,C3B", "--verify-c3t-sealed-c3q-note",
+		"--verify-c3t-preseal-ledger", "verifyC3TPresealLedger",
+	],
+	"tools/check-p07b-c-unit-scope.mjs": ["\"C3T\"", "p07b-c-unit-paths/v14"],
 });
 
 const planAuthorityMarkdownPaths = Object.freeze([...new Set([
@@ -3490,10 +3678,11 @@ const planAuthorityMarkdownPaths = Object.freeze([...new Set([
 		requiredC3Text,
 		requiredC3RText,
 		requiredC3QText,
+		requiredC3TText,
 	].flatMap((authority) => Object.keys(authority)),
 ].filter((path) => path.endsWith(".md")))].sort((left, right) =>
 	Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8"))));
-const planAuthorityMarkdownDigest = "sha256:16d63155a00c9e87b7eec79707ad6d47d6f5d70205d18243b8bc687e401e4b66";
+const planAuthorityMarkdownDigest = "sha256:52e78638d70f4e229e0b54c0a8311b6e0d1d2acc0d4e439cacf10cde65c62959";
 
 function computedPlanAuthorityMarkdownDigest() {
 	return `sha256:${createHash("sha256")
@@ -3727,7 +3916,7 @@ const activeUnitSelfReceiptPositiveControls = Object.freeze([
 ]);
 
 function runActiveUnitSelfReceiptMatrixSelfTest() {
-	const units = Object.freeze(["C3Q", "C3B"]);
+	const units = Object.freeze(["C3T", "C3B"]);
 	let rejected = 0;
 	let controls = 0;
 	let supplementalAliases = 0;
@@ -4913,6 +5102,44 @@ async function loadC3QAuthorityFromGit(root, expectedParent = sealedC3RIdentity.
 	return loadC3QAuthorityWithRunner(run, expectedParent);
 }
 
+function loadC3TAuthorityWithRunner(run, expectedParent = sealedC3QIdentity.commit) {
+	const result = run(["rev-list", "--parents", "--ancestry-path", `${expectedParent}..HEAD`]);
+	const text = decodeGitUTF8(result.stdout, "git C3T ancestry stdout");
+	if (text.length === 0 || !text.endsWith("\n") || text.includes("\r")) {
+		throw new Error("C3T ancestry is absent or not exact LF-framed output");
+	}
+	const rows = text.slice(0, -1).split("\n").map((line) => line.split(" "));
+	if (rows.some((row) => row.length < 2 || row.some((oid) => !/^[0-9a-f]{40}$/u.test(oid)))) {
+		throw new Error("C3T ancestry row is malformed");
+	}
+	const directChildren = rows.filter((row) => row.length === 2 && row[1] === expectedParent);
+	if (directChildren.length !== 1) {
+		throw new Error(`C3T direct-child cardinality ${directChildren.length}`);
+	}
+	return loadReceiptAuthorityWithRunner({ source_commit: directChildren[0][0] }, run);
+}
+
+async function loadC3TAuthorityFromGit(root, expectedParent = sealedC3QIdentity.commit) {
+	const requested = process.env.COUNTERSHAPE_GIT || "/usr/bin/git";
+	if (!isAbsolute(requested)) throw new Error("COUNTERSHAPE_GIT must be absolute");
+	const git = await realpath(requested);
+	const env = {
+		HOME: process.env.HOME || "/", PATH: "/usr/bin:/bin", LANG: "C", LC_ALL: "C", NO_COLOR: "1",
+		GIT_CONFIG_NOSYSTEM: "1", GIT_CONFIG_GLOBAL: "/dev/null", GIT_NO_LAZY_FETCH: "1",
+		GIT_OPTIONAL_LOCKS: "0", GIT_TERMINAL_PROMPT: "0",
+	};
+	const run = (args, accepted = [0]) => {
+		const result = spawnSync(git, ["--no-replace-objects", ...args], {
+			cwd: root, encoding: "buffer", timeout: 30_000, maxBuffer: 4 * 1024 * 1024, env,
+		});
+		if (result.error || result.signal || !accepted.includes(result.status) || (result.stderr?.length ?? 0) !== 0) {
+			throw new Error(`git ${args[0]} failed (status=${result.status}, signal=${result.signal}, error=${result.error?.message ?? "none"})`);
+		}
+		return { status: result.status, stdout: result.stdout ?? Buffer.alloc(0) };
+	};
+	return loadC3TAuthorityWithRunner(run, expectedParent);
+}
+
 function sealedC3ReceiptProjection() {
 	return {
 		source_commit: sealedC3Identity.commit,
@@ -4963,6 +5190,31 @@ export async function verifyC3QSealedC3RNote() {
 	const errors = validateSealedC3RAuthority(authority, true);
 	if (errors.length > 0) throw new Error(`P07B-C C3Q sealed-C3R authority mismatch: ${errors.join(", ")}`);
 	console.log(`P07B-C C3Q sealed-C3R note exact: commit=${authority.commit} tree=${authority.tree} note=${authority.note_blob_oid} claims=${c3rClaimLabels.length}`);
+}
+
+function sealedC3QReceiptProjection() {
+	return {
+		source_commit: sealedC3QIdentity.commit,
+		source_tree: sealedC3QIdentity.tree,
+		source_subject: sealedC3QIdentity.subject,
+		secrets_override: true,
+		coverage_complete_events: c3qClaimLabels.length,
+		coverage_total_events: c3qClaimLabels.length,
+		evidence: {
+			git_note: {
+				version: 1,
+				blob_oid: sealedC3QIdentity.noteBlob,
+				body_sha256: sealedC3QIdentity.noteBodySHA256,
+			},
+		},
+	};
+}
+
+export async function verifyC3TSealedC3QNote() {
+	const authority = await loadReceiptAuthorityFromGit(repositoryRoot, sealedC3QReceiptProjection());
+	const errors = validateC3TPredecessorAuthority(authority);
+	if (errors.length > 0) throw new Error(`P07B-C C3T sealed-C3Q authority mismatch: ${errors.join(", ")}`);
+	console.log(`P07B-C C3T sealed-C3Q note exact: commit=${authority.commit} tree=${authority.tree} note=${authority.note_blob_oid} claims=${c3qClaimLabels.length}`);
 }
 
 function validateC1ReceiptDeclaration(receipt) {
@@ -5891,9 +6143,134 @@ function validateC3QAuthority(authority, expectedParent = sealedC3RIdentity.comm
 	return errors;
 }
 
-function validateC3BPredecessorAuthority(authority, expectedParent = sealedC3RIdentity.commit) {
-	const errors = validateC3QAuthority(authority, expectedParent);
-	if (authority?.head_commit !== authority?.commit) errors.push("C3Q is not current HEAD");
+function validateSealedC3QAuthority(authority, requireCurrentHead = false) {
+	const errors = validateC3QAuthority(authority, sealedC3RIdentity.commit);
+	if (authority?.commit !== sealedC3QIdentity.commit) errors.push("sealed C3Q commit identity");
+	if (authority?.tree !== sealedC3QIdentity.tree) errors.push("sealed C3Q tree identity");
+	if (authority?.note_type !== sealedC3QIdentity.noteType) errors.push("sealed C3Q note type");
+	if (authority?.note_blob_oid !== sealedC3QIdentity.noteBlob) errors.push("sealed C3Q note object identity");
+	if (authority?.note_body_sha256 !== sealedC3QIdentity.noteBodySHA256) errors.push("sealed C3Q note body digest");
+	if (authority?.note?.secrets_override !== true) errors.push("sealed C3Q secrets override disclosure");
+	if (requireCurrentHead && authority?.head_commit !== authority?.commit) errors.push("sealed C3Q is not current HEAD");
+	return errors;
+}
+
+function validateC3TClaimPreview(index, argv) {
+	const expected = c3tExpectedClaimArgv[index];
+	if (!expected || !Array.isArray(argv) || argv.length !== expected.length ||
+		argv.some((argument) => typeof argument !== "string" || argument.length === 0 || argument.length > 4096 || /[\u0000-\u001f\u007f]/u.test(argument))) {
+		return false;
+	}
+	const redactedPositions = new Set([2, 4, 5, 6, 7, 8, 31, 32, 33, 35, 36]);
+	const redacted = /^(?:«redacted:high-entropy»)(?:\.countershape\/[^\u0000-\u001f\u007f]+|\.?:?«redacted:high-entropy»)?$/u;
+	for (let position = 0; position < c3tHermeticArgvPrefix.length; position += 1) {
+		if (argv[position] === expected[position]) continue;
+		if (!redactedPositions.has(position) || !redacted.test(argv[position])) return false;
+	}
+	return isDeepStrictEqual(
+		argv.slice(c3tHermeticArgvPrefix.length),
+		expected.slice(c3tHermeticArgvPrefix.length),
+	);
+}
+
+function validateC3TSourceDiff(authority) {
+	const errors = [];
+	const entries = authority.source_diff;
+	if (!Array.isArray(entries)) return ["source diff roster"];
+	const paths = entries.map((entry) => entry?.path);
+	if (new Set(paths).size !== paths.length || !isDeepStrictEqual(paths, requiredC3TPaths)) {
+		errors.push("source diff exact path roster");
+	}
+	let added = 0;
+	let modified = 0;
+	for (const path of requiredC3TPaths) {
+		const entry = entries.find((candidate) => candidate?.path === path);
+		if (!entry || !isDeepStrictEqual(Object.keys(entry).sort(), ["new_mode", "new_oid", "old_mode", "old_oid", "path", "status"])) {
+			errors.push(`source diff row ${path}`);
+			continue;
+		}
+		const objectPattern = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/u;
+		const newObjectValid = objectPattern.test(entry.new_oid) && !/^0+$/u.test(entry.new_oid);
+		if (path === c3tStatusPath) {
+			added += 1;
+			if (entry.status !== "A" || entry.old_mode !== "000000" || entry.new_mode !== "100644" ||
+				!objectPattern.test(entry.old_oid) || !/^0+$/u.test(entry.old_oid) || !newObjectValid ||
+				entry.old_oid.length !== entry.new_oid.length) {
+				errors.push(`source diff added row ${path}`);
+			}
+		} else {
+			modified += 1;
+			if (entry.status !== "M" || entry.old_mode !== "100644" || entry.new_mode !== "100644" ||
+				!objectPattern.test(entry.old_oid) || /^0+$/u.test(entry.old_oid) || !newObjectValid ||
+				entry.old_oid.length !== entry.new_oid.length || entry.old_oid === entry.new_oid) {
+				errors.push(`source diff modified row ${path}`);
+			}
+		}
+	}
+	if (added !== 1 || modified !== 6) errors.push(`source diff status partition A=${added} M=${modified}`);
+	return errors;
+}
+
+function validateC3TAuthority(authority, expectedParent = sealedC3QIdentity.commit) {
+	const errors = [];
+	if (!authority || typeof authority !== "object" || Array.isArray(authority)) return ["missing Git/didrun authority"];
+	if (!/^[0-9a-f]{40}$/u.test(authority.commit ?? "") || /^0+$/u.test(authority.commit ?? "")) errors.push("source commit");
+	if (!/^[0-9a-f]{40}$/u.test(authority.tree ?? "") || /^0+$/u.test(authority.tree ?? "")) errors.push("source tree");
+	if (authority.parent !== expectedParent || !isDeepStrictEqual(authority.parents, [expectedParent])) errors.push("source parent");
+	errors.push(...validateC3TSourceDiff(authority));
+	if (authority.subject !== c3tSourceSubject) errors.push("source commit subject");
+	if (authority.ancestor_of_head !== true) errors.push("source commit is not an ancestor of HEAD");
+	if (authority.note_type !== "blob") errors.push("didrun note object type");
+	if (!/^[0-9a-f]{40}$/u.test(authority.note_blob_oid ?? "")) errors.push("didrun note object identity");
+	if (!/^[0-9a-f]{64}$/u.test(authority.note_body_sha256 ?? "")) errors.push("didrun note body digest");
+	const note = authority.note;
+	if (!note || typeof note !== "object" || Array.isArray(note) ||
+		!isDeepStrictEqual(Object.keys(note).sort(), ["claims", "commit", "coverage", "secrets_override", "tree", "version"])) {
+		errors.push("missing or malformed parsed didrun Git note");
+		return errors;
+	}
+	if (note.version !== 1) errors.push("didrun note version");
+	if (note.commit !== authority.commit) errors.push("didrun note commit");
+	if (note.tree !== authority.tree) errors.push("didrun note tree");
+	if (typeof note.secrets_override !== "boolean") errors.push("didrun note secrets override disclosure");
+	if (!Array.isArray(note.claims) || note.claims.length !== c3tClaimLabels.length) {
+		errors.push("didrun note claim roster length");
+	} else {
+		for (let index = 0; index < c3tClaimLabels.length; index += 1) {
+			const recorded = note.claims[index];
+			const claim = recorded?.claim;
+			if (!recorded || typeof recorded !== "object" || Array.isArray(recorded) ||
+				!isDeepStrictEqual(Object.keys(recorded).sort(), ["claim", "delta", "exit_code", "grade", "reason", "supporting_event_index"]) ||
+				!claim || typeof claim !== "object" || Array.isArray(claim) ||
+				!isDeepStrictEqual(Object.keys(claim).sort(), ["argv_preview", "ctype", "declared_at_index", "event_indices", "label", "pathspecs"]) ||
+				claim.label !== c3tClaimLabels[index] || claim.ctype !== c3tClaimTypes[index] ||
+				claim.declared_at_index !== index || !isDeepStrictEqual(claim.event_indices, [index]) ||
+				!isDeepStrictEqual(claim.pathspecs, []) || recorded.supporting_event_index !== index ||
+				recorded.grade !== "tree-exact" || recorded.exit_code !== 0 ||
+				recorded.reason !== "self-stable command ran against the sealed tree" || !isDeepStrictEqual(recorded.delta, [])) {
+				errors.push(`didrun note claim ${index + 1}`);
+			}
+			if (!validateC3TClaimPreview(index, claim?.argv_preview)) errors.push(`didrun note claim ${index + 1} argv`);
+		}
+	}
+	if (!note.coverage || typeof note.coverage !== "object" || Array.isArray(note.coverage) ||
+		!isDeepStrictEqual(Object.keys(note.coverage).sort(), ["by_coverage", "total_events"]) ||
+		note.coverage.total_events !== c3tClaimLabels.length ||
+		!note.coverage.by_coverage || typeof note.coverage.by_coverage !== "object" || Array.isArray(note.coverage.by_coverage) ||
+		!isDeepStrictEqual(Object.keys(note.coverage.by_coverage), ["complete"]) ||
+		note.coverage.by_coverage.complete !== c3tClaimLabels.length) {
+		errors.push("didrun note exact event coverage");
+	}
+	return errors;
+}
+
+function validateC3TPredecessorAuthority(authority) {
+	return validateSealedC3QAuthority(authority, true);
+}
+
+function validateC3BPredecessorAuthority(authority, expectedParent = sealedC3QIdentity.commit) {
+	const errors = validateC3TAuthority(authority, expectedParent);
+	if (authority?.head_commit !== authority?.commit) errors.push("C3T is not current HEAD");
 	return errors;
 }
 
@@ -6134,10 +6511,11 @@ const c3pbLifecyclePhases = Object.freeze([
 	Object.freeze({ field: "c3", phase: "C3_ACTIVE" }),
 	Object.freeze({ field: "c3r", phase: "C3R_ACTIVE" }),
 	Object.freeze({ field: "c3q", phase: "C3Q_ACTIVE" }),
+	Object.freeze({ field: "c3t", phase: "C3T_ACTIVE" }),
 	Object.freeze({ field: "c3b", phase: "C3B_ACTIVE" }),
 ]);
 
-function classifyC3PBHandoffPhase(body, c3Receipt, c3rAuthority, c3qAuthority) {
+function classifyC3PBHandoffPhase(body, c3Receipt, c3rAuthority, c3qAuthority, c3tAuthority) {
 	const visibleBody = visibleMarkdownLifecycleBody(body);
 	if (c3Receipt === undefined) {
 		const prematureC3B = visibleBody.includes("C3B receipt reconciliation is the active") ||
@@ -6163,7 +6541,7 @@ function classifyC3PBHandoffPhase(body, c3Receipt, c3rAuthority, c3qAuthority) {
 		if (metadataContract !== undefined) {
 			const matchingSlots = lines.slice(currentStateStart + 1, firstSubheading)
 				.filter((line) => line.startsWith(metadataContract.prefix));
-			return matchingSlots.length === 1 && matchingSlots[0] === metadataContract.render(value, field, c3Receipt, c3rAuthority, c3qAuthority) ? 1 : 0;
+			return matchingSlots.length === 1 && matchingSlots[0] === metadataContract.render(value, field, c3Receipt, c3rAuthority, c3qAuthority, c3tAuthority) ? 1 : 0;
 		}
 		if (transition.name === "maintenance heading") {
 			return lines.slice(firstSubheading, boundedCurrentStateEnd).filter((line) => line === value).length;
@@ -6200,7 +6578,7 @@ function classifyC3PBHandoffPhase(body, c3Receipt, c3rAuthority, c3qAuthority) {
 	if (active.length !== 1) {
 		const summary = counts.map(({ name, fields }) => `${name}=${admittedPhases
 			.map(({ field }) => `${field}:${fields[field].count}:${fields[field].located}`).join("/")}`).join(", ");
-		throw new Error(`mixed, duplicate, or incomplete C3M/C3PB/C3A/C3L/C3F/C3S/C3/C3R/C3Q/C3B operational phase (${summary})`);
+		throw new Error(`mixed, duplicate, or incomplete C3M/C3PB/C3A/C3L/C3F/C3S/C3/C3R/C3Q/C3T/C3B operational phase (${summary})`);
 	}
 	return active[0].phase;
 }
@@ -6237,6 +6615,14 @@ function requireSyntheticC3QActiveHandoff(body) {
 	return body;
 }
 
+function requireSyntheticC3TActiveHandoff(body) {
+	const phase = classifyC3PBHandoffPhase(body);
+	if (phase !== "C3T_ACTIVE") {
+		throw new Error(`P07B-C current operational phase must be C3T-active, found ${phase}`);
+	}
+	return body;
+}
+
 async function checkC3PReceiptPhase(root, overrides, status, handoff, errors, injectedReceiptAuthority) {
 	let receiptText;
 	try {
@@ -6261,7 +6647,7 @@ async function checkC3PReceiptPhase(root, overrides, status, handoff, errors, in
 		}
 		for (const digest of [
 			requiredC3PDigest, requiredC3PBDigest, requiredC3SDigest, requiredC3Digest,
-			requiredC3RDigest, requiredC3QDigest, requiredC3BDigest,
+			requiredC3RDigest, requiredC3QDigest, requiredC3TDigest, requiredC3BDigest,
 		]) {
 			if (!handoff.includes(digest)) errors.push(`docs/HANDOFF_MODE_C.md: C3P prerequisite digest missing: ${digest}`);
 		}
@@ -6330,6 +6716,7 @@ async function checkC3ReceiptPhase(
 	injectedReceiptAuthority,
 	injectedC3RAuthority,
 	injectedC3QAuthority,
+	injectedC3TAuthority,
 ) {
 	try {
 		status = visibleMarkdownLifecycleBody(status);
@@ -6375,7 +6762,7 @@ async function checkC3ReceiptPhase(
 		}
 		try {
 			const phase = classifyC3PBHandoffPhase(handoff);
-			if (phase !== "C3Q_ACTIVE") errors.push(`docs/HANDOFF_MODE_C.md: C3 receipt-absent phase must be C3Q-active, found ${phase}`);
+			if (phase !== "C3T_ACTIVE") errors.push(`docs/HANDOFF_MODE_C.md: C3 receipt-absent phase must be C3T-active, found ${phase}`);
 		} catch (error) {
 			errors.push(`docs/HANDOFF_MODE_C.md: C3 receipt-absent operational phase invalid (${error.message})`);
 		}
@@ -6394,6 +6781,10 @@ async function checkC3ReceiptPhase(
 	const receiptErrors = validateC3ReceiptDeclaration(receipt);
 	for (const error of receiptErrors) errors.push(`${c3ReceiptDeclarationPath}: invalid receipt declaration (${error})`);
 	if (receiptErrors.length > 0) return;
+	if (receiptText !== `${JSON.stringify(receipt)}\n`) {
+		errors.push(`${c3ReceiptDeclarationPath}: receipt declaration must be exact canonical one-line JSON`);
+		return;
+	}
 	let authority = injectedReceiptAuthority;
 	if (authority === undefined) {
 		try {
@@ -6427,9 +6818,21 @@ async function checkC3ReceiptPhase(
 			return;
 		}
 	}
-	const c3qErrors = validateC3BPredecessorAuthority(c3qAuthority, c3rAuthority.commit);
+	const c3qErrors = validateSealedC3QAuthority(c3qAuthority);
 	for (const error of c3qErrors) errors.push(`${c3ReceiptDeclarationPath}: sealed C3Q authority mismatch (${error})`);
 	if (c3qErrors.length > 0) return;
+	let c3tAuthority = injectedC3TAuthority;
+	if (c3tAuthority === undefined) {
+		try {
+			c3tAuthority = await loadC3TAuthorityFromGit(root, c3qAuthority.commit);
+		} catch (error) {
+			errors.push(`${c3ReceiptDeclarationPath}: sealed C3T authority unavailable (${error.message})`);
+			return;
+		}
+	}
+	const c3tErrors = validateC3TAuthority(c3tAuthority, c3qAuthority.commit);
+	for (const error of c3tErrors) errors.push(`${c3ReceiptDeclarationPath}: sealed C3T authority mismatch (${error})`);
+	if (c3tErrors.length > 0) return;
 
 	requireExactlyOnce(status, c3ReconciledStatusState(receipt), c3StatusPath, "C3B reconciled source state", errors);
 	requireExactlyOnce(status, "## C3 source receipt map", c3StatusPath, "C3 source receipt heading", errors);
@@ -6453,14 +6856,14 @@ async function checkC3ReceiptPhase(
 		requireExactlyOnce(status, disclosure, c3StatusPath, "C3 source evidence disclosure", errors);
 	}
 	try {
-		const phase = classifyC3PBHandoffPhase(handoff, receipt, c3rAuthority, c3qAuthority);
+		const phase = classifyC3PBHandoffPhase(handoff, receipt, c3rAuthority, c3qAuthority, c3tAuthority);
 		if (phase !== "C3B_ACTIVE") errors.push(`docs/HANDOFF_MODE_C.md: C3 receipt-present phase must be C3B-active, found ${phase}`);
 	} catch (error) {
 		errors.push(`docs/HANDOFF_MODE_C.md: C3 receipt-present operational phase invalid (${error.message})`);
 	}
 	try {
 		const observedSection = currentStateSubsection(handoff, "### Active C3B source receipt reconciliation");
-		const expectedSection = c3bActiveMaintenanceSection(receipt, c3rAuthority, c3qAuthority);
+		const expectedSection = c3bActiveMaintenanceSection(receipt, c3rAuthority, c3qAuthority, c3tAuthority);
 		if (observedSection !== expectedSection) {
 			const staleC3Q = observedSection.includes("Its planned nine-claim final ledger") ||
 				observedSection.includes("Every intended grade remains `UNRECEIPTED` at this boundary.");
@@ -6478,10 +6881,13 @@ async function checkC3ReceiptPhase(
 				requireVisibleMarkdownReceiptBlock(handoff, c3ReceiptBlockStart, c3ReceiptBlockEnd, "C3 source receipt block");
 			} catch (error) {
 				errors.push(`docs/HANDOFF_MODE_C.md: ${error.message}`);
-			}
-			const expectedBlock = c3ReceiptHandoffBlock(receipt);
-			if (parsed.block !== expectedBlock) errors.push("docs/HANDOFF_MODE_C.md: C3 source receipt block payload mismatch");
-			for (const line of c3ReceiptSpecificHandoffLines(receipt)) {
+				}
+				const expectedBlock = c3ReceiptHandoffBlock(receipt);
+				if (parsed.block !== expectedBlock) errors.push("docs/HANDOFF_MODE_C.md: C3 source receipt block payload mismatch");
+				if (handoff !== `${parsed.stripped}${expectedBlock}\n`) {
+					errors.push("docs/HANDOFF_MODE_C.md: C3 source receipt block must be the exact terminal handoff block");
+				}
+				for (const line of c3ReceiptSpecificHandoffLines(receipt)) {
 				if (parsed.stripped.includes(line)) {
 					errors.push(`docs/HANDOFF_MODE_C.md: C3 source receipt residue outside block: ${JSON.stringify(line)}`);
 				}
@@ -6615,6 +7021,7 @@ async function syntheticC3PReceiptPlanFixture(fixture, currentHandoffOverride) {
 		lifecycle.receipt,
 		lifecycle.c3rAuthority,
 		lifecycle.c3qAuthority,
+		lifecycle.c3tAuthority,
 	);
 	if (receiptPhase !== lifecycle.phase) {
 		throw new Error(`P07B-C C3PB synthetic handoff must preserve ${lifecycle.phase}, found ${receiptPhase}`);
@@ -6697,8 +7104,8 @@ async function currentC3LifecycleFixture(overrides = new Map()) {
 	}
 	if (receiptText === undefined) {
 		return Object.freeze({
-			field: "c3q", phase: "C3Q_ACTIVE", receipt: undefined,
-			c3rAuthority: undefined, c3qAuthority: undefined,
+			field: "c3t", phase: "C3T_ACTIVE", receipt: undefined,
+			c3rAuthority: undefined, c3qAuthority: undefined, c3tAuthority: undefined,
 		});
 	}
 	let receipt;
@@ -6709,7 +7116,8 @@ async function currentC3LifecycleFixture(overrides = new Map()) {
 	}
 	const c3rAuthority = await loadC3RAuthorityFromGit(repositoryRoot);
 	const c3qAuthority = await loadC3QAuthorityFromGit(repositoryRoot, c3rAuthority.commit);
-	return Object.freeze({ field: "c3b", phase: "C3B_ACTIVE", receipt, c3rAuthority, c3qAuthority });
+	const c3tAuthority = await loadC3TAuthorityFromGit(repositoryRoot, c3qAuthority.commit);
+	return Object.freeze({ field: "c3b", phase: "C3B_ACTIVE", receipt, c3rAuthority, c3qAuthority, c3tAuthority });
 }
 
 export async function runC3PReceiptSelfTest() {
@@ -6724,6 +7132,7 @@ export async function runC3PReceiptSelfTest() {
 	rejected += runHermeticPresealSelfTest("C3", c3ExpectedClaimArgv, c3HermeticArgvPrefix);
 	rejected += runHermeticPresealSelfTest("C3R", c3rExpectedClaimArgv, c3rHermeticArgvPrefix);
 	rejected += runHermeticPresealSelfTest("C3Q", c3qExpectedClaimArgv, c3qHermeticArgvPrefix);
+	rejected += runHermeticPresealSelfTest("C3T", c3tExpectedClaimArgv, c3tHermeticArgvPrefix);
 	rejected += runHermeticPresealSelfTest("C3B", c3bExpectedClaimArgv, c3bHermeticArgvPrefix);
 	const requireError = (name, errors, expected) => {
 		if (!errors.some((error) => error.includes(expected))) {
@@ -6754,13 +7163,13 @@ export async function runC3PReceiptSelfTest() {
 		const metadata = c3pbMetadataLineContracts[transition.name];
 		return metadata === undefined
 			? value
-			: metadata.render(value, field, lifecycle.receipt, lifecycle.c3rAuthority, lifecycle.c3qAuthority);
+			: metadata.render(value, field, lifecycle.receipt, lifecycle.c3rAuthority, lifecycle.c3qAuthority, lifecycle.c3tAuthority);
 	};
 	const phaseInvalidDiagnostic = lifecycle.receipt === undefined
 		? "C3 receipt-absent operational phase invalid"
 		: "C3 receipt-present operational phase invalid";
 	const phaseMismatchDiagnostic = lifecycle.receipt === undefined
-		? "C3 receipt-absent phase must be C3Q-active"
+		? "C3 receipt-absent phase must be C3T-active"
 		: "C3 receipt-present phase must be C3B-active";
 	if (withoutC3PReceiptBlock("prefix\nsuffix\n") !== "prefix\nsuffix\n") {
 		throw new Error("P07B-C C3P receipt-block marker-free identity baseline mismatch");
@@ -6775,6 +7184,7 @@ export async function runC3PReceiptSelfTest() {
 		requiredC3SDigest,
 		requiredC3RDigest,
 		requiredC3QDigest,
+		requiredC3TDigest,
 		lifecycleValue(c3pbHandoffTransitions[0]),
 	]) {
 		if (!strippedLiveHandoff.includes(anchor)) throw new Error("P07B-C C3P live receipt stripping dropped interposed authority");
@@ -6818,7 +7228,7 @@ export async function runC3PReceiptSelfTest() {
 			const after = metadataContract === undefined
 				? afterValue
 				: metadataContract.render(
-					afterValue, field, lifecycle.receipt, lifecycle.c3rAuthority, lifecycle.c3qAuthority,
+					afterValue, field, lifecycle.receipt, lifecycle.c3rAuthority, lifecycle.c3qAuthority, lifecycle.c3tAuthority,
 				);
 			return replaceFixtureExactlyOnce(current, before, after, `${label} ${transition.name}`);
 		},
@@ -6835,7 +7245,7 @@ export async function runC3PReceiptSelfTest() {
 		return `${contradicted}\n### Historical relocated operational text — inert\n\n> ${lifecycleValue(transition)}\n`;
 	};
 	const duplicateContradictoryMetadataSlot = (body, label) => {
-		const firstSubheading = "\n### C3P/C3V/C3M/C3PB/C3A/C3L/C3F/C3S/C3/C3R/C3Q/C3B scope declarations\n";
+		const firstSubheading = "\n### C3P/C3V/C3M/C3PB/C3A/C3L/C3F/C3S/C3/C3R/C3Q/C3T/C3B scope declarations\n";
 		return replaceFixtureExactlyOnce(
 			body,
 			firstSubheading,
@@ -6950,9 +7360,9 @@ export async function runC3PReceiptSelfTest() {
 			expect: phaseMismatchDiagnostic,
 		},
 		{
-			name: `receipt-absent ${lifecycle.receipt === undefined ? "C3Q" : "C3B"} self receipt`, path: "docs/HANDOFF_MODE_C.md",
-			value: `${liveHandoff}\n${lifecycle.receipt === undefined ? "C3Q" : "C3B"} is sealed and strict-clean.\n`,
-			expect: `${lifecycle.receipt === undefined ? "C3Q" : "C3B"} self-receipt`,
+			name: `receipt-absent ${lifecycle.receipt === undefined ? "C3T" : "C3B"} self receipt`, path: "docs/HANDOFF_MODE_C.md",
+			value: `${liveHandoff}\n${lifecycle.receipt === undefined ? "C3T" : "C3B"} is sealed and strict-clean.\n`,
+			expect: `${lifecycle.receipt === undefined ? "C3T" : "C3B"} self-receipt`,
 		},
 		{
 			name: "receipt-absent relocated active tuple", path: "docs/HANDOFF_MODE_C.md",
@@ -6960,9 +7370,9 @@ export async function runC3PReceiptSelfTest() {
 			expect: phaseInvalidDiagnostic,
 		},
 		{
-			name: `receipt-absent external ${lifecycle.receipt === undefined ? "C3Q" : "C3B"} self receipt`, path: "docs/VERIFICATION.md",
-			value: `${liveVerification}\n${lifecycle.receipt === undefined ? "C3Q" : "C3B"} strict exit: 0\n`,
-			expect: `${lifecycle.receipt === undefined ? "C3Q" : "C3B"} self-receipt`,
+			name: `receipt-absent external ${lifecycle.receipt === undefined ? "C3T" : "C3B"} self receipt`, path: "docs/VERIFICATION.md",
+			value: `${liveVerification}\n${lifecycle.receipt === undefined ? "C3T" : "C3B"} strict exit: 0\n`,
+			expect: `${lifecycle.receipt === undefined ? "C3T" : "C3B"} self-receipt`,
 		},
 		{
 			name: "receipt-absent duplicate metadata slot", path: "docs/HANDOFF_MODE_C.md",
@@ -7034,6 +7444,7 @@ export async function runC3PReceiptSelfTest() {
 		requiredC3SDigest,
 		requiredC3RDigest,
 		requiredC3QDigest,
+		requiredC3TDigest,
 		lifecycleValue(c3pbHandoffTransitions[0]),
 	]) {
 		if (!phase.overrides.get("docs/HANDOFF_MODE_C.md").includes(anchor)) {
@@ -7109,9 +7520,9 @@ export async function runC3PReceiptSelfTest() {
 			return `${body.replace(parsed.block, movedBlock)}${disclosure}\n`;
 		}, "receipt block payload mismatch"],
 		["receipt nested marker", "docs/HANDOFF_MODE_C.md", (body) => body.replace(c3pReceiptBlockStart, `${c3pReceiptBlockStart}\n${c3pReceiptBlockStart}`), "receipt block invalid"],
-		[`${lifecycle.receipt === undefined ? "C3Q" : "C3B"} self receipt`, "docs/HANDOFF_MODE_C.md", (body) =>
-			`${body}\n${lifecycle.receipt === undefined ? "C3Q" : "C3B"} is sealed and strict-clean.\n`,
-			`${lifecycle.receipt === undefined ? "C3Q" : "C3B"} self-receipt`],
+		[`${lifecycle.receipt === undefined ? "C3T" : "C3B"} self receipt`, "docs/HANDOFF_MODE_C.md", (body) =>
+			`${body}\n${lifecycle.receipt === undefined ? "C3T" : "C3B"} is sealed and strict-clean.\n`,
+			`${lifecycle.receipt === undefined ? "C3T" : "C3B"} self-receipt`],
 		["receipt-present coherent C3PB downgrade", "docs/HANDOFF_MODE_C.md", (body) => rewriteOperationalPhase(
 			body, "after", "receipt-present C3PB downgrade",
 			), phaseMismatchDiagnostic],
@@ -7176,7 +7587,7 @@ export async function runC3PReceiptSelfTest() {
 	return rejected;
 }
 
-function syntheticC3ReceiptFixture() {
+function syntheticC3ReceiptFixture(receiptOverride) {
 	const sourceCommit = sealedC3Identity.commit;
 	const sourceTree = sealedC3Identity.tree;
 	const sourceDiff = requiredC3Paths.map((path, index) => {
@@ -7190,7 +7601,7 @@ function syntheticC3ReceiptFixture() {
 			path,
 		};
 	});
-	const receipt = {
+	const syntheticReceipt = {
 		schema_version: "countershape/p07b-c-c3-receipt/v1",
 		source_commit: sourceCommit,
 		source_tree: sourceTree,
@@ -7234,6 +7645,7 @@ function syntheticC3ReceiptFixture() {
 			},
 		},
 	};
+	const receipt = receiptOverride === undefined ? syntheticReceipt : structuredClone(receiptOverride);
 	const authority = {
 		commit: sourceCommit,
 		tree: sourceTree,
@@ -7263,8 +7675,10 @@ function syntheticC3ReceiptFixture() {
 	};
 	const c3rCommit = sealedC3RIdentity.commit;
 	const c3rTree = sealedC3RIdentity.tree;
-	const c3qCommit = "3".repeat(40);
-	const c3qTree = "4".repeat(40);
+	const c3qCommit = sealedC3QIdentity.commit;
+	const c3qTree = sealedC3QIdentity.tree;
+	const c3tCommit = "3".repeat(40);
+	const c3tTree = "4".repeat(40);
 	const c3rSourceDiff = requiredC3RPaths.map((path, index) => {
 		const added = path === c3rStatusPath;
 		return {
@@ -7277,7 +7691,7 @@ function syntheticC3ReceiptFixture() {
 		};
 	});
 	const c3rAuthority = {
-		head_commit: c3qCommit,
+		head_commit: c3tCommit,
 		commit: c3rCommit,
 		tree: c3rTree,
 		parent: sourceCommit,
@@ -7316,7 +7730,7 @@ function syntheticC3ReceiptFixture() {
 		};
 	});
 	const c3qAuthority = {
-		head_commit: c3qCommit,
+		head_commit: c3tCommit,
 		commit: c3qCommit,
 		tree: c3qTree,
 		parent: c3rCommit,
@@ -7325,13 +7739,13 @@ function syntheticC3ReceiptFixture() {
 		subject: c3qSourceSubject,
 		ancestor_of_head: true,
 		note_type: "blob",
-		note_blob_oid: "7".repeat(40),
-		note_body_sha256: "8".repeat(64),
+		note_blob_oid: sealedC3QIdentity.noteBlob,
+		note_body_sha256: sealedC3QIdentity.noteBodySHA256,
 		note: {
 			version: 1,
 			commit: c3qCommit,
 			tree: c3qTree,
-			secrets_override: false,
+			secrets_override: true,
 			claims: c3qClaimLabels.map((label, index) => ({
 				claim: {
 					argv_preview: [...c3qExpectedClaimArgv[index]], ctype: c3qClaimTypes[index],
@@ -7343,71 +7757,183 @@ function syntheticC3ReceiptFixture() {
 			coverage: { by_coverage: { complete: c3qClaimLabels.length }, total_events: c3qClaimLabels.length },
 		},
 	};
-	return { receipt, authority, c3rAuthority, c3qAuthority };
+	const c3tSourceDiff = requiredC3TPaths.map((path, index) => {
+		const added = path === c3tStatusPath;
+		return {
+			old_mode: added ? "000000" : "100644",
+			new_mode: "100644",
+			old_oid: added ? "0".repeat(40) : (index + 67).toString(16).padStart(40, "7").slice(-40),
+			new_oid: (index + 79).toString(16).padStart(40, "8").slice(-40),
+			status: added ? "A" : "M",
+			path,
+		};
+	});
+	const c3tAuthority = {
+		head_commit: c3tCommit,
+		commit: c3tCommit,
+		tree: c3tTree,
+		parent: c3qCommit,
+		parents: [c3qCommit],
+		source_diff: c3tSourceDiff,
+		subject: c3tSourceSubject,
+		ancestor_of_head: true,
+		note_type: "blob",
+		note_blob_oid: "9".repeat(40),
+		note_body_sha256: "a".repeat(64),
+		note: {
+			version: 1,
+			commit: c3tCommit,
+			tree: c3tTree,
+			secrets_override: false,
+			claims: c3tClaimLabels.map((label, index) => ({
+				claim: {
+					argv_preview: [...c3tExpectedClaimArgv[index]], ctype: c3tClaimTypes[index],
+					declared_at_index: index, event_indices: [index], label, pathspecs: [],
+				},
+				delta: [], exit_code: 0, grade: "tree-exact",
+				reason: "self-stable command ran against the sealed tree", supporting_event_index: index,
+			})),
+			coverage: { by_coverage: { complete: c3tClaimLabels.length }, total_events: c3tClaimLabels.length },
+		},
+	};
+	return { receipt, authority, c3rAuthority, c3qAuthority, c3tAuthority };
 }
 
-async function syntheticC3ReceiptPlanFixture(fixture, current = new Map()) {
+function c3ReceiptStatusMetadata(receipt) {
+	return [
+		"## C3 source receipt map",
+		"- C3 source strict exit: `0`",
+		`- C3 source strict claims: \`${receipt.strict_claims_recorded_exact}/${receipt.strict_claims_total} claims recorded-exact\``,
+		c3ReceiptNoRecursionBoundary,
+		...c3ReceiptDisclosureLines(receipt),
+	].join("\n");
+}
+
+async function syntheticC3AbsentPlanFixture(fixture, current = new Map()) {
 	let status = current.get(c3StatusPath) ?? await readText(repositoryRoot, c3StatusPath, current);
 	let handoff = current.get("docs/HANDOFF_MODE_C.md") ?? await readText(repositoryRoot, "docs/HANDOFF_MODE_C.md", current);
-	if (status.includes(c3PendingStatusState)) {
-		status = replaceFixtureExactlyOnce(status, c3PendingStatusState, c3ReconciledStatusState(fixture.receipt), "C3B source state");
-		const metadata = [
-			"## C3 source receipt map",
-			"- C3 source strict exit: `0`",
-			`- C3 source strict claims: \`${fixture.receipt.strict_claims_recorded_exact}/${fixture.receipt.strict_claims_total} claims recorded-exact\``,
-			c3ReceiptNoRecursionBoundary,
-			...c3ReceiptDisclosureLines(fixture.receipt),
-		].join("\n");
-		status = replaceFixtureExactlyOnce(status, "## Intended C3 source receipt map", metadata, "C3B receipt heading");
+	let phase;
+	const receiptOverride = current.get(c3ReceiptDeclarationPath);
+	const receiptPresent = receiptOverride !== ABSENT_FIXTURE_PATH &&
+		(receiptOverride !== undefined || !status.includes(c3PendingStatusState));
+	if (receiptPresent) {
+		phase = classifyC3PBHandoffPhase(
+			handoff, fixture.receipt, fixture.c3rAuthority, fixture.c3qAuthority, fixture.c3tAuthority,
+		);
+		if (phase !== "C3B_ACTIVE") {
+			throw new Error(`P07B-C C3 inverse fixture requires C3B-active input, found ${phase}`);
+		}
+		status = replaceFixtureExactlyOnce(
+			status, c3ReconciledStatusState(fixture.receipt), c3PendingStatusState, "C3B to C3T source state",
+		);
+		status = replaceFixtureExactlyOnce(
+			status, c3ReceiptStatusMetadata(fixture.receipt), "## Intended C3 source receipt map", "C3B to C3T receipt metadata",
+		);
 		for (const claim of fixture.receipt.claims) {
 			status = replaceFixtureExactlyOnce(
 				status,
-				`| \`${claim.label}\` | \`${claim.type}\` | \`UNRECEIPTED\` |`,
 				`| \`${claim.label}\` | \`${claim.type}\` | \`${claim.grade}\` |`,
-				`C3B source receipt row ${claim.supporting_event_index}`,
+				`| \`${claim.label}\` | \`${claim.type}\` | \`UNRECEIPTED\` |`,
+				`C3B to C3T source receipt row ${claim.supporting_event_index}`,
 			);
 		}
-	} else if (!status.includes(c3ReconciledStatusState(fixture.receipt))) {
-		throw new Error("P07B-C C3 receipt-present status fixture is neither pending nor reconciled");
-	}
-	const phase = classifyC3PBHandoffPhase(
-		handoff, fixture.receipt, fixture.c3rAuthority, fixture.c3qAuthority,
-	);
-	if (phase === "C3Q_ACTIVE") {
 		handoff = replaceCurrentStateSubsection(
 			handoff,
-			"### Active C3Q self-receipt checker maintenance",
-			c3bActiveMaintenanceSection(fixture.receipt, fixture.c3rAuthority, fixture.c3qAuthority),
+			"### Active C3B source receipt reconciliation",
+			c3tActiveMaintenanceSection(),
 		);
 		handoff = c3pbHandoffTransitions.filter(({ name }) =>
 			name !== "maintenance heading" && name !== "receipt presence").reduce((body, transition) => {
 			const metadata = c3pbMetadataLineContracts[transition.name];
+			const beforeValue = c3pbTransitionValue(transition, "c3b", fixture.receipt);
 			const before = metadata === undefined
-				? transition.c3q
+				? beforeValue
 				: metadata.render(
-					transition.c3q, "c3q", fixture.receipt, fixture.c3rAuthority, fixture.c3qAuthority,
+					beforeValue, "c3b", fixture.receipt, fixture.c3rAuthority, fixture.c3qAuthority, fixture.c3tAuthority,
 				);
-			const afterValue = c3pbTransitionValue(transition, "c3b", fixture.receipt);
 			const after = metadata === undefined
-				? afterValue
-				: metadata.render(
-					afterValue, "c3b", fixture.receipt, fixture.c3rAuthority, fixture.c3qAuthority,
-				);
-			return replaceFixtureExactlyOnce(body, before, after, `C3Q to C3B ${transition.name}`);
+				? transition.c3t
+				: metadata.render(transition.c3t, "c3t");
+			return replaceFixtureExactlyOnce(body, before, after, `C3B to C3T ${transition.name}`);
 		}, handoff);
-	} else if (phase !== "C3B_ACTIVE") {
-		throw new Error(`P07B-C C3 receipt-present handoff fixture phase mismatch: ${phase}`);
+		const parsed = parseC3ReceiptBlock(handoff);
+		const expectedBlock = c3ReceiptHandoffBlock(fixture.receipt);
+		if (parsed.block !== expectedBlock) {
+			throw new Error("P07B-C C3 inverse fixture requires the exact canonical receipt block");
+		}
+		handoff = parsed.stripped;
+	} else {
+		if (!status.includes(c3PendingStatusState) || !status.includes("## Intended C3 source receipt map")) {
+			throw new Error("P07B-C C3 absent fixture status is not the canonical pending projection");
+		}
+		phase = classifyC3PBHandoffPhase(handoff);
+		if (phase !== "C3T_ACTIVE") {
+			throw new Error(`P07B-C C3 absent fixture requires C3T-active input, found ${phase}`);
+		}
+		if (parseC3ReceiptBlock(handoff).block !== undefined) {
+			throw new Error("P07B-C C3 absent fixture retains a receipt block");
+		}
 	}
-	const parsed = parseC3ReceiptBlock(handoff);
-	const block = c3ReceiptHandoffBlock(fixture.receipt);
-	if (parsed.block === undefined) {
-		if (!handoff.endsWith("\n")) throw new Error("P07B-C C3 receipt-present handoff lacks terminal LF");
-		handoff = `${handoff}${block}\n`;
-	} else if (parsed.block !== block) {
-		throw new Error("P07B-C C3 receipt-present handoff carries a different receipt block");
-	}
-	return new Map([
+	const absent = new Map([
 		...current,
+		[c3StatusPath, status],
+		["docs/HANDOFF_MODE_C.md", handoff],
+		[c3ReceiptDeclarationPath, ABSENT_FIXTURE_PATH],
+	]);
+	const errors = await checkPlan(repositoryRoot, absent);
+	if (errors.length > 0) {
+		throw new Error(`P07B-C C3 validated C3T-active absent fixture failed:\n${errors.join("\n")}`);
+	}
+	return absent;
+}
+
+async function syntheticC3ReceiptPlanFixture(fixture, current = new Map()) {
+	const absent = await syntheticC3AbsentPlanFixture(fixture, current);
+	let status = absent.get(c3StatusPath);
+	let handoff = absent.get("docs/HANDOFF_MODE_C.md");
+	status = replaceFixtureExactlyOnce(
+		status, c3PendingStatusState, c3ReconciledStatusState(fixture.receipt), "C3T to C3B source state",
+	);
+	status = replaceFixtureExactlyOnce(
+		status, "## Intended C3 source receipt map", c3ReceiptStatusMetadata(fixture.receipt), "C3T to C3B receipt metadata",
+	);
+	for (const claim of fixture.receipt.claims) {
+		status = replaceFixtureExactlyOnce(
+			status,
+			`| \`${claim.label}\` | \`${claim.type}\` | \`UNRECEIPTED\` |`,
+			`| \`${claim.label}\` | \`${claim.type}\` | \`${claim.grade}\` |`,
+			`C3T to C3B source receipt row ${claim.supporting_event_index}`,
+		);
+	}
+	const phase = classifyC3PBHandoffPhase(handoff);
+	if (phase !== "C3T_ACTIVE") {
+		throw new Error(`P07B-C C3 receipt-present renderer requires C3T-active input, found ${phase}`);
+	}
+	handoff = replaceCurrentStateSubsection(
+		handoff,
+		"### Active C3T phase-transition self-test maintenance",
+		c3bActiveMaintenanceSection(fixture.receipt, fixture.c3rAuthority, fixture.c3qAuthority, fixture.c3tAuthority),
+	);
+	handoff = c3pbHandoffTransitions.filter(({ name }) =>
+		name !== "maintenance heading" && name !== "receipt presence").reduce((body, transition) => {
+		const metadata = c3pbMetadataLineContracts[transition.name];
+		const before = metadata === undefined
+			? transition.c3t
+			: metadata.render(transition.c3t, "c3t");
+		const afterValue = c3pbTransitionValue(transition, "c3b", fixture.receipt);
+		const after = metadata === undefined
+			? afterValue
+			: metadata.render(
+				afterValue, "c3b", fixture.receipt, fixture.c3rAuthority, fixture.c3qAuthority, fixture.c3tAuthority,
+			);
+		return replaceFixtureExactlyOnce(body, before, after, `C3T to C3B ${transition.name}`);
+	}, handoff);
+	if (!handoff.endsWith("\n") || parseC3ReceiptBlock(handoff).block !== undefined) {
+		throw new Error("P07B-C C3 receipt-present renderer requires a terminal-LF block-free handoff");
+	}
+	handoff = `${handoff}${c3ReceiptHandoffBlock(fixture.receipt)}\n`;
+	return new Map([
+		...absent,
 		[c3StatusPath, status],
 		["docs/HANDOFF_MODE_C.md", handoff],
 		[c3ReceiptDeclarationPath, `${JSON.stringify(fixture.receipt)}\n`],
@@ -7417,7 +7943,31 @@ async function syntheticC3ReceiptPlanFixture(fixture, current = new Map()) {
 export async function runC3ReceiptSelfTest() {
 	const liveErrors = await checkPlan();
 	if (liveErrors.length > 0) throw new Error(`P07B-C C3 receipt checker live baseline failed:\n${liveErrors.join("\n")}`);
-	const fixture = syntheticC3ReceiptFixture();
+	let liveReceipt;
+	let liveReceiptText;
+	let liveControlledPaths;
+	try {
+		liveReceiptText = await readText(repositoryRoot, c3ReceiptDeclarationPath, new Map());
+		liveReceipt = JSON.parse(liveReceiptText);
+	} catch (error) {
+		if (error.code !== "ENOENT") throw new Error(`P07B-C C3 live receipt fixture unavailable: ${error.message}`);
+	}
+	const fixture = syntheticC3ReceiptFixture(liveReceipt);
+	if (liveReceipt !== undefined) {
+		const liveReceiptErrors = validateC3ReceiptDeclaration(liveReceipt);
+		if (liveReceiptErrors.length > 0) {
+			throw new Error(`P07B-C C3 live receipt fixture invalid: ${liveReceiptErrors.join(", ")}`);
+		}
+		fixture.authority = await loadReceiptAuthorityFromGit(repositoryRoot, liveReceipt);
+		fixture.c3rAuthority = await loadC3RAuthorityFromGit(repositoryRoot);
+		fixture.c3qAuthority = await loadC3QAuthorityFromGit(repositoryRoot, fixture.c3rAuthority.commit);
+		fixture.c3tAuthority = await loadC3TAuthorityFromGit(repositoryRoot, fixture.c3qAuthority.commit);
+		liveControlledPaths = new Map([
+			[c3StatusPath, await readText(repositoryRoot, c3StatusPath, new Map())],
+			["docs/HANDOFF_MODE_C.md", await readText(repositoryRoot, "docs/HANDOFF_MODE_C.md", new Map())],
+			[c3ReceiptDeclarationPath, liveReceiptText],
+		]);
+	}
 	let rejected = 0;
 	const requireError = (name, errors, expected) => {
 		if (!errors.some((error) => error.includes(expected))) {
@@ -7433,44 +7983,65 @@ export async function runC3ReceiptSelfTest() {
 	if (c3rAuthorityBaseline.length > 0) {
 		throw new Error(`P07B-C C3R predecessor authority baseline failed: ${c3rAuthorityBaseline.join(", ")}`);
 	}
-	const c3bPredecessorBaseline = validateC3BPredecessorAuthority(
-		fixture.c3qAuthority,
-		fixture.c3rAuthority.commit,
+	const c3qPredecessorBaseline = validateSealedC3QAuthority(fixture.c3qAuthority);
+	if (c3qPredecessorBaseline.length > 0) {
+		throw new Error(`P07B-C sealed C3Q predecessor baseline failed: ${c3qPredecessorBaseline.join(", ")}`);
+	}
+	const c3tPresealC3Q = structuredClone(fixture.c3qAuthority);
+	c3tPresealC3Q.head_commit = c3tPresealC3Q.commit;
+	const c3tPresealC3QErrors = validateC3TPredecessorAuthority(c3tPresealC3Q);
+	if (c3tPresealC3QErrors.length > 0) {
+		throw new Error(`P07B-C C3T sealed-C3Q current-HEAD baseline failed: ${c3tPresealC3QErrors.join(", ")}`);
+	}
+	const staleC3TPresealC3Q = structuredClone(c3tPresealC3Q);
+	staleC3TPresealC3Q.head_commit = fixture.c3tAuthority.commit;
+	requireError("C3T sealed-C3Q descendant HEAD", validateC3TPredecessorAuthority(staleC3TPresealC3Q), "sealed C3Q is not current HEAD");
+	const c3tAuthorityBaseline = validateC3TAuthority(
+		fixture.c3tAuthority,
+		fixture.c3qAuthority.commit,
 	);
+	if (c3tAuthorityBaseline.length > 0) {
+		throw new Error(`P07B-C C3T sealed-ancestor baseline failed: ${c3tAuthorityBaseline.join(", ")}`);
+	}
+	const c3bPresealC3T = structuredClone(fixture.c3tAuthority);
+	c3bPresealC3T.head_commit = c3bPresealC3T.commit;
+	const c3bPredecessorBaseline = validateC3BPredecessorAuthority(c3bPresealC3T, fixture.c3qAuthority.commit);
 	if (c3bPredecessorBaseline.length > 0) {
-		throw new Error(`P07B-C C3B predecessor-head baseline failed: ${c3bPredecessorBaseline.join(", ")}`);
+		throw new Error(`P07B-C C3B preseal predecessor-head baseline failed: ${c3bPredecessorBaseline.join(", ")}`);
 	}
 	const plainSealC3RAuthority = structuredClone(fixture.c3rAuthority);
 	plainSealC3RAuthority.note.secrets_override = false;
-	const overrideSealC3QAuthority = structuredClone(fixture.c3qAuthority);
-	overrideSealC3QAuthority.note.secrets_override = true;
+	const plainSealC3TAuthority = structuredClone(fixture.c3tAuthority);
+	plainSealC3TAuthority.note.secrets_override = false;
 	const c3bLedgerTransition = c3pbHandoffTransitions.find((transition) => transition.name === "ledger profile");
 	if (c3bLedgerTransition === undefined) throw new Error("P07B-C C3B ledger-profile transition is absent");
 	const c3bLedgerValue = c3pbTransitionValue(c3bLedgerTransition, "c3b", fixture.receipt);
-	const renderC3BLedgerProfile = (c3rAuthority, c3qAuthority) => c3pbMetadataLineContracts["ledger profile"].render(
+	const renderC3BLedgerProfile = (c3rAuthority, c3qAuthority, c3tAuthority) => c3pbMetadataLineContracts["ledger profile"].render(
 		c3bLedgerValue,
 		"c3b",
 		fixture.receipt,
 		c3rAuthority,
 		c3qAuthority,
+		c3tAuthority,
 	);
-	const mixedLedgerProfile = renderC3BLedgerProfile(fixture.c3rAuthority, fixture.c3qAuthority);
-	const plainC3RLedgerProfile = renderC3BLedgerProfile(plainSealC3RAuthority, fixture.c3qAuthority);
-	const overrideC3QLedgerProfile = renderC3BLedgerProfile(fixture.c3rAuthority, overrideSealC3QAuthority);
+	const mixedLedgerProfile = renderC3BLedgerProfile(fixture.c3rAuthority, fixture.c3qAuthority, fixture.c3tAuthority);
+	const plainC3RLedgerProfile = renderC3BLedgerProfile(plainSealC3RAuthority, fixture.c3qAuthority, fixture.c3tAuthority);
+	const plainC3TLedgerProfile = renderC3BLedgerProfile(fixture.c3rAuthority, fixture.c3qAuthority, plainSealC3TAuthority);
 	if (!mixedLedgerProfile.includes(c3rSealOutcomeDisclosure(fixture.c3rAuthority)) ||
-		!mixedLedgerProfile.includes(c3qSealOutcomeDisclosure(fixture.c3qAuthority))) {
-		throw new Error("P07B-C C3B dual seal disclosure renderer baseline failed");
+		!mixedLedgerProfile.includes(c3qSealOutcomeDisclosure(fixture.c3qAuthority)) ||
+		!mixedLedgerProfile.includes(c3tSealOutcomeDisclosure(fixture.c3tAuthority))) {
+		throw new Error("P07B-C C3B three-seal disclosure renderer baseline failed");
 	}
 	if (!plainC3RLedgerProfile.includes(c3rSealOutcomeDisclosure(plainSealC3RAuthority)) ||
 		!plainC3RLedgerProfile.includes(c3qSealOutcomeDisclosure(fixture.c3qAuthority)) ||
-		!overrideC3QLedgerProfile.includes(c3qSealOutcomeDisclosure(overrideSealC3QAuthority))) {
+		!plainC3TLedgerProfile.includes(c3tSealOutcomeDisclosure(plainSealC3TAuthority))) {
 		throw new Error("P07B-C C3B independent seal disclosure renderer baseline failed");
 	}
 	const malformedSealC3RAuthority = structuredClone(fixture.c3rAuthority);
 	malformedSealC3RAuthority.note.secrets_override = "false";
 	let malformedSealRendererError = "";
 	try {
-		renderC3BLedgerProfile(malformedSealC3RAuthority, fixture.c3qAuthority);
+		renderC3BLedgerProfile(malformedSealC3RAuthority, fixture.c3qAuthority, fixture.c3tAuthority);
 	} catch (error) {
 		malformedSealRendererError = error.message;
 	}
@@ -7482,7 +8053,7 @@ export async function runC3ReceiptSelfTest() {
 	malformedSealC3QAuthority.note.secrets_override = "false";
 	malformedSealRendererError = "";
 	try {
-		renderC3BLedgerProfile(fixture.c3rAuthority, malformedSealC3QAuthority);
+		renderC3BLedgerProfile(fixture.c3rAuthority, malformedSealC3QAuthority, fixture.c3tAuthority);
 	} catch (error) {
 		malformedSealRendererError = error.message;
 	}
@@ -7490,12 +8061,24 @@ export async function runC3ReceiptSelfTest() {
 		throw new Error(`P07B-C C3B C3Q seal disclosure renderer self-test false negative: ${malformedSealRendererError || "accepted"}`);
 	}
 	rejected += 1;
-	const descendantHead = structuredClone(fixture.c3qAuthority);
+	const malformedSealC3TAuthority = structuredClone(fixture.c3tAuthority);
+	malformedSealC3TAuthority.note.secrets_override = "false";
+	malformedSealRendererError = "";
+	try {
+		renderC3BLedgerProfile(fixture.c3rAuthority, fixture.c3qAuthority, malformedSealC3TAuthority);
+	} catch (error) {
+		malformedSealRendererError = error.message;
+	}
+	if (!malformedSealRendererError.includes("exact C3T note identity and secrets override disclosure")) {
+		throw new Error(`P07B-C C3B C3T seal disclosure renderer self-test false negative: ${malformedSealRendererError || "accepted"}`);
+	}
+	rejected += 1;
+	const descendantHead = structuredClone(c3bPresealC3T);
 	descendantHead.head_commit = "d".repeat(40);
 	requireError(
 		"C3B descendant HEAD",
-		validateC3BPredecessorAuthority(descendantHead, fixture.c3rAuthority.commit),
-		"C3Q is not current HEAD",
+		validateC3BPredecessorAuthority(descendantHead, fixture.c3qAuthority.commit),
+		"C3T is not current HEAD",
 	);
 	const exactC3RNoteBytes = Buffer.from(JSON.stringify(fixture.c3rAuthority.note), "utf8");
 	const rawC3RDiff = Buffer.from(fixture.c3rAuthority.source_diff.map((row) =>
@@ -7573,10 +8156,17 @@ export async function runC3ReceiptSelfTest() {
 		"utf8",
 	)) => {
 		let noteListCalls = 0;
+		let ancestryCalls = 0;
 		return (args, accepted = [0]) => {
 			let status = 0;
 			let stdout;
 			if (args[0] === "rev-list") {
+				ancestryCalls += 1;
+				if (ancestryCalls !== 1 || !isDeepStrictEqual(args, [
+					"rev-list", "--parents", "--ancestry-path", `${fixture.c3rAuthority.commit}..HEAD`,
+				])) {
+					throw new Error(`synthetic C3Q loader received noncanonical ancestry argv: ${args.join(" ")}`);
+				}
 				stdout = ancestry;
 			} else if (args[0] === "rev-parse" && args[2] === "HEAD^{commit}") {
 				stdout = Buffer.from(`${fixture.c3qAuthority.head_commit}\n`, "utf8");
@@ -7608,7 +8198,7 @@ export async function runC3ReceiptSelfTest() {
 		};
 	};
 	const loadedC3QAuthority = loadC3QAuthorityWithRunner(c3qLoaderRunner(), fixture.c3rAuthority.commit);
-	const loadedC3QErrors = validateC3BPredecessorAuthority(loadedC3QAuthority, fixture.c3rAuthority.commit);
+	const loadedC3QErrors = validateC3QAuthority(loadedC3QAuthority, fixture.c3rAuthority.commit);
 	if (loadedC3QErrors.length > 0) {
 		throw new Error(`P07B-C C3Q direct-child loader baseline failed: ${loadedC3QErrors.join(", ")}`);
 	}
@@ -7634,6 +8224,81 @@ export async function runC3ReceiptSelfTest() {
 		}
 		rejected += 1;
 	}
+	const exactC3TNoteBytes = Buffer.from(JSON.stringify(fixture.c3tAuthority.note), "utf8");
+	const rawC3TDiff = Buffer.from(fixture.c3tAuthority.source_diff.map((row) =>
+		`:${row.old_mode} ${row.new_mode} ${row.old_oid} ${row.new_oid} ${row.status}\0${row.path}\0`).join(""), "utf8");
+	const c3tLoaderRunner = (ancestry = Buffer.from(
+		`${fixture.c3tAuthority.commit} ${fixture.c3qAuthority.commit}\n`,
+		"utf8",
+	)) => {
+		let noteListCalls = 0;
+		let ancestryCalls = 0;
+		return (args, accepted = [0]) => {
+			let status = 0;
+			let stdout;
+			if (args[0] === "rev-list") {
+				ancestryCalls += 1;
+				if (ancestryCalls !== 1 || !isDeepStrictEqual(args, [
+					"rev-list", "--parents", "--ancestry-path", `${fixture.c3qAuthority.commit}..HEAD`,
+				])) {
+					throw new Error(`synthetic C3T loader received noncanonical ancestry argv: ${args.join(" ")}`);
+				}
+				stdout = ancestry;
+			} else if (args[0] === "rev-parse" && args[2] === "HEAD^{commit}") {
+				stdout = Buffer.from(`${fixture.c3tAuthority.head_commit}\n`, "utf8");
+			} else if (args[0] === "rev-parse" && args[2] === `${fixture.c3tAuthority.commit}^{commit}`) {
+				stdout = Buffer.from(`${fixture.c3tAuthority.commit}\n`, "utf8");
+			} else if (args[0] === "rev-parse" && args[2] === `${fixture.c3tAuthority.commit}^{tree}`) {
+				stdout = Buffer.from(`${fixture.c3tAuthority.tree}\n`, "utf8");
+			} else if (args[0] === "show" && args[2] === "--format=%P") {
+				stdout = Buffer.from(`${fixture.c3tAuthority.parents.join(" ")}\n`, "utf8");
+			} else if (args[0] === "diff-tree") {
+				stdout = rawC3TDiff;
+			} else if (args[0] === "show" && args[2] === "--format=%s") {
+				stdout = Buffer.from(`${fixture.c3tAuthority.subject}\n`, "utf8");
+			} else if (args[0] === "merge-base") {
+				stdout = Buffer.alloc(0);
+			} else if (args[0] === "notes" && args[2] === "list") {
+				noteListCalls += 1;
+				stdout = Buffer.from(`${fixture.c3tAuthority.note_blob_oid}\n`, "utf8");
+			} else if (args[0] === "cat-file" && args[1] === "-t") {
+				stdout = Buffer.from("blob\n", "utf8");
+			} else if (args[0] === "cat-file" && args[1] === "blob") {
+				stdout = exactC3TNoteBytes;
+			} else {
+				throw new Error(`synthetic C3T loader received unexpected Git argv: ${args.join(" ")}`);
+			}
+			if (!accepted.includes(status)) throw new Error(`synthetic C3T loader status ${status} not accepted`);
+			if (noteListCalls > 2) throw new Error("synthetic C3T loader listed the note too many times");
+			return { status, stdout };
+		};
+	};
+	const loadedC3TAuthority = loadC3TAuthorityWithRunner(c3tLoaderRunner(), fixture.c3qAuthority.commit);
+	const loadedC3TErrors = validateC3TAuthority(loadedC3TAuthority, fixture.c3qAuthority.commit);
+	if (loadedC3TErrors.length > 0) {
+		throw new Error(`P07B-C C3T direct-child loader baseline failed: ${loadedC3TErrors.join(", ")}`);
+	}
+	for (const [name, ancestry, expected] of [
+		["C3T absent ancestry", Buffer.alloc(0), "absent or not exact LF-framed"],
+		["C3T ancestry framing", Buffer.from(`${fixture.c3tAuthority.commit} ${fixture.c3qAuthority.commit}`, "utf8"), "absent or not exact LF-framed"],
+		["C3T malformed ancestry", Buffer.from("not-an-object\n", "utf8"), "ancestry row is malformed"],
+		["C3T zero direct children", Buffer.from(`${fixture.c3tAuthority.commit} ${"b".repeat(40)}\n`, "utf8"), "direct-child cardinality 0"],
+		["C3T multiple direct children", Buffer.from(
+			`${fixture.c3tAuthority.commit} ${fixture.c3qAuthority.commit}\n${"b".repeat(40)} ${fixture.c3qAuthority.commit}\n`,
+			"utf8",
+		), "direct-child cardinality 2"],
+	]) {
+		let message = "";
+		try {
+			loadC3TAuthorityWithRunner(c3tLoaderRunner(ancestry), fixture.c3qAuthority.commit);
+		} catch (error) {
+			message = error.message;
+		}
+		if (!message.includes(expected)) {
+			throw new Error(`P07B-C C3T loader self-test false negative: ${name} (${message || "accepted"})`);
+		}
+		rejected += 1;
+	}
 	const exactNoteBytes = Buffer.from(JSON.stringify(fixture.authority.note), "utf8");
 	const loaderReceipt = structuredClone(fixture.receipt);
 	loaderReceipt.evidence.git_note.body_sha256 = createHash("sha256").update(exactNoteBytes).digest("hex");
@@ -7645,7 +8310,7 @@ export async function runC3ReceiptSelfTest() {
 			let status = 0;
 			let stdout;
 			if (args[0] === "rev-parse" && args[2] === "HEAD^{commit}") {
-				stdout = Buffer.from(`${fixture.c3qAuthority.commit}\n`, "utf8");
+				stdout = Buffer.from(`${fixture.c3tAuthority.commit}\n`, "utf8");
 			} else if (args[0] === "rev-parse" && args[2] === `${loaderReceipt.source_commit}^{commit}`) {
 				stdout = Buffer.from(`${fixture.authority.commit}\n`, "utf8");
 			} else if (args[0] === "rev-parse" && args[2] === `${loaderReceipt.source_commit}^{tree}`) {
@@ -7772,7 +8437,6 @@ export async function runC3ReceiptSelfTest() {
 		["C3Q diff partition", (value) => { value.source_diff.find((row) => row.status === "A").status = "M"; }, "source diff added row"],
 		["C3Q subject", (value) => { value.subject += " altered"; }, "source commit subject"],
 		["C3Q ancestry", (value) => { value.ancestor_of_head = false; }, "ancestor"],
-		["C3Q current HEAD", (value) => { value.head_commit = "9".repeat(40); }, "C3Q is not current HEAD"],
 		["C3Q note type", (value) => { value.note_type = "tree"; }, "note object type"],
 		["C3Q note blob shape", (value) => { value.note_blob_oid = "z".repeat(40); }, "note object identity"],
 		["C3Q note body shape", (value) => { value.note_body_sha256 = "z".repeat(64); }, "note body digest"],
@@ -7796,14 +8460,50 @@ export async function runC3ReceiptSelfTest() {
 	]) {
 		const candidate = structuredClone(fixture.c3qAuthority);
 		mutate(candidate);
-		requireError(name, validateC3BPredecessorAuthority(candidate, fixture.c3rAuthority.commit), expected);
+		requireError(name, validateSealedC3QAuthority(candidate), expected);
+	}
+	for (const [name, mutate, expected] of [
+		["C3T malformed commit", (value) => { value.commit = "z".repeat(40); }, "source commit"],
+		["C3T malformed tree", (value) => { value.tree = "z".repeat(40); }, "source tree"],
+		["C3T parent", (value) => { value.parent = "b".repeat(40); value.parents = [value.parent]; }, "source parent"],
+		["C3T merge parent", (value) => { value.parents.push("b".repeat(40)); }, "source parent"],
+		["C3T diff roster", (value) => { value.source_diff.pop(); }, "source diff exact path roster"],
+		["C3T diff partition", (value) => { value.source_diff.find((row) => row.status === "A").status = "M"; }, "source diff added row"],
+		["C3T subject", (value) => { value.subject += " altered"; }, "source commit subject"],
+		["C3T ancestry", (value) => { value.ancestor_of_head = false; }, "ancestor"],
+		["C3T current HEAD", (value) => { value.head_commit = "b".repeat(40); }, "C3T is not current HEAD"],
+		["C3T note type", (value) => { value.note_type = "tree"; }, "note object type"],
+		["C3T note root", (value) => { value.note.extra = true; }, "missing or malformed parsed didrun Git note"],
+		["C3T note claim order", (value) => { [value.note.claims[0], value.note.claims[1]] = [value.note.claims[1], value.note.claims[0]]; }, "didrun note claim 1"],
+		["C3T note argv", (value) => { value.note.claims[2].claim.argv_preview.push("--extra"); }, "didrun note claim 3 argv"],
+		["C3T coverage", (value) => { value.note.coverage.by_coverage.complete -= 1; }, "event coverage"],
+		["C3T override type", (value) => { value.note.secrets_override = "false"; }, "secrets override disclosure"],
+	]) {
+		const candidate = structuredClone(c3bPresealC3T);
+		mutate(candidate);
+		requireError(name, validateC3BPredecessorAuthority(candidate, fixture.c3qAuthority.commit), expected);
+	}
+	for (const [name, mutate, expected] of [
+		["sealed C3Q coherent commit substitution", (value) => {
+			value.commit = "c".repeat(40); value.note.commit = value.commit;
+		}, "sealed C3Q commit identity"],
+		["sealed C3Q coherent tree substitution", (value) => {
+			value.tree = "d".repeat(40); value.note.tree = value.tree;
+		}, "sealed C3Q tree identity"],
+		["sealed C3Q valid alternate note blob", (value) => { value.note_blob_oid = "e".repeat(40); }, "sealed C3Q note object identity"],
+		["sealed C3Q valid alternate note body", (value) => { value.note_body_sha256 = "f".repeat(64); }, "sealed C3Q note body digest"],
+		["sealed C3Q alternate seal outcome", (value) => { value.note.secrets_override = false; }, "sealed C3Q secrets override disclosure"],
+	]) {
+		const candidate = structuredClone(fixture.c3qAuthority);
+		mutate(candidate);
+		requireError(name, validateSealedC3QAuthority(candidate), expected);
 	}
 	let malformedSubjectFramingRejected = false;
 	try { decodeExactGitLine(Buffer.from(`${c3SourceSubject}\n\n`, "utf8"), "synthetic C3 subject"); } catch {
 		malformedSubjectFramingRejected = true;
 	}
 	if (!malformedSubjectFramingRejected) throw new Error("P07B-C C3 exact Git subject framing self-test false negative");
-	const absent = new Map([[c3ReceiptDeclarationPath, ABSENT_FIXTURE_PATH]]);
+	const absent = await syntheticC3AbsentPlanFixture(fixture);
 	for (const [name, path, mutate, expected] of [
 		["pending status", c3StatusPath, (body) => body.replace(c3PendingStatusState, "- **State:** prematurely sealed"), "pending source state"],
 		["pending grade", c3StatusPath, (body) => body.replace("| `UNRECEIPTED` |", "| `TREE-EXACT` |"), "pending source receipt map"],
@@ -7813,10 +8513,10 @@ export async function runC3ReceiptSelfTest() {
 		["premature marker", "docs/HANDOFF_MODE_C.md", (body) => `${body}\n${c3ReceiptBlockStart}\n`, "pending receipt marker"],
 		["C3F downgrade", "docs/HANDOFF_MODE_C.md", (body) => c3pbHandoffTransitions.reduce((currentBody, transition) => {
 			const metadata = c3pbMetadataLineContracts[transition.name];
-			const before = metadata === undefined ? transition.c3q : metadata.render(transition.c3q, "c3q");
+			const before = metadata === undefined ? transition.c3t : metadata.render(transition.c3t, "c3t");
 			const after = metadata === undefined ? transition.c3f : metadata.render(transition.c3f, "c3f");
 			return replaceFixtureExactlyOnce(currentBody, before, after, `C3 absent downgrade ${transition.name}`);
-		}, body), "must be C3Q-active"],
+		}, body), "must be C3T-active"],
 	]) {
 		const overrides = new Map(absent);
 		const body = await readText(repositoryRoot, path, overrides);
@@ -7854,8 +8554,8 @@ export async function runC3ReceiptSelfTest() {
 		["HTML-commented subsection heading", "C3Q-INERT-HTML-SUBSECTION-DECOY", "<!--\n### C3Q-INERT-HTML-SUBSECTION-DECOY\n-->"],
 		["fenced subsection heading", "C3Q-INERT-FENCE-SUBSECTION-DECOY", "```text\n### C3Q-INERT-FENCE-SUBSECTION-DECOY\n```"],
 	]) {
-		const liveHandoff = await readText(repositoryRoot, "docs/HANDOFF_MODE_C.md", new Map());
-		const heading = "### Active C3Q self-receipt checker maintenance";
+		const liveHandoff = absent.get("docs/HANDOFF_MODE_C.md");
+		const heading = "### Active C3T phase-transition self-test maintenance";
 		const liveSection = currentStateSubsection(liveHandoff, heading);
 		const decoySection = replaceFixtureExactlyOnce(
 			liveSection,
@@ -7863,8 +8563,11 @@ export async function runC3ReceiptSelfTest() {
 			`${heading}\n\n${inertDecoy}\n\n`,
 			name,
 		);
-		const decoyCurrent = new Map([["docs/HANDOFF_MODE_C.md",
-			replaceCurrentStateSubsection(liveHandoff, heading, decoySection)]]);
+		const decoyCurrent = new Map(absent);
+		decoyCurrent.set(
+			"docs/HANDOFF_MODE_C.md",
+			replaceCurrentStateSubsection(liveHandoff, heading, decoySection),
+		);
 		const transitioned = await syntheticC3ReceiptPlanFixture(fixture, decoyCurrent);
 		if (transitioned.get("docs/HANDOFF_MODE_C.md").includes(marker)) {
 			throw new Error(`P07B-C C3 receipt checker retained ${name}`);
@@ -7879,6 +8582,7 @@ export async function runC3ReceiptSelfTest() {
 			fixture.authority,
 			fixture.c3rAuthority,
 			fixture.c3qAuthority,
+			fixture.c3tAuthority,
 		);
 		if (transitionedErrors.length > 0) {
 			throw new Error(`P07B-C C3 receipt checker ${name} transition failed:\n${transitionedErrors.join("\n")}`);
@@ -7896,8 +8600,39 @@ export async function runC3ReceiptSelfTest() {
 		fixture.authority,
 		fixture.c3rAuthority,
 		fixture.c3qAuthority,
+		fixture.c3tAuthority,
 	);
 	if (presentErrors.length > 0) throw new Error(`P07B-C C3 receipt-present baseline failed:\n${presentErrors.join("\n")}`);
+	if (liveControlledPaths !== undefined) {
+		for (const path of [c3StatusPath, "docs/HANDOFF_MODE_C.md", c3ReceiptDeclarationPath]) {
+			if (present.get(path) !== liveControlledPaths.get(path)) {
+				throw new Error(`P07B-C C3 live present round trip changed canonical ${path}`);
+			}
+		}
+	}
+	const sealedDescendantC3T = structuredClone(fixture.c3tAuthority);
+	sealedDescendantC3T.head_commit = "d".repeat(40);
+	const sealedDescendantErrors = await checkPlan(
+		repositoryRoot,
+		present,
+		undefined,
+		undefined,
+		undefined,
+		undefined,
+		fixture.authority,
+		fixture.c3rAuthority,
+		fixture.c3qAuthority,
+		sealedDescendantC3T,
+	);
+	if (sealedDescendantErrors.length > 0) {
+		throw new Error(`P07B-C C3 sealed-descendant-head plan baseline failed:\n${sealedDescendantErrors.join("\n")}`);
+	}
+	const inverse = await syntheticC3AbsentPlanFixture(fixture, present);
+	for (const path of [c3StatusPath, "docs/HANDOFF_MODE_C.md", c3ReceiptDeclarationPath]) {
+		if (inverse.get(path) !== absent.get(path)) {
+			throw new Error(`P07B-C C3 present-to-absent inverse changed canonical ${path}`);
+		}
+	}
 	const rerun = await syntheticC3ReceiptPlanFixture(fixture, present);
 	for (const path of [c3StatusPath, "docs/HANDOFF_MODE_C.md", c3ReceiptDeclarationPath]) {
 		if (rerun.get(path) !== present.get(path)) throw new Error(`P07B-C C3 receipt rerun changed ${path}`);
@@ -7909,20 +8644,70 @@ export async function runC3ReceiptSelfTest() {
 	]) {
 		const hostileC3QAuthority = structuredClone(fixture.c3qAuthority);
 		mutate(hostileC3QAuthority);
+		const handoffPath = "docs/HANDOFF_MODE_C.md";
+		const heading = "### Active C3B source receipt reconciliation";
+		const liveHandoff = present.get(handoffPath);
+		const liveSection = currentStateSubsection(liveHandoff, heading);
+		const hostileSection = replaceFixtureExactlyOnce(
+			liveSection,
+			c3qSealOutcomeDisclosure(fixture.c3qAuthority),
+			c3qSealOutcomeDisclosure(hostileC3QAuthority),
+			name,
+		);
+		const hostilePresent = new Map(present);
+		hostilePresent.set(handoffPath, replaceCurrentStateSubsection(liveHandoff, heading, hostileSection));
 		requireError(name, await checkPlan(
 			repositoryRoot,
-			present,
+			hostilePresent,
 			undefined,
 			undefined,
 			undefined,
 			undefined,
 			fixture.authority,
 			fixture.c3rAuthority,
-			hostileC3QAuthority,
-		), "receipt-present operational phase invalid");
+			fixture.c3qAuthority,
+			fixture.c3tAuthority,
+		), "C3B active maintenance section payload mismatch");
+	}
+	for (const [name, mutate] of [
+		["C3T note blob handoff binding", (authority) => { authority.note_blob_oid = "c".repeat(40); }],
+		["C3T note body handoff binding", (authority) => { authority.note_body_sha256 = "d".repeat(64); }],
+		["C3T seal outcome handoff binding", (authority) => { authority.note.secrets_override = !authority.note.secrets_override; }],
+	]) {
+		const hostileC3TAuthority = structuredClone(fixture.c3tAuthority);
+		mutate(hostileC3TAuthority);
+		const handoffPath = "docs/HANDOFF_MODE_C.md";
+		const heading = "### Active C3B source receipt reconciliation";
+		const liveHandoff = present.get(handoffPath);
+		const liveSection = currentStateSubsection(liveHandoff, heading);
+		const hostileSection = replaceFixtureExactlyOnce(
+			liveSection,
+			c3tSealOutcomeDisclosure(fixture.c3tAuthority),
+			c3tSealOutcomeDisclosure(hostileC3TAuthority),
+			name,
+		);
+		const hostilePresent = new Map(present);
+		hostilePresent.set(handoffPath, replaceCurrentStateSubsection(liveHandoff, heading, hostileSection));
+		requireError(name, await checkPlan(
+			repositoryRoot,
+			hostilePresent,
+			undefined,
+			undefined,
+			undefined,
+			undefined,
+			fixture.authority,
+			fixture.c3rAuthority,
+			fixture.c3qAuthority,
+			fixture.c3tAuthority,
+		), "C3B active maintenance section payload mismatch");
 	}
 	for (const [name, path, mutate, expected] of [
 		["source grade", c3StatusPath, (body) => body.replace("| `TREE-EXACT` |", "| `UNRECEIPTED` |"), "source receipt map"],
+		["receipt declaration pretty JSON", c3ReceiptDeclarationPath,
+			(body) => `${JSON.stringify(JSON.parse(body), null, 2)}\n`, "exact canonical one-line JSON"],
+		["receipt declaration duplicate key", c3ReceiptDeclarationPath,
+			(body) => body.replace('{"schema_version":', '{"schema_version":"ignored","schema_version":'),
+			"exact canonical one-line JSON"],
 		["source status HTML-commented", c3StatusPath, (body) => `<!--\n${body}-->\n`, "reconciled source state"],
 		["source status fenced", c3StatusPath, (body) => `\`\`\`markdown\n${body}\`\`\`\n`, "reconciled source state"],
 		["source status indented code", c3StatusPath, (body) => body.split("\n").map((line) => `    ${line}`).join("\n"), "reconciled source state"],
@@ -7943,6 +8728,8 @@ export async function runC3ReceiptSelfTest() {
 			return body.replace(parsed.block, `\`\`\`markdown\n${parsed.block}\n\`\`\``);
 		}, "source receipt block is not visible Markdown authority"],
 		["receipt residue", "docs/HANDOFF_MODE_C.md", (body) => `${body}C3 source commit \`${fixture.receipt.source_commit}\`, tree \`${fixture.receipt.source_tree}\`.\n`, "residue outside block"],
+		["receipt post-block tail", "docs/HANDOFF_MODE_C.md", (body) => `${body}Unrelated trailing receipt-era prose.\n`,
+			"exact terminal handoff block"],
 		["C3Q lifecycle downgrade", "docs/HANDOFF_MODE_C.md", (body) => body.replace(c3bActiveHandoffState(fixture.receipt), c3qActiveHandoffState), "receipt-present operational phase"],
 		["stale C3Q planned prose", "docs/HANDOFF_MODE_C.md", (body) => {
 			const heading = "### Active C3B source receipt reconciliation";
@@ -7964,8 +8751,8 @@ export async function runC3ReceiptSelfTest() {
 			return replaceCurrentStateSubsection(body, heading,
 				section.replace(/\n\n$/u, "\n\n<!-- Every intended grade remains `UNRECEIPTED` at this boundary. -->\n\n"));
 		}, "C3B active maintenance section retains stale C3Q active prose"],
-		["phase-neutral C3Q corpus ruling removal", "docs/HANDOFF_MODE_C.md", (body) => body.replace(
-			"The closed C3Q repair remains a phase-neutral checker ruling:",
+		["phase-stable C3T corpus ruling removal", "docs/HANDOFF_MODE_C.md", (body) => body.replace(
+			"C3Q's production refusal logic and synthetic C3Q/C3B renderer passed on its sealed tree",
 			"The closed checker repair is omitted:",
 		), "C3B active maintenance section payload mismatch"],
 		["C3B self receipt", "docs/HANDOFF_MODE_C.md", (body) => `${body}\nC3B is sealed and strict-clean.\n`, "C3B self-receipt"],
@@ -7983,6 +8770,7 @@ export async function runC3ReceiptSelfTest() {
 			fixture.authority,
 			fixture.c3rAuthority,
 			fixture.c3qAuthority,
+			fixture.c3tAuthority,
 		), expected);
 	}
 	const root = await mkdtemp(resolve(tmpdir(), "countershape-c3-local-evidence-"));
@@ -8014,7 +8802,7 @@ export async function runC3ReceiptSelfTest() {
 	} finally {
 		await rm(root, { recursive: true, force: true });
 	}
-	console.log(`P07B-C C3 receipt checker self-test passed: ${rejected} declaration, exact-diff, Git-note, lifecycle, block, no-recursion, and local-evidence mutations rejected; receipt rerun byte-stable; ${subsectionDecoyControls} inert raw-heading decoys removed by visible-boundary transition`);
+	console.log(`P07B-C C3 receipt checker self-test passed: ${rejected} declaration, exact-diff, Git-note, lifecycle, block, no-recursion, and local-evidence mutations rejected; absent-to-present and present-to-absent-to-present controlled paths are byte-stable; ${subsectionDecoyControls} inert raw-heading decoys removed by visible-boundary transition`);
 	return rejected;
 }
 
@@ -8308,6 +9096,7 @@ export async function checkPlan(
 	c3ReceiptAuthority,
 	c3rReceiptAuthority,
 	c3qReceiptAuthority,
+	c3tReceiptAuthority,
 ) {
 	const errors = [];
 	const bodies = new Map();
@@ -8555,6 +9344,27 @@ export async function checkPlan(
 			if (!body.includes(snippet)) errors.push(`${path}: missing required C3Q ruling: ${JSON.stringify(snippet)}`);
 		}
 	}
+	for (const [path, snippets] of Object.entries(requiredC3TText)) {
+		let body;
+		try {
+			body = bodies.get(path) ?? await readText(root, path, overrides);
+			bodies.set(path, body);
+		} catch (error) {
+			errors.push(`${path}: unreadable (${error.message})`);
+			continue;
+		}
+		if (path === c3tStatusPath) {
+			try {
+				body = visibleMarkdownLifecycleBody(body);
+			} catch (error) {
+				errors.push(`${path}: C3T visible authority invalid (${error.message})`);
+				continue;
+			}
+		}
+		for (const snippet of snippets) {
+			if (!body.includes(snippet)) errors.push(`${path}: missing required C3T ruling: ${JSON.stringify(snippet)}`);
+		}
+	}
 	try {
 		const manifestBytes = await readBytes(root, c3PredecessorManifestPath, overrides);
 		const manifest = JSON.parse(decodeGitUTF8(manifestBytes, "C3 predecessor declaration"));
@@ -8602,6 +9412,7 @@ export async function checkPlan(
 		["C3", requiredC3Paths, requiredC3Digest],
 		["C3R", requiredC3RPaths, requiredC3RDigest],
 		["C3Q", requiredC3QPaths, requiredC3QDigest],
+		["C3T", requiredC3TPaths, requiredC3TDigest],
 		["C3B", requiredC3BPaths, requiredC3BDigest],
 	]) {
 		const computed = `sha256:${createHash("sha256").update(`${paths.join("\n")}\n`, "utf8").digest("hex")}`;
@@ -8707,6 +9518,13 @@ export async function checkPlan(
 			requiredC3QDeclaration,
 			"docs/VERIFICATION.md",
 			"C3Q active-unit self-receipt maintenance scope declaration",
+			errors,
+		);
+		requireExactlyOnce(
+			verificationBody,
+			requiredC3TDeclaration,
+			"docs/VERIFICATION.md",
+			"C3T receipt-phase self-test maintenance scope declaration",
 			errors,
 		);
 	}
@@ -8964,6 +9782,30 @@ export async function checkPlan(
 			);
 			requireClaimLabelExactlyOnce(c3qStatusBody, c3qClaimLabels[index], c3qStatusPath, "C3Q intended claim map", errors);
 		}
+		rejectReceiptSelfClaims(c3qStatusBody, c3qStatusPath, "C3Q", errors);
+	}
+	const c3tRawStatusBody = bodies.get(c3tStatusPath);
+	let c3tStatusBody;
+	if (c3tRawStatusBody !== undefined) {
+		try { c3tStatusBody = visibleMarkdownLifecycleBody(c3tRawStatusBody); } catch { /* reported above */ }
+	}
+	if (c3tStatusBody !== undefined) {
+		requireExactlyOnce(c3tStatusBody, requiredC3TDeclaration, c3tStatusPath, "C3T source scope", errors);
+		requireExactlyOnce(c3tStatusBody, c3tStatusBoundaryLine, c3tStatusPath, "C3T active boundary", errors);
+		requireExactlyOnce(c3tStatusBody, c3tStatusParentLine, c3tStatusPath, "C3T sealed parent identity", errors);
+		requireExactlyOnce(c3tStatusBody, c3tStatusUnreceiptedLine, c3tStatusPath, "C3T unreceipted state", errors);
+		requireExactlyOnce(c3tStatusBody, `- **Commit subject:** \`${c3tSourceSubject}\``, c3tStatusPath, "C3T commit subject", errors);
+		for (let index = 0; index < c3tClaimLabels.length; index += 1) {
+			requireExactlyOnce(
+				c3tStatusBody,
+				`| \`${c3tClaimLabels[index]}\` | \`${c3tClaimTypes[index]}\` | \`UNRECEIPTED\` |`,
+				c3tStatusPath,
+				"C3T intended claim map",
+				errors,
+			);
+			requireClaimLabelExactlyOnce(c3tStatusBody, c3tClaimLabels[index], c3tStatusPath, "C3T intended claim map", errors);
+		}
+		rejectReceiptSelfClaims(c3tStatusBody, c3tStatusPath, "C3T", errors);
 	}
 
 	try {
@@ -9073,10 +9915,11 @@ export async function checkPlan(
 					c3ReceiptAuthority,
 					c3rReceiptAuthority,
 					c3qReceiptAuthority,
+					c3tReceiptAuthority,
 				);
 			}
 		}
-	const activeSelfReceiptUnit = c3ReceiptPresentForPhase ? "C3B" : "C3Q";
+	const activeSelfReceiptUnit = c3ReceiptPresentForPhase ? "C3B" : "C3T";
 	rejectActiveUnitSelfReceipts(bodies, activeSelfReceiptUnit, errors);
 
 	for (const path of controllingPaths) {
@@ -9256,6 +10099,12 @@ export async function checkPlan(
 		}
 		if (!isDeepStrictEqual(specification.units.C3Q.prefixes, []) || specification.units.C3Q.verification_profile !== "SOURCE_FULL") {
 			errors.push("spec/verification/p07b-c-unit-paths.json: C3Q source profile mismatch");
+		}
+		if (!isDeepStrictEqual(specification.units.C3T.exact, requiredC3TPaths)) {
+			errors.push("spec/verification/p07b-c-unit-paths.json: C3T exact path roster mismatch");
+		}
+		if (!isDeepStrictEqual(specification.units.C3T.prefixes, []) || specification.units.C3T.verification_profile !== "SOURCE_FULL") {
+			errors.push("spec/verification/p07b-c-unit-paths.json: C3T source profile mismatch");
 		}
 		if (!isDeepStrictEqual(specification.units.C3B.exact, requiredC3BPaths)) {
 			errors.push("spec/verification/p07b-c-unit-paths.json: C3B exact path roster mismatch");
@@ -9706,7 +10555,7 @@ async function runSelfTest() {
 	const corpusReport = planAuthorityMarkdownCorpusReport();
 	const corpusReportLines = corpusReport.split("\n");
 	const renderedCorpusPaths = corpusReportLines.slice(1, -2).map((line) => line.startsWith("- ") ? line.slice(2) : undefined);
-	if (corpusReportLines[0] !== `P07B-C plan-authority Markdown corpus: paths=42 digest=${planAuthorityMarkdownDigest}` ||
+	if (corpusReportLines[0] !== `P07B-C plan-authority Markdown corpus: paths=43 digest=${planAuthorityMarkdownDigest}` ||
 		corpusReportLines.length !== planAuthorityMarkdownPaths.length + 3 ||
 		!isDeepStrictEqual(renderedCorpusPaths, planAuthorityMarkdownPaths) ||
 		corpusReportLines.at(-2) !== "scope: positive-receipt-form refusal only; not a general Markdown or security audit" ||
@@ -9845,6 +10694,7 @@ async function runSelfTest() {
 	const currentC3SStatus = await readText(repositoryRoot, c3sStatusPath, new Map());
 	const currentC3RStatus = await readText(repositoryRoot, c3rStatusPath, new Map());
 	const currentC3QStatus = await readText(repositoryRoot, c3qStatusPath, new Map());
+	const currentC3TStatus = await readText(repositoryRoot, c3tStatusPath, new Map());
 	const syntheticHandoff = `${currentHandoff.replace(
 		/\n?<!-- P07B-C-C0A-RECEIPTS:START -->[\s\S]*?<!-- P07B-C-C0A-RECEIPTS:END -->\n?/u,
 		"\n",
@@ -10263,6 +11113,56 @@ async function runSelfTest() {
 			name: "C3Q status raw-HTML authority", path: c3qStatusPath,
 			value: `<section>\n${currentC3QStatus}</section>\n`,
 			expect: "C3Q visible authority invalid",
+		},
+		{
+			name: "C3T active boundary drift", path: c3tStatusPath,
+			value: currentC3TStatus.replace(c3tStatusBoundaryLine, "- **Boundary:** sealed."),
+			expect: "C3T active boundary",
+		},
+		{
+			name: "C3T predecessor identity removal", path: c3tStatusPath,
+			value: currentC3TStatus.replace(sealedC3QIdentity.commit, "0".repeat(40)),
+			expect: "C3T sealed parent identity",
+		},
+		{
+			name: "C3T predecessor note identity removal", path: c3tStatusPath,
+			value: currentC3TStatus.replace(sealedC3QIdentity.noteBlob, "0".repeat(40)),
+			expect: "C3T sealed parent identity",
+		},
+		{
+			name: "C3T subject drift", path: c3tStatusPath,
+			value: currentC3TStatus.replace(c3tSourceSubject, `${c3tSourceSubject} altered`),
+			expect: "C3T commit subject",
+		},
+		{
+			name: "C3T unreceipted state drift", path: c3tStatusPath,
+			value: currentC3TStatus.replace(c3tStatusUnreceiptedLine, "C3T is partially receipted."),
+			expect: "C3T unreceipted state",
+		},
+		{
+			name: "C3T intended claim label drift", path: c3tStatusPath,
+			value: currentC3TStatus.replace(c3tClaimLabels[0], `${c3tClaimLabels[0]} altered`),
+			expect: "C3T intended claim map",
+		},
+		{
+			name: "C3T self receipt", path: c3tStatusPath,
+			value: `${currentC3TStatus}\nC3T is sealed and strict-clean.\n`,
+			expect: "C3T self-receipt",
+		},
+		{
+			name: "C3T status HTML-commented authority", path: c3tStatusPath,
+			value: `<!--\n${currentC3TStatus}-->\n`,
+			expect: "missing required C3T ruling",
+		},
+		{
+			name: "C3T status fenced authority", path: c3tStatusPath,
+			value: `\`\`\`markdown\n${currentC3TStatus}\`\`\`\n`,
+			expect: "missing required C3T ruling",
+		},
+		{
+			name: "C3T status raw-HTML authority", path: c3tStatusPath,
+			value: `<section>\n${currentC3TStatus}</section>\n`,
+			expect: "C3T visible authority invalid",
 		},
 		...Object.entries(c3vFrozenVerifierDigests).map(([path, digest]) => ({
 			name: `C3V historical verifier digest removal: ${path}`,
@@ -11242,13 +12142,13 @@ async function runSelfTest() {
 				expect: "invalid",
 			},
 			{
-				name: "C3Q C3B unit order drift", path: configPath,
+				name: "C3Q C3T unit order drift", path: configPath,
 				value: (() => {
 					const candidate = structuredClone(currentConfiguration);
 					const entries = Object.entries(candidate.units);
 					const c3qIndex = entries.findIndex(([unit]) => unit === "C3Q");
-					const c3bIndex = entries.findIndex(([unit]) => unit === "C3B");
-					[entries[c3qIndex], entries[c3bIndex]] = [entries[c3bIndex], entries[c3qIndex]];
+					const c3tIndex = entries.findIndex(([unit]) => unit === "C3T");
+					[entries[c3qIndex], entries[c3tIndex]] = [entries[c3tIndex], entries[c3qIndex]];
 					candidate.units = Object.fromEntries(entries);
 					return `${JSON.stringify(candidate, null, 2)}\n`;
 				})(),
@@ -11278,6 +12178,56 @@ async function runSelfTest() {
 					const candidate = structuredClone(currentConfiguration);
 					candidate.units.C3Q.verification_profile = "RECEIPT_RECONCILIATION";
 					candidate.units.C3Q.receipt_claims = structuredClone(requiredC3BReceiptClaims);
+					return `${JSON.stringify(candidate, null, 2)}\n`;
+				})(),
+				expect: "invalid",
+			},
+			{
+				name: "C3T unit removal", path: configPath,
+				value: (() => {
+					const candidate = structuredClone(currentConfiguration);
+					delete candidate.units.C3T;
+					return `${JSON.stringify(candidate, null, 2)}\n`;
+				})(),
+				expect: "invalid",
+			},
+			{
+				name: "C3T C3B unit order drift", path: configPath,
+				value: (() => {
+					const candidate = structuredClone(currentConfiguration);
+					const entries = Object.entries(candidate.units);
+					const c3tIndex = entries.findIndex(([unit]) => unit === "C3T");
+					const c3bIndex = entries.findIndex(([unit]) => unit === "C3B");
+					[entries[c3tIndex], entries[c3bIndex]] = [entries[c3bIndex], entries[c3tIndex]];
+					candidate.units = Object.fromEntries(entries);
+					return `${JSON.stringify(candidate, null, 2)}\n`;
+				})(),
+				expect: "invalid",
+			},
+			{
+				name: "C3T exact path removal", path: configPath,
+				value: (() => {
+					const candidate = structuredClone(currentConfiguration);
+					candidate.units.C3T.exact = candidate.units.C3T.exact.filter((path) => path !== c3tStatusPath);
+					return `${JSON.stringify(candidate, null, 2)}\n`;
+				})(),
+				expect: "C3T: frozen exact unit contract",
+			},
+			{
+				name: "C3T prefix introduction", path: configPath,
+				value: (() => {
+					const candidate = structuredClone(currentConfiguration);
+					candidate.units.C3T.prefixes = ["tools/"];
+					return `${JSON.stringify(candidate, null, 2)}\n`;
+				})(),
+				expect: "invalid",
+			},
+			{
+				name: "C3T receipt profile substitution", path: configPath,
+				value: (() => {
+					const candidate = structuredClone(currentConfiguration);
+					candidate.units.C3T.verification_profile = "RECEIPT_RECONCILIATION";
+					candidate.units.C3T.receipt_claims = structuredClone(requiredC3BReceiptClaims);
 					return `${JSON.stringify(candidate, null, 2)}\n`;
 				})(),
 				expect: "invalid",
@@ -11654,7 +12604,7 @@ async function runSelfTest() {
 		}
 	}
 
-	console.log(`P07B-C evolved plan checker self-test passed: ${cases.length + localEvidenceMutations + receiptModePhaseMutations + c2ReceiptMutations + c2SealedSourcePhaseMutations + c2LocalEvidenceMutations + c3pReceiptMutations + c3ReceiptMutations + activeSelfReceiptMatrix.rejected} authority, structure, C1/C2/C3P/C3 local-evidence, phase-isolation, semantic-projection, receipt, and allowlist mutations rejected; active-unit matrix phases=${activeSelfReceiptMatrix.phases} active-phases=C3Q,C3B paths=${activeSelfReceiptMatrix.paths} forms=${activeSelfReceiptMatrix.forms} rejected=${activeSelfReceiptMatrix.rejected} positive-controls=${activeSelfReceiptMatrix.controls} supplemental-aliases=${activeSelfReceiptMatrix.supplementalAliases} supplemental-controls=${activeSelfReceiptMatrix.supplementalControls}; result=positive-form refusal only, not a general Markdown or security audit`);
+	console.log(`P07B-C evolved plan checker self-test passed: ${cases.length + localEvidenceMutations + receiptModePhaseMutations + c2ReceiptMutations + c2SealedSourcePhaseMutations + c2LocalEvidenceMutations + c3pReceiptMutations + c3ReceiptMutations + activeSelfReceiptMatrix.rejected} authority, structure, C1/C2/C3P/C3 local-evidence, phase-isolation, semantic-projection, receipt, and allowlist mutations rejected; active-unit matrix phases=${activeSelfReceiptMatrix.phases} active-phases=C3T,C3B paths=${activeSelfReceiptMatrix.paths} forms=${activeSelfReceiptMatrix.forms} rejected=${activeSelfReceiptMatrix.rejected} positive-controls=${activeSelfReceiptMatrix.controls} supplemental-aliases=${activeSelfReceiptMatrix.supplementalAliases} supplemental-controls=${activeSelfReceiptMatrix.supplementalControls}; result=positive-form refusal only, not a general Markdown or security audit`);
 }
 
 async function verifyC2MaintenancePresealLedger() {
@@ -12185,6 +13135,21 @@ export async function verifyC3QPresealLedger() {
 	});
 }
 
+export async function verifyC3TPresealLedger() {
+	await requirePrivateFinalRunDirectories("C3T", c3tFinalRunDirectories);
+	await verifyC3TSealedC3QNote();
+	await verifyLivePresealLedger({
+		phase: "C3T",
+		expectedArgv: c3tExpectedClaimArgv,
+		claims: c3tClaimLabels.map((label, index) => ({ label, type: c3tClaimTypes[index] })),
+		receiptStates: [
+			{ path: c3pReceiptDeclarationPath, present: true },
+			{ path: c3ReceiptDeclarationPath, present: false },
+		],
+		hermeticArgvPrefix: c3tHermeticArgvPrefix,
+	});
+}
+
 export async function verifyC3BPresealLedger() {
 	await requirePrivateFinalRunDirectories("C3B", c3bFinalRunDirectories);
 	const c3rAuthority = await loadC3RAuthorityFromGit(repositoryRoot);
@@ -12193,9 +13158,14 @@ export async function verifyC3BPresealLedger() {
 		throw new Error(`P07B-C C3B sealed-C3R predecessor mismatch: ${c3rErrors.join(", ")}`);
 	}
 	const c3qAuthority = await loadC3QAuthorityFromGit(repositoryRoot, c3rAuthority.commit);
-	const c3qErrors = validateC3BPredecessorAuthority(c3qAuthority, c3rAuthority.commit);
+	const c3qErrors = validateSealedC3QAuthority(c3qAuthority);
 	if (c3qErrors.length > 0) {
 		throw new Error(`P07B-C C3B sealed-C3Q predecessor mismatch: ${c3qErrors.join(", ")}`);
+	}
+	const c3tAuthority = await loadC3TAuthorityFromGit(repositoryRoot, c3qAuthority.commit);
+	const c3tErrors = validateC3BPredecessorAuthority(c3tAuthority, c3qAuthority.commit);
+	if (c3tErrors.length > 0) {
+		throw new Error(`P07B-C C3B sealed-C3T predecessor mismatch: ${c3tErrors.join(", ")}`);
 	}
 	await verifyLivePresealLedger({
 		phase: "C3B",
@@ -12283,7 +13253,7 @@ export async function verifyC3BCredentialScan() {
 
 async function main() {
 	const mode = process.argv[2];
-	const usage = "usage: check-p07b-c-plan.mjs [--self-test|--print-plan-authority-corpus|--verify-sealed-c1-local-evidence|--verify-c1-local-evidence|--verify-c2-local-evidence|--verify-c2m-preseal-ledger|--verify-c2-preseal-ledger|--verify-c3v-preseal-ledger|--verify-c3m-preseal-ledger|--verify-c3a-preseal-ledger|--verify-c3l-preseal-ledger|--verify-c3f-preseal-ledger|--verify-c3s-preseal-ledger|--verify-c3-preseal-ledger|--verify-c3r-sealed-c3-note|--verify-c3r-preseal-ledger|--verify-c3q-sealed-c3r-note|--verify-c3q-preseal-ledger|--verify-c3-local-evidence|--verify-c3b-staged|--verify-c3b-credential-scan|--verify-c3b-preseal-ledger]";
+	const usage = "usage: check-p07b-c-plan.mjs [--self-test|--print-plan-authority-corpus|--verify-sealed-c1-local-evidence|--verify-c1-local-evidence|--verify-c2-local-evidence|--verify-c2m-preseal-ledger|--verify-c2-preseal-ledger|--verify-c3v-preseal-ledger|--verify-c3m-preseal-ledger|--verify-c3a-preseal-ledger|--verify-c3l-preseal-ledger|--verify-c3f-preseal-ledger|--verify-c3s-preseal-ledger|--verify-c3-preseal-ledger|--verify-c3r-sealed-c3-note|--verify-c3r-preseal-ledger|--verify-c3q-sealed-c3r-note|--verify-c3q-preseal-ledger|--verify-c3t-sealed-c3q-note|--verify-c3t-preseal-ledger|--verify-c3-local-evidence|--verify-c3b-staged|--verify-c3b-credential-scan|--verify-c3b-preseal-ledger]";
 	if (mode === "--self-test") {
 		if (process.argv.length !== 3) throw new Error(usage);
 		await runSelfTest();
@@ -12407,6 +13377,16 @@ async function main() {
 		await verifyC3QPresealLedger();
 		return;
 	}
+	if (mode === "--verify-c3t-sealed-c3q-note") {
+		if (process.argv.length !== 3) throw new Error(usage);
+		await verifyC3TSealedC3QNote();
+		return;
+	}
+	if (mode === "--verify-c3t-preseal-ledger") {
+		if (process.argv.length !== 3) throw new Error(usage);
+		await verifyC3TPresealLedger();
+		return;
+	}
 	if (mode === "--verify-c3-local-evidence") {
 		if (process.argv.length !== 3) throw new Error(usage);
 		await verifyC3LocalEvidence();
@@ -12443,8 +13423,8 @@ async function main() {
 		else throw error;
 	}
 	console.log(c3ReceiptPresent
-		? "P07B-C C3B plan check passed: sealed C3 source evidence, exact sealed C3R/C3Q checker ancestry, and the active receipt-only descendant are coherent; this gate does not re-run or upgrade any C3 source claim"
-		: "P07B-C C3Q plan check passed: declared sealed-C3R identity, corpus-wide active-unit self-receipt refusal, pending C3 receipt grades, and the frozen C3B receipt boundary are coherent; live C3R Git-note authority is verified only by the dedicated compatibility and chain gates, and this gate confers no process-start or C4 authority");
+		? "P07B-C C3B plan check passed: sealed C3 source evidence, exact sealed C3R/C3Q/C3T checker ancestry, and the active receipt-only descendant are coherent; this gate does not re-run or upgrade any C3 source claim"
+		: "P07B-C C3T plan check passed: declared sealed-C3Q identity, validated phase-stable receipt fixture, corpus-wide active-unit self-receipt refusal, pending C3 receipt grades, and the frozen C3B receipt boundary are coherent; live sealed-note authority is verified only by the dedicated compatibility and chain gates, and this gate confers no process-start or C4 authority");
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
