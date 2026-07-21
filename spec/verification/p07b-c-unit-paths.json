@@ -1,5 +1,5 @@
 {
-  "schema_version": "countershape/p07b-c-unit-paths/v15",
+  "schema_version": "countershape/p07b-c-unit-paths/v16",
   "units": {
     "C0A": {
       "exact": [
@@ -326,7 +326,13 @@
         "tools/check-p07b-c-plan.mjs",
         "tools/check-p07b-c-unit-scope.mjs"
       ],
+      "parent": "C3V",
       "prefixes": [],
+      "receipt_states": {
+        "C3P": "ABSENT",
+        "C3": "ABSENT",
+        "C6A": "ABSENT"
+      },
       "verification_profile": "SOURCE_FULL"
     },
     "C3PB": {
@@ -335,6 +341,7 @@
         "docs/status/P07B-C-C3P-RUNTIME-EPOCH.md",
         "spec/verification/p07b-c-c3p-receipt.json"
       ],
+      "parent": "C3M",
       "prefixes": [],
       "receipt_claims": [
         {
@@ -366,6 +373,11 @@
           "type": "command-succeeded"
         }
       ],
+      "receipt_states": {
+        "C3P": "PRESENT",
+        "C3": "ABSENT",
+        "C6A": "ABSENT"
+      },
       "verification_profile": "RECEIPT_RECONCILIATION"
     },
     "C3A": {
@@ -384,7 +396,13 @@
         "tools/check-p07b-c-plan.mjs",
         "tools/check-p07b-c-unit-scope.mjs"
       ],
+      "parent": "C3PB",
       "prefixes": [],
+      "receipt_states": {
+        "C3P": "PRESENT",
+        "C3": "ABSENT",
+        "C6A": "ABSENT"
+      },
       "verification_profile": "SOURCE_FULL"
     },
     "C3L": {
@@ -399,7 +417,13 @@
         "tools/check-u6-architecture-selftest.mjs",
         "tools/check-u6-architecture.mjs"
       ],
+      "parent": "C3A",
       "prefixes": [],
+      "receipt_states": {
+        "C3P": "PRESENT",
+        "C3": "ABSENT",
+        "C6A": "ABSENT"
+      },
       "verification_profile": "SOURCE_FULL"
     },
     "C3F": {
@@ -415,7 +439,13 @@
         "tools/check-p07b-c-plan.mjs",
         "tools/check-p07b-c-unit-scope.mjs"
       ],
+      "parent": "C3L",
       "prefixes": [],
+      "receipt_states": {
+        "C3P": "PRESENT",
+        "C3": "ABSENT",
+        "C6A": "ABSENT"
+      },
       "verification_profile": "SOURCE_FULL"
     },
     "C3S": {
@@ -429,7 +459,13 @@
         "tools/check-p07b-c-unit-scope.mjs",
         "tools/check-u6-architecture-selftest.mjs"
       ],
+      "parent": "C3F",
       "prefixes": [],
+      "receipt_states": {
+        "C3P": "PRESENT",
+        "C3": "ABSENT",
+        "C6A": "ABSENT"
+      },
       "verification_profile": "SOURCE_FULL"
     },
     "C3": {
@@ -475,7 +511,13 @@
         "tools/verify-current-selftest.mjs",
         "tools/verify-current.mjs"
       ],
+      "parent": "C3S",
       "prefixes": [],
+      "receipt_states": {
+        "C3P": "PRESENT",
+        "C3": "ABSENT",
+        "C6A": "ABSENT"
+      },
       "verification_profile": "SOURCE_FULL"
     },
     "C3R": {
@@ -488,7 +530,13 @@
         "tools/check-p07b-c-plan.mjs",
         "tools/check-p07b-c-unit-scope.mjs"
       ],
+      "parent": "C3",
       "prefixes": [],
+      "receipt_states": {
+        "C3P": "PRESENT",
+        "C3": "ABSENT",
+        "C6A": "ABSENT"
+      },
       "verification_profile": "SOURCE_FULL"
     },
     "C3Q": {
@@ -501,7 +549,13 @@
         "tools/check-p07b-c-plan.mjs",
         "tools/check-p07b-c-unit-scope.mjs"
       ],
+      "parent": "C3R",
       "prefixes": [],
+      "receipt_states": {
+        "C3P": "PRESENT",
+        "C3": "ABSENT",
+        "C6A": "ABSENT"
+      },
       "verification_profile": "SOURCE_FULL"
     },
     "C3T": {
@@ -514,7 +568,13 @@
         "tools/check-p07b-c-plan.mjs",
         "tools/check-p07b-c-unit-scope.mjs"
       ],
+      "parent": "C3Q",
       "prefixes": [],
+      "receipt_states": {
+        "C3P": "PRESENT",
+        "C3": "ABSENT",
+        "C6A": "ABSENT"
+      },
       "verification_profile": "SOURCE_FULL"
     },
     "C3U": {
@@ -527,7 +587,13 @@
         "tools/check-p07b-c-plan.mjs",
         "tools/check-p07b-c-unit-scope.mjs"
       ],
+      "parent": "C3T",
       "prefixes": [],
+      "receipt_states": {
+        "C3P": "PRESENT",
+        "C3": "ABSENT",
+        "C6A": "ABSENT"
+      },
       "verification_profile": "SOURCE_FULL"
     },
     "C3B": {
@@ -536,6 +602,7 @@
         "docs/status/P07B-C-C3-TARGET.md",
         "spec/verification/p07b-c-c3-receipt.json"
       ],
+      "parent": "C3U",
       "prefixes": [],
       "receipt_claims": [
         {
@@ -567,7 +634,31 @@
           "type": "command-succeeded"
         }
       ],
+      "receipt_states": {
+        "C3P": "PRESENT",
+        "C3": "PRESENT",
+        "C6A": "ABSENT"
+      },
       "verification_profile": "RECEIPT_RECONCILIATION"
+    },
+    "C3D": {
+      "exact": [
+        "docs/HANDOFF_MODE_C.md",
+        "docs/PROMPT_PACK.md",
+        "docs/VERIFICATION.md",
+        "docs/status/P07B-C-C3D-RECEIPT-PHASE-CONSOLIDATION.md",
+        "spec/verification/p07b-c-unit-paths.json",
+        "tools/check-p07b-c-plan.mjs",
+        "tools/check-p07b-c-unit-scope.mjs"
+      ],
+      "parent": "C3B",
+      "prefixes": [],
+      "receipt_states": {
+        "C3P": "PRESENT",
+        "C3": "PRESENT",
+        "C6A": "ABSENT"
+      },
+      "verification_profile": "SOURCE_FULL"
     },
     "C4": {
       "exact": [
@@ -584,17 +675,22 @@
         "internal/store/nonhead_contract_test.go",
         "internal/store/private_contract_run.go",
         "internal/store/private_contract_run_test.go",
-        "spec/verification/p07b-c-unit-paths.json",
         "tools/check-p07b-c-architecture-selftest.mjs",
         "tools/check-p07b-c-architecture.mjs",
         "tools/verify-current-selftest.mjs",
         "tools/verify-current.mjs"
       ],
+      "parent": "C3D",
       "prefixes": [
         "internal/contractexec/runner/",
         "internal/processmechanics/",
         "testkit/contractexec/cli/"
       ],
+      "receipt_states": {
+        "C3P": "PRESENT",
+        "C3": "PRESENT",
+        "C6A": "ABSENT"
+      },
       "verification_profile": "SOURCE_FULL"
     },
     "C5": {
@@ -606,17 +702,22 @@
         "docs/STATE_MACHINES.md",
         "docs/THREAT_MODEL.md",
         "docs/status/P07B-C-C5-HTTP-SCOPE.md",
-        "spec/verification/p07b-c-unit-paths.json",
         "tools/check-p07b-c-architecture-selftest.mjs",
         "tools/check-p07b-c-architecture.mjs",
         "tools/verify-current-selftest.mjs",
         "tools/verify-current.mjs"
       ],
+      "parent": "C4",
       "prefixes": [
         "internal/contractexec/http/",
         "internal/contractexec/scope/",
         "testkit/contractexec/http/"
       ],
+      "receipt_states": {
+        "C3P": "PRESENT",
+        "C3": "PRESENT",
+        "C6A": "ABSENT"
+      },
       "verification_profile": "SOURCE_FULL"
     },
     "C6A": {
@@ -630,29 +731,62 @@
         "docs/THREAT_MODEL.md",
         "docs/status/DIDRUN_BUGS.md",
         "docs/status/P07B-C-C6-EVIDENCE.md",
-        "spec/verification/p07b-c-unit-paths.json",
         "tools/check-p07b-c-architecture-selftest.mjs",
         "tools/check-p07b-c-architecture.mjs",
         "tools/verify-current-selftest.mjs",
         "tools/verify-current.mjs"
       ],
+      "parent": "C5",
       "prefixes": [
         "docs/captures/p07b-c/",
         "testkit/contractexec/",
         "tools/p07b-c/"
       ],
+      "receipt_states": {
+        "C3P": "PRESENT",
+        "C3": "PRESENT",
+        "C6A": "ABSENT"
+      },
+      "verification_profile": "SOURCE_FULL"
+    },
+    "C6M": {
+      "exact": [
+        "docs/HANDOFF_MODE_C.md",
+        "docs/PROMPT_PACK.md",
+        "docs/VERIFICATION.md",
+        "docs/status/P07B-C-C6M-RECEIPT-ADAPTER-MAINTENANCE.md",
+        "spec/verification/p07b-c-c6a-source-authority.json"
+      ],
+      "parent": "C6A",
+      "prefixes": [],
+      "receipt_states": {
+        "C3P": "PRESENT",
+        "C3": "PRESENT",
+        "C6A": "ABSENT"
+      },
       "verification_profile": "SOURCE_FULL"
     },
     "C6B": {
       "exact": [
         "docs/HANDOFF_MODE_C.md",
+        "docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md",
         "docs/status/DIDRUN_BUGS.md",
-        "docs/status/P07B-C-C6-EVIDENCE.md"
+        "docs/status/P07B-C-C6-EVIDENCE.md",
+        "spec/verification/p07b-c-c6a-receipt.json"
       ],
+      "parent": "C6M",
       "prefixes": [],
       "receipt_claims": [
         {
-          "label": "P07B-C C6B evidence receipt reconciliation",
+          "label": "P07B-C C6B candidate phase plan coherence",
+          "type": "tests-pass"
+        },
+        {
+          "label": "P07B-C C6B independent sealed-C6A source-authority conformance",
+          "type": "tests-pass"
+        },
+        {
+          "label": "P07B-C C6B source receipt declaration reconciliation",
           "type": "tests-pass"
         },
         {
@@ -660,7 +794,7 @@
           "type": "tests-pass"
         },
         {
-          "label": "P07B-C C6B declared local source-evidence snapshot match",
+          "label": "P07B-C C6B declared local source-evidence and private-availability snapshot match",
           "type": "tests-pass"
         },
         {
@@ -668,7 +802,7 @@
           "type": "command-succeeded"
         },
         {
-          "label": "P07B-C C6B exact three-path staged scope and diff integrity",
+          "label": "P07B-C C6B exact five-path staged scope and diff integrity",
           "type": "command-succeeded"
         },
         {
@@ -680,6 +814,11 @@
           "type": "command-succeeded"
         }
       ],
+      "receipt_states": {
+        "C3P": "PRESENT",
+        "C3": "PRESENT",
+        "C6A": "PRESENT"
+      },
       "verification_profile": "RECEIPT_RECONCILIATION"
     }
   }

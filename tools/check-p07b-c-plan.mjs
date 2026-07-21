@@ -2,7 +2,7 @@
 
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { constants as fsConstants } from "node:fs";
+import { constants as fsConstants, readFileSync } from "node:fs";
 import { lstat, mkdir, mkdtemp, open, opendir, readFile, readdir, realpath, rm, rmdir, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
@@ -11,12 +11,16 @@ import { isDeepStrictEqual } from "node:util";
 import { deflateSync, inflateSync } from "node:zlib";
 
 import {
+	activeReceiptPhaseBoundary,
 	credentialPatternFindings,
 	exactPathsMatch,
 	gitOutput,
 	stagedBlobEntries,
 	stagedIndexEntries,
 	stagedPaths,
+	receiptPhaseRows,
+	runIndependentCandidatePhaseGate,
+	validateExactIndexModes,
 	validateReceiptIndexModes,
 	validateSpecification,
 } from "./check-p07b-c-unit-scope.mjs";
@@ -24,6 +28,7 @@ import { qualificationCaseIDs, qualificationMatrixDigest } from "./verify-go-tes
 
 export const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const ABSENT_FIXTURE_PATH = Symbol("ABSENT_FIXTURE_PATH");
+const STRICT_INDEX_SNAPSHOT = Symbol("STRICT_INDEX_SNAPSHOT");
 
 const c1PlanningPaths = Object.freeze({
 	targetSchema: "spec/schema/v1/contract-execution-target.schema.json",
@@ -86,10 +91,37 @@ const c3rStatusPath = "docs/status/P07B-C-C3R-NOTE-PREVIEW-MAINTENANCE.md";
 const c3qStatusPath = "docs/status/P07B-C-C3Q-SELF-RECEIPT-MAINTENANCE.md";
 const c3tStatusPath = "docs/status/P07B-C-C3T-PHASE-SELFTEST-MAINTENANCE.md";
 const c3uStatusPath = "docs/status/P07B-C-C3U-CROSS-PHASE-RECEIPT-FIXTURE-MAINTENANCE.md";
+const c3dStatusPath = "docs/status/P07B-C-C3D-RECEIPT-PHASE-CONSOLIDATION.md";
+const c6aSourceAuthorityPath = "spec/verification/p07b-c-c6a-source-authority.json";
+const c6aReceiptDeclarationPath = "spec/verification/p07b-c-c6a-receipt.json";
+const c6aEvidenceSummaryPath = "docs/captures/p07b-c/c6a-evidence-summary.json";
+const c6EvidencePath = "docs/status/P07B-C-C6-EVIDENCE.md";
+const c6aReceiptBlockStart = "<!-- P07B-C-C6A-SOURCE-RECEIPTS:START -->";
+const c6aReceiptBlockEnd = "<!-- P07B-C-C6A-SOURCE-RECEIPTS:END -->";
+const c6aSourceAuthoritySchema = "countershape/p07b-c-c6a-source-authority/v1";
+const c6aReceiptDeclarationSchema = "countershape/p07b-c-c6a-receipt/v1";
+const c6aEvidenceSummarySchema = "countershape/p07b-c-c6a-evidence-summary/v1";
+const c6aSourceSubject = "test: close P07B-C cumulative evidence";
+const c6mSourceSubject = "fix: bind sealed C6A source authority";
+const c6bReceiptSubject = "docs: receipt P07B-C contract execution";
 const c3pReceiptBlockStart = "<!-- P07B-C-C3P-SOURCE-RECEIPTS:START -->";
 const c3pReceiptBlockEnd = "<!-- P07B-C-C3P-SOURCE-RECEIPTS:END -->";
 const c3ReceiptBlockStart = "<!-- P07B-C-C3-SOURCE-RECEIPTS:START -->";
 const c3ReceiptBlockEnd = "<!-- P07B-C-C3-SOURCE-RECEIPTS:END -->";
+const receiptPhaseCapsuleStart = "<!-- P07B-C-RECEIPT-PHASE:START -->";
+const receiptPhaseCapsuleEnd = "<!-- P07B-C-RECEIPT-PHASE:END -->";
+const receiptPhaseSpecification = validateSpecification(JSON.parse(readFileSync(
+	resolve(repositoryRoot, "spec/verification/p07b-c-unit-paths.json"),
+	"utf8",
+)));
+const p07bCReceiptPhaseRows = receiptPhaseRows(receiptPhaseSpecification);
+const p07bCReceiptPhaseRowsByBoundary = Object.freeze(Object.fromEntries(
+	p07bCReceiptPhaseRows.map((row) => [row.boundary, row]),
+));
+const p07bCActiveReceiptPhaseBoundary = activeReceiptPhaseBoundary(
+	receiptPhaseSpecification,
+	classifyReceiptPhase(readFileSync(resolve(repositoryRoot, "docs/HANDOFF_MODE_C.md"), "utf8")).boundary,
+);
 const c3pbActiveHandoffState = "C3PB receipt reconciliation is the active exact three-path `RECEIPT_RECONCILIATION` unit and remains `UNRECEIPTED`; C3M is treated as a closed interposed prerequisite in this receipt-present phase. C3 stays blocked until C3PB independently closes.";
 const c3pReceiptNoRecursionBoundary = "This receipt binds only the already-existing C3P source commit. The independently sealed C3PB descendant is outside this C3P source grade map, and the active C3A unit cannot grade itself here.";
 const c1DidrunBugsPath = "docs/status/DIDRUN_BUGS.md";
@@ -211,6 +243,26 @@ const sealedC3TIdentity = Object.freeze({
 	noteType: "blob",
 	noteBlob: "d9e371310b360b183d890ed401cb36bd877becda",
 	noteBodySHA256: "05914bf85ce1d3bc48f5debf902babb526faf2500af318c35f08ffdf071ff735",
+});
+const sealedC3UIdentity = Object.freeze({
+	commit: "6e3d837425248b9d9d414d801810dec37cb9ca0b",
+	tree: "b77870b62b3aa29e85a365cef0af49184d2319a6",
+	parent: sealedC3TIdentity.commit,
+	subject: "fix: preserve terminal C3 receipts in legacy fixtures",
+	noteRef: "refs/notes/didrun",
+	noteType: "blob",
+	noteBlob: "b41e4bbe116264c53e5ceb7943414f78e5c893d2",
+	noteBodySHA256: "902be6f89d6adaaf5ecb565e206e887260749d398b24c5298e82e4ce146be4e3",
+});
+const sealedC3BIdentity = Object.freeze({
+	commit: "3b0b56d2bdd36531caf31e3dbad555aca061616d",
+	tree: "15edcc92c5d1ed79885cf9caaa85b4be36918433",
+	parent: sealedC3UIdentity.commit,
+	subject: "docs: reconcile C3 source receipts",
+	noteRef: "refs/notes/didrun",
+	noteType: "blob",
+	noteBlob: "e447175c54e8fa864f540f09f8bf614962cd8e07",
+	noteBodySHA256: "7602ba5baa1e23fc1d309ea4d50c23b843dd87d6f05efe732e8cf656358b2d4b",
 });
 const c0ClaimLabels = Object.freeze([
 	"P07B C0 authority plan coherence",
@@ -489,7 +541,7 @@ const requiredText = Object.freeze({
 		"`RECEIPT_RECONCILIATION` is admitted only for an exact empty-prefix roster",
 	],
 	"spec/verification/p07b-c-unit-paths.json": [
-		"countershape/p07b-c-unit-paths/v15",
+		"countershape/p07b-c-unit-paths/v16",
 		"\"C0A\"",
 		"\"C1M\"",
 		"\"C1V\"",
@@ -876,7 +928,7 @@ const requiredC1EvidenceMaintenanceText = Object.freeze({
 			"later independently sealed, delimited handoff/receipt descendant",
 	],
 		"spec/verification/p07b-c-unit-paths.json": [
-			"countershape/p07b-c-unit-paths/v15",
+			"countershape/p07b-c-unit-paths/v16",
 		"\"C1E\"",
 	],
 		"tools/check-p07b-c-plan.mjs": [
@@ -1350,6 +1402,8 @@ const c3qActiveHandoffState = `C3Q self-receipt checker maintenance is the activ
 const c3tActiveHandoffState = `C3T phase-transition self-test maintenance is the active exact seven-path \`SOURCE_FULL\` unit and remains \`UNRECEIPTED\`; sealed C3Q commit \`${sealedC3QIdentity.commit}\`, tree \`${sealedC3QIdentity.tree}\`, is the closed checker prerequisite. C3B stays blocked until C3T independently closes.`;
 const c3uActiveHandoffState = `C3U cross-phase receipt-fixture maintenance is the active exact seven-path \`SOURCE_FULL\` unit and remains \`UNRECEIPTED\`; sealed C3T commit \`${sealedC3TIdentity.commit}\`, tree \`${sealedC3TIdentity.tree}\`, is the closed checker prerequisite. C3B stays blocked until C3U independently closes.`;
 const c3bActiveHandoffState = (receipt) => `C3B receipt reconciliation is the active exact three-path \`RECEIPT_RECONCILIATION\` unit and remains \`UNRECEIPTED\`; sealed C3 source commit \`${receipt.source_commit}\`, tree \`${receipt.source_tree}\`, is the closed source boundary, and sealed C3U is the immediate checker prerequisite. C4 stays blocked until C3B independently closes.`;
+// Frozen pre-capsule regression adapter. Forward phases are rows in
+// p07bCReceiptPhaseRows; this historical renderer must not gain C3D/C4/C5 fields.
 const c3pbHandoffTransitions = Object.freeze([
 	Object.freeze({
 		name: "active state",
@@ -1712,6 +1766,21 @@ function c3bActiveMaintenanceSection(receipt, c3rAuthority, c3qAuthority, c3tAut
 		"",
 		"",
 	].join("\n");
+}
+
+function validateFrozenC3BMaintenanceSection(
+	body, receipt, c3rAuthority, c3qAuthority, c3tAuthority, c3uAuthority,
+) {
+	const errors = [];
+	const expected = c3bActiveMaintenanceSection(
+		receipt, c3rAuthority, c3qAuthority, c3tAuthority, c3uAuthority,
+	);
+	if (body.includes("Its planned nine-claim final ledger remains pending.") ||
+		body.includes("Every intended grade remains `UNRECEIPTED` at this boundary.")) {
+		errors.push("C3B frozen active maintenance section retains stale C3Q active prose");
+	}
+	if (body !== expected) errors.push("C3B frozen active maintenance section payload mismatch");
+	return errors;
 }
 
 const c3pbMetadataLineContracts = Object.freeze({
@@ -2369,6 +2438,149 @@ const c3bFinalRunDirectories = Object.freeze([
 	...["home", "tmp", "gotmp", "gocache", "gopath", "gomodcache"]
 		.map((name) => resolve(c3bFinalRunRoot, name)),
 ]);
+const c3dClaimLabels = Object.freeze([
+	"P07B-C C3D data-driven receipt-phase plan coherence",
+	"P07B-C C3D independent candidate transition authority",
+	"P07B-C C3D generated fixture and fixed-regression defensive self-test",
+	"P07B-C C3D sealed-C3B Git-note and ancestry compatibility",
+	"P07B-C C3D unit-scope defensive self-test",
+	"P07B-C C3D cumulative verifier self-test",
+	"P07B-C C3D cumulative verification",
+	"P07B-C C3D exact seven-path staged scope and diff integrity",
+	"P07B-C C3D scoped staged credential-pattern scan",
+	"P07B-C C3D sealed-C3B predecessor and preceding didrun chain integrity",
+]);
+const c3dClaimTypes = Object.freeze([
+	...Array(7).fill("tests-pass"),
+	...Array(3).fill("command-succeeded"),
+]);
+const c3dFinalRunRoot = resolve(repositoryRoot, ".countershape/p07bc-c3d-final");
+const c3dHermeticArgvPrefix = Object.freeze(c3uHermeticArgvPrefix.map((argument) =>
+	argument.replaceAll(c3uFinalRunRoot, c3dFinalRunRoot)));
+const c3dHermeticArgv = (...tail) => Object.freeze([...c3dHermeticArgvPrefix, ...tail]);
+const c3dFinalCommandTails = Object.freeze([
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--check-candidate-phase", "C3D"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--candidate-phase", "C3D"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--self-test"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--verify-c3d-sealed-c3b-note"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--self-test"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current-selftest.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C3D", "--source-final-gate"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C3D", "--credential-scan"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--verify-c3d-preseal-ledger"]),
+]);
+const c3dExpectedClaimArgv = Object.freeze(c3dFinalCommandTails.map((tail) => c3dHermeticArgv(...tail)));
+const c3dFinalCommandOrderMarkdown = c3dFinalCommandTails
+	.map((tail, index) => `${index + 1}. \`${tail.join(" ")}\``).join("\n");
+const c3dFinalCommandExecutionNotice = "These are command tails, not bare receipt commands. Run each only through `didrun run --` with the checker-owned hermetic prefix and claim its matching label/type immediately; bare execution creates no admissible final receipt.";
+const c3dFinalRunDirectories = Object.freeze([
+	c3dFinalRunRoot,
+	...["home", "tmp", "gotmp", "gocache", "gopath", "gomodcache"]
+		.map((name) => resolve(c3dFinalRunRoot, name)),
+]);
+const c6aClaimLabels = Object.freeze([
+	"P07B-C C6A candidate phase plan coherence",
+	"P07B-C C6A independent candidate transition authority",
+	"P07B-C C6A architecture conformance",
+	"P07B-C C6A architecture defensive self-test",
+	"P07B-C C6A cumulative verifier self-test",
+	"P07B-C C6A cumulative verification",
+	"P07B-C C6A final evidence defensive self-test",
+	"P07B-C C6A exact CLI HTTP Node and documentation evidence closure",
+	"P07B-C C6A exact staged scope and diff integrity",
+	"P07B-C C6A scoped staged credential-pattern scan",
+	"P07B-C C6A declared C5 parent edge and preceding didrun chain integrity",
+]);
+const c6aClaimTypes = Object.freeze([...Array(8).fill("tests-pass"), ...Array(3).fill("command-succeeded")]);
+const c6aFinalRunRoot = resolve(repositoryRoot, ".countershape/p07bc-c6a-final");
+const c6aHermeticArgvPrefix = Object.freeze(c3dHermeticArgvPrefix.map((argument) =>
+	argument.replaceAll(c3dFinalRunRoot, c6aFinalRunRoot)));
+const c6aHermeticArgv = (...tail) => Object.freeze([...c6aHermeticArgvPrefix, ...tail]);
+const c6aFinalCommandTails = Object.freeze([
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--check-candidate-phase", "C6A"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--candidate-phase", "C6A"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-architecture.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-architecture-selftest.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current-selftest.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/p07b-c/check-final-evidence.mjs", "--self-test"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/p07b-c/check-final-evidence.mjs", "--verify"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C6A", "--source-final-gate"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C6A", "--credential-scan"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--verify-c6a-preseal-ledger"]),
+]);
+const c6aExpectedClaimArgv = Object.freeze(c6aFinalCommandTails.map((tail) => c6aHermeticArgv(...tail)));
+const c6aFinalRunDirectories = Object.freeze([
+	c6aFinalRunRoot,
+	...["home", "tmp", "gotmp", "gocache", "gopath", "gomodcache"].map((name) => resolve(c6aFinalRunRoot, name)),
+]);
+const c6mClaimLabels = Object.freeze([
+	"P07B-C C6M data-driven phase plan coherence",
+	"P07B-C C6M independent candidate transition authority",
+	"P07B-C C6M source-authority defensive self-test",
+	"P07B-C C6M sealed-C6A source-authority conformance",
+	"P07B-C C6M unit-scope defensive self-test",
+	"P07B-C C6M cumulative verifier self-test",
+	"P07B-C C6M cumulative verification",
+	"P07B-C C6M exact five-path staged scope and diff integrity",
+	"P07B-C C6M scoped staged credential-pattern scan",
+	"P07B-C C6M sealed-C6A predecessor and preceding didrun chain integrity",
+]);
+const c6mClaimTypes = Object.freeze([...Array(7).fill("tests-pass"), ...Array(3).fill("command-succeeded")]);
+const c6mFinalRunRoot = resolve(repositoryRoot, ".countershape/p07bc-c6m-final");
+const c6mHermeticArgvPrefix = Object.freeze(c3dHermeticArgvPrefix.map((argument) =>
+	argument.replaceAll(c3dFinalRunRoot, c6mFinalRunRoot)));
+const c6mHermeticArgv = (...tail) => Object.freeze([...c6mHermeticArgvPrefix, ...tail]);
+const c6mFinalCommandTails = Object.freeze([
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--check-candidate-phase", "C6M"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--candidate-phase", "C6M"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--self-test"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C6M", "--source-authority-gate"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--self-test"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current-selftest.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C6M", "--source-final-gate"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C6M", "--credential-scan"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--verify-c6m-preseal-ledger"]),
+]);
+const c6mExpectedClaimArgv = Object.freeze(c6mFinalCommandTails.map((tail) => c6mHermeticArgv(...tail)));
+const c6mFinalRunDirectories = Object.freeze([
+	c6mFinalRunRoot,
+	...["home", "tmp", "gotmp", "gocache", "gopath", "gomodcache"].map((name) => resolve(c6mFinalRunRoot, name)),
+]);
+const c6bClaimLabels = Object.freeze([
+	"P07B-C C6B candidate phase plan coherence",
+	"P07B-C C6B independent sealed-C6A source-authority conformance",
+	"P07B-C C6B source receipt declaration reconciliation",
+	"P07B-C C6B receipt checker defensive self-test",
+	"P07B-C C6B declared local source-evidence and private-availability snapshot match",
+	"P07B-C C6B receipt-only Go build",
+	"P07B-C C6B exact five-path staged scope and diff integrity",
+	"P07B-C C6B scoped staged credential-pattern scan",
+	"P07B-C C6B preceding didrun chain integrity",
+]);
+const c6bClaimTypes = Object.freeze([...Array(5).fill("tests-pass"), ...Array(4).fill("command-succeeded")]);
+const c6bFinalRunRoot = resolve(repositoryRoot, ".countershape/p07bc-c6b-final");
+const c6bHermeticArgvPrefix = Object.freeze(c3dHermeticArgvPrefix.map((argument) =>
+	argument.replaceAll(c3dFinalRunRoot, c6bFinalRunRoot)));
+const c6bHermeticArgv = (...tail) => Object.freeze([...c6bHermeticArgvPrefix, ...tail]);
+const c6bFinalCommandTails = Object.freeze([
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--check-candidate-phase", "C6B"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C6B", "--source-authority-gate"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--verify-c6a-source-receipt"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--self-test-c6a-source-receipt"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--verify-c6a-local-evidence"]),
+	Object.freeze(["/opt/homebrew/bin/go", "build", "-mod=readonly", "-buildvcs=false", "-p=1", "./..."]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C6B", "--receipt-final-gate"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C6B", "--credential-scan"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--verify-c6b-preseal-ledger"]),
+]);
+const c6bExpectedClaimArgv = Object.freeze(c6bFinalCommandTails.map((tail) => c6bHermeticArgv(...tail)));
+const c6bFinalRunDirectories = Object.freeze([
+	c6bFinalRunRoot,
+	...["home", "tmp", "gotmp", "gocache", "gopath", "gomodcache"].map((name) => resolve(c6bFinalRunRoot, name)),
+]);
 const c3PredecessorManifestPath = "spec/verification/p07b-c-c3-predecessors.json";
 const c3PredecessorAuthorities = Object.freeze([
 	Object.freeze({
@@ -2484,6 +2696,10 @@ function validateSealedC3FNote(note, identity = sealedC3FIdentity) {
 
 function validateSealedC3SNote(note, identity = sealedC3SIdentity) {
 	return validateSealedNote(note, identity, c3sClaimLabels, c3sClaimTypes, c3sExpectedClaimArgv, c3sHermeticArgvPrefix);
+}
+
+function validateSealedC3BNote(note, identity = sealedC3BIdentity) {
+	return validateSealedNote(note, identity, c3bClaimLabels, c3bClaimTypes, c3bExpectedClaimArgv, c3bHermeticArgvPrefix);
 }
 
 function runHermeticPresealSelfTest(phase, expectedArgv, prefix) {
@@ -3063,6 +3279,357 @@ const requiredC3BReceiptClaims = Object.freeze([
 	Object.freeze({ label: "P07B-C C3B scoped staged credential-pattern scan", type: "command-succeeded" }),
 	Object.freeze({ label: "P07B-C C3B preceding didrun chain integrity", type: "command-succeeded" }),
 ]);
+const requiredC3DPaths = Object.freeze([
+	"docs/HANDOFF_MODE_C.md",
+	"docs/PROMPT_PACK.md",
+	"docs/VERIFICATION.md",
+	"docs/status/P07B-C-C3D-RECEIPT-PHASE-CONSOLIDATION.md",
+	"spec/verification/p07b-c-unit-paths.json",
+	"tools/check-p07b-c-plan.mjs",
+	"tools/check-p07b-c-unit-scope.mjs",
+]);
+const requiredC3DDigest = "sha256:ac4436680c612ad206d2786ddd3146af747e1f8ea2bdedf898afca67d46fcd63";
+const requiredC3DRosterText = requiredC3DPaths
+	.map((path, index) => `${index === requiredC3DPaths.length - 1 ? "and " : ""}\`${path}\``)
+	.join(", ");
+const requiredC3DDeclaration = `C3D owns exactly these ${requiredC3DPaths.length} paths: ${requiredC3DRosterText}. Their sorted-newline roster digest is \`${requiredC3DDigest}\`.`;
+const c3dSourceSubject = "fix: derive receipt fixtures from phase table";
+const c3dStatusBoundaryLine = "- **Boundary:** active pre-seal `SOURCE_FULL` checker maintenance after sealed C3B and before C4. Classification: `DEFECT_REPAIR`.";
+const c3dStatusParentLine = `- **Parent:** sealed C3B commit \`${sealedC3BIdentity.commit}\`, tree \`${sealedC3BIdentity.tree}\`, is note-present with note blob \`${sealedC3BIdentity.noteBlob}\`, note-body SHA-256 \`${sealedC3BIdentity.noteBodySHA256}\`, \`7/7 claims recorded-exact\`, strict exit \`0\`, and recorded \`secrets_override: true\`.`;
+const c3dStatusUnreceiptedLine = "Every intended C3D grade remains `UNRECEIPTED` until one exact staged tree runs the declared commands through a fresh didrun ledger, commits, seals, exposes a readable Git note, and passes `NO_COLOR=1 didrun verify --strict`. This status cannot receipt C3D itself.";
+const finalRunbookBoundaryOrder = Object.freeze(["C3D", "C6A", "C6M", "C6B"]);
+const finalRunbookRegistry = Object.freeze({
+	C3D: Object.freeze({
+		subject: c3dSourceSubject, parent: "sealed C3B", profile: "SOURCE_FULL",
+		labels: c3dClaimLabels, types: c3dClaimTypes, argv: c3dExpectedClaimArgv,
+		prefix: c3dHermeticArgvPrefix, directories: c3dFinalRunDirectories,
+	}),
+	C6A: Object.freeze({
+		subject: c6aSourceSubject, parent: "declared C5", profile: "SOURCE_FULL",
+		labels: c6aClaimLabels, types: c6aClaimTypes, argv: c6aExpectedClaimArgv,
+		prefix: c6aHermeticArgvPrefix, directories: c6aFinalRunDirectories,
+	}),
+	C6M: Object.freeze({
+		subject: c6mSourceSubject, parent: "sealed C6A", profile: "SOURCE_FULL",
+		labels: c6mClaimLabels, types: c6mClaimTypes, argv: c6mExpectedClaimArgv,
+		prefix: c6mHermeticArgvPrefix, directories: c6mFinalRunDirectories,
+	}),
+	C6B: Object.freeze({
+		subject: c6bReceiptSubject, parent: "sealed C6M", profile: "RECEIPT_RECONCILIATION",
+		labels: c6bClaimLabels, types: c6bClaimTypes, argv: c6bExpectedClaimArgv,
+		prefix: c6bHermeticArgvPrefix, directories: c6bFinalRunDirectories,
+	}),
+});
+const posixSingleQuoteEscape = `'"'"'`;
+
+function shellQuote(token) {
+	if (typeof token !== "string" || /[\0\r\n]/u.test(token)) {
+		throw new Error("final runbook token framing");
+	}
+	return `'${token.replaceAll("'", posixSingleQuoteEscape)}'`;
+}
+
+function decodeShellQuotedToken(rendered) {
+	if (typeof rendered !== "string" || rendered.length < 2 || rendered[0] !== "'" || rendered.at(-1) !== "'") {
+		throw new Error("final runbook quoted-token framing");
+	}
+	const decoded = rendered.slice(1, -1).replaceAll(posixSingleQuoteEscape, "'");
+	if (shellQuote(decoded) !== rendered) throw new Error("final runbook quoted-token canonical form");
+	return decoded;
+}
+
+function finalRunbookDidrunLine(argv) {
+	return `/opt/homebrew/bin/didrun run -- ${argv.map(shellQuote).join(" ")}`;
+}
+
+function finalRunbookClaimLine(type, label) {
+	return `/opt/homebrew/bin/didrun claim ${shellQuote(type)} --label ${shellQuote(label)}`;
+}
+
+function finalRunbookRootBindingLines() {
+	return [
+		`cd -P -- ${shellQuote(repositoryRoot)}`,
+		`/bin/test \"$PWD\" = ${shellQuote(repositoryRoot)}`,
+	];
+}
+
+function finalRunbookCommitBindingLines() {
+	return [
+		"commit=$(/usr/bin/git rev-parse --verify 'HEAD^{commit}')",
+		'short=${commit%"${commit#????????????}"}',
+		'/bin/test "${#short}" -eq 12',
+	];
+}
+
+function finalRunbookFenceLines(...commands) {
+	if (commands.some((command) => typeof command !== "string" || /[\r\n]/u.test(command))) {
+		throw new Error("final runbook fence command framing");
+	}
+	return ["(", "set -eu", ...finalRunbookRootBindingLines(), ...commands, ")"];
+}
+
+function finalLedgerArchivePrefix(boundary) {
+	if (!finalRunbookBoundaryOrder.includes(boundary)) {
+		throw new Error(`final ledger archive unavailable for ${String(boundary)}`);
+	}
+	return `.didrun-history/p07b-c-${boundary.toLowerCase()}-final-`;
+}
+
+function finalLedgerArchiveRoot(boundary, shortCommit) {
+	if (typeof shortCommit !== "string" || !/^[0-9a-f]{12}$/u.test(shortCommit)) {
+		throw new Error(`final ledger archive ${String(boundary)} short commit`);
+	}
+	return `${finalLedgerArchivePrefix(boundary)}${shortCommit}`;
+}
+
+function finalLedgerArchivePath(boundary, commit) {
+	if (typeof commit !== "string" || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/u.test(commit) || /^0+$/u.test(commit)) {
+		throw new Error(`final ledger archive ${String(boundary)} commit`);
+	}
+	return `${finalLedgerArchiveRoot(boundary, commit.slice(0, 12))}/.didrun/`;
+}
+
+export function renderFinalRunbook(boundary) {
+	const runbook = finalRunbookRegistry[boundary];
+	if (runbook === undefined || !finalRunbookBoundaryOrder.includes(boundary)) {
+		throw new Error(`final runbook unavailable for ${String(boundary)}; C4 and C5 are topology-only until their owning boundaries declare executable contracts`);
+	}
+	if (runbook.labels.length !== runbook.types.length || runbook.labels.length !== runbook.argv.length) {
+		throw new Error(`final runbook ${boundary} claim/argv cardinality mismatch`);
+	}
+	const lower = boundary.toLowerCase();
+	const lines = [
+		`# P07B-C ${boundary} final evidence runbook`,
+		"",
+		"> Generated instructions, not a receipt. Printing this document executes no command and confers no grade.",
+		"",
+		`- Boundary: \`${boundary}\``,
+		`- Profile: \`${runbook.profile}\``,
+		`- Required parent: ${runbook.parent}`,
+		`- Exact commit subject: \`${runbook.subject}\``,
+		`- Exact commands/claims: \`${runbook.labels.length}\``,
+		`- Private final root: \`${runbook.directories[0]}\``,
+		"- Shell-fence state: every fence is an isolated subshell with `set -eu`, independently re-enters and asserts the canonical repository root, and cannot continue to a claim or later mutation after a failed command; every post-commit fence re-derives the current immutable HEAD and its exact first 12 hexadecimal characters under the same sole-writer boundary.",
+		"- C4 and C5 remain topology-only table rows and deliberately have no executable final runbook here.",
+		"",
+		"## Prepare one fresh evidence boundary",
+		"",
+		"Under sole-writer control, first preserve any development `.didrun` at a unique ignored history path and make the live `.didrun` absent. This generator intentionally does not choose, move, or delete that evidence. Refuse an existing phase final root; do not rotate or overwrite it automatically. Stage the already-reviewed exact unit tree before continuing; this runbook deliberately emits no staging command.",
+		"",
+		"```sh",
+		...finalRunbookFenceLines(
+			`/bin/test ! -e ${shellQuote(".didrun")}`,
+			`/bin/test ! -e ${shellQuote(runbook.directories[0])}`,
+			`/bin/mkdir -p ${shellQuote(".countershape/evidence")}`,
+			`/bin/chmod 0700 ${shellQuote(".countershape/evidence")}`,
+			`/bin/mkdir -p ${runbook.directories.map(shellQuote).join(" ")}`,
+			`/bin/chmod 0700 ${runbook.directories.map(shellQuote).join(" ")}`,
+		),
+		"```",
+		"",
+		"## Run each exact command and claim it immediately",
+		"",
+	];
+	for (let index = 0; index < runbook.argv.length; index += 1) {
+		lines.push(
+			`# ${index + 1}. ${runbook.labels[index]}`,
+			"```sh",
+			...finalRunbookFenceLines(
+				finalRunbookDidrunLine(runbook.argv[index]),
+				finalRunbookClaimLine(runbook.types[index], runbook.labels[index]),
+			),
+			"```",
+			"",
+		);
+	}
+	lines.push(
+		"## Commit, seal, inspect, verify, and archive",
+		"",
+		"The staged tree must still be exact. Commit with the frozen subject, capture that immutable commit, and run the plain seal first.",
+		"",
+		"```sh",
+		...finalRunbookFenceLines(
+			"/usr/bin/git diff --cached --check",
+			`/usr/bin/git commit -m ${shellQuote(runbook.subject)}`,
+			...finalRunbookCommitBindingLines(),
+			"/opt/homebrew/bin/didrun seal --commit \"$commit\"",
+		),
+		"```",
+		"",
+		"If the plain seal fails, stop and inspect its exact reason. Only after reviewing the staged inventory and the already-claimed credential scan may the operator deliberately choose the following logged override; it is never an automatic fallback:",
+		"",
+		"```sh",
+		...finalRunbookFenceLines(
+			...finalRunbookCommitBindingLines(),
+			"# MANUAL CHECKPOINT ONLY: /opt/homebrew/bin/didrun seal --commit \"$commit\" --allow-secrets",
+		),
+		"```",
+		"",
+		"Inspect the readable didrun note through the recorder. This post-seal inspection event is outside the sealed claim manifest and supports no additional claim.",
+		"",
+		"```sh",
+		...finalRunbookFenceLines(
+			...finalRunbookCommitBindingLines(),
+			"/opt/homebrew/bin/didrun run -- /usr/bin/git notes --ref=didrun show \"$commit\"",
+		),
+		"```",
+		"",
+		"Strict must exit zero for the captured commit before HTML is generated. A nonzero result does not become green by rerunning verify unchanged: preserve the failed commit, note, and ledger; diagnose the exact grade; repair the real defect; start fresh final evidence; rerun the affected verification and immediate claims; create a new commit; seal; and verify again.",
+		"",
+		"```sh",
+		...finalRunbookFenceLines(
+			...finalRunbookCommitBindingLines(),
+			"NO_COLOR=1 /opt/homebrew/bin/didrun verify --commit \"$commit\" --strict",
+			`html=".countershape/evidence/p07b-c-${lower}-final-\${short}.html"`,
+			"NO_COLOR=1 /opt/homebrew/bin/didrun verify --commit \"$commit\" --strict --html \"$html\"",
+		),
+		"```",
+		"",
+		"Only after both strict invocations succeed, copy the final ledger to a commit-addressed ignored archive. Retain the live `.didrun`; didrun 0.1.0 strict verification does not auto-discover archived objects.",
+		"",
+		"```sh",
+		...finalRunbookFenceLines(
+			...finalRunbookCommitBindingLines(),
+			`archive_root="${finalLedgerArchivePrefix(boundary)}\${short}"`,
+			"/bin/test ! -e \"$archive_root\"",
+			"/bin/mkdir -p \"$archive_root\"",
+			"/bin/chmod 0700 \"$archive_root\"",
+			"/bin/cp -R '.didrun' \"$archive_root/.didrun\"",
+			"/bin/chmod -R go-rwx \"$archive_root/.didrun\"",
+		),
+		"```",
+		"",
+		"Every grade remains `UNRECEIPTED` until its exact command, claim, commit, seal, and strict-clean result exist.",
+	);
+	return `${lines.join("\n")}\n`;
+}
+
+function runFinalRunbookRendererSelfTest() {
+	if (!isDeepStrictEqual(Object.keys(finalRunbookRegistry), finalRunbookBoundaryOrder)) {
+		throw new Error("final runbook boundary order");
+	}
+	const expectedCardinality = Object.freeze({ C3D: 10, C6A: 11, C6M: 10, C6B: 9 });
+	const expectedTests = Object.freeze({ C3D: 7, C6A: 8, C6M: 7, C6B: 5 });
+	let controls = 0;
+	for (const boundary of finalRunbookBoundaryOrder) {
+		const spec = finalRunbookRegistry[boundary];
+		if (!Object.isFrozen(spec) || spec.labels.length !== expectedCardinality[boundary] ||
+			spec.types.filter((type) => type === "tests-pass").length !== expectedTests[boundary] ||
+			spec.types.filter((type) => type === "command-succeeded").length !== expectedCardinality[boundary] - expectedTests[boundary]) {
+			throw new Error(`final runbook ${boundary} frozen cardinality/type split`);
+		}
+		for (const argv of spec.argv) {
+			if (!isDeepStrictEqual(argv.slice(0, spec.prefix.length), [...spec.prefix]) ||
+				!isDeepStrictEqual(argv.map(shellQuote).map(decodeShellQuotedToken), [...argv])) {
+				throw new Error(`final runbook ${boundary} exact hermetic argv projection`);
+			}
+		}
+		const rendered = renderFinalRunbook(boundary);
+		if (rendered !== renderFinalRunbook(boundary) || !rendered.endsWith("\n") || rendered.endsWith("\n\n") ||
+			!rendered.includes(`Exact commit subject: \`${spec.subject}\``) ||
+			!rendered.includes(`Private final root: \`${spec.directories[0]}\``) ||
+			!rendered.includes("every fence is an isolated subshell with `set -eu`") ||
+			!rendered.includes("cannot continue to a claim or later mutation after a failed command") ||
+			!rendered.includes("exact first 12 hexadecimal characters") ||
+			!rendered.includes("C4 and C5 remain topology-only table rows")) {
+			throw new Error(`final runbook ${boundary} deterministic envelope`);
+		}
+		const rootEntry = `cd -P -- ${shellQuote(repositoryRoot)}\n/bin/test \"$PWD\" = ${shellQuote(repositoryRoot)}\n`;
+		const fencePrologue = `(\nset -eu\n${rootEntry}`;
+		const shellBlocks = [...rendered.matchAll(/^```sh\n([\s\S]*?)^```$/gmu)].map((match) => match[1]);
+		if (shellBlocks.length !== spec.argv.length + 6 ||
+			shellBlocks.some((block) => !block.startsWith(fencePrologue) || !block.endsWith(")\n")) ||
+			rendered.indexOf(rootEntry) > rendered.indexOf("/bin/test ! -e '.didrun'")) {
+			throw new Error(`final runbook ${boundary} isolated fail-fast repository-root binding`);
+		}
+		const commitBinding = `${finalRunbookCommitBindingLines().join("\n")}\n`;
+		if (shellBlocks.slice(spec.argv.length + 1).length !== 5 ||
+			shellBlocks.slice(spec.argv.length + 1).some((block) => block.split(commitBinding).length !== 2) ||
+			rendered.includes("rev-parse --short=12")) {
+			throw new Error(`final runbook ${boundary} self-contained exact-12 commit binding`);
+		}
+		const evidencePreparation = `/bin/mkdir -p ${shellQuote(".countershape/evidence")}\n/bin/chmod 0700 ${shellQuote(".countershape/evidence")}\n`;
+		if (rendered.split(evidencePreparation).length !== 2 ||
+			rendered.indexOf(evidencePreparation) > rendered.indexOf(finalRunbookDidrunLine(spec.argv[0]))) {
+			throw new Error(`final runbook ${boundary} evidence-directory preparation`);
+		}
+		const archiveTemplate = `archive_root="${finalLedgerArchivePrefix(boundary)}\${short}"`;
+		if (rendered.split(archiveTemplate).length !== 2 ||
+			finalLedgerArchiveRoot(boundary, "a".repeat(12)) !== `${finalLedgerArchivePrefix(boundary)}${"a".repeat(12)}`) {
+			throw new Error(`final runbook ${boundary} commit-addressed archive contract`);
+		}
+		for (let index = 0; index < spec.argv.length; index += 1) {
+			const pair = `${finalRunbookDidrunLine(spec.argv[index])}\n${finalRunbookClaimLine(spec.types[index], spec.labels[index])}\n`;
+			if (rendered.split(pair).length !== 2) throw new Error(`final runbook ${boundary} command/claim adjacency ${index + 1}`);
+		}
+		const plainSeal = rendered.indexOf("didrun seal --commit \"$commit\"\n");
+		const note = rendered.indexOf("didrun run -- /usr/bin/git notes");
+		const strict = rendered.indexOf("verify --commit \"$commit\" --strict\n");
+		const html = rendered.indexOf("--strict --html \"$html\"");
+		const archive = rendered.indexOf("/bin/cp -R '.didrun'");
+		if (!(plainSeal !== -1 && plainSeal < note && note < strict && strict < html && html < archive)) {
+			throw new Error(`final runbook ${boundary} seal/strict/HTML/archive order`);
+		}
+		for (const banned of ["\ngit add ", "\ngit push ", "\nrm ", "\nmv ", "|| true", "set +e", "--event", "--short=12", "/usr/bin/test"]) {
+			if (rendered.includes(banned)) throw new Error(`final runbook ${boundary} unsafe command ${JSON.stringify(banned)}`);
+		}
+		if (rendered.split("\n").some((line) => line.includes("--allow-secrets") && !line.startsWith("# MANUAL CHECKPOINT ONLY:"))) {
+			throw new Error(`final runbook ${boundary} active seal override`);
+		}
+		controls += spec.argv.length + 10;
+	}
+	const failFastControls = [
+		"/usr/bin/false",
+		"/bin/test 'existing-authority' = 'absent-authority'",
+	].map((failure, index) => {
+		const result = spawnSync("/bin/sh", ["-c", `(\nset -eu\n${failure}\n/usr/bin/printf 'UNREACHABLE_CLAIM_${index}'\n)\n`], {
+			cwd: repositoryRoot, encoding: "buffer", timeout: 10_000, maxBuffer: 1024 * 1024,
+			env: { PATH: "/usr/bin:/bin", LANG: "C", LC_ALL: "C" },
+		});
+		if (result.error || result.signal || result.status !== 1 || (result.stdout?.length ?? 0) !== 0 ||
+			(result.stderr?.length ?? 0) !== 0) {
+			throw new Error(`final runbook fail-fast hostile ${index + 1}`);
+		}
+		return 1;
+	}).reduce((sum, value) => sum + value, 0);
+	const positiveShell = spawnSync("/bin/sh", ["-c", "(\nset -eu\n/usr/bin/printf 'REACHED'\n)\n"], {
+		cwd: repositoryRoot, encoding: "buffer", timeout: 10_000, maxBuffer: 1024 * 1024,
+		env: { PATH: "/usr/bin:/bin", LANG: "C", LC_ALL: "C" },
+	});
+	if (positiveShell.error || positiveShell.signal || positiveShell.status !== 0 ||
+		!isDeepStrictEqual(positiveShell.stdout, Buffer.from("REACHED")) || (positiveShell.stderr?.length ?? 0) !== 0) {
+		throw new Error("final runbook fail-fast positive control");
+	}
+	controls += failFastControls + 1;
+	const archiveAuthority = Object.freeze({
+		commit: "a".repeat(40), tree: "b".repeat(40), parent: "c".repeat(40),
+		subject: c6aSourceSubject, noteBlob: "d".repeat(40), noteBodySHA256: "e".repeat(64),
+		secretsOverride: true,
+	});
+	if (syntheticPlanC6ReceiptFixture(archiveAuthority).receipt.evidence.ledger_archive.path !==
+		finalLedgerArchivePath("C6A", archiveAuthority.commit)) {
+		throw new Error("final runbook C6A receipt archive cross-contract");
+	}
+	controls += 1;
+	for (const token of ["", "plain", "with space", "single'quote", "$(opaque)", "semi;colon", "double\"quote"]) {
+		if (decodeShellQuotedToken(shellQuote(token)) !== token) throw new Error("final runbook hostile shell token round trip");
+		controls += 1;
+	}
+	for (const rejected of ["C4", "C5", "c3d", "", "C7", undefined]) {
+		let failed = false;
+		try { renderFinalRunbook(rejected); } catch { failed = true; }
+		if (!failed) throw new Error(`final runbook unsupported boundary ${String(rejected)}`);
+		controls += 1;
+	}
+	if (!c6bFinalCommandTails[1].includes("--source-authority-gate") ||
+		!c6bFinalCommandTails[2].includes("--verify-c6a-source-receipt") ||
+		!c6bFinalCommandTails[3].includes("--self-test-c6a-source-receipt") ||
+		!c6bFinalCommandTails[4].includes("--verify-c6a-local-evidence") ||
+		!c6bFinalCommandTails[6].includes("--receipt-final-gate")) {
+		throw new Error("final runbook C6B receipt-specific topology");
+	}
+	return controls + 1;
+}
 const requiredC3AddedPaths = new Set([
 	"docs/status/P07B-C-C3-TARGET.md",
 	"internal/contractexec/target.go",
@@ -3252,7 +3819,7 @@ const requiredC3AText = Object.freeze({
 	"tools/check-p07b-c-plan.mjs": [
 		"requiredC3APaths", "C3A_ACTIVE", "--verify-c3a-preseal-ledger", "requirePrivateC3AFinalRunDirectories",
 	],
-	"tools/check-p07b-c-unit-scope.mjs": ["\"C3A\"", "p07b-c-unit-paths/v15"],
+	"tools/check-p07b-c-unit-scope.mjs": ["\"C3A\"", "p07b-c-unit-paths/v16"],
 });
 const requiredC3LText = Object.freeze({
 	"docs/HANDOFF_MODE_C.md": [
@@ -3305,7 +3872,7 @@ const requiredC3LText = Object.freeze({
 		"requiredC3LPaths", "C3L_ACTIVE", "--verify-c3l-preseal-ledger", "requirePrivateC3LFinalRunDirectories",
 		"requireSealedC3APredecessorAuthority", "validateSealedC3ANote",
 	],
-	"tools/check-p07b-c-unit-scope.mjs": ["\"C3L\"", "p07b-c-unit-paths/v15"],
+	"tools/check-p07b-c-unit-scope.mjs": ["\"C3L\"", "p07b-c-unit-paths/v16"],
 	"tools/check-u6-architecture.mjs": [
 		"admitsC3StoreBridge", "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED", "decodeGoImportLiteral", "goSourceTokens", "topLevelMatches",
 	],
@@ -3383,7 +3950,7 @@ const requiredC3FText = Object.freeze({
 		c3fStatusUnreceiptedLine,
 		...c3fClaimLabels.map((label) => `\`${label}\``),
 	],
-	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v15", "\"C3F\""],
+	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v16", "\"C3F\""],
 	"tools/check-p07b-b-architecture.mjs": [
 		"c3OfficialTargetSurface", "completeC3Surface", "partitionFutureSymbols",
 		"internal/store/nonhead_contract.go:ParseContractExecutionTarget",
@@ -3396,7 +3963,7 @@ const requiredC3FText = Object.freeze({
 		"requiredC3FPaths", "C3F_ACTIVE", "--verify-c3f-preseal-ledger", "requirePrivateC3FFinalRunDirectories",
 		"requireSealedC3LPredecessorAuthority", "validateSealedC3LNote",
 	],
-	"tools/check-p07b-c-unit-scope.mjs": ["\"C3F\"", "p07b-c-unit-paths/v15"],
+	"tools/check-p07b-c-unit-scope.mjs": ["\"C3F\"", "p07b-c-unit-paths/v16"],
 });
 const requiredC3SText = Object.freeze({
 	"docs/HANDOFF_MODE_C.md": [
@@ -3443,12 +4010,12 @@ const requiredC3SText = Object.freeze({
 		c3sStatusUnreceiptedLine,
 		...c3sClaimLabels.map((label) => `\`${label}\``),
 	],
-	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v15", "\"C3S\""],
+	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v16", "\"C3S\""],
 	"tools/check-p07b-c-plan.mjs": [
 		"requiredC3SPaths", "C3S_ACTIVE", "--verify-c3s-preseal-ledger", "requirePrivateC3SFinalRunDirectories",
 		"requireSealedC3FPredecessorAuthority", "validateSealedC3FNote",
 	],
-	"tools/check-p07b-c-unit-scope.mjs": ["\"C3S\"", "p07b-c-unit-paths/v15"],
+	"tools/check-p07b-c-unit-scope.mjs": ["\"C3S\"", "p07b-c-unit-paths/v16"],
 	"tools/check-u6-architecture-selftest.mjs": [
 		"requireExact", "c3StoreModelImport", "c3StoreInput", "c3StoreRoots", "c3StoreMethodSignatures",
 		"requireC3StoreBridge", "ensureC3StoreBridge",
@@ -3574,7 +4141,7 @@ const requiredC3Text = Object.freeze({
 	],
 	"tools/check-p07b-c-architecture.mjs": ["c3-official-target", "predecessorAuthority", "P07B_C3_"],
 	"tools/check-p07b-c-architecture-selftest.mjs": ["--c3", "c3-official-target"],
-	"tools/check-p07b-c-unit-scope.mjs": ["\"C3\"", "\"C3R\"", "\"C3Q\"", "\"C3T\"", "\"C3U\"", "\"C3B\"", "p07b-c-unit-paths/v15"],
+	"tools/check-p07b-c-unit-scope.mjs": ["\"C3\"", "\"C3R\"", "\"C3Q\"", "\"C3T\"", "\"C3U\"", "\"C3B\"", "\"C3D\"", "p07b-c-unit-paths/v16"],
 	"tools/verify-current.mjs": ["c3-official-target", "c3-single-target", "c3-hostepoch", "c3-noderuntime", "c3-store-bridge"],
 });
 const requiredC3RText = Object.freeze({
@@ -3635,13 +4202,13 @@ const requiredC3RText = Object.freeze({
 		"does not prove plain-seal-first sequencing",
 		...c3rClaimLabels.map((label) => `\`${label}\``),
 	],
-	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v15", "\"C3R\""],
+	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v16", "\"C3R\""],
 	"tools/check-p07b-c-plan.mjs": [
 		"requiredC3RPaths", "C3R_ACTIVE", "validateC3RClaimPreview", "validateC3RAuthority",
 		"c3rSealOutcomeDisclosure",
 		"--verify-c3r-sealed-c3-note", "--verify-c3r-preseal-ledger", "verifyC3RPresealLedger",
 	],
-	"tools/check-p07b-c-unit-scope.mjs": ["\"C3R\"", "p07b-c-unit-paths/v15"],
+	"tools/check-p07b-c-unit-scope.mjs": ["\"C3R\"", "p07b-c-unit-paths/v16"],
 });
 const requiredC3QText = Object.freeze({
 	"docs/HANDOFF_MODE_C.md": [
@@ -3716,20 +4283,20 @@ const requiredC3QText = Object.freeze({
 		"C3Q changes no verifier roster",
 		...c3qClaimLabels.map((label) => `\`${label}\``),
 	],
-	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v15", "\"C3Q\""],
+	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v16", "\"C3Q\""],
 	"tools/check-p07b-c-plan.mjs": [
 		"requiredC3QPaths", "C3Q_ACTIVE", "validateC3QClaimPreview", "validateC3QAuthority",
 		"planAuthorityMarkdownPaths", "planAuthorityMarkdownDigest", "computedPlanAuthorityMarkdownDigest",
 		"planAuthorityMarkdownCorpusReport",
 		"--print-plan-authority-corpus", "rejectActiveUnitSelfReceipts",
-		"runActiveUnitSelfReceiptMatrixSelfTest", "c3qSealOutcomeDisclosure", "c3bActiveMaintenanceSection",
+		"runFrozenHistoricalSelfReceiptMatrixSelfTest", "c3qSealOutcomeDisclosure", "c3bActiveMaintenanceSection",
 		"currentStateSubsection", "replaceCurrentStateSubsection",
-		"active-phases=C3U,C3B", "result=positive-form refusal only, not a general Markdown or security audit",
+		"historical-phases=C3U,C3B", "result=positive-form refusal only, not a general Markdown or security audit",
 		"supplemental-aliases=", "supplemental-controls=", "visible Markdown subsection projection",
 		"declared sealed-C3R identity",
 		"--verify-c3q-sealed-c3r-note", "--verify-c3q-preseal-ledger", "verifyC3QPresealLedger",
 	],
-	"tools/check-p07b-c-unit-scope.mjs": ["\"C3Q\"", "p07b-c-unit-paths/v15"],
+	"tools/check-p07b-c-unit-scope.mjs": ["\"C3Q\"", "p07b-c-unit-paths/v16"],
 });
 
 const requiredC3TText = Object.freeze({
@@ -3774,14 +4341,14 @@ const requiredC3TText = Object.freeze({
 		"## Final command order", c3tFinalCommandOrderMarkdown,
 		...c3tClaimLabels.map((label) => `\`${label}\``),
 	],
-	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v15", "\"C3T\""],
+	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v16", "\"C3T\""],
 	"tools/check-p07b-c-plan.mjs": [
 		"requiredC3TPaths", "C3T_ACTIVE", "syntheticC3AbsentPlanFixture",
 		"validateC3TClaimPreview", "validateC3TAuthority", "loadC3TAuthorityWithRunner",
 		"active-phases=C3U,C3B", "--verify-c3t-sealed-c3q-note",
 		"--verify-c3t-preseal-ledger", "verifyC3TPresealLedger",
 	],
-	"tools/check-p07b-c-unit-scope.mjs": ["\"C3T\"", "p07b-c-unit-paths/v15"],
+	"tools/check-p07b-c-unit-scope.mjs": ["\"C3T\"", "p07b-c-unit-paths/v16"],
 });
 
 const requiredC3UText = Object.freeze({
@@ -3828,14 +4395,195 @@ const requiredC3UText = Object.freeze({
 		"## Final command order", c3uFinalCommandOrderMarkdown,
 		...c3uClaimLabels.map((label) => `\`${label}\``),
 	],
-	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v15", "\"C3U\""],
+	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v16", "\"C3U\""],
 	"tools/check-p07b-c-plan.mjs": [
 		"requiredC3UPaths", "C3U_ACTIVE", "insertLegacyReceiptBlockBeforeOptionalTerminalC3",
 		"validateC3UClaimPreview", "validateC3UAuthority", "loadC3UAuthorityWithRunner",
 		"--verify-c3u-sealed-c3t-note", "--verify-c3u-preseal-ledger", "verifyC3UPresealLedger",
 	],
-	"tools/check-p07b-c-unit-scope.mjs": ["\"C3U\"", "p07b-c-unit-paths/v15"],
+	"tools/check-p07b-c-unit-scope.mjs": ["\"C3U\"", "p07b-c-unit-paths/v16"],
 });
+
+const requiredC3DText = Object.freeze({
+	"docs/HANDOFF_MODE_C.md": [
+		requiredC3DDigest, sealedC3BIdentity.commit, sealedC3BIdentity.tree,
+		sealedC3BIdentity.noteBlob, sealedC3BIdentity.noteBodySHA256,
+		"data-driven receipt-phase machinery", "C3R/C3Q/C3T/C3U",
+		"sha256:91ace265208883f3df976cc6a58d4a9d816d9c7c9fd2ba58887ccab13c3561fc",
+		"C3D is the only forward unit that owns `spec/verification/p07b-c-unit-paths.json`",
+		"candidate specification bytes must equal the C3D-sealed parent authority",
+		"strict full-index source snapshot", "C6M is the exact five-path `SOURCE_FULL` data-only source-authority boundary",
+		"a56fc2d71b79a06ba151ec454e7ed9280b20140e41c7006e027091eeddcf13e7",
+		"Prefix scopes cannot admit case-insensitive `.md` or `.markdown` authority", "The exact two-diagnostic C6B preactivation case remains a negative control",
+		"docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md", "post-transition control requires",
+		"ordinary current-C3D overrides", "outer `checkPlan()` scan",
+		"--check-candidate-phase <unit>", "no-argument cumulative plan check remains a live-coherence check",
+		"six admitted forward edges and 37 hostile snapshot cases", "ABA mutation",
+		"spec/verification/p07b-c-c6a-source-authority.json", "countershape/p07b-c-c6a-source-authority/v1",
+		"owns neither checker", "canonical visible C6A source-receipt block",
+		"sha256:94501edc81cc170b220fb83873f70ba638a3f19a0a317e2e8df226057dc77a48",
+		"spec/verification/p07b-c-c6a-receipt.json", "docs/captures/p07b-c/c6a-evidence-summary.json",
+		"first-parent Git bytes supply historical self-receipt inputs", "complete live snapshot",
+		"Each target corpus accumulates every declared Markdown surface from C4 through that target",
+		"preseal-parent HEAD=C6M or sealed-current HEAD=C6B", "Private-evidence availability is only a bounded tracked declaration",
+		"--verify-c6a-source-receipt", "--verify-c6a-local-evidence",
+		"--print-final-runbook <C3D|C6A|C6M|C6B>", "C4 and C5 reject as topology-only",
+		"enters and asserts the physical canonical repository root",
+		"exact full hermetic argv cardinality and order", "prepares mode-`0700` `.countershape/evidence`",
+		".didrun-history/p07b-c-c6a-final-<12-hex-commit>/.didrun/",
+		"position-specific", "no persistent interactive shell state is required",
+		"macOS `/bin/test`", "unclaimed development exit `127`",
+		"isolated subshell with `set -eu`", "short-circuits before a claim or later mutation",
+		".didrun-history/2026-07-20-p07b-c-c3b-final/.didrun/",
+		".countershape/evidence/p07b-c-c3b-final-3b0b56d2bdd3.html",
+		"archived object stores are not auto-discovered",
+	],
+	"docs/PROMPT_PACK.md": [
+		"P07B-C C3D receipt-phase machinery consolidation", requiredC3DDigest,
+		sealedC3BIdentity.commit, "countershape/p07b-c-unit-paths/v16",
+		"sha256:91ace265208883f3df976cc6a58d4a9d816d9c7c9fd2ba58887ccab13c3561fc",
+		"makes C3D its sole specification owner", "strict full-index source snapshot plus mechanically coupled independent transition gate",
+		"predeclares data-only C6M", "sha256:5501a7e8c2d8f6d44392d101110edafe90a0348ef77f5ea24539f6a8ba969803",
+		"phase table", "generic fixture generator", "C3R/C3Q/C3T/C3U",
+		"a56fc2d71b79a06ba151ec454e7ed9280b20140e41c7006e027091eeddcf13e7",
+		"C4/C5/C6A/C6M and post-transition C6B full-plan controls", "exact two-error preactivation negative",
+		"--check-candidate-phase <unit>", "countershape/p07b-c-c6a-source-authority/v1",
+		"--verify-c6a-preseal-ledger", "--verify-c6m-preseal-ledger", "--verify-c6b-preseal-ledger",
+		"--print-final-runbook <C3D|C6A|C6M|C6B>", "rejects topology-only C4/C5",
+		"position-specific redaction-tolerant hermetic argv shape", "one commit-addressed archive contract",
+		"isolated fail-fast subshell with cwd/commit self-containment", "exact first-12 commit key",
+		"11/10/9 claims", "every future grade remains `UNRECEIPTED`", "C4 remains blocked until C3D",
+	],
+	"docs/VERIFICATION.md": [
+		"## C3D data-driven receipt-phase machinery", requiredC3DDeclaration,
+		"countershape/p07b-c-unit-paths/v16", "receiptPhaseRows", "renderReceiptPhaseCapsule",
+		"sha256:91ace265208883f3df976cc6a58d4a9d816d9c7c9fd2ba58887ccab13c3561fc",
+		"C3D alone owns that specification in the forward horizon",
+		"staged/worktree specification is byte-identical to the pinned parent",
+		"C6M is predeclared between C6A and C6B", "git write-tree",
+		"classifyReceiptPhase", "rewriteReceiptPhaseCapsule", "generatedReceiptPhaseCases",
+		"666", "C3R_NOTE_PREVIEW", "C3Q_EXTERNAL_SELF_RECEIPT",
+		"C3T_VALIDATED_ABSENT_BASELINE", "C3U_TERMINAL_RECEIPT_LAYERING",
+		"670", "a56fc2d71b79a06ba151ec454e7ed9280b20140e41c7006e027091eeddcf13e7",
+		"every case-insensitive `.md` or `.markdown` authority must be enumerated as an exact path",
+		"exact two-diagnostic preactivation simulation remains a negative control",
+		"non-self-receipting prompt transition",
+		"ordinary current-C3D overrides", "historical-C3B scanner corpus", "singleton refusal",
+		"--check-candidate-phase <unit>", "no-argument plan command",
+		"six admitted forward edges and 37 hostile snapshot cases", "same-user actor can attempt an ABA mutation",
+		"1,320", "440", "ten-claim final ledger",
+		"spec/verification/p07b-c-c6a-source-authority.json", "full byte-identical projections",
+		"spec/verification/p07b-c-c6a-receipt.json", "docs/captures/p07b-c/c6a-evidence-summary.json",
+		"the historical self-receipt corpus is reopened from its matching first-parent sealed commit",
+		"Each target surface is cumulative from C4 through that target",
+		"C6M resolves either preseal-parent HEAD=C6A or sealed-current HEAD=C6M",
+		"C6B resolves either preseal-parent HEAD=C6M or sealed-current HEAD=C6B",
+		"The bounded tracked private-availability fields are declaration state only",
+		"--verify-c6a-source-receipt", "--verify-c6a-local-evidence",
+		"--verify-c6a-preseal-ledger", "--verify-c6m-preseal-ledger", "--verify-c6b-preseal-ledger",
+		"--print-final-runbook <C3D|C6A|C6M|C6B>", "C4 and C5 reject because they are topology-only",
+		"enters and asserts the physical canonical repository root",
+		"full hermetic argv previews", "mode-`0700` `.countershape/evidence` preparation",
+		".didrun-history/p07b-c-c6a-final-<12-hex-commit>/.didrun/",
+		"The form is position-specific", "no persistent shell state",
+		"macOS `/bin/test`", "unclaimed development exit `127`",
+		"own `set -eu` subshell", "behavioral failure short-circuit",
+	],
+	[c3dStatusPath]: [
+		"# P07B-C C3D — receipt-phase machinery consolidation", "Classification: `DEFECT_REPAIR`",
+		requiredC3DDeclaration, c3dStatusBoundaryLine, c3dStatusParentLine, c3dStatusUnreceiptedLine,
+		`- **Commit subject:** \`${c3dSourceSubject}\``, "countershape/p07b-c-unit-paths/v16",
+		"phase table", "generic fixture generator", "666", "C3R_NOTE_PREVIEW",
+		"sha256:91ace265208883f3df976cc6a58d4a9d816d9c7c9fd2ba58887ccab13c3561fc",
+		"C3D alone owns the specification in the forward horizon",
+		"candidate specification bytes must also match the pinned parent",
+		"C6M is predeclared after C6A", "sha256:5501a7e8c2d8f6d44392d101110edafe90a0348ef77f5ea24539f6a8ba969803",
+		"C3Q_EXTERNAL_SELF_RECEIPT", "C3T_VALIDATED_ABSENT_BASELINE", "C3U_TERMINAL_RECEIPT_LAYERING",
+		"670-case combined catalog", "a56fc2d71b79a06ba151ec454e7ed9280b20140e41c7006e027091eeddcf13e7",
+		"The unreceipted implementation defines full `checkPlan()` controls for C4, C5, C6A, C6M, and post-transition C6B",
+		"data-only source-authority boundary", "The exact two-diagnostic C6B preactivation case remains a negative control",
+		"ordinary current-C3D overrides", "historical C3B scanner corpus", "docs/VERIFICATION.md",
+		"--check-candidate-phase <unit>", "live stage-zero index",
+		"Six admitted forward edges and 37 hostile snapshot cases",
+		"countershape/p07b-c-c6a-source-authority/v1", "owns neither checker",
+		"sha256:94501edc81cc170b220fb83873f70ba638a3f19a0a317e2e8df226057dc77a48",
+		"spec/verification/p07b-c-c6a-receipt.json", "Historical self-receipt corpus bytes come from matching first-parent Git commits",
+		"Each forward corpus accumulates every declared Markdown surface from C4 through its target",
+		"preseal-parent HEAD=C6M or sealed-current HEAD=C6B", "Private-availability fields are bounded tracked declaration state only",
+		"--verify-c6a-source-receipt", "--verify-c6a-local-evidence", "11/10/9 claims",
+		"--verify-c6a-preseal-ledger", "--verify-c6m-preseal-ledger", "--verify-c6b-preseal-ledger",
+		"--print-final-runbook <C3D|C6A|C6M|C6B>", "It refuses C4 and C5 because they remain topology-only",
+		"independently re-enters and asserts the physical canonical repository root",
+		"exact full hermetic argv length and order", "mode-`0700` `.countershape/evidence` preparation",
+		".didrun-history/p07b-c-c6a-final-<12-hex-commit>/.didrun/",
+		"wrong visible suffix", "neither persistent shell state",
+		"didrun-wrapped development shell probe", "renderer now uses `/bin/test` exclusively",
+		"isolated `set -eu` subshell", "Behavioral shell hostiles",
+		"## Final command order", c3dFinalCommandExecutionNotice, c3dFinalCommandOrderMarkdown,
+		...c3dClaimLabels.map((label) => `\`${label}\``),
+	],
+	"spec/verification/p07b-c-unit-paths.json": [
+		"countershape/p07b-c-unit-paths/v16", "\"C3D\"", "\"C6M\"", "\"parent\"", "\"receipt_states\"",
+		"docs/status/P07B-C-C6M-RECEIPT-ADAPTER-MAINTENANCE.md",
+		"spec/verification/p07b-c-c6a-source-authority.json",
+		"docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md", "P07B-C C6B exact five-path staged scope and diff integrity",
+	],
+	"tools/check-p07b-c-plan.mjs": [
+		"receiptPhaseRows", "p07bCActiveReceiptPhaseBoundary", "renderReceiptPhaseCapsule", "classifyReceiptPhase",
+		"rewriteReceiptPhaseCapsule", "generatedReceiptPhaseCases", "receiptPhaseFixtureCatalog",
+		"fixedReceiptPhaseExecutableCatalog", "validateReceiptPresence", "currentReceiptPhaseMarkdownPaths",
+		"validateFrozenC3BMaintenanceSection", "runReceiptPhaseTableSelfTest",
+		"runDeclaredForwardReceiptPhasePlanSelfTest", "fixedReceiptPhaseRegressions",
+		"verifyCandidateReceiptPhasePlan", "requireCandidateReceiptPhaseSnapshot",
+		"requireCandidateReceiptPhaseTransition", "runCandidateReceiptPhaseTransitionSelfTest",
+		"receiptPhaseSpecificationPath", "--check-candidate-phase",
+		"selfReceiptCorpusOverrides", "external-markdown-full-plan-positive-receipt-refusal",
+		"C3R_NOTE_PREVIEW", "C3Q_EXTERNAL_SELF_RECEIPT", "C3T_VALIDATED_ABSENT_BASELINE",
+		"C3U_TERMINAL_RECEIPT_LAYERING", "--verify-c3d-sealed-c3b-note",
+		"--verify-c3d-preseal-ledger", "verifyC3DPresealLedger",
+		"planC6SourceAuthorityRecord", "renderPlanC6SourceAuthority", "validatePlanC6SourceAuthority",
+		"planC6SourceProjectionState", "derivePlanC6SealedSource", "runPlanC6SourceAuthoritySelfTest",
+		"finalRunbookRegistry", "renderFinalRunbook", "runFinalRunbookRendererSelfTest", "--print-final-runbook",
+		"cd -P --", "repository-root binding", "finalLedgerArchivePath", "validatePlanC6ClaimPreview",
+		"planC6ExpectedRedactionProjection", "finalRunbookRootBindingLines", "finalRunbookCommitBindingLines",
+		"finalRunbookFenceLines", "fail-fast hostile", "isolated fail-fast repository-root binding",
+		"evidence-directory preparation", "receipt archive cross-contract", "self-contained exact-12 commit binding",
+		"/bin/test", "/usr/bin/test",
+		"forwardPhaseHistory", "forwardFixtureKind", "forwardDeclaredReceiptPhaseMarkdownPaths", "ABSENT_FIXTURE_PATH", "planC6SourceDerivationMode",
+		"c6aReceiptDeclarationPath", "c6aEvidenceSummaryPath", "validatePlanC6ReceiptDeclaration",
+		"verifyC6ASourceReceipt", "verifyC6ALocalEvidence", "runC6ASourceReceiptSelfTest",
+		"verifyC6APresealLedger", "verifyC6MPresealLedger", "verifyC6BPresealLedger",
+		"--verify-c6a-preseal-ledger", "--verify-c6m-preseal-ledger", "--verify-c6b-preseal-ledger",
+	],
+	"tools/check-p07b-c-unit-scope.mjs": [
+		"\"C3D\"", "p07b-c-unit-paths/v16", "activeReceiptPhaseBoundary",
+		"receiptPhaseRows", "receipt_states", "c6mDeclaredAdapterContract", "c6bDeclaredReceiptContract",
+		"receiptPhaseAuthorityDigest", "91ace265208883f3df976cc6a58d4a9d816d9c7c9fd2ba58887ccab13c3561fc",
+		"validateIndependentCandidateSnapshot", "runIndependentCandidatePhaseGate",
+		"runIndependentCandidatePhaseSelfTest", "--candidate-phase",
+		"c6aSourceAuthorityPath", "c6aSourceAuthoritySchema", "renderC6ASourceAuthorityManifest",
+		"validateFutureC6Authority", "validateFutureC6Material", "runFutureC6MaterialSelfTest",
+		"validateSealedSourceClaimPreview", "sealedSourceExpectedRedactionProjection", "c6aSourceExpectedClaimArgv",
+		"--source-authority-gate", "--receipt-final-gate",
+		"c6aReceiptDeclarationPath", "P07B-C C6B source receipt declaration reconciliation",
+		"markdownAuthorityPath", "docs/captures/p07b-c/authority.md",
+		"docs/captures/p07b-c/authority.MD", "docs/captures/p07b-c/authority.markdown",
+	],
+});
+const forbiddenC3DNarrativeSnippets = Object.freeze([
+	"sha256:33046a2de60af9624c408cd734b8c5ec86130e9e4a5abc957f075ced195217e9",
+	"sha256:c50005a1e06c513934545e04b9f3d3969f024fa6e30eb4e154b11bb405903f58",
+	"sha256:bcb69d11932737f510b02fbf2b3a68518aeb13cbf73791d50eafa1a1176b4a10",
+	"11/10/7 claims",
+	"C6B has 7 claims",
+	"it owns the plan checker",
+	"implement its receipt adapter",
+	"C6M is the explicit adapter-maintenance boundary",
+	"C6M alone is predeclared to implement and pin the C6A receipt adapter",
+]);
+const c3dNarrativePathSet = new Set([
+	"docs/HANDOFF_MODE_C.md", "docs/PROMPT_PACK.md", "docs/VERIFICATION.md", c3dStatusPath,
+]);
 
 const planAuthorityMarkdownPaths = Object.freeze([...new Set([
 	statusPath,
@@ -3864,13 +4612,41 @@ const planAuthorityMarkdownPaths = Object.freeze([...new Set([
 		requiredC3TText,
 		requiredC3UText,
 	].flatMap((authority) => Object.keys(authority)),
-].filter((path) => path.endsWith(".md")))].sort((left, right) =>
+].filter(receiptPhaseMarkdownAuthorityPath))].sort((left, right) =>
 	Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8"))));
 const planAuthorityMarkdownDigest = "sha256:1c5bf120f1ab948586bfa594e6ae634fc6acf7a5544febcccb2c4dc475a59a49";
 
 function computedPlanAuthorityMarkdownDigest() {
 	return `sha256:${createHash("sha256")
 		.update(`${planAuthorityMarkdownPaths.join("\n")}\n`, "utf8").digest("hex")}`;
+}
+
+function receiptPhaseMarkdownAuthorityPath(path) {
+	return /\.(?:md|markdown)$/iu.test(path);
+}
+
+function forwardDeclaredReceiptPhaseMarkdownPaths(boundary) {
+	const targetIndex = p07bCReceiptPhaseRows.findIndex((row) => row.boundary === boundary);
+	const c3dIndex = p07bCReceiptPhaseRows.findIndex((row) => row.boundary === "C3D");
+	if (targetIndex === -1 || c3dIndex === -1) throw new Error(`unknown forward receipt-phase Markdown boundary ${boundary}`);
+	const rows = targetIndex > c3dIndex
+		? p07bCReceiptPhaseRows.slice(c3dIndex + 1, targetIndex + 1)
+		: [p07bCReceiptPhaseRows[targetIndex]];
+	return Object.freeze([...new Set(rows.flatMap((row) =>
+		receiptPhaseSpecification.units[row.boundary].exact.filter(receiptPhaseMarkdownAuthorityPath)))].sort(
+		(left, right) => Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8")),
+	));
+}
+
+function currentReceiptPhaseMarkdownPaths(boundary = p07bCActiveReceiptPhaseBoundary) {
+	const unit = receiptPhaseSpecification.units[boundary];
+	if (unit === undefined || p07bCReceiptPhaseRowsByBoundary[boundary] === undefined) {
+		throw new Error(`unknown receipt-phase Markdown boundary ${boundary}`);
+	}
+	return Object.freeze([...new Set([
+		...planAuthorityMarkdownPaths,
+		...forwardDeclaredReceiptPhaseMarkdownPaths(boundary),
+	])].sort((left, right) => Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8"))));
 }
 
 export function planAuthorityMarkdownCorpusReport() {
@@ -3895,6 +4671,11 @@ async function readBytes(root, path, overrides) {
 			throw error;
 		}
 		return Buffer.isBuffer(value) ? value : Buffer.from(value, "utf8");
+	}
+	if (overrides.has(STRICT_INDEX_SNAPSHOT)) {
+		const error = new Error(`path absent from strict pinned index snapshot: ${path}`);
+		error.code = "ENOENT";
+		throw error;
 	}
 	return readFile(resolve(root, path));
 }
@@ -4068,7 +4849,7 @@ function rejectReceiptSelfClaims(body, path, unit, errors) {
 }
 
 function rejectActiveUnitSelfReceipts(bodies, unit, errors) {
-	const paths = [...bodies.keys()].filter((path) => path.endsWith(".md")).sort();
+	const paths = [...bodies.keys()].filter(receiptPhaseMarkdownAuthorityPath).sort();
 	for (const path of paths) rejectReceiptSelfClaims(bodies.get(path), path, unit, errors);
 	return paths;
 }
@@ -4099,7 +4880,7 @@ const activeUnitSelfReceiptPositiveControls = Object.freeze([
 	() => "Sealed C3R is predecessor evidence; the active descendant remains unreceipted.",
 ]);
 
-function runActiveUnitSelfReceiptMatrixSelfTest() {
+function runFrozenHistoricalSelfReceiptMatrixSelfTest() {
 	const units = Object.freeze(["C3U", "C3B"]);
 	let rejected = 0;
 	let controls = 0;
@@ -4163,6 +4944,37 @@ function runActiveUnitSelfReceiptMatrixSelfTest() {
 		supplementalAliases,
 		supplementalControls,
 	});
+}
+
+function runCurrentReceiptPhaseSelfReceiptExtension(unit = p07bCActiveReceiptPhaseBoundary) {
+	const paths = currentReceiptPhaseMarkdownPaths(unit);
+	const exercisedPaths = Object.freeze([
+		...paths,
+		"docs/receipt-phase-suffix-fixture.MD",
+		"docs/receipt-phase-suffix-fixture.markdown",
+	]);
+	let rejected = 0;
+	let controls = 0;
+	for (const path of exercisedPaths) {
+		for (const form of activeUnitSelfReceiptPositiveForms) {
+			const errors = [];
+			rejectActiveUnitSelfReceipts(new Map([[path, `${form.render(unit)}\n`]]), unit, errors);
+			const expected = `${path}: ${unit} self-receipt forbidden (${form.label}); remove or reframe the positive ${unit} result`;
+			if (!isDeepStrictEqual(errors, [expected])) {
+				throw new Error(`P07B-C current phase self-receipt extension false negative: ${path}/${form.name}`);
+			}
+			rejected += 1;
+		}
+		for (const render of activeUnitSelfReceiptPositiveControls) {
+			const errors = [];
+			rejectActiveUnitSelfReceipts(new Map([[path, `${render(unit)}\n`]]), unit, errors);
+			if (errors.length > 0) {
+				throw new Error(`P07B-C current phase self-receipt extension false positive: ${path}`);
+			}
+			controls += 1;
+		}
+	}
+	return Object.freeze({ paths: paths.length, suffixVariants: exercisedPaths.length - paths.length, rejected, controls });
 }
 
 function rejectC1BSelfReceiptClaims(body, path, errors) {
@@ -5462,6 +6274,70 @@ export async function verifyC3USealedC3TNote() {
 	const errors = validateC3UPredecessorAuthority(authority);
 	if (errors.length > 0) throw new Error(`P07B-C C3U sealed-C3T authority mismatch: ${errors.join(", ")}`);
 	console.log(`P07B-C C3U sealed-C3T note exact: commit=${authority.commit} tree=${authority.tree} note=${authority.note_blob_oid} claims=${c3tClaimLabels.length}`);
+}
+
+function sealedC3BReceiptProjection() {
+	return {
+		source_commit: sealedC3BIdentity.commit,
+		source_tree: sealedC3BIdentity.tree,
+		source_subject: sealedC3BIdentity.subject,
+		secrets_override: true,
+		coverage_complete_events: c3bClaimLabels.length,
+		coverage_total_events: c3bClaimLabels.length,
+		evidence: {
+			git_note: {
+				version: 1,
+				blob_oid: sealedC3BIdentity.noteBlob,
+				body_sha256: sealedC3BIdentity.noteBodySHA256,
+			},
+		},
+	};
+}
+
+function validateSealedC3BAuthority(authority, requireCurrentHead = false) {
+	const errors = [];
+	if (!authority || typeof authority !== "object" || Array.isArray(authority)) return ["missing Git/didrun authority"];
+	if (authority.commit !== sealedC3BIdentity.commit) errors.push("commit");
+	if (authority.tree !== sealedC3BIdentity.tree) errors.push("tree");
+	if (authority.parent !== sealedC3BIdentity.parent || !isDeepStrictEqual(authority.parents, [sealedC3BIdentity.parent])) errors.push("parent");
+	if (authority.subject !== sealedC3BIdentity.subject) errors.push("subject");
+	if (authority.ancestor_of_head !== true) errors.push("ancestor of HEAD");
+	if (requireCurrentHead && authority.head_commit !== sealedC3BIdentity.commit) {
+		errors.push("sealed C3B is not current HEAD");
+	}
+	if (authority.note_type !== sealedC3BIdentity.noteType) errors.push("note type");
+	if (authority.note_blob_oid !== sealedC3BIdentity.noteBlob) errors.push("note blob");
+	if (authority.note_body_sha256 !== sealedC3BIdentity.noteBodySHA256) errors.push("note body digest");
+	if (!Array.isArray(authority.source_diff) ||
+		!isDeepStrictEqual(authority.source_diff.map(({ path }) => path), requiredC3BPaths)) {
+		errors.push("source diff exact path roster");
+	}
+	errors.push(...validateSealedC3BNote(authority.note));
+	return errors;
+}
+
+export async function verifyC3DSealedC3BNote() {
+	const authority = await loadReceiptAuthorityFromGit(repositoryRoot, sealedC3BReceiptProjection());
+	const errors = validateSealedC3BAuthority(authority, true);
+	if (errors.length > 0) throw new Error(`P07B-C C3D sealed-C3B authority mismatch: ${errors.join(", ")}`);
+	console.log(`P07B-C C3D sealed-C3B note exact: commit=${authority.commit} tree=${authority.tree} note=${authority.note_blob_oid} claims=${c3bClaimLabels.length}`);
+}
+
+async function runC3DSealedC3BCompatibilitySelfTest() {
+	const loaded = await loadReceiptAuthorityFromGit(repositoryRoot, sealedC3BReceiptProjection());
+	const baseline = structuredClone(loaded);
+	baseline.head_commit = sealedC3BIdentity.commit;
+	const baselineErrors = validateSealedC3BAuthority(baseline, true);
+	if (baselineErrors.length > 0) {
+		throw new Error(`P07B-C C3D sealed-C3B self-test baseline failed: ${baselineErrors.join(", ")}`);
+	}
+	const descendant = structuredClone(baseline);
+	descendant.head_commit = "f".repeat(40);
+	const errors = validateSealedC3BAuthority(descendant, true);
+	if (!errors.includes("sealed C3B is not current HEAD")) {
+		throw new Error("P07B-C C3D sealed-C3B self-test accepted an intervening HEAD");
+	}
+	return 1;
 }
 
 function validateC1ReceiptDeclaration(receipt) {
@@ -6903,6 +7779,1948 @@ function requireVisibleMarkdownReceiptBlock(body, startMarker, endMarker, label)
 	}
 }
 
+function renderReceiptPhaseCapsule(row) {
+	if (!row || typeof row !== "object" || !p07bCReceiptPhaseRowsByBoundary[row.boundary] ||
+		p07bCReceiptPhaseRowsByBoundary[row.boundary] !== row) {
+		throw new Error("receipt phase capsule row is not canonical");
+	}
+	return [
+		receiptPhaseCapsuleStart,
+		"### Active P07B-C phase contract",
+		"",
+		`- **Boundary:** \`${row.boundary}\``,
+		`- **Parent:** \`${row.parent}\``,
+		`- **Verification profile:** \`${row.profile}\``,
+		`- **Receipt C3P:** \`${row.receipts.C3P}\``,
+		`- **Receipt C3:** \`${row.receipts.C3}\``,
+		`- **Receipt C6A:** \`${row.receipts.C6A}\``,
+		receiptPhaseCapsuleEnd,
+	].join("\n");
+}
+
+function hasReceiptPhaseCapsule(body) {
+	return body.includes(receiptPhaseCapsuleStart) || body.includes(receiptPhaseCapsuleEnd);
+}
+
+function classifyReceiptPhase(body) {
+	if (countOccurrences(body, receiptPhaseCapsuleStart) !== 1 ||
+		countOccurrences(body, receiptPhaseCapsuleEnd) !== 1) {
+		throw new Error("receipt phase capsule marker cardinality");
+	}
+	const start = body.indexOf(receiptPhaseCapsuleStart);
+	const end = body.indexOf(receiptPhaseCapsuleEnd, start);
+	if (end < start) throw new Error("receipt phase capsule marker order");
+	if ((start !== 0 && body[start - 1] !== "\n") ||
+		body.slice(start + receiptPhaseCapsuleStart.length, start + receiptPhaseCapsuleStart.length + 1) !== "\n" ||
+		(end !== 0 && body[end - 1] !== "\n") ||
+		(body.slice(end + receiptPhaseCapsuleEnd.length, end + receiptPhaseCapsuleEnd.length + 1) !== "\n" &&
+			end + receiptPhaseCapsuleEnd.length !== body.length)) {
+		throw new Error("receipt phase capsule markers must be standalone LF lines");
+	}
+	const currentStateAnchor = "## Current state\n";
+	if (countOccurrences(body, currentStateAnchor) !== 1) {
+		throw new Error("receipt phase capsule current-state heading cardinality");
+	}
+	const currentStateStart = body.indexOf(currentStateAnchor) + currentStateAnchor.length;
+	const nextHeading = body.indexOf("\n## ", currentStateStart);
+	const currentStateEnd = nextHeading === -1 ? body.length : nextHeading;
+	if (start < currentStateStart || end >= currentStateEnd) {
+		throw new Error("receipt phase capsule is outside current state");
+	}
+	requireVisibleMarkdownReceiptBlock(
+		body, receiptPhaseCapsuleStart, receiptPhaseCapsuleEnd, "receipt phase capsule",
+	);
+	const block = body.slice(start, end + receiptPhaseCapsuleEnd.length);
+	const matches = p07bCReceiptPhaseRows.filter((row) => block === renderReceiptPhaseCapsule(row));
+	if (matches.length !== 1) throw new Error("receipt phase capsule does not match one phase-table row");
+	return matches[0];
+}
+
+function rewriteReceiptPhaseCapsule(body, fromBoundary, toBoundary) {
+	const from = p07bCReceiptPhaseRowsByBoundary[fromBoundary];
+	const to = p07bCReceiptPhaseRowsByBoundary[toBoundary];
+	if (!from || !to) throw new Error("receipt phase capsule rewrite boundary");
+	const classified = classifyReceiptPhase(body);
+	if (classified.boundary !== fromBoundary) {
+		throw new Error(`receipt phase capsule rewrite expected ${fromBoundary}, found ${classified.boundary}`);
+	}
+	const rewritten = replaceFixtureExactlyOnce(
+		body,
+		renderReceiptPhaseCapsule(from),
+		renderReceiptPhaseCapsule(to),
+		`receipt phase ${fromBoundary} to ${toBoundary}`,
+	);
+	if (classifyReceiptPhase(rewritten).boundary !== toBoundary) {
+		throw new Error(`receipt phase capsule rewrite did not materialize ${toBoundary}`);
+	}
+	return rewritten;
+}
+
+function receiptPhaseFixtureDocument(row) {
+	return `# Receipt phase fixture\n\n## Current state\n\n${renderReceiptPhaseCapsule(row)}\n\n## Tail\n\nStable.\n`;
+}
+
+const forwardCandidateReceiptPhaseBoundaries = Object.freeze(["C3D", "C4", "C5", "C6A", "C6M", "C6B"]);
+const forwardCandidateReceiptPhaseBoundarySet = new Set(forwardCandidateReceiptPhaseBoundaries);
+const receiptPhaseHandoffPath = "docs/HANDOFF_MODE_C.md";
+const receiptPhaseSpecificationPath = "spec/verification/p07b-c-unit-paths.json";
+
+function decodeCandidateUTF8(bytes, label) {
+	if (!Buffer.isBuffer(bytes)) throw new Error(`${label} is not bytes`);
+	if (bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) {
+		throw new Error(`${label} has a noncanonical UTF-8 BOM`);
+	}
+	try { return new TextDecoder("utf-8", { fatal: true }).decode(bytes); }
+	catch (error) { throw new Error(`${label} is not UTF-8 (${error.message})`); }
+}
+
+function decodeCandidateGitOID(bytes, label) {
+	const oid = decodeCandidateUTF8(bytes, label).trim();
+	if (!/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/u.test(oid) || /^0+$/u.test(oid)) {
+		throw new Error(`${label} is not one canonical nonzero Git object ID`);
+	}
+	return oid;
+}
+
+function requireCandidateReceiptPhaseAuthorityStable(before, after) {
+	for (const field of ["parentCommit", "parentTree", "indexTree", "notesTree"]) {
+		if (before[field] !== after[field]) {
+			throw new Error(`receipt phase candidate ${field} changed during validation`);
+		}
+	}
+}
+
+function requireCandidateReceiptPhaseTransition(candidateBoundary, parentBoundary, parentCommit, parentTree) {
+	if (!forwardCandidateReceiptPhaseBoundarySet.has(candidateBoundary)) {
+		throw new Error(`receipt phase candidate boundary is outside the declared forward horizon: ${candidateBoundary}`);
+	}
+	const candidate = p07bCReceiptPhaseRowsByBoundary[
+		activeReceiptPhaseBoundary(receiptPhaseSpecification, candidateBoundary)
+	];
+	if (parentBoundary === undefined) {
+		if (candidate.boundary !== "C3D" || candidate.parent !== "C3B" ||
+			parentCommit !== sealedC3BIdentity.commit || parentTree !== sealedC3BIdentity.tree) {
+			throw new Error(`receipt phase bootstrap mismatch: ${candidate.boundary}/${candidate.parent}/${parentCommit ?? "ABSENT"}/${parentTree ?? "ABSENT"}`);
+		}
+		return candidate;
+	}
+	if (candidate.boundary === "C3D") throw new Error(`receipt phase C3D bootstrap found prior capsule ${parentBoundary}`);
+	activeReceiptPhaseBoundary(receiptPhaseSpecification, parentBoundary);
+	if (candidate.parent !== parentBoundary) {
+		throw new Error(`receipt phase candidate ${candidate.boundary} requires parent ${candidate.parent}, found ${parentBoundary}`);
+	}
+	return candidate;
+}
+
+function requireCandidateReceiptPhaseSnapshot(snapshot) {
+	const candidateBoundary = snapshot?.candidateBoundary;
+	if (!forwardCandidateReceiptPhaseBoundarySet.has(candidateBoundary)) {
+		throw new Error(`receipt phase candidate boundary is outside the declared forward horizon: ${candidateBoundary}`);
+	}
+	const unit = receiptPhaseSpecification.units[candidateBoundary];
+	if (!unit.exact.includes(receiptPhaseHandoffPath)) {
+		throw new Error(`receipt phase candidate ${candidateBoundary} does not own ${receiptPhaseHandoffPath}`);
+	}
+	if ((candidateBoundary === "C3D") !== unit.exact.includes(receiptPhaseSpecificationPath)) {
+		throw new Error(`receipt phase candidate ${candidateBoundary} specification ownership mismatch`);
+	}
+	validateExactIndexModes(
+		candidateBoundary,
+		[receiptPhaseHandoffPath, receiptPhaseSpecificationPath],
+		snapshot.indexEntries,
+	);
+	for (const [path, oid] of [
+		[receiptPhaseHandoffPath, snapshot.stagedHandoffOID],
+		[receiptPhaseSpecificationPath, snapshot.stagedSpecificationOID],
+	]) {
+		const entry = snapshot.indexEntries.find((candidate) => candidate.path === path);
+		if (entry.object !== oid) {
+			throw new Error(`receipt phase candidate index/tree blob mismatch: ${path}`);
+		}
+	}
+	if (!snapshot.stagedHandoffBytes.equals(snapshot.workingHandoffBytes)) {
+		throw new Error("receipt phase candidate HANDOFF staged/worktree byte mismatch");
+	}
+	if (!snapshot.stagedSpecificationBytes.equals(snapshot.workingSpecificationBytes)) {
+		throw new Error("receipt phase candidate specification staged/worktree byte mismatch");
+	}
+	if (candidateBoundary !== "C3D" && !snapshot.stagedSpecificationBytes.equals(snapshot.parentSpecificationBytes)) {
+		throw new Error(`receipt phase candidate ${candidateBoundary} changed the C3D-sealed topology table`);
+	}
+	let stagedSpecification;
+	try {
+		stagedSpecification = validateSpecification(JSON.parse(decodeCandidateUTF8(
+			snapshot.stagedSpecificationBytes, "receipt phase candidate specification",
+		)));
+	} catch (error) {
+		throw new Error(`receipt phase candidate specification is invalid (${error.message})`);
+	}
+	if (!isDeepStrictEqual(stagedSpecification, receiptPhaseSpecification)) {
+		throw new Error("receipt phase candidate specification differs from the loaded authority");
+	}
+	const candidate = classifyReceiptPhase(decodeCandidateUTF8(
+		snapshot.stagedHandoffBytes, "receipt phase candidate HANDOFF",
+	));
+	if (candidate.boundary !== candidateBoundary) {
+		throw new Error(`receipt phase candidate selection mismatch: requested ${candidateBoundary}, found ${candidate.boundary}`);
+	}
+	const parentHandoff = decodeCandidateUTF8(snapshot.parentHandoffBytes, "receipt phase parent HANDOFF");
+	let parentBoundary;
+	if (hasReceiptPhaseCapsule(parentHandoff)) parentBoundary = classifyReceiptPhase(parentHandoff).boundary;
+	requireCandidateReceiptPhaseTransition(
+		candidateBoundary, parentBoundary, snapshot.parentCommit, snapshot.parentTree,
+	);
+	return candidate;
+}
+
+function runCandidateReceiptPhaseTransitionSelfTest() {
+	const specificationBytes = Buffer.from(JSON.stringify(receiptPhaseSpecification, null, 2) + "\n", "utf8");
+	const indexEntries = Object.freeze([
+		Object.freeze({ mode: "100644", object: "1".repeat(40), stage: 0, path: receiptPhaseHandoffPath }),
+		Object.freeze({ mode: "100644", object: "2".repeat(40), stage: 0, path: receiptPhaseSpecificationPath }),
+	]);
+	const fixture = (candidateBoundary, parentBoundary) => {
+		const candidateBytes = Buffer.from(receiptPhaseFixtureDocument(p07bCReceiptPhaseRowsByBoundary[candidateBoundary]), "utf8");
+		const bootstrap = parentBoundary === undefined;
+		return {
+			candidateBoundary,
+			indexEntries,
+			indexTree: "3".repeat(40),
+			stagedHandoffOID: "1".repeat(40),
+			stagedSpecificationOID: "2".repeat(40),
+			stagedHandoffBytes: candidateBytes,
+			workingHandoffBytes: candidateBytes,
+			parentHandoffBytes: Buffer.from(bootstrap
+				? "# Sealed C3B handoff without a receipt-phase capsule.\n"
+				: receiptPhaseFixtureDocument(p07bCReceiptPhaseRowsByBoundary[parentBoundary]), "utf8"),
+			stagedSpecificationBytes: specificationBytes,
+			workingSpecificationBytes: specificationBytes,
+			parentSpecificationBytes: bootstrap ? Buffer.from("{\"schema_version\":\"historical-v15\"}\n") : specificationBytes,
+			parentCommit: bootstrap ? sealedC3BIdentity.commit : "f".repeat(40),
+			parentTree: bootstrap ? sealedC3BIdentity.tree : "e".repeat(40),
+		};
+	};
+	const accepted = [["C3D", undefined], ["C4", "C3D"], ["C5", "C4"], ["C6A", "C5"], ["C6M", "C6A"], ["C6B", "C6M"]];
+	for (const [candidate, parent] of accepted) requireCandidateReceiptPhaseSnapshot(fixture(candidate, parent));
+	let rejected = 0;
+	const refuse = (name, baseline, mutate) => {
+		const hostile = { ...baseline, indexEntries: baseline.indexEntries.map((entry) => ({ ...entry })) };
+		mutate(hostile);
+		let refused = false;
+		try { requireCandidateReceiptPhaseSnapshot(hostile); } catch { refused = true; }
+		if (!refused) throw new Error(`receipt phase candidate-transition self-test false negative: ${name}`);
+		rejected += 1;
+	};
+	refuse("CLI/capsule mismatch", fixture("C5", "C4"), (value) => {
+		value.stagedHandoffBytes = value.workingHandoffBytes = Buffer.from(
+			receiptPhaseFixtureDocument(p07bCReceiptPhaseRowsByBoundary.C4), "utf8");
+	});
+	refuse("staged/worktree HANDOFF mismatch", fixture("C4", "C3D"), (value) => {
+		value.workingHandoffBytes = Buffer.from("different\n");
+	});
+	refuse("staged/worktree specification mismatch", fixture("C4", "C3D"), (value) => {
+		value.workingSpecificationBytes = Buffer.from("different\n");
+	});
+	refuse("sealed-parent specification drift", fixture("C4", "C3D"), (value) => {
+		value.parentSpecificationBytes = Buffer.from("different\n");
+	});
+	refuse("bootstrap wrong commit", fixture("C3D", undefined), (value) => { value.parentCommit = "0".repeat(40); });
+	refuse("bootstrap wrong tree", fixture("C3D", undefined), (value) => { value.parentTree = "0".repeat(40); });
+	refuse("bootstrap prior capsule", fixture("C3D", undefined), (value) => {
+		value.parentHandoffBytes = Buffer.from(receiptPhaseFixtureDocument(p07bCReceiptPhaseRowsByBoundary.C3B), "utf8");
+	});
+	refuse("coherent downgrade", fixture("C4", "C5"), () => {});
+	refuse("source phase skip", fixture("C5", "C3D"), () => {});
+	refuse("receipt phase skip", fixture("C6B", "C5"), () => {});
+	refuse("adapter phase skipped by C6B", fixture("C6B", "C6A"), () => {});
+	refuse("adapter phase source skip", fixture("C6M", "C5"), () => {});
+	refuse("adapter phase replay", fixture("C6M", "C6M"), () => {});
+	refuse("same phase replay", fixture("C6B", "C6B"), () => {});
+	refuse("unknown boundary", fixture("C4", "C3D"), (value) => { value.candidateBoundary = "UNKNOWN"; });
+	refuse("candidate non-UTF8", fixture("C4", "C3D"), (value) => {
+		value.stagedHandoffBytes = value.workingHandoffBytes = Buffer.from([0xff]);
+	});
+	refuse("parent non-UTF8", fixture("C4", "C3D"), (value) => { value.parentHandoffBytes = Buffer.from([0xff]); });
+	refuse("specification non-UTF8", fixture("C4", "C3D"), (value) => {
+		value.stagedSpecificationBytes = value.workingSpecificationBytes = value.parentSpecificationBytes = Buffer.from([0xff]);
+	});
+	for (const [pathLabel, entryIndex] of [["HANDOFF", 0], ["specification", 1]]) {
+		for (const [name, mutate] of [
+			["symlink", (entry) => { entry.mode = "120000"; }],
+			["executable", (entry) => { entry.mode = "100755"; }],
+			["unmerged", (entry) => { entry.stage = 2; }],
+			["intent-to-add", (entry) => { entry.object = "0".repeat(40); }],
+		]) {
+			refuse(`candidate ${pathLabel} index ${name}`, fixture("C4", "C3D"), (value) => {
+				mutate(value.indexEntries[entryIndex]);
+			});
+		}
+		refuse(`candidate ${pathLabel} index duplicate`, fixture("C4", "C3D"), (value) => {
+			value.indexEntries.push({ ...value.indexEntries[entryIndex] });
+		});
+		refuse(`candidate ${pathLabel} index missing`, fixture("C4", "C3D"), (value) => {
+			value.indexEntries.splice(entryIndex, 1);
+		});
+		refuse(`candidate ${pathLabel} index/tree OID mismatch`, fixture("C4", "C3D"), (value) => {
+			value.indexEntries[entryIndex].object = "9".repeat(40);
+		});
+	}
+	refuse("candidate specification semantic drift", fixture("C3D", undefined), (value) => {
+		const hostile = structuredClone(receiptPhaseSpecification);
+		hostile.units.C4.exact = hostile.units.C4.exact.slice(1);
+		value.stagedSpecificationBytes = value.workingSpecificationBytes = Buffer.from(
+			JSON.stringify(hostile, null, 2) + "\n", "utf8",
+		);
+	});
+	const stable = { ...fixture("C6M", "C6A"), notesTree: "7".repeat(40) };
+	requireCandidateReceiptPhaseAuthorityStable(stable, {
+		parentCommit: stable.parentCommit, parentTree: stable.parentTree, indexTree: stable.indexTree,
+		notesTree: stable.notesTree,
+	});
+	for (const [name, field] of [
+		["parent commit drift", "parentCommit"],
+		["parent tree drift", "parentTree"],
+		["index tree drift", "indexTree"],
+		["didrun notes tree drift", "notesTree"],
+	]) {
+		let refused = false;
+		try {
+			const after = {
+				parentCommit: stable.parentCommit, parentTree: stable.parentTree,
+				indexTree: stable.indexTree, notesTree: stable.notesTree,
+			};
+			after[field] = "8".repeat(40);
+			requireCandidateReceiptPhaseAuthorityStable(stable, after);
+		} catch { refused = true; }
+		if (!refused) throw new Error(`receipt phase candidate-transition self-test false negative: ${name}`);
+		rejected += 1;
+	}
+	return Object.freeze({ accepted: accepted.length, rejected });
+}
+
+function validCandidateIndexPath(path) {
+	return typeof path === "string" && path.length > 0 && path.length <= 4096 &&
+		!isAbsolute(path) && !path.startsWith("./") && !path.includes("\\") &&
+		!path.includes("//") && !path.split("/").some((part) => part === "" || part === "." || part === "..") &&
+		!/[\u0000-\u001f\u007f]/u.test(path);
+}
+
+function parseCandidateIndexTree(bytes) {
+	if (!Buffer.isBuffer(bytes) || (bytes.length > 0 && bytes.at(-1) !== 0)) {
+		throw new Error("receipt phase candidate index-tree inventory framing");
+	}
+	let decoded;
+	try {
+		decoded = new TextDecoder("utf-8", { fatal: true }).decode(
+			bytes.length === 0 ? bytes : bytes.subarray(0, -1),
+		);
+	} catch (error) {
+		throw new Error(`receipt phase candidate index-tree inventory is not UTF-8 (${error.message})`);
+	}
+	const entries = [];
+	for (const row of decoded.length === 0 ? [] : decoded.split("\0")) {
+		const match = /^([0-7]{6}) (blob|commit) ([0-9a-f]{40}|[0-9a-f]{64})\t([\s\S]+)$/u.exec(row);
+		if (!match || match[2] !== "blob" || !validCandidateIndexPath(match[4]) ||
+			(match[1] !== "100644" && match[1] !== "100755") || /^0+$/u.test(match[3])) {
+			throw new Error("receipt phase candidate index-tree inventory entry");
+		}
+		entries.push(Object.freeze({ mode: match[1], object: match[3], stage: 0, path: match[4] }));
+	}
+	if (new Set(entries.map(({ path }) => path)).size !== entries.length) {
+		throw new Error("receipt phase candidate index-tree duplicate path");
+	}
+	return Object.freeze(entries.sort((left, right) =>
+		Buffer.compare(Buffer.from(left.path, "utf8"), Buffer.from(right.path, "utf8"))));
+}
+
+async function readStableCandidateWorktreeBytes(path, expectedMode) {
+	const rootReal = await realpath(repositoryRoot);
+	const parts = path.split("/");
+	let cursor = repositoryRoot;
+	for (let index = 0; index < parts.length - 1; index += 1) {
+		const part = parts[index];
+		cursor = resolve(cursor, part);
+		const ancestor = await lstat(cursor);
+		if (!ancestor.isDirectory() || ancestor.isSymbolicLink() ||
+			await realpath(cursor) !== resolve(rootReal, ...parts.slice(0, index + 1))) {
+			throw new Error(`receipt phase candidate worktree ancestor is not a stable directory: ${path}`);
+		}
+	}
+	const target = resolve(repositoryRoot, path);
+	if (await realpath(target) !== resolve(rootReal, path)) {
+		throw new Error(`receipt phase candidate worktree path escapes the repository: ${path}`);
+	}
+	const handle = await open(target, fsConstants.O_RDONLY | fsConstants.O_NOFOLLOW);
+	try {
+		const before = await handle.stat({ bigint: true });
+		if (!before.isFile() || before.size > 16n * 1024n * 1024n) {
+			throw new Error(`receipt phase candidate worktree file bounds: ${path}`);
+		}
+		if (expectedMode !== undefined &&
+			((expectedMode === "100755") !== ((before.mode & 0o111n) !== 0n))) {
+			throw new Error(`receipt phase candidate worktree executable mode mismatch: ${path}`);
+		}
+		const bytes = await handle.readFile();
+		const after = await handle.stat({ bigint: true });
+		for (const field of ["dev", "ino", "size", "mtimeNs", "ctimeNs"]) {
+			if (before[field] !== after[field]) {
+				throw new Error(`receipt phase candidate worktree file changed during read: ${path}`);
+			}
+		}
+		return bytes;
+	} finally {
+		await handle.close();
+	}
+}
+
+async function candidateIndexTreeSnapshot(indexTree, liveIndexEntries) {
+	const treeEntries = parseCandidateIndexTree(await gitOutput([
+		"ls-tree", "-r", "-z", "--full-tree", indexTree,
+	]));
+	const normalizedLiveEntries = Object.freeze(liveIndexEntries.map((entry) => Object.freeze({
+		mode: entry.mode, object: entry.object, stage: entry.stage, path: entry.path,
+	})).sort((left, right) => Buffer.compare(
+		Buffer.from(left.path, "utf8"), Buffer.from(right.path, "utf8"),
+	)));
+	if (!isDeepStrictEqual(treeEntries, normalizedLiveEntries)) {
+		throw new Error("receipt phase candidate live index differs from pinned index tree");
+	}
+	const overrides = new Map([[STRICT_INDEX_SNAPSHOT, true]]);
+	const working = new Map();
+	let totalBytes = 0;
+	for (const entry of treeEntries) {
+		const stagedBytes = await gitOutput(["cat-file", "blob", entry.object]);
+		totalBytes += stagedBytes.length;
+		if (totalBytes > 128 * 1024 * 1024) {
+			throw new Error("receipt phase candidate pinned index snapshot exceeds byte ceiling");
+		}
+		const workingBytes = await readStableCandidateWorktreeBytes(entry.path, entry.mode);
+		if (!stagedBytes.equals(workingBytes)) {
+			throw new Error(`receipt phase candidate staged/worktree byte mismatch: ${entry.path}`);
+		}
+		overrides.set(entry.path, stagedBytes);
+		working.set(entry.path, workingBytes);
+	}
+	return Object.freeze({ entries: treeEntries, overrides, working });
+}
+
+export async function verifyCandidateReceiptPhasePlan(boundary) {
+	if (!forwardCandidateReceiptPhaseBoundarySet.has(boundary)) {
+		throw new Error(`receipt phase candidate boundary is outside the declared forward horizon: ${boundary}`);
+	}
+	const parentCommit = decodeCandidateGitOID(
+		await gitOutput(["rev-parse", "--verify", "HEAD^{commit}"]), "receipt phase parent commit",
+	);
+	const parentTree = decodeCandidateGitOID(
+		await gitOutput(["rev-parse", "--verify", `${parentCommit}^{tree}`]), "receipt phase parent tree",
+	);
+	const indexTree = decodeCandidateGitOID(
+		await gitOutput(["write-tree"]), "receipt phase candidate index tree",
+	);
+	const notesTree = decodeCandidateGitOID(
+		await gitOutput(["rev-parse", "--verify", "refs/notes/didrun^{tree}"]),
+		"receipt phase initial didrun notes tree",
+	);
+	const liveIndexEntries = await stagedIndexEntries();
+	const treeSnapshot = await candidateIndexTreeSnapshot(indexTree, liveIndexEntries);
+	const indexEntries = treeSnapshot.entries;
+	const stagedHandoffOID = decodeCandidateGitOID(
+		await gitOutput(["rev-parse", "--verify", `${indexTree}:${receiptPhaseHandoffPath}`]),
+		"receipt phase staged HANDOFF blob",
+	);
+	const stagedSpecificationOID = decodeCandidateGitOID(
+		await gitOutput(["rev-parse", "--verify", `${indexTree}:${receiptPhaseSpecificationPath}`]),
+		"receipt phase staged specification blob",
+	);
+	const snapshot = {
+		candidateBoundary: boundary,
+		indexEntries,
+		indexTree,
+		stagedHandoffOID,
+		stagedSpecificationOID,
+		stagedHandoffBytes: treeSnapshot.overrides.get(receiptPhaseHandoffPath),
+		workingHandoffBytes: treeSnapshot.working.get(receiptPhaseHandoffPath),
+		parentHandoffBytes: await gitOutput(["show", `${parentCommit}:${receiptPhaseHandoffPath}`]),
+		stagedSpecificationBytes: treeSnapshot.overrides.get(receiptPhaseSpecificationPath),
+		workingSpecificationBytes: treeSnapshot.working.get(receiptPhaseSpecificationPath),
+		parentSpecificationBytes: await gitOutput(["show", `${parentCommit}:${receiptPhaseSpecificationPath}`]),
+		parentCommit,
+		parentTree,
+		notesTree,
+	};
+	const candidate = requireCandidateReceiptPhaseSnapshot(snapshot);
+	const overrides = treeSnapshot.overrides;
+	for (const path of currentReceiptPhaseMarkdownPaths(candidate.boundary)) {
+		const stagedBytes = overrides.get(path);
+		if (!Buffer.isBuffer(stagedBytes)) throw new Error(`receipt phase candidate corpus absent from pinned index tree: ${path}`);
+		decodeCandidateUTF8(stagedBytes, `receipt phase staged corpus ${path}`);
+	}
+	const errors = await checkPlan(
+		repositoryRoot, overrides, ...Array(9).fill(undefined), candidate.boundary, candidate.boundary,
+	);
+	if (errors.length > 0) throw new Error(`P07B-C ${candidate.boundary} candidate phase plan failed:\n${errors.join("\n")}`);
+	await runIndependentCandidatePhaseGate(receiptPhaseSpecification, candidate.boundary);
+	const finalParentCommit = decodeCandidateGitOID(
+		await gitOutput(["rev-parse", "--verify", "HEAD^{commit}"]), "receipt phase final parent commit",
+	);
+	const finalAuthority = {
+		parentCommit: finalParentCommit,
+		parentTree: decodeCandidateGitOID(
+			await gitOutput(["rev-parse", "--verify", `${finalParentCommit}^{tree}`]), "receipt phase final parent tree",
+		),
+		indexTree: decodeCandidateGitOID(await gitOutput(["write-tree"]), "receipt phase final index tree"),
+		notesTree: decodeCandidateGitOID(
+			await gitOutput(["rev-parse", "--verify", "refs/notes/didrun^{tree}"]),
+			"receipt phase final didrun notes tree",
+		),
+	};
+	requireCandidateReceiptPhaseAuthorityStable(snapshot, finalAuthority);
+	for (const [path, before] of treeSnapshot.working) {
+		const entry = treeSnapshot.entries.find((candidateEntry) => candidateEntry.path === path);
+		const after = await readStableCandidateWorktreeBytes(path, entry.mode);
+		if (!before.equals(after)) throw new Error(`receipt phase candidate corpus worktree changed during validation: ${path}`);
+	}
+	if (!snapshot.workingSpecificationBytes.equals(
+		await readStableCandidateWorktreeBytes(receiptPhaseSpecificationPath, "100644"),
+	)) {
+		throw new Error("receipt phase candidate specification worktree changed during validation");
+	}
+	console.log(`P07B-C ${candidate.boundary} candidate phase plan passed: pinned parent/index trees, strict full-index source snapshot, and mechanically coupled independent transition oracle advance exactly one declared parent edge without persistent authority drift; persistent-drift detection only, sole-writer required, same-user ABA remains outside the claim`);
+}
+
+function validateReceiptPresence(row, observed) {
+	if (!row || p07bCReceiptPhaseRowsByBoundary[row.boundary] !== row ||
+		!observed || typeof observed !== "object" || Array.isArray(observed)) {
+		throw new Error("receipt phase observed-state input");
+	}
+	const expectedKeys = Object.keys(row.receipts);
+	if (!isDeepStrictEqual(Object.keys(observed), expectedKeys)) {
+		throw new Error("receipt phase observed-state key roster");
+	}
+	for (const key of expectedKeys) {
+		if (observed[key] !== "ABSENT" && observed[key] !== "PRESENT") {
+			throw new Error(`receipt phase observed-state value ${key}`);
+		}
+		if (observed[key] !== row.receipts[key]) {
+			throw new Error(`receipt phase ${row.boundary} observed ${key}=${observed[key]} expected ${row.receipts[key]}`);
+		}
+	}
+	return row;
+}
+
+function planC6SourceAuthorityRecord(authority) {
+	return {
+		schema_version: c6aSourceAuthoritySchema,
+		source_commit: authority.commit,
+		source_tree: authority.tree,
+		source_parent: authority.parent,
+		source_subject: c6aSourceSubject,
+		note_ref: "refs/notes/didrun",
+		note_type: "blob",
+		note_blob: authority.noteBlob,
+		note_body_sha256: authority.noteBodySHA256,
+		secrets_override: authority.secretsOverride,
+		claims: c6aClaimLabels.map((label, index) => ({
+			label, type: c6aClaimTypes[index], grade: "TREE-EXACT",
+		})),
+	};
+}
+
+function renderPlanC6SourceAuthority(authority) {
+	return `${JSON.stringify(planC6SourceAuthorityRecord(authority), null, 2)}\n`;
+}
+
+function validatePlanC6SourceAuthority(bytes, authority) {
+	const text = decodeCandidateUTF8(bytes, "plan C6A source-authority manifest");
+	let manifest;
+	try { manifest = JSON.parse(text); }
+	catch (error) { throw new Error(`C6A source-authority manifest JSON (${error.message})`); }
+	const expected = planC6SourceAuthorityRecord(authority);
+	if (!isDeepStrictEqual(manifest, expected) || text !== `${JSON.stringify(manifest, null, 2)}\n`) {
+		throw new Error("C6A source-authority manifest is not the exact canonical sealed-source record");
+	}
+	return Object.freeze(manifest);
+}
+
+const c6aRequiredNonclaims = Object.freeze([
+	"adoption or market demand",
+	"human comprehension or taste",
+	"maintainership",
+	"production hardening or cross-platform support",
+	"security review or hostile containment",
+]);
+
+function boundedC6DisclosureText(value, label, maximum = 500) {
+	if (typeof value !== "string" || value.length === 0 || value.length > maximum ||
+		/[\u0000-\u001f\u007f]/u.test(value)) throw new Error(`C6A evidence summary ${label}`);
+	return value;
+}
+
+function validatePlanC6EvidenceSummary(bytes) {
+	const text = decodeCandidateUTF8(bytes, "plan C6A evidence summary");
+	let summary;
+	try { summary = JSON.parse(text); }
+	catch (error) { throw new Error(`C6A evidence summary JSON (${error.message})`); }
+	if (!summary || typeof summary !== "object" || Array.isArray(summary) ||
+		!isDeepStrictEqual(Object.keys(summary).sort(), [
+			"didrun_bugs", "nonclaims", "permanent_negatives", "private_evidence", "schema_version", "timings",
+		]) || summary.schema_version !== c6aEvidenceSummarySchema || text !== `${JSON.stringify(summary)}\n`) {
+		throw new Error("C6A evidence summary root or canonical encoding");
+	}
+	const requireSortedRecords = (records, key, label, validate, { minimum = 0, maximum = 128 } = {}) => {
+		if (!Array.isArray(records) || records.length < minimum || records.length > maximum) {
+			throw new Error(`C6A evidence summary ${label} cardinality`);
+		}
+		const identities = records.map((record) => validate(record));
+		if (new Set(identities).size !== identities.length ||
+			!isDeepStrictEqual(identities, [...identities].sort((left, right) => Buffer.compare(Buffer.from(left), Buffer.from(right))))) {
+			throw new Error(`C6A evidence summary ${label} ${key} order`);
+		}
+	};
+	requireSortedRecords(summary.timings, "label", "timings", (record) => {
+		if (!record || typeof record !== "object" || Array.isArray(record) ||
+			!isDeepStrictEqual(Object.keys(record).sort(), ["elapsed_ms", "label"]) ||
+			!Number.isSafeInteger(record.elapsed_ms) || record.elapsed_ms < 0 || record.elapsed_ms > 86_400_000) {
+			throw new Error("C6A evidence summary timing record");
+		}
+		return boundedC6DisclosureText(record.label, "timing label", 160);
+	}, { minimum: 1 });
+	requireSortedRecords(summary.permanent_negatives, "id", "permanent negatives", (record) => {
+		if (!record || typeof record !== "object" || Array.isArray(record) ||
+			!isDeepStrictEqual(Object.keys(record).sort(), ["evidence", "id"])) {
+			throw new Error("C6A evidence summary permanent-negative record");
+		}
+		boundedC6DisclosureText(record.evidence, "permanent-negative evidence");
+		return boundedC6DisclosureText(record.id, "permanent-negative id", 160);
+	});
+	requireSortedRecords(summary.didrun_bugs, "id", "didrun bugs", (record) => {
+		if (!record || typeof record !== "object" || Array.isArray(record) ||
+			!isDeepStrictEqual(Object.keys(record).sort(), ["id", "status"]) ||
+			!["FIXED", "NOT_OBSERVED", "OPEN"].includes(record.status)) {
+			throw new Error("C6A evidence summary didrun-bug record");
+		}
+		return boundedC6DisclosureText(record.id, "didrun-bug id", 160);
+	});
+	if (!isDeepStrictEqual(summary.nonclaims, c6aRequiredNonclaims)) {
+		throw new Error("C6A evidence summary exact nonclaims");
+	}
+	const privateEvidence = summary.private_evidence;
+	if (!privateEvidence || typeof privateEvidence !== "object" || Array.isArray(privateEvidence) ||
+		!isDeepStrictEqual(Object.keys(privateEvidence).sort(), ["availability", "declared_blobs", "declared_bytes", "note"]) ||
+		!["AVAILABLE", "PARTIAL", "UNAVAILABLE"].includes(privateEvidence.availability) ||
+		!Number.isSafeInteger(privateEvidence.declared_blobs) || privateEvidence.declared_blobs < 0 || privateEvidence.declared_blobs > 16 ||
+		!Number.isSafeInteger(privateEvidence.declared_bytes) || privateEvidence.declared_bytes < 0 || privateEvidence.declared_bytes > 64 * 1024 * 1024 ||
+		(privateEvidence.availability === "UNAVAILABLE" &&
+			(privateEvidence.declared_blobs !== 0 || privateEvidence.declared_bytes !== 0))) {
+		throw new Error("C6A evidence summary private-evidence declaration");
+	}
+	boundedC6DisclosureText(privateEvidence.note, "private-evidence note");
+	return Object.freeze(summary);
+}
+
+function validatePlanC6ReceiptDeclaration(bytes, authority, manifestBytes, summaryBytes) {
+	const text = decodeCandidateUTF8(bytes, "plan C6A receipt declaration");
+	let receipt;
+	try { receipt = JSON.parse(text); }
+	catch (error) { throw new Error(`C6A receipt declaration JSON (${error.message})`); }
+	const rootKeys = [
+		"claims", "coverage_complete_events", "coverage_total_events", "evidence", "schema_version",
+		"secrets_override", "source_authority_sha256", "source_commit", "source_parent", "source_subject",
+		"source_tree", "strict_claims_recorded_exact", "strict_claims_total", "strict_exit_code",
+	];
+	if (!receipt || typeof receipt !== "object" || Array.isArray(receipt) ||
+		!isDeepStrictEqual(Object.keys(receipt).sort(), rootKeys) ||
+		receipt.schema_version !== c6aReceiptDeclarationSchema || text !== `${JSON.stringify(receipt)}\n` ||
+		receipt.source_commit !== authority.commit || receipt.source_tree !== authority.tree ||
+		receipt.source_parent !== authority.parent || receipt.source_subject !== c6aSourceSubject ||
+		receipt.secrets_override !== authority.secretsOverride || receipt.strict_exit_code !== 0 ||
+		receipt.strict_claims_recorded_exact !== c6aClaimLabels.length || receipt.strict_claims_total !== c6aClaimLabels.length ||
+		receipt.coverage_complete_events !== c6aClaimLabels.length || receipt.coverage_total_events !== c6aClaimLabels.length ||
+		receipt.source_authority_sha256 !== createHash("sha256").update(manifestBytes).digest("hex") ||
+		!Array.isArray(receipt.claims) || receipt.claims.length !== c6aClaimLabels.length) {
+		throw new Error("C6A receipt declaration root, source, strict, or claim roster");
+	}
+	for (let index = 0; index < receipt.claims.length; index += 1) {
+		const claim = receipt.claims[index];
+		if (!claim || typeof claim !== "object" || Array.isArray(claim) ||
+			!isDeepStrictEqual(Object.keys(claim).sort(), ["grade", "label", "supporting_event_index", "type"]) ||
+			claim.label !== c6aClaimLabels[index] || claim.type !== c6aClaimTypes[index] || claim.grade !== "TREE-EXACT" ||
+			claim.supporting_event_index !== index) throw new Error(`C6A receipt declaration claim ${index + 1}`);
+	}
+	const evidence = receipt.evidence;
+	if (!evidence || typeof evidence !== "object" || Array.isArray(evidence) ||
+		!isDeepStrictEqual(Object.keys(evidence).sort(), [
+			"git_note", "html_report", "ledger_archive", "seal_redaction", "source_summary",
+		])) throw new Error("C6A receipt declaration evidence roster");
+	const note = evidence.git_note;
+	if (!note || typeof note !== "object" || Array.isArray(note) ||
+		!isDeepStrictEqual(Object.keys(note).sort(), ["blob_oid", "body_sha256", "version"]) || note.version !== 1 ||
+		note.blob_oid !== authority.noteBlob || note.body_sha256 !== authority.noteBodySHA256) {
+		throw new Error("C6A receipt declaration Git-note evidence");
+	}
+	const html = evidence.html_report;
+	if (!html || typeof html !== "object" || Array.isArray(html) ||
+		!isDeepStrictEqual(Object.keys(html).sort(), ["authority", "bytes", "path", "sha256"]) ||
+		html.path !== `.countershape/evidence/p07b-c-c6a-final-${authority.commit.slice(0, 12)}.html` ||
+		html.authority !== "LOCAL_SNAPSHOT_NOT_PORTABLE_STRICT_WITNESS" ||
+		!Number.isSafeInteger(html.bytes) || html.bytes <= 0 || html.bytes > 16 * 1024 * 1024 ||
+		!/^[0-9a-f]{64}$/u.test(html.sha256 ?? "")) throw new Error("C6A receipt declaration local HTML");
+	const ledger = evidence.ledger_archive;
+	const ledgerKeys = [
+		"all_files_manifest_sha256", "archive_session_event_count", "authority", "claim_count",
+		"claims_jsonl_sha256", "gitignore_sha256", "manifest_format", "object_file_count", "objects_manifest_sha256",
+		"path", "seal_count", "sealed_event_count", "seals_jsonl_sha256", "session_log_sha256", "total_bytes", "total_file_count",
+	];
+	if (!ledger || typeof ledger !== "object" || Array.isArray(ledger) ||
+		!isDeepStrictEqual(Object.keys(ledger).sort(), ledgerKeys) ||
+		ledger.path !== finalLedgerArchivePath("C6A", authority.commit) ||
+		ledger.authority !== "LOCAL_IGNORED_ARCHIVE_NOT_GIT_AUTHORITY" ||
+		ledger.manifest_format !== "sorted-relative-posix-path-tab-size-tab-sha256-newline/v1" ||
+		ledger.sealed_event_count !== c6aClaimLabels.length || ledger.claim_count !== c6aClaimLabels.length || ledger.seal_count !== 1 ||
+		!Number.isSafeInteger(ledger.archive_session_event_count) || ledger.archive_session_event_count < c6aClaimLabels.length ||
+		ledger.archive_session_event_count > c6aClaimLabels.length + 4 ||
+		!Number.isSafeInteger(ledger.object_file_count) || ledger.object_file_count <= 0 || ledger.object_file_count > 10_000 ||
+		ledger.total_file_count !== ledger.object_file_count + 4 || !Number.isSafeInteger(ledger.total_bytes) ||
+		ledger.total_bytes <= 0 || ledger.total_bytes > 1024 * 1024 * 1024 ||
+		![ledger.all_files_manifest_sha256, ledger.objects_manifest_sha256, ledger.gitignore_sha256,
+			ledger.session_log_sha256, ledger.claims_jsonl_sha256, ledger.seals_jsonl_sha256]
+			.every((digest) => /^[0-9a-f]{64}$/u.test(digest ?? ""))) {
+		throw new Error("C6A receipt declaration local ledger");
+	}
+	const summaryDescriptor = evidence.source_summary;
+	if (!summaryDescriptor || typeof summaryDescriptor !== "object" || Array.isArray(summaryDescriptor) ||
+		!isDeepStrictEqual(Object.keys(summaryDescriptor).sort(), ["authority", "bytes", "path", "sha256"]) ||
+		summaryDescriptor.path !== c6aEvidenceSummaryPath ||
+		summaryDescriptor.authority !== "TRACKED_SEALED_C6A_SOURCE_ARTIFACT" ||
+		summaryDescriptor.bytes !== summaryBytes.length ||
+		summaryDescriptor.sha256 !== createHash("sha256").update(summaryBytes).digest("hex")) {
+		throw new Error("C6A receipt declaration source-summary binding");
+	}
+	const redaction = evidence.seal_redaction;
+	if (!redaction || typeof redaction !== "object" || Array.isArray(redaction) ||
+		!isDeepStrictEqual(Object.keys(redaction).sort(), [
+			"finding_count", "finding_kinds", "finding_provenance", "structured_scan_provenance", "structured_staged_scan_findings",
+		]) || !Number.isSafeInteger(redaction.finding_count) || redaction.finding_count < 0 || redaction.finding_count > 100_000 ||
+		!isDeepStrictEqual(redaction.finding_kinds, redaction.finding_count === 0 ? [] : ["high-entropy"]) ||
+		redaction.finding_provenance !== "LOCAL_TERMINAL_OBSERVATION_NOT_GIT_NOTE" ||
+		redaction.structured_staged_scan_findings !== 0 ||
+		redaction.structured_scan_provenance !== "SEALED_C6A_SUPPORTING_EVENT_10" ||
+		receipt.secrets_override !== (redaction.finding_count > 0)) {
+		throw new Error("C6A receipt declaration seal-redaction evidence");
+	}
+	return Object.freeze({ receipt, summary: validatePlanC6EvidenceSummary(summaryBytes) });
+}
+
+function syntheticPlanC6ReceiptFixture(authority) {
+	const manifestText = renderPlanC6SourceAuthority(authority);
+	const manifestBytes = Buffer.from(manifestText, "utf8");
+	const manifest = validatePlanC6SourceAuthority(manifestBytes, authority);
+	const summary = {
+		schema_version: c6aEvidenceSummarySchema,
+		timings: [{ label: "cumulative-verification", elapsed_ms: 1 }],
+		permanent_negatives: [],
+		didrun_bugs: [],
+		nonclaims: [...c6aRequiredNonclaims],
+		private_evidence: {
+			availability: "UNAVAILABLE", declared_blobs: 0, declared_bytes: 0,
+			note: "Synthetic fixture declares no private evidence.",
+		},
+	};
+	const summaryBytes = Buffer.from(`${JSON.stringify(summary)}\n`, "utf8");
+	validatePlanC6EvidenceSummary(summaryBytes);
+	const receipt = {
+		schema_version: c6aReceiptDeclarationSchema,
+		source_commit: authority.commit,
+		source_tree: authority.tree,
+		source_parent: authority.parent,
+		source_subject: c6aSourceSubject,
+		source_authority_sha256: createHash("sha256").update(manifestBytes).digest("hex"),
+		secrets_override: authority.secretsOverride,
+		strict_exit_code: 0,
+		strict_claims_recorded_exact: c6aClaimLabels.length,
+		strict_claims_total: c6aClaimLabels.length,
+		coverage_complete_events: c6aClaimLabels.length,
+		coverage_total_events: c6aClaimLabels.length,
+		claims: c6aClaimLabels.map((label, index) => ({
+			label, type: c6aClaimTypes[index], grade: "TREE-EXACT", supporting_event_index: index,
+		})),
+		evidence: {
+			html_report: {
+				path: `.countershape/evidence/p07b-c-c6a-final-${authority.commit.slice(0, 12)}.html`,
+				sha256: "1".repeat(64), bytes: 1, authority: "LOCAL_SNAPSHOT_NOT_PORTABLE_STRICT_WITNESS",
+			},
+			ledger_archive: {
+				path: finalLedgerArchivePath("C6A", authority.commit),
+				authority: "LOCAL_IGNORED_ARCHIVE_NOT_GIT_AUTHORITY",
+				manifest_format: "sorted-relative-posix-path-tab-size-tab-sha256-newline/v1",
+				sealed_event_count: c6aClaimLabels.length, archive_session_event_count: c6aClaimLabels.length,
+				claim_count: c6aClaimLabels.length, seal_count: 1, object_file_count: 1, total_file_count: 5,
+				total_bytes: 1, all_files_manifest_sha256: "2".repeat(64), objects_manifest_sha256: "3".repeat(64),
+				gitignore_sha256: "4".repeat(64), session_log_sha256: "5".repeat(64),
+				claims_jsonl_sha256: "6".repeat(64), seals_jsonl_sha256: "7".repeat(64),
+			},
+			git_note: { version: 1, blob_oid: authority.noteBlob, body_sha256: authority.noteBodySHA256 },
+			seal_redaction: {
+				finding_count: authority.secretsOverride ? 1 : 0,
+				finding_kinds: authority.secretsOverride ? ["high-entropy"] : [],
+				finding_provenance: "LOCAL_TERMINAL_OBSERVATION_NOT_GIT_NOTE",
+				structured_staged_scan_findings: 0,
+				structured_scan_provenance: "SEALED_C6A_SUPPORTING_EVENT_10",
+			},
+			source_summary: {
+				path: c6aEvidenceSummaryPath, sha256: createHash("sha256").update(summaryBytes).digest("hex"),
+				bytes: summaryBytes.length, authority: "TRACKED_SEALED_C6A_SOURCE_ARTIFACT",
+			},
+		},
+	};
+	const receiptBytes = Buffer.from(`${JSON.stringify(receipt)}\n`, "utf8");
+	validatePlanC6ReceiptDeclaration(receiptBytes, authority, manifestBytes, summaryBytes);
+	return Object.freeze({ manifest, manifestText, manifestBytes, receipt, receiptBytes, summary, summaryBytes });
+}
+
+function renderPlanC6SourceReceiptBlock(manifest, receipt, summary) {
+	return [
+		c6aReceiptBlockStart,
+		"### Sealed C6A source receipts",
+		"",
+		`- **Source commit:** \`${manifest.source_commit}\``,
+		`- **Source tree:** \`${manifest.source_tree}\``,
+		`- **Source parent:** \`${manifest.source_parent}\``,
+		`- **Source subject:** \`${manifest.source_subject}\``,
+		`- **Didrun note:** \`${manifest.note_blob}\` (body SHA-256 \`${manifest.note_body_sha256}\`)`,
+		`- **Seal override disclosed:** \`${String(manifest.secrets_override)}\``,
+		`- **Strict result:** \`${receipt.strict_claims_recorded_exact}/${receipt.strict_claims_total} claims recorded-exact\`; strict exit \`${receipt.strict_exit_code}\``,
+		`- **Local HTML snapshot:** \`${receipt.evidence.html_report.path}\` (SHA-256 \`${receipt.evidence.html_report.sha256}\`, ${receipt.evidence.html_report.bytes} bytes; not a portable strict witness)`,
+		`- **Ignored ledger snapshot:** \`${receipt.evidence.ledger_archive.path}\` (all-files SHA-256 \`${receipt.evidence.ledger_archive.all_files_manifest_sha256}\`; local only)`,
+		`- **Tracked evidence summary:** \`${receipt.evidence.source_summary.path}\` (SHA-256 \`${receipt.evidence.source_summary.sha256}\`; timings=${summary.timings.length}, permanent-negatives=${summary.permanent_negatives.length}, didrun-bugs=${summary.didrun_bugs.length})`,
+		`- **Private evidence availability:** \`${summary.private_evidence.availability}\`; ${summary.private_evidence.declared_blobs} declared blobs / ${summary.private_evidence.declared_bytes} bytes; confidentiality is not established`,
+		"",
+		"| # | Claim | Type | Grade |",
+		"|---:|---|---|---|",
+		...manifest.claims.map((claim, index) =>
+			`| ${index + 1} | \`${claim.label}\` | \`${claim.type}\` | \`${claim.grade}\` |`),
+		"",
+		"Nonclaims: " + summary.nonclaims.map((value) => `\`${value}\``).join(", ") + ".",
+		c6aReceiptBlockEnd,
+	].join("\n");
+}
+
+function planC6SourceProjectionState(body, manifest, receipt, summary, label) {
+	const starts = countOccurrences(body, c6aReceiptBlockStart);
+	const ends = countOccurrences(body, c6aReceiptBlockEnd);
+	if (starts === 0 && ends === 0) return "ABSENT";
+	if (manifest === undefined) throw new Error(`${label}: C6A source receipts exist without source authority`);
+	if (starts !== 1 || ends !== 1) throw new Error(`${label}: C6A source-receipt marker cardinality`);
+	if (receipt === undefined || summary === undefined) throw new Error(`${label}: C6A source receipts exist without full receipt evidence`);
+	const expected = renderPlanC6SourceReceiptBlock(manifest, receipt, summary);
+	if (!body.includes(expected)) throw new Error(`${label}: C6A source-receipt block mismatch`);
+	const start = body.indexOf(c6aReceiptBlockStart);
+	const end = body.indexOf(c6aReceiptBlockEnd, start);
+	if ((start !== 0 && body[start - 1] !== "\n") || end < start ||
+		(end + c6aReceiptBlockEnd.length !== body.length && body[end + c6aReceiptBlockEnd.length] !== "\n")) {
+		throw new Error(`${label}: C6A source-receipt block framing`);
+	}
+	requireVisibleMarkdownReceiptBlock(body, c6aReceiptBlockStart, c6aReceiptBlockEnd, `C6A source receipts in ${label}`);
+	return "PRESENT";
+}
+
+const planC6PreviewRedaction = "«redacted:high-entropy»";
+const planC6DoubleRedactionPositions = new Set([2, 4, 5, 7, 8]);
+const planC6BareRedactionPositions = new Set([31, 32, 33, 35, 36]);
+
+function planC6ExpectedRedactionProjection(position, expected) {
+	if (planC6DoubleRedactionPositions.has(position)) return `${planC6PreviewRedaction}.${planC6PreviewRedaction}`;
+	if (planC6BareRedactionPositions.has(position)) return planC6PreviewRedaction;
+	if (position !== 6) return undefined;
+	const suffixOffset = expected.indexOf(".countershape/");
+	return suffixOffset === -1 ? undefined : `${planC6PreviewRedaction}${expected.slice(suffixOffset)}`;
+}
+
+function validatePlanC6ClaimPreview(index, argv, expectedArgv, hermeticPrefix) {
+	const expected = expectedArgv[index];
+	if (!expected || !Array.isArray(argv) || argv.length !== expected.length ||
+		!isDeepStrictEqual(expected.slice(0, hermeticPrefix.length), [...hermeticPrefix]) ||
+		argv.some((argument) => typeof argument !== "string" || argument.length === 0 ||
+			argument.length > 4096 || /[\u0000-\u001f\u007f]/u.test(argument))) {
+		return false;
+	}
+	for (let position = 0; position < hermeticPrefix.length; position += 1) {
+		if (argv[position] === expected[position]) continue;
+		if (argv[position] !== planC6ExpectedRedactionProjection(position, expected[position])) return false;
+	}
+	return isDeepStrictEqual(argv.slice(hermeticPrefix.length), expected.slice(hermeticPrefix.length));
+}
+
+function validatePlanC6SourceNote(note, identity, claimLabels, claimTypes, expectedArgv, hermeticPrefix, label) {
+	const rootKeys = ["claims", "commit", "coverage", "secrets_override", "tree", "version"];
+	if (!note || typeof note !== "object" || Array.isArray(note) ||
+		!isDeepStrictEqual(Object.keys(note).sort(), rootKeys) || note.version !== 1 ||
+		note.commit !== identity.commit || note.tree !== identity.tree || typeof note.secrets_override !== "boolean" ||
+		!Array.isArray(note.claims) || note.claims.length !== claimLabels.length ||
+		expectedArgv.length !== claimLabels.length || hermeticPrefix.length === 0) {
+		throw new Error(`${label}: didrun note root, identity, or claim roster`);
+	}
+	for (let index = 0; index < claimLabels.length; index += 1) {
+		const recorded = note.claims[index];
+		const claim = recorded?.claim;
+		if (!recorded || typeof recorded !== "object" || Array.isArray(recorded) ||
+			!isDeepStrictEqual(Object.keys(recorded).sort(), ["claim", "delta", "exit_code", "grade", "reason", "supporting_event_index"]) ||
+			!claim || typeof claim !== "object" || Array.isArray(claim) ||
+			!isDeepStrictEqual(Object.keys(claim).sort(), ["argv_preview", "ctype", "declared_at_index", "event_indices", "label", "pathspecs"]) ||
+			claim.label !== claimLabels[index] || claim.ctype !== claimTypes[index] ||
+			claim.declared_at_index !== index || !isDeepStrictEqual(claim.event_indices, [index]) ||
+			!isDeepStrictEqual(claim.pathspecs, []) ||
+			!validatePlanC6ClaimPreview(index, claim.argv_preview, expectedArgv, hermeticPrefix) ||
+			recorded.supporting_event_index !== index || recorded.grade !== "tree-exact" ||
+			recorded.exit_code !== 0 || recorded.reason !== "self-stable command ran against the sealed tree" ||
+			!isDeepStrictEqual(recorded.delta, [])) {
+			throw new Error(`${label}: didrun note claim ${index + 1}`);
+		}
+	}
+	if (!note.coverage || typeof note.coverage !== "object" || Array.isArray(note.coverage) ||
+		!isDeepStrictEqual(Object.keys(note.coverage).sort(), ["by_coverage", "total_events"]) ||
+		note.coverage.total_events !== claimLabels.length || !note.coverage.by_coverage ||
+		typeof note.coverage.by_coverage !== "object" || Array.isArray(note.coverage.by_coverage) ||
+		!isDeepStrictEqual(Object.keys(note.coverage.by_coverage), ["complete"]) ||
+		note.coverage.by_coverage.complete !== claimLabels.length) {
+		throw new Error(`${label}: didrun note exact event coverage`);
+	}
+	return note.secrets_override;
+}
+
+function runPlanC6Git(root, args, label) {
+	const result = spawnSync("/usr/bin/git", ["--no-replace-objects", ...args], {
+		cwd: root, encoding: "buffer", timeout: 30_000, maxBuffer: 20 * 1024 * 1024,
+		env: {
+			HOME: process.env.HOME || "/", PATH: "/usr/bin:/bin", LANG: "C", LC_ALL: "C", NO_COLOR: "1",
+			GIT_CONFIG_NOSYSTEM: "1", GIT_CONFIG_GLOBAL: "/dev/null", GIT_NO_LAZY_FETCH: "1",
+			GIT_OPTIONAL_LOCKS: "0", GIT_TERMINAL_PROMPT: "0",
+		},
+	});
+	if (result.error || result.signal || result.status !== 0 || (result.stderr?.length ?? 0) !== 0) {
+		throw new Error(`${label}: Git authority failed (status=${result.status}, signal=${result.signal}, error=${result.error?.message ?? "none"})`);
+	}
+	return result.stdout ?? Buffer.alloc(0);
+}
+
+function planC6GitLine(root, args, label) {
+	return decodeExactGitLine(runPlanC6Git(root, args, label), label);
+}
+
+function planC6ChangedPaths(root, parent, commit, label) {
+	const bytes = runPlanC6Git(root, [
+		"diff-tree", "--no-commit-id", "--name-only", "-r", "-z", "--no-renames", parent, commit, "--",
+	], `${label} source diff`);
+	if (bytes.length > 0 && bytes.at(-1) !== 0) throw new Error(`${label}: source diff NUL framing`);
+	const text = decodeCandidateUTF8(bytes.length === 0 ? bytes : bytes.subarray(0, -1), `${label} source diff`);
+	const paths = text.length === 0 ? [] : text.split("\0");
+	if (new Set(paths).size !== paths.length || paths.some((path) => !validCandidateIndexPath(path))) {
+		throw new Error(`${label}: source diff path roster`);
+	}
+	return paths.sort((left, right) => Buffer.compare(Buffer.from(left), Buffer.from(right)));
+}
+
+function derivePlanC6SealedSource(root, commit, unit, subject, claimLabels, claimTypes, expectedArgv, hermeticPrefix) {
+	const reopened = planC6GitLine(root, ["rev-parse", "--verify", `${commit}^{commit}`], `${unit} commit`);
+	if (reopened !== commit) throw new Error(`${unit}: source commit did not reopen exactly`);
+	const tree = planC6GitLine(root, ["rev-parse", "--verify", `${commit}^{tree}`], `${unit} tree`);
+	const parentLine = planC6GitLine(root, ["show", "-s", "--format=%P", commit], `${unit} parent`);
+	const parents = parentLine.length === 0 ? [] : parentLine.split(" ");
+	if (parents.length !== 1 || !/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/u.test(parents[0])) {
+		throw new Error(`${unit}: source commit must have one exact parent`);
+	}
+	if (planC6GitLine(root, ["show", "-s", "--format=%s", commit], `${unit} subject`) !== subject) {
+		throw new Error(`${unit}: source subject mismatch`);
+	}
+	const changedPaths = planC6ChangedPaths(root, parents[0], commit, unit);
+	const entry = receiptPhaseSpecification.units[unit];
+	if (entry.exact.some((path) => !changedPaths.includes(path)) || changedPaths.some((path) =>
+		!entry.exact.includes(path) && (receiptPhaseMarkdownAuthorityPath(path) ||
+			!entry.prefixes.some((prefix) => path.startsWith(prefix))))) {
+		throw new Error(`${unit}: sealed source diff is outside the declared scope`);
+	}
+	const noteBlob = planC6GitLine(root, ["notes", "--ref=didrun", "list", commit], `${unit} didrun note`);
+	if (!/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/u.test(noteBlob) || /^0+$/u.test(noteBlob) ||
+		planC6GitLine(root, ["cat-file", "-t", noteBlob], `${unit} note type`) !== "blob") {
+		throw new Error(`${unit}: didrun note object authority`);
+	}
+	const noteBytes = runPlanC6Git(root, ["cat-file", "blob", noteBlob], `${unit} note body`);
+	let note;
+	try { note = JSON.parse(decodeCandidateUTF8(noteBytes, `${unit} note body`)); }
+	catch (error) { throw new Error(`${unit}: didrun note JSON (${error.message})`); }
+	const secretsOverride = validatePlanC6SourceNote(
+		note, { commit, tree }, claimLabels, claimTypes, expectedArgv, hermeticPrefix, unit,
+	);
+	if (planC6GitLine(root, ["notes", "--ref=didrun", "list", commit], `${unit} stable didrun note`) !== noteBlob) {
+		throw new Error(`${unit}: didrun note changed during plan validation`);
+	}
+	return Object.freeze({
+		commit, tree, parent: parents[0], subject, noteBlob,
+		noteBodySHA256: createHash("sha256").update(noteBytes).digest("hex"), secretsOverride,
+	});
+}
+
+function requireSyntheticPlanC6Authority(authority) {
+	const expectedKeys = ["commit", "noteBlob", "noteBodySHA256", "parent", "secretsOverride", "subject", "tree"];
+	if (!authority || typeof authority !== "object" || Array.isArray(authority) ||
+		!isDeepStrictEqual(Object.keys(authority).sort(), expectedKeys) ||
+		![authority.commit, authority.tree, authority.parent, authority.noteBlob].every((value) =>
+			typeof value === "string" && /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/u.test(value) && !/^0+$/u.test(value)) ||
+		typeof authority.noteBodySHA256 !== "string" || !/^[0-9a-f]{64}$/u.test(authority.noteBodySHA256) ||
+		authority.subject !== c6aSourceSubject || typeof authority.secretsOverride !== "boolean") {
+		throw new Error("synthetic C6A source authority fixture");
+	}
+	return Object.freeze({ ...authority });
+}
+
+function planC6SourceDerivationMode(boundary, headSubject) {
+	if (boundary === "C6M") {
+		if (headSubject === c6aSourceSubject) return "PRESEAL_PARENT";
+		if (headSubject === c6mSourceSubject) return "SEALED_CURRENT";
+	}
+	if (boundary === "C6B") {
+		if (headSubject === c6mSourceSubject) return "PRESEAL_PARENT";
+		if (headSubject === c6bReceiptSubject) return "SEALED_CURRENT";
+	}
+	throw new Error(`${boundary}: HEAD subject does not identify an admitted preseal parent or sealed current boundary`);
+}
+
+function resolvePlanC6ASourceAuthority(root, boundary, injectedAuthority) {
+	if (injectedAuthority !== undefined) return requireSyntheticPlanC6Authority(injectedAuthority);
+	const head = planC6GitLine(root, ["rev-parse", "--verify", "HEAD^{commit}"], `${boundary} HEAD`);
+	const headSubject = planC6GitLine(root, ["show", "-s", "--format=%s", head], `${boundary} HEAD subject`);
+	const mode = planC6SourceDerivationMode(boundary, headSubject);
+	let authority;
+	if (boundary === "C6M") {
+		const c6aCommit = mode === "PRESEAL_PARENT" ? head : derivePlanC6SealedSource(
+			root, head, "C6M", c6mSourceSubject, c6mClaimLabels, c6mClaimTypes, c6mExpectedClaimArgv, c6mHermeticArgvPrefix,
+		).parent;
+		authority = derivePlanC6SealedSource(
+			root, c6aCommit, "C6A", c6aSourceSubject, c6aClaimLabels, c6aClaimTypes, c6aExpectedClaimArgv, c6aHermeticArgvPrefix,
+		);
+	} else if (boundary === "C6B") {
+		const c6mCommit = mode === "PRESEAL_PARENT" ? head : derivePlanC6SealedSource(
+			root, head, "C6B", c6bReceiptSubject, c6bClaimLabels, c6bClaimTypes, c6bExpectedClaimArgv, c6bHermeticArgvPrefix,
+		).parent;
+		const c6m = derivePlanC6SealedSource(
+			root, c6mCommit, "C6M", c6mSourceSubject, c6mClaimLabels, c6mClaimTypes, c6mExpectedClaimArgv, c6mHermeticArgvPrefix,
+		);
+		authority = derivePlanC6SealedSource(
+			root, c6m.parent, "C6A", c6aSourceSubject, c6aClaimLabels, c6aClaimTypes, c6aExpectedClaimArgv, c6aHermeticArgvPrefix,
+		);
+	} else {
+		throw new Error(`C6A source authority is not admitted for ${boundary}`);
+	}
+	if (planC6GitLine(root, ["rev-parse", "--verify", "HEAD^{commit}"], `${boundary} stable HEAD`) !== head) {
+		throw new Error(`${boundary}: HEAD changed during C6A source-authority derivation`);
+	}
+	return authority;
+}
+
+function planC6TreePathBytes(root, tree, path, label) {
+	const oid = planC6GitLine(root, ["rev-parse", "--verify", `${tree}:${path}`], `${label} blob`);
+	if (!/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/u.test(oid) || /^0+$/u.test(oid)) {
+		throw new Error(`${label}: tree path object identity`);
+	}
+	const bytes = runPlanC6Git(root, ["cat-file", "blob", oid], `${label} body`);
+	if (bytes.length === 0 || bytes.length > 2 * 1024 * 1024) throw new Error(`${label}: body byte ceiling`);
+	return bytes;
+}
+
+async function optionalPlanText(root, path, overrides) {
+	try { return await readText(root, path, overrides); }
+	catch (error) {
+		if (error.code === "ENOENT") return undefined;
+		throw error;
+	}
+}
+
+async function optionalPlanBytes(root, path, overrides) {
+	try { return await readBytes(root, path, overrides); }
+	catch (error) {
+		if (error.code === "ENOENT") return undefined;
+		throw error;
+	}
+}
+
+export async function printC6ASourceAuthority() {
+	if (p07bCActiveReceiptPhaseBoundary !== "C6M") {
+		throw new Error(`C6A source-authority rendering is admitted only in active C6M, found ${p07bCActiveReceiptPhaseBoundary}`);
+	}
+	const authority = resolvePlanC6ASourceAuthority(repositoryRoot, "C6M");
+	process.stdout.write(renderPlanC6SourceAuthority(authority));
+}
+
+export async function printC6ASourceReceiptBlock() {
+	if (p07bCActiveReceiptPhaseBoundary !== "C6B") {
+		throw new Error(`C6A source-receipt rendering is admitted only in active C6B, found ${p07bCActiveReceiptPhaseBoundary}`);
+	}
+	const authority = resolvePlanC6ASourceAuthority(repositoryRoot, "C6B");
+	const manifestBytes = await readRegularNoFollow(
+		resolve(repositoryRoot, c6aSourceAuthorityPath), 2 * 1024 * 1024,
+	);
+	const manifest = validatePlanC6SourceAuthority(manifestBytes, authority);
+	const receiptBytes = await readRegularNoFollow(
+		resolve(repositoryRoot, c6aReceiptDeclarationPath), 2 * 1024 * 1024,
+	);
+	const summaryBytes = await readRegularNoFollow(
+		resolve(repositoryRoot, c6aEvidenceSummaryPath), 2 * 1024 * 1024,
+	);
+	const sealedSummaryBytes = planC6TreePathBytes(
+		repositoryRoot, authority.tree, c6aEvidenceSummaryPath, "C6A evidence summary",
+	);
+	if (!sealedSummaryBytes.equals(summaryBytes)) throw new Error("C6A evidence summary differs from sealed source tree");
+	const { receipt, summary } = validatePlanC6ReceiptDeclaration(
+		receiptBytes, authority, manifestBytes, summaryBytes,
+	);
+	process.stdout.write(`${renderPlanC6SourceReceiptBlock(manifest, receipt, summary)}\n`);
+}
+
+async function observedReceiptStates(root, overrides, boundary, injectedC6ASourceAuthority) {
+	const present = async (path) => {
+		try {
+			await readText(root, path, overrides);
+			return "PRESENT";
+		} catch (error) {
+			if (error.code === "ENOENT") return "ABSENT";
+			throw error;
+		}
+	};
+	const manifestBytes = await optionalPlanBytes(root, c6aSourceAuthorityPath, overrides);
+	const receiptBytes = await optionalPlanBytes(root, c6aReceiptDeclarationPath, overrides);
+	const manifestRequired = boundary === "C6M" || boundary === "C6B";
+	if ((manifestBytes !== undefined) !== manifestRequired) {
+		throw new Error(`receipt phase ${boundary} C6A source-authority manifest must be ${manifestRequired ? "PRESENT" : "ABSENT"}`);
+	}
+	let manifest;
+	let receipt;
+	let summary;
+	let authority;
+	if (manifestRequired) {
+		authority = resolvePlanC6ASourceAuthority(root, boundary, injectedC6ASourceAuthority);
+		manifest = validatePlanC6SourceAuthority(manifestBytes, authority);
+	}
+	if ((receiptBytes !== undefined) !== (boundary === "C6B")) {
+		throw new Error(`receipt phase ${boundary} C6A receipt declaration must be ${boundary === "C6B" ? "PRESENT" : "ABSENT"}`);
+	}
+	if (boundary === "C6B") {
+		let summaryBytes = await optionalPlanBytes(root, c6aEvidenceSummaryPath, overrides);
+		if (summaryBytes === undefined) throw new Error("receipt phase C6B sealed C6A evidence summary must be PRESENT");
+		if (injectedC6ASourceAuthority === undefined) {
+			const sealedBytes = planC6TreePathBytes(root, authority.tree, c6aEvidenceSummaryPath, "C6A evidence summary");
+			if (!sealedBytes.equals(summaryBytes)) throw new Error("receipt phase C6B C6A evidence summary differs from sealed source tree");
+		}
+		({ receipt, summary } = validatePlanC6ReceiptDeclaration(receiptBytes, authority, manifestBytes, summaryBytes));
+	}
+	const handoff = await readText(root, receiptPhaseHandoffPath, overrides);
+	const evidence = await optionalPlanText(root, c6EvidencePath, overrides);
+	if (["C6A", "C6M", "C6B"].includes(boundary) && evidence === undefined) {
+		throw new Error(`receipt phase ${boundary} requires inherited C6 evidence authority`);
+	}
+	const handoffState = planC6SourceProjectionState(handoff, manifest, receipt, summary, "HANDOFF");
+	const evidenceState = evidence === undefined ? "ABSENT" : planC6SourceProjectionState(
+		evidence, manifest, receipt, summary, "C6 evidence",
+	);
+	const projected = boundary === "C6B" ? "PRESENT" : "ABSENT";
+	if (handoffState !== projected || evidenceState !== projected) {
+		throw new Error(`receipt phase ${boundary} canonical C6A projections HANDOFF=${handoffState} evidence=${evidenceState} expected=${projected}`);
+	}
+	return Object.freeze({
+		C3P: await present(c3pReceiptDeclarationPath),
+		C3: await present(c3ReceiptDeclarationPath),
+		C6A: projected,
+	});
+}
+
+function runPlanC6SourceAuthoritySelfTest() {
+	const authority = Object.freeze({
+		commit: "a".repeat(40), tree: "b".repeat(40), parent: "c".repeat(40),
+		subject: c6aSourceSubject, noteBlob: "d".repeat(40), noteBodySHA256: "e".repeat(64),
+		secretsOverride: true,
+	});
+	const bytes = Buffer.from(renderPlanC6SourceAuthority(authority), "utf8");
+	const manifest = validatePlanC6SourceAuthority(bytes, authority);
+	let rejected = 0;
+	const refuse = (name, run) => {
+		let refused = false;
+		try { run(); } catch { refused = true; }
+		if (!refused) throw new Error(`plan C6A source-authority self-test false negative: ${name}`);
+		rejected += 1;
+	};
+	for (const [name, mutate] of [
+		["schema", (value) => { value.schema_version += "-altered"; }],
+		["source commit", (value) => { value.source_commit = "f".repeat(40); }],
+		["note body digest", (value) => { value.note_body_sha256 = "f".repeat(64); }],
+		["claim label", (value) => { value.claims[0].label += " altered"; }],
+		["claim grade", (value) => { value.claims[0].grade = "STALE"; }],
+		["unknown field", (value) => { value.unknown = true; }],
+	]) {
+		const hostile = structuredClone(manifest);
+		mutate(hostile);
+		refuse(name, () => validatePlanC6SourceAuthority(
+			Buffer.from(`${JSON.stringify(hostile, null, 2)}\n`, "utf8"), authority,
+		));
+	}
+	refuse("compact JSON", () => validatePlanC6SourceAuthority(Buffer.from(JSON.stringify(manifest)), authority));
+	refuse("UTF-8 BOM", () => validatePlanC6SourceAuthority(
+		Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), bytes]), authority,
+	));
+	const receiptFixture = syntheticPlanC6ReceiptFixture(authority);
+	const block = renderPlanC6SourceReceiptBlock(manifest, receiptFixture.receipt, receiptFixture.summary);
+	const present = `# Fixture\n\n${block}\n`;
+	if (planC6SourceProjectionState("# Absent\n", manifest, receiptFixture.receipt, receiptFixture.summary, "fixture") !== "ABSENT" ||
+		planC6SourceProjectionState(present, manifest, receiptFixture.receipt, receiptFixture.summary, "fixture") !== "PRESENT") {
+		throw new Error("plan C6A source-authority projection controls");
+	}
+	refuse("projection duplicate", () => planC6SourceProjectionState(
+		`${present}\n${block}\n`, manifest, receiptFixture.receipt, receiptFixture.summary, "fixture",
+	));
+	refuse("projection hidden", () => planC6SourceProjectionState(
+		`<!--\n${block}\n-->\n`, manifest, receiptFixture.receipt, receiptFixture.summary, "fixture",
+	));
+	refuse("projection without authority", () => planC6SourceProjectionState(
+		present, undefined, receiptFixture.receipt, receiptFixture.summary, "fixture",
+	));
+	refuse("projection without full receipt evidence", () => planC6SourceProjectionState(
+		present, manifest, undefined, undefined, "fixture",
+	));
+	for (const [name, mutate] of [
+		["receipt strict exit", (value) => { value.strict_exit_code = 1; }],
+		["receipt claim", (value) => { value.claims[0].label += " altered"; }],
+		["receipt HTML", (value) => { value.evidence.html_report.path = "evidence/other.html"; }],
+		["receipt ledger archive", (value) => { value.evidence.ledger_archive.path = ".didrun-history/p07b-c-c6a-final-deadbeefdead/.didrun/"; }],
+		["receipt summary binding", (value) => { value.evidence.source_summary.sha256 = "0".repeat(64); }],
+	]) {
+		const hostile = structuredClone(receiptFixture.receipt);
+		mutate(hostile);
+		refuse(name, () => validatePlanC6ReceiptDeclaration(
+			Buffer.from(`${JSON.stringify(hostile)}\n`, "utf8"), authority,
+			receiptFixture.manifestBytes, receiptFixture.summaryBytes,
+		));
+	}
+	const hostileSummary = structuredClone(receiptFixture.summary);
+	hostileSummary.nonclaims = hostileSummary.nonclaims.slice(1);
+	refuse("evidence summary nonclaims", () => validatePlanC6ReceiptDeclaration(
+		receiptFixture.receiptBytes, authority, receiptFixture.manifestBytes,
+		Buffer.from(`${JSON.stringify(hostileSummary)}\n`, "utf8"),
+	));
+	refuse("receipt compact encoding", () => validatePlanC6ReceiptDeclaration(
+		Buffer.from(JSON.stringify(receiptFixture.receipt), "utf8"), authority,
+		receiptFixture.manifestBytes, receiptFixture.summaryBytes,
+	));
+	if (planC6SourceDerivationMode("C6M", c6aSourceSubject) !== "PRESEAL_PARENT" ||
+		planC6SourceDerivationMode("C6M", c6mSourceSubject) !== "SEALED_CURRENT" ||
+		planC6SourceDerivationMode("C6B", c6mSourceSubject) !== "PRESEAL_PARENT" ||
+		planC6SourceDerivationMode("C6B", c6bReceiptSubject) !== "SEALED_CURRENT") {
+		throw new Error("plan C6A source-authority preseal/sealed derivation controls");
+	}
+	refuse("C6M unknown HEAD", () => planC6SourceDerivationMode("C6M", "other"));
+	refuse("C6B unknown HEAD", () => planC6SourceDerivationMode("C6B", "other"));
+	const note = {
+		claims: c6aClaimLabels.map((label, index) => ({
+			claim: {
+				argv_preview: [...c6aExpectedClaimArgv[index]],
+				ctype: c6aClaimTypes[index], declared_at_index: index, event_indices: [index], label, pathspecs: [],
+			},
+			delta: [], exit_code: 0, grade: "tree-exact",
+			reason: "self-stable command ran against the sealed tree", supporting_event_index: index,
+		})),
+		commit: authority.commit,
+		coverage: { by_coverage: { complete: c6aClaimLabels.length }, total_events: c6aClaimLabels.length },
+		secrets_override: true, tree: authority.tree, version: 1,
+	};
+	validatePlanC6SourceNote(
+		note, authority, c6aClaimLabels, c6aClaimTypes, c6aExpectedClaimArgv, c6aHermeticArgvPrefix, "C6A fixture",
+	);
+	const redactedNote = structuredClone(note);
+	for (const record of redactedNote.claims) {
+		for (const position of [...planC6DoubleRedactionPositions, 6, ...planC6BareRedactionPositions]) {
+			record.claim.argv_preview[position] = planC6ExpectedRedactionProjection(
+				position, record.claim.argv_preview[position],
+			);
+		}
+	}
+	validatePlanC6SourceNote(
+		redactedNote, authority, c6aClaimLabels, c6aClaimTypes, c6aExpectedClaimArgv, c6aHermeticArgvPrefix,
+		"C6A redacted fixture",
+	);
+	for (const [name, mutate] of [
+		["note label", (value) => { value.claims[0].claim.label += " altered"; }],
+		["note argv", (value) => { value.claims[0].claim.argv_preview.push("altered"); }],
+		["note leading executable injection", (value) => { value.claims[0].claim.argv_preview.unshift("/bin/true"); }],
+		["note missing prefix token", (value) => { value.claims[0].claim.argv_preview.shift(); }],
+		["note prefix substitution", (value) => { value.claims[0].claim.argv_preview[0] = "/bin/true"; }],
+		["note redaction outside admitted positions", (value) => { value.claims[0].claim.argv_preview[1] = "«redacted:high-entropy»"; }],
+		["note wrong redaction form", (value) => { value.claims[0].claim.argv_preview[2] = planC6PreviewRedaction; }],
+		["note wrong redaction suffix", (value) => { value.claims[0].claim.argv_preview[6] = `${planC6PreviewRedaction}.countershape/other/gocache`; }],
+		["note tail redaction", (value) => { value.claims[0].claim.argv_preview[value.claims[0].claim.argv_preview.length - 1] = "«redacted:high-entropy»"; }],
+		["note grade", (value) => { value.claims[0].grade = "stale"; }],
+		["note seal type", (value) => { value.secrets_override = "true"; }],
+		["note coverage", (value) => { value.coverage.total_events -= 1; }],
+	]) {
+		const hostile = structuredClone(note);
+		mutate(hostile);
+		refuse(name, () => validatePlanC6SourceNote(
+			hostile, authority, c6aClaimLabels, c6aClaimTypes, c6aExpectedClaimArgv, c6aHermeticArgvPrefix, "C6A fixture",
+		));
+	}
+	if (rejected !== 33) throw new Error(`plan C6A source-authority self-test cardinality ${rejected}`);
+	return rejected;
+}
+
+function generatedReceiptPhaseCases(row) {
+	const baseline = receiptPhaseFixtureDocument(row);
+	const capsule = renderReceiptPhaseCapsule(row);
+	const flip = (state) => state === "ABSENT" ? "PRESENT" : "ABSENT";
+	const observed = Object.freeze({ ...row.receipts });
+	const observedCase = (id, mutate) => {
+		const candidate = { ...row.receipts };
+		mutate(candidate);
+		return Object.freeze({ id: `${row.boundary}:${id}`, expected: "REJECT", body: baseline, observed: Object.freeze(candidate) });
+	};
+	return Object.freeze([
+		Object.freeze({ id: `${row.boundary}:accept`, expected: "ACCEPT", body: baseline, observed }),
+		Object.freeze({ id: `${row.boundary}:missing-start`, expected: "REJECT", body: baseline.replace(`${receiptPhaseCapsuleStart}\n`, ""), observed }),
+		Object.freeze({ id: `${row.boundary}:missing-end`, expected: "REJECT", body: baseline.replace(`\n${receiptPhaseCapsuleEnd}`, ""), observed }),
+		Object.freeze({ id: `${row.boundary}:duplicate`, expected: "REJECT", body: `${baseline}${capsule}\n`, observed }),
+		Object.freeze({ id: `${row.boundary}:unknown-boundary`, expected: "REJECT", body: baseline.replace(`- **Boundary:** \`${row.boundary}\``, "- **Boundary:** `UNKNOWN`"), observed }),
+		Object.freeze({ id: `${row.boundary}:parent`, expected: "REJECT", body: baseline.replace(`- **Parent:** \`${row.parent}\``, "- **Parent:** `UNKNOWN`"), observed }),
+		Object.freeze({ id: `${row.boundary}:profile`, expected: "REJECT", body: baseline.replace(`- **Verification profile:** \`${row.profile}\``, "- **Verification profile:** `UNKNOWN`"), observed }),
+		...Object.entries(row.receipts).map(([family, state]) => Object.freeze({
+			id: `${row.boundary}:receipt-${family}`,
+			expected: "REJECT",
+			body: baseline.replace(`- **Receipt ${family}:** \`${state}\``, `- **Receipt ${family}:** \`${flip(state)}\``),
+			observed,
+		})),
+		Object.freeze({
+			id: `${row.boundary}:relocated`, expected: "REJECT",
+			body: baseline.replace(`${capsule}\n\n## Tail`, `Phase omitted.\n\n## Tail\n\n${capsule}`),
+			observed,
+		}),
+		Object.freeze({ id: `${row.boundary}:inline-start`, expected: "REJECT", body: baseline.replace(receiptPhaseCapsuleStart, `prefix ${receiptPhaseCapsuleStart}`), observed }),
+		Object.freeze({ id: `${row.boundary}:inline-end`, expected: "REJECT", body: baseline.replace(receiptPhaseCapsuleEnd, `${receiptPhaseCapsuleEnd} suffix`), observed }),
+		Object.freeze({ id: `${row.boundary}:reversed`, expected: "REJECT", body: baseline.replace(capsule, `${receiptPhaseCapsuleEnd}\n${capsule.slice(receiptPhaseCapsuleStart.length + 1, -receiptPhaseCapsuleEnd.length - 1)}\n${receiptPhaseCapsuleStart}`), observed }),
+		observedCase("observed-missing-key", (candidate) => { delete candidate.C6A; }),
+		observedCase("observed-unknown-key", (candidate) => { candidate.UNKNOWN = "ABSENT"; }),
+		observedCase("observed-invalid-state", (candidate) => { candidate.C3 = "UNKNOWN"; }),
+		...Object.entries(row.receipts).map(([family, state]) => observedCase(
+			`observed-${family}`,
+			(candidate) => { candidate[family] = flip(state); },
+		)),
+	]);
+}
+
+function receiptPhaseFixtureCatalog() {
+	const records = [];
+	for (const row of p07bCReceiptPhaseRows) {
+		for (const testCase of generatedReceiptPhaseCases(row)) {
+			records.push(Object.freeze({
+				id: testCase.id,
+				expected: testCase.expected,
+				body_sha256: createHash("sha256").update(testCase.body, "utf8").digest("hex"),
+				observed: testCase.observed,
+			}));
+		}
+		for (const target of p07bCReceiptPhaseRows) {
+			if (target === row) continue;
+			const baseline = receiptPhaseFixtureDocument(row);
+			const rewritten = rewriteReceiptPhaseCapsule(baseline, row.boundary, target.boundary);
+			records.push(Object.freeze({
+				id: `${row.boundary}:rewrite:${target.boundary}`,
+				expected: "ACCEPT",
+				body_sha256: createHash("sha256").update(baseline, "utf8").digest("hex"),
+				output_sha256: createHash("sha256").update(rewritten, "utf8").digest("hex"),
+				observed: target.receipts,
+			}));
+		}
+	}
+	return Object.freeze(records);
+}
+
+const fixedReceiptPhaseRegressions = Object.freeze([
+	Object.freeze({ id: "C3R_NOTE_PREVIEW", commit: sealedC3RIdentity.commit, checker_blob: "aada405d426df8a6da1679cbf51d7dddec54ab36", checker_sha256: "c7f03c49d2096fd33856a648f330bc00db641ec156f1f680e916267e8896c76c" }),
+	Object.freeze({ id: "C3Q_EXTERNAL_SELF_RECEIPT", commit: sealedC3QIdentity.commit, checker_blob: "442484b99c468f9252d2d2852e06b72efff0ef57", checker_sha256: "59075667df86c9518954caa06217ff5418527cf600ecf24643ff04688fd83a88" }),
+	Object.freeze({ id: "C3T_VALIDATED_ABSENT_BASELINE", commit: sealedC3TIdentity.commit, checker_blob: "7ae0d95e3aa0a5cdd88193c04af72b33da7a8cd6", checker_sha256: "9c91eebc6b608846d853b12e0bf7e7212947f52c9296e50d8f96399812b33977" }),
+	Object.freeze({ id: "C3U_TERMINAL_RECEIPT_LAYERING", commit: sealedC3UIdentity.commit, checker_blob: "4479e0185912bbbb572104f32c03becbae71707b", checker_sha256: "fee5ecbf3ff7c32dcb2ad2fc4d24c6f6a2f30f65dbab81da809064cf5d0fe173" }),
+]);
+
+const fixedReceiptPhaseRegressionOracleNames = Object.freeze({
+	C3R_NOTE_PREVIEW: "exact-note-preview-and-hostile-tail",
+	C3Q_EXTERNAL_SELF_RECEIPT: "external-markdown-full-plan-positive-receipt-refusal",
+	C3T_VALIDATED_ABSENT_BASELINE: "validated-absent-baseline-before-hostile-downgrade",
+	C3U_TERMINAL_RECEIPT_LAYERING: "byte-exact-terminal-receipt-layering",
+});
+
+async function runFixedReceiptPhaseRegression(regression) {
+	switch (regression.id) {
+	case "C3R_NOTE_PREVIEW": {
+		const preview = [...c3ExpectedClaimArgv[7]];
+		for (const position of [2, 4, 5, 6, 7, 8, 31, 32, 33, 35, 36]) preview[position] = "«redacted:high-entropy»";
+		const patternPosition = preview.indexOf(c3RaceTestPattern);
+		if (patternPosition === -1 || preview.lastIndexOf(c3RaceTestPattern) !== patternPosition) {
+			throw new Error("fixed C3R note-preview regression cannot locate the exact selector");
+		}
+		preview[patternPosition] = c3RaceNotePreviewPattern;
+		if (!validateC3ClaimPreview(7, preview)) throw new Error("fixed C3R note-preview regression rejected the admitted projection");
+		const hostile = [...preview];
+		hostile[patternPosition] = c3RaceNotePreviewPattern.replace(
+			"TestC3HostEpochConcurrentMeasurementsNeverCache", "«redacted:high-entropy»",
+		);
+		if (validateC3ClaimPreview(7, hostile)) throw new Error("fixed C3R note-preview regression admitted a second projected alternative");
+		break;
+	}
+	case "C3Q_EXTERNAL_SELF_RECEIPT": {
+		const path = "docs/VERIFICATION.md";
+		const liveVerification = await readText(repositoryRoot, path, new Map());
+		const currentHostile = new Map([[
+			path,
+			`${liveVerification.trimEnd()}\n\nC3D strict exit: 0\n`,
+		]]);
+		const currentErrors = await checkPlan(repositoryRoot, currentHostile);
+		if (!isDeepStrictEqual(currentErrors, [
+			`${path}: C3D self-receipt forbidden (strict-zero); remove or reframe the positive C3D result`,
+		])) {
+			throw new Error(`fixed C3Q normal external-body wiring regression escaped: ${currentErrors.join("; ")}`);
+		}
+		const currentControl = new Map([[
+			path,
+			`${liveVerification.trimEnd()}\n\nC3D strict exit 0 is forbidden before its own sealed boundary.\n`,
+		]]);
+		const currentControlErrors = await checkPlan(repositoryRoot, currentControl);
+		if (currentControlErrors.length !== 0) {
+			throw new Error(`fixed C3Q normal external-body prohibition control failed: ${currentControlErrors.join("; ")}`);
+		}
+
+		const liveHandoff = await readText(repositoryRoot, "docs/HANDOFF_MODE_C.md", new Map());
+		const planOverrides = new Map([[
+			"docs/HANDOFF_MODE_C.md",
+			rewriteReceiptPhaseCapsule(liveHandoff, p07bCActiveReceiptPhaseBoundary, "C3B"),
+		]]);
+		const corpusBaseline = new Map(currentReceiptPhaseMarkdownPaths("C3B").map((corpusPath) => [
+			corpusPath,
+			"# Historical C3B receipt-phase fixture\n\nC3B remains `UNRECEIPTED` pending its own exact boundary.\n",
+		]));
+		const baselineErrors = await checkPlan(
+			repositoryRoot, planOverrides, ...Array(9).fill(undefined), "C3B", "C3B", corpusBaseline,
+		);
+		if (baselineErrors.length !== 0) {
+			throw new Error(`fixed C3Q historical scanner baseline failed: ${baselineErrors.join("; ")}`);
+		}
+		const hostileCorpus = new Map(corpusBaseline);
+		hostileCorpus.set(path, "C3B strict exit: 0\n");
+		const errors = await checkPlan(
+			repositoryRoot, planOverrides, ...Array(9).fill(undefined), "C3B", "C3B", hostileCorpus,
+		);
+		if (!isDeepStrictEqual(errors, [
+			`${path}: C3B self-receipt forbidden (strict-zero); remove or reframe the positive C3B result`,
+		])) {
+			throw new Error(`fixed C3Q historical scanner replay escaped: ${errors.join("; ")}`);
+		}
+		const controlCorpus = new Map(corpusBaseline);
+		controlCorpus.set(path, "C3B strict exit 0 is forbidden before its own sealed boundary.\n");
+		const controls = await checkPlan(
+			repositoryRoot, planOverrides, ...Array(9).fill(undefined), "C3B", "C3B", controlCorpus,
+		);
+		if (controls.length !== 0) {
+			throw new Error(`fixed C3Q historical scanner prohibition control failed: ${controls.join("; ")}`);
+		}
+		break;
+	}
+	case "C3T_VALIDATED_ABSENT_BASELINE": {
+		const liveReceipt = JSON.parse(await readText(repositoryRoot, c3ReceiptDeclarationPath, new Map()));
+		const fixture = syntheticC3ReceiptFixture(liveReceipt);
+		fixture.authority = await loadReceiptAuthorityFromGit(repositoryRoot, liveReceipt);
+		fixture.c3rAuthority = await loadC3RAuthorityFromGit(repositoryRoot);
+		fixture.c3qAuthority = await loadC3QAuthorityFromGit(repositoryRoot, fixture.c3rAuthority.commit);
+		fixture.c3tAuthority = await loadC3TAuthorityFromGit(repositoryRoot, fixture.c3qAuthority.commit);
+		fixture.c3uAuthority = await loadC3UAuthorityFromGit(repositoryRoot, fixture.c3tAuthority.commit);
+		const absent = await syntheticC3AbsentPlanFixture(fixture);
+		const handoff = absent.get("docs/HANDOFF_MODE_C.md");
+		if (classifyReceiptPhase(handoff).boundary !== "C3U") {
+			throw new Error("fixed C3T absent-baseline regression did not reconstruct the validated historical terminal phase");
+		}
+		const hostile = new Map(absent);
+		hostile.set("docs/HANDOFF_MODE_C.md", rewriteReceiptPhaseCapsule(handoff, "C3U", "C3T"));
+		const errors = await checkPlan(
+			repositoryRoot, hostile, undefined, undefined, undefined, undefined, undefined,
+			undefined, undefined, undefined, undefined, "C3U", p07bCActiveReceiptPhaseBoundary,
+		);
+		if (!errors.some((error) => error.includes("expected active receipt phase C3U"))) {
+			throw new Error("fixed C3T absent-baseline regression failed to reject a coherent stale downgrade");
+		}
+		break;
+	}
+	case "C3U_TERMINAL_RECEIPT_LAYERING": {
+		const fixture = syntheticC3ReceiptFixture();
+		const terminalBlock = c3ReceiptHandoffBlock(fixture.receipt);
+		const baseline = `base\n${terminalBlock}\n`;
+		const legacy = "<!-- P07B-C-C3U-FIXED-REGRESSION:START -->\nlegacy\n<!-- P07B-C-C3U-FIXED-REGRESSION:END -->";
+		const layered = insertLegacyReceiptBlockBeforeOptionalTerminalC3(
+			baseline, legacy, "fixed C3U terminal layering regression", "direct",
+		);
+		const parsed = parseC3ReceiptBlock(layered);
+		if (parsed.block !== terminalBlock || layered !== `${parsed.stripped}${terminalBlock}\n` ||
+			parsed.stripped !== `base\n${legacy}\n`) {
+			throw new Error("fixed C3U terminal layering regression changed terminal receipt bytes");
+		}
+		let hostileMessage = "";
+		try {
+			insertLegacyReceiptBlockBeforeOptionalTerminalC3(
+				`${baseline}trailing\n`, legacy, "fixed C3U nonterminal regression", "direct",
+			);
+		} catch (error) { hostileMessage = error.message; }
+		if (!hostileMessage.includes("must already be exact and terminal")) {
+			throw new Error("fixed C3U terminal layering regression admitted trailing content");
+		}
+		break;
+	}
+	default:
+		throw new Error(`unknown fixed receipt phase regression ${regression.id}`);
+	}
+}
+
+function fixedReceiptPhaseExecutableCatalog() {
+	return Object.freeze(fixedReceiptPhaseRegressions.map((regression) => Object.freeze({
+		id: `FIXED:${regression.id}`,
+		expected: "ACCEPT",
+		kind: "FIXED_REGRESSION",
+		oracle: fixedReceiptPhaseRegressionOracleNames[regression.id],
+		commit: regression.commit,
+		checker_blob: regression.checker_blob,
+		checker_sha256: regression.checker_sha256,
+	})));
+}
+
+async function verifyFixedReceiptPhaseRegressions() {
+	const env = {
+		HOME: process.env.HOME || "/", PATH: "/usr/bin:/bin", LANG: "C", LC_ALL: "C", NO_COLOR: "1",
+		GIT_CONFIG_NOSYSTEM: "1", GIT_CONFIG_GLOBAL: "/dev/null", GIT_NO_LAZY_FETCH: "1",
+		GIT_OPTIONAL_LOCKS: "0", GIT_TERMINAL_PROMPT: "0",
+	};
+	for (const regression of fixedReceiptPhaseRegressions) {
+		const oid = spawnSync("/usr/bin/git", ["--no-replace-objects", "rev-parse", "--verify", `${regression.commit}:tools/check-p07b-c-plan.mjs`], {
+			cwd: repositoryRoot, encoding: "utf8", timeout: 30_000, maxBuffer: 1024 * 1024, env,
+		});
+		if (oid.error || oid.signal || oid.status !== 0 || oid.stderr !== "" || oid.stdout.trim() !== regression.checker_blob) {
+			throw new Error(`fixed receipt phase regression blob ${regression.id}`);
+		}
+		const blob = spawnSync("/usr/bin/git", ["--no-replace-objects", "cat-file", "blob", regression.checker_blob], {
+			cwd: repositoryRoot, encoding: "buffer", timeout: 30_000, maxBuffer: 4 * 1024 * 1024, env,
+		});
+		if (blob.error || blob.signal || blob.status !== 0 || (blob.stderr?.length ?? 0) !== 0 ||
+			createHash("sha256").update(blob.stdout).digest("hex") !== regression.checker_sha256) {
+			throw new Error(`fixed receipt phase regression bytes ${regression.id}`);
+		}
+	}
+	const manifestDigest = createHash("sha256")
+		.update(`${fixedReceiptPhaseRegressions.map((entry) => JSON.stringify(entry)).join("\n")}\n`, "utf8")
+		.digest("hex");
+	if (manifestDigest !== "0e57699ff0ffc17e28da743d7f55ed2c0de760fa6e0867606ef1261c91efdee5") {
+		throw new Error(`fixed receipt phase regression manifest digest ${manifestDigest}`);
+	}
+	for (const regression of fixedReceiptPhaseRegressions) await runFixedReceiptPhaseRegression(regression);
+}
+
+export async function runReceiptPhaseTableSelfTest() {
+	const candidateTransitions = runCandidateReceiptPhaseTransitionSelfTest();
+	if (candidateTransitions.accepted !== 6 || candidateTransitions.rejected !== 37) {
+		throw new Error(`receipt phase candidate-transition catalog cardinality ${candidateTransitions.accepted}/${candidateTransitions.rejected}`);
+	}
+	const caseIDs = new Set();
+	let rejected = 0;
+	let accepted = 0;
+	for (const row of p07bCReceiptPhaseRows) {
+		for (const testCase of generatedReceiptPhaseCases(row)) {
+			if (caseIDs.has(testCase.id)) throw new Error(`duplicate receipt phase case id ${testCase.id}`);
+			caseIDs.add(testCase.id);
+			let result;
+			try {
+				const classified = classifyReceiptPhase(testCase.body);
+				validateReceiptPresence(classified, testCase.observed);
+				result = classified.boundary;
+			} catch { result = "REJECT"; }
+			if (testCase.expected === "ACCEPT") {
+				if (result !== row.boundary) throw new Error(`receipt phase generated control failed: ${testCase.id}`);
+				accepted += 1;
+			} else {
+				if (result !== "REJECT") throw new Error(`receipt phase generated hostile survived: ${testCase.id}`);
+				rejected += 1;
+			}
+		}
+		const baseline = receiptPhaseFixtureDocument(row);
+		for (const target of p07bCReceiptPhaseRows) {
+			if (target === row) continue;
+			const caseID = `${row.boundary}:rewrite:${target.boundary}`;
+			if (caseIDs.has(caseID)) throw new Error(`duplicate receipt phase case id ${caseID}`);
+			caseIDs.add(caseID);
+			const rewritten = rewriteReceiptPhaseCapsule(baseline, row.boundary, target.boundary);
+			validateReceiptPresence(target, target.receipts);
+			const restored = rewriteReceiptPhaseCapsule(rewritten, target.boundary, row.boundary);
+			if (restored !== baseline) throw new Error(`receipt phase rewrite round trip changed bytes: ${caseID}`);
+			accepted += 1;
+		}
+	}
+	const catalog = receiptPhaseFixtureCatalog();
+	const digest = createHash("sha256").update(`${catalog.map((record) => JSON.stringify(record)).join("\n")}\n`, "utf8").digest("hex");
+	if (catalog.length !== 666 || caseIDs.size !== 666) throw new Error(`receipt phase catalog cardinality ${catalog.length}/${caseIDs.size}`);
+	if (digest !== "479f21a8a86a8a6eb34056dabb471e8ceebf08c725008d5f204fa2294af9f83a") throw new Error(`receipt phase catalog digest ${digest}`);
+	if (fixedReceiptPhaseRegressions.length !== 4 || new Set(fixedReceiptPhaseRegressions.map(({ id }) => id)).size !== 4) {
+		throw new Error("fixed receipt phase regression manifest");
+	}
+	await verifyFixedReceiptPhaseRegressions();
+	const fixedCatalog = fixedReceiptPhaseExecutableCatalog();
+	for (const record of fixedCatalog) {
+		if (caseIDs.has(record.id)) throw new Error(`duplicate receipt phase case id ${record.id}`);
+		caseIDs.add(record.id);
+		accepted += 1;
+	}
+	const executableCatalog = Object.freeze([...catalog, ...fixedCatalog]);
+	const executableDigest = createHash("sha256")
+		.update(`${executableCatalog.map((record) => JSON.stringify(record)).join("\n")}\n`, "utf8").digest("hex");
+	if (executableCatalog.length !== 670 || caseIDs.size !== 670) {
+		throw new Error(`receipt phase executable catalog cardinality ${executableCatalog.length}/${caseIDs.size}`);
+	}
+	if (executableDigest !== "a56fc2d71b79a06ba151ec454e7ed9280b20140e41c7006e027091eeddcf13e7") {
+		throw new Error(`receipt phase executable catalog digest ${executableDigest}`);
+	}
+	return Object.freeze({ rejected, accepted, cases: caseIDs.size, genericCases: catalog.length, fixedCases: fixedCatalog.length, candidateTransitions, digest, executableDigest });
+}
+
+const c6bPromptProjectionPairs = Object.freeze([
+	Object.freeze({
+		positive: "- C6b records C6a’s exact commit/tree, timings, permanent negatives, didrun bugs, claims/grades, nonclaims, current private-evidence availability, and handoff; it receives its own fresh receipt-doc ledger, commit, seal, note check, and strict gate.",
+		neutral: "- The C6 receipt document may bind only the already-sealed C6A source authority; C6B's own result remains unasserted in that source tree and requires a later observer.",
+	}),
+	Object.freeze({
+		positive: "- C6a source and C6b receipt commits each seal, their Git notes validate, and strict exits `0`; exact HTML is generated for C6b only after that exact commit exists.",
+		neutral: "- C6A must already be sealed before C6B can bind its source authority; asserting C6B's own seal or strict result inside C6B remains forbidden.",
+	}),
+]);
+const c6bPromptProjectionDigest = "9ebd5bd3a58b697bf629c0faa2afee35d506cba6b30ff2d2082416fb4b306aca";
+
+function projectC6BPrompt(body, target) {
+	if (target !== "POSITIVE" && target !== "NEUTRAL") throw new Error("C6B prompt projection target");
+	const positiveCounts = c6bPromptProjectionPairs.map(({ positive }) => countOccurrences(body, positive));
+	const neutralCounts = c6bPromptProjectionPairs.map(({ neutral }) => countOccurrences(body, neutral));
+	const positive = positiveCounts.every((count) => count === 1) && neutralCounts.every((count) => count === 0);
+	const neutral = neutralCounts.every((count) => count === 1) && positiveCounts.every((count) => count === 0);
+	if (!positive && !neutral) throw new Error("C6B prompt projection must contain exactly one complete positive or neutral pair");
+	if ((target === "POSITIVE" && positive) || (target === "NEUTRAL" && neutral)) return body;
+	let projected = body;
+	for (const pair of c6bPromptProjectionPairs) {
+		const from = target === "POSITIVE" ? pair.neutral : pair.positive;
+		const to = target === "POSITIVE" ? pair.positive : pair.neutral;
+		projected = replaceFixtureExactlyOnce(projected, from, to, `C6B prompt ${target.toLowerCase()} projection`);
+	}
+	return projected;
+}
+
+function stripOptionalC6ReceiptProjection(body, label) {
+	const starts = countOccurrences(body, c6aReceiptBlockStart);
+	const ends = countOccurrences(body, c6aReceiptBlockEnd);
+	if (starts === 0 && ends === 0) return Object.freeze({ body, present: false });
+	if (starts !== 1 || ends !== 1) throw new Error(`${label}: C6A source-receipt marker cardinality`);
+	requireVisibleMarkdownReceiptBlock(body, c6aReceiptBlockStart, c6aReceiptBlockEnd, `${label} C6A source receipts`);
+	const start = body.indexOf(c6aReceiptBlockStart);
+	const end = body.indexOf(c6aReceiptBlockEnd, start);
+	if (end <= start) throw new Error(`${label}: C6A source-receipt marker order`);
+	const beforeC3 = parseC3ReceiptBlock(body).block;
+	const blockEnd = end + c6aReceiptBlockEnd.length;
+	const removalEnd = body[blockEnd] === "\n" ? blockEnd + 1 : blockEnd;
+	const stripped = `${body.slice(0, start)}${body.slice(removalEnd)}`;
+	if (parseC3ReceiptBlock(stripped).block !== beforeC3 ||
+		stripOptionalC6ReceiptProjection(stripped, `${label} idempotence`).body !== stripped) {
+		throw new Error(`${label}: C6A projection stripping changed terminal C3 authority`);
+	}
+	return Object.freeze({ body: stripped, present: true });
+}
+
+function forwardFixtureKind(activeBoundary, targetBoundary) {
+	const activeIndex = forwardCandidateReceiptPhaseBoundaries.indexOf(activeBoundary);
+	const targetIndex = forwardCandidateReceiptPhaseBoundaries.indexOf(targetBoundary);
+	if (activeIndex === -1 || targetIndex === -1) throw new Error("forward fixture boundary outside declared horizon");
+	return targetIndex < activeIndex ? "HISTORY" : targetIndex === activeIndex ? "LIVE" : "FUTURE";
+}
+
+function optionalPlanGitTreeText(root, commit, path, label) {
+	const listing = runPlanC6Git(root, ["ls-tree", "-z", commit, "--", path], `${label} listing`);
+	if (listing.length === 0) return ABSENT_FIXTURE_PATH;
+	if (listing.at(-1) !== 0) throw new Error(`${label}: tree listing framing`);
+	const records = decodeCandidateUTF8(listing.subarray(0, -1), `${label} listing`).split("\0");
+	if (records.length !== 1) throw new Error(`${label}: tree listing cardinality`);
+	const match = /^(100644) blob ([0-9a-f]{40}|[0-9a-f]{64})\t(.+)$/u.exec(records[0]);
+	if (!match || match[3] !== path) throw new Error(`${label}: tree path is not one regular blob`);
+	return decodeCandidateUTF8(runPlanC6Git(root, ["cat-file", "blob", match[2]], `${label} body`), label);
+}
+
+function forwardPhaseHistory(root, expectedHead) {
+	const output = runPlanC6Git(root, [
+		"rev-list", "--first-parent", "--reverse", `${sealedC3BIdentity.commit}..${expectedHead}`,
+	], "forward phase first-parent history");
+	const text = decodeCandidateUTF8(output, "forward phase first-parent history");
+	const commits = text.length === 0 ? [] : text.trimEnd().split("\n");
+	const history = new Map();
+	let lastIndex = -1;
+	for (const commit of commits) {
+		if (!/^(?:[0-9a-f]{40}|[0-9a-f]{64})$/u.test(commit)) throw new Error("forward phase history commit identity");
+		const handoff = optionalPlanGitTreeText(root, commit, receiptPhaseHandoffPath, `forward phase ${commit} HANDOFF`);
+		if (handoff === ABSENT_FIXTURE_PATH || !hasReceiptPhaseCapsule(handoff)) continue;
+		const boundary = classifyReceiptPhase(handoff).boundary;
+		const index = forwardCandidateReceiptPhaseBoundaries.indexOf(boundary);
+		if (index === -1 || index < lastIndex || index > lastIndex + 1) {
+			throw new Error(`forward phase first-parent topology ${boundary} after index ${lastIndex}`);
+		}
+		lastIndex = index;
+		history.set(boundary, commit);
+	}
+	return history;
+}
+
+function historicalSelfReceiptCorpus(root, boundary, history) {
+	const commit = history.get(boundary);
+	if (commit === undefined) throw new Error(`forward phase ${boundary} historical corpus commit absent`);
+	return new Map(currentReceiptPhaseMarkdownPaths(boundary).map((path) => [
+		path, optionalPlanGitTreeText(root, commit, path, `forward phase ${boundary} corpus ${path}`),
+	]));
+}
+
+async function liveForwardPlanCorpus(boundary) {
+	const overrides = new Map();
+	const declaredForwardPaths = new Set(forwardDeclaredReceiptPhaseMarkdownPaths(boundary));
+	for (const path of currentReceiptPhaseMarkdownPaths(boundary)) {
+		try {
+			overrides.set(path, await readText(repositoryRoot, path, new Map()));
+		} catch (error) {
+			if (error.code !== "ENOENT") throw error;
+			if (declaredForwardPaths.has(path)) {
+				overrides.set(path, `# ${boundary} forward phase fixture\n\nPending source authority; no receipt asserted.\n`);
+			} else {
+				overrides.set(path, ABSENT_FIXTURE_PATH);
+			}
+		}
+	}
+	const liveHandoff = overrides.get(receiptPhaseHandoffPath);
+	if (typeof liveHandoff !== "string") throw new Error("forward fixture live HANDOFF absent");
+	overrides.set(receiptPhaseHandoffPath, rewriteReceiptPhaseCapsule(
+		liveHandoff, p07bCActiveReceiptPhaseBoundary, boundary,
+	));
+	if (["C6A", "C6M", "C6B"].includes(boundary) &&
+		(!overrides.has(c6EvidencePath) || overrides.get(c6EvidencePath) === ABSENT_FIXTURE_PATH)) {
+		overrides.set(c6EvidencePath, "# C6 evidence forward fixture\n\nC6A source receipts remain absent.\n");
+	}
+	const handoffProjection = stripOptionalC6ReceiptProjection(overrides.get(receiptPhaseHandoffPath), "forward HANDOFF");
+	overrides.set(receiptPhaseHandoffPath, handoffProjection.body);
+	const evidenceBody = overrides.get(c6EvidencePath);
+	let evidenceProjection = Object.freeze({ body: evidenceBody, present: false });
+	if (typeof evidenceBody === "string") {
+		evidenceProjection = stripOptionalC6ReceiptProjection(evidenceBody, "forward C6 evidence");
+		overrides.set(c6EvidencePath, evidenceProjection.body);
+	}
+	if (handoffProjection.present !== evidenceProjection.present) {
+		throw new Error("forward C6 source-receipt projections are one-sided");
+	}
+	overrides.set(c6aSourceAuthorityPath, ABSENT_FIXTURE_PATH);
+	overrides.set(c6aReceiptDeclarationPath, ABSENT_FIXTURE_PATH);
+	if (boundary === "C6B") {
+		const prompt = overrides.get("docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md");
+		if (typeof prompt !== "string") throw new Error("forward C6B prompt absent");
+		overrides.set("docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md", projectC6BPrompt(prompt, "POSITIVE"));
+	}
+	return overrides;
+}
+
+function runForwardFixtureIsolationSelfTest() {
+	const targets = ["C4", "C5", "C6A", "C6M", "C6B"];
+	for (const [active, expected] of [
+		["C5", ["HISTORY", "LIVE", "FUTURE", "FUTURE", "FUTURE"]],
+		["C6M", ["HISTORY", "HISTORY", "HISTORY", "LIVE", "FUTURE"]],
+		["C6B", ["HISTORY", "HISTORY", "HISTORY", "HISTORY", "LIVE"]],
+	]) {
+		const observed = targets.map((target) => forwardFixtureKind(active, target));
+		if (!isDeepStrictEqual(observed, expected)) throw new Error(`forward fixture kind matrix ${active}`);
+	}
+	const cumulativeSurfaceCases = [
+		["C4", "docs/status/P07B-C-C4-CLI-PROFILE.md", "docs/status/P07B-C-C5-HTTP-SCOPE.md", false],
+		["C5", "docs/status/P07B-C-C4-CLI-PROFILE.md", "docs/status/P07B-C-C5-HTTP-SCOPE.md", true],
+		["C6A", "docs/status/P07B-C-C5-HTTP-SCOPE.md", c6EvidencePath, true],
+		["C6M", c6EvidencePath, "docs/status/P07B-C-C6M-RECEIPT-ADAPTER-MAINTENANCE.md", true],
+		["C6B", "docs/status/P07B-C-C6M-RECEIPT-ADAPTER-MAINTENANCE.md", "docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md", true],
+	];
+	for (const [boundary, inherited, own, ownExpected] of cumulativeSurfaceCases) {
+		const paths = currentReceiptPhaseMarkdownPaths(boundary);
+		if (!paths.includes(inherited) || paths.includes(own) !== ownExpected ||
+			!isDeepStrictEqual(paths, [...new Set(paths)].sort((left, right) =>
+				Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8"))))) {
+			throw new Error(`forward fixture cumulative Markdown surface ${boundary}`);
+		}
+	}
+	const digest = createHash("sha256").update(`${JSON.stringify(c6bPromptProjectionPairs)}\n`, "utf8").digest("hex");
+	if (digest !== c6bPromptProjectionDigest) throw new Error(`C6B prompt projection digest ${digest}`);
+	const prompt = `head\n${c6bPromptProjectionPairs.map(({ positive }) => positive).join("\n")}\ntail\n`;
+	const neutral = projectC6BPrompt(prompt, "NEUTRAL");
+	if (projectC6BPrompt(neutral, "POSITIVE") !== prompt || projectC6BPrompt(neutral, "NEUTRAL") !== neutral) {
+		throw new Error("C6B prompt projection round trip");
+	}
+	for (const hostile of [
+		prompt.replace(c6bPromptProjectionPairs[0].positive, "missing"),
+		`${prompt}${c6bPromptProjectionPairs[0].positive}\n`,
+		prompt.replace(c6bPromptProjectionPairs[0].positive, c6bPromptProjectionPairs[0].neutral),
+	]) {
+		let refused = false;
+		try { projectC6BPrompt(hostile, "NEUTRAL"); } catch { refused = true; }
+		if (!refused) throw new Error("C6B prompt projection hostile survived");
+	}
+	return 8;
+}
+
+export async function runDeclaredForwardReceiptPhasePlanSelfTest() {
+	const historyHead = planC6GitLine(repositoryRoot, ["rev-parse", "--verify", "HEAD^{commit}"], "forward fixture HEAD");
+	const history = forwardPhaseHistory(repositoryRoot, historyHead);
+	const syntheticAuthority = Object.freeze({
+		commit: "a".repeat(40), tree: "b".repeat(40), parent: "c".repeat(40),
+		subject: c6aSourceSubject, noteBlob: "d".repeat(40), noteBodySHA256: "e".repeat(64),
+		secretsOverride: true,
+	});
+	const c6ReceiptFixture = syntheticPlanC6ReceiptFixture(syntheticAuthority);
+	const { manifestText } = c6ReceiptFixture;
+	const receiptBlock = renderPlanC6SourceReceiptBlock(
+		c6ReceiptFixture.manifest, c6ReceiptFixture.receipt, c6ReceiptFixture.summary,
+	);
+	const callForwardPlan = (fixture, authority = undefined) => checkPlan(
+		repositoryRoot, fixture.overrides, ...Array(9).fill(undefined), fixture.boundary, fixture.boundary,
+		fixture.selfReceiptCorpus, authority,
+	);
+	const baseOverrides = async (boundary) => {
+		const overrides = await liveForwardPlanCorpus(boundary);
+		const kind = forwardFixtureKind(p07bCActiveReceiptPhaseBoundary, boundary);
+		const selfReceiptCorpus = kind === "HISTORY"
+			? historicalSelfReceiptCorpus(repositoryRoot, boundary, history)
+			: new Map(currentReceiptPhaseMarkdownPaths(boundary).map((path) => [path, overrides.get(path)]));
+		return Object.freeze({ boundary, kind, overrides, selfReceiptCorpus });
+	};
+	const withOverrides = (fixture, overrides) => Object.freeze({
+		...fixture,
+		overrides,
+		selfReceiptCorpus: fixture.kind === "HISTORY" ? fixture.selfReceiptCorpus : new Map(
+			currentReceiptPhaseMarkdownPaths(fixture.boundary).map((path) => [path, overrides.get(path)]),
+		),
+	});
+	const fixtureIsolationHostiles = runForwardFixtureIsolationSelfTest();
+	let fullPlanControls = 0;
+	let adapterBlocks = 0;
+	let postTransitionControls = 0;
+	let selfReceiptRejected = 0;
+	let selfReceiptControls = 0;
+	for (const boundary of ["C4", "C5", "C6A", "C6M", "C6B"]) {
+		const fixture = await baseOverrides(boundary);
+		const { overrides } = fixture;
+		if (boundary === "C6B") {
+			const errors = await callForwardPlan(fixture);
+			const expected = [
+				"docs/HANDOFF_MODE_C.md: receipt phase observed-state mismatch (receipt phase C6B C6A source-authority manifest must be PRESENT)",
+				"docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md: C6B self-receipt forbidden (evidence-association); remove or reframe the positive C6B result",
+			];
+			if (!isDeepStrictEqual(errors, expected)) {
+				throw new Error(`P07B-C C6B forward preactivation self-test false negative: ${errors.join("; ")}`);
+			}
+			adapterBlocks += 1;
+			overrides.set(c6aSourceAuthorityPath, manifestText);
+			overrides.set(c6aReceiptDeclarationPath, c6ReceiptFixture.receiptBytes);
+			overrides.set(c6aEvidenceSummaryPath, c6ReceiptFixture.summaryBytes);
+			const c6bAbsentHandoff = overrides.get(receiptPhaseHandoffPath);
+			overrides.set(receiptPhaseHandoffPath, insertLegacyReceiptBlockBeforeOptionalTerminalC3(
+				c6bAbsentHandoff, receiptBlock, "C6B canonical C6A source receipts", "direct",
+			));
+			overrides.set(c6EvidencePath, `${overrides.get(c6EvidencePath).trimEnd()}\n\n${receiptBlock}\n`);
+			overrides.set(
+				"docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md",
+				projectC6BPrompt(overrides.get("docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md"), "NEUTRAL"),
+			);
+			const positiveFixture = withOverrides(fixture, overrides);
+			const positiveErrors = await callForwardPlan(positiveFixture, syntheticAuthority);
+			if (positiveErrors.length > 0) {
+				throw new Error(`P07B-C C6B forward post-transition control failed:\n${positiveErrors.join("\n")}`);
+			}
+			fullPlanControls += 1;
+			postTransitionControls += 1;
+			for (const [name, mutate] of [
+				["missing HANDOFF projection", (value) => value.set(receiptPhaseHandoffPath, c6bAbsentHandoff)],
+				["missing evidence projection", (value) => value.set(
+					c6EvidencePath, value.get(c6EvidencePath).replace(`\n\n${receiptBlock}\n`, "\n"),
+				)],
+				["manifest identity drift", (value) => value.set(
+					c6aSourceAuthorityPath, value.get(c6aSourceAuthorityPath).replace(syntheticAuthority.noteBlob, "f".repeat(40)),
+				)],
+				["missing receipt declaration", (value) => value.set(c6aReceiptDeclarationPath, ABSENT_FIXTURE_PATH)],
+				["receipt authority digest drift", (value) => value.set(
+					c6aReceiptDeclarationPath,
+					value.get(c6aReceiptDeclarationPath).toString("utf8").replace(
+						c6ReceiptFixture.receipt.source_authority_sha256, "0".repeat(64),
+					),
+				)],
+				["sealed summary nonclaim drift", (value) => value.set(
+					c6aEvidenceSummaryPath,
+					Buffer.from(`${JSON.stringify({ ...c6ReceiptFixture.summary, nonclaims: c6ReceiptFixture.summary.nonclaims.slice(1) })}\n`, "utf8"),
+				)],
+				["duplicate HANDOFF projection", (value) => value.set(
+					receiptPhaseHandoffPath, `${value.get(receiptPhaseHandoffPath)}\n${receiptBlock}\n`,
+				)],
+			]) {
+				const hostile = new Map(overrides);
+				mutate(hostile);
+				const hostileErrors = await callForwardPlan(withOverrides(positiveFixture, hostile), syntheticAuthority);
+				if (!hostileErrors.some((error) => error.includes("receipt phase observed-state mismatch"))) {
+					throw new Error(`P07B-C C6B forward authority hostile survived: ${name} (${hostileErrors.join("; ")})`);
+				}
+				adapterBlocks += 1;
+			}
+		} else {
+			if (boundary === "C6M") overrides.set(c6aSourceAuthorityPath, manifestText);
+			const activeFixture = withOverrides(fixture, overrides);
+			const errors = await callForwardPlan(activeFixture, boundary === "C6M" ? syntheticAuthority : undefined);
+			if (errors.length > 0) {
+				throw new Error(`P07B-C ${boundary} forward full-plan phase self-test failed:\n${errors.join("\n")}`);
+			}
+			fullPlanControls += 1;
+			if (boundary === "C6A") {
+				const premature = new Map(overrides);
+				premature.set(c6aSourceAuthorityPath, manifestText);
+				const prematureErrors = await callForwardPlan(withOverrides(activeFixture, premature), syntheticAuthority);
+				if (!prematureErrors.some((error) => error.includes("manifest must be ABSENT"))) {
+					throw new Error(`P07B-C C6A premature source-authority hostile survived: ${prematureErrors.join("; ")}`);
+				}
+				adapterBlocks += 1;
+			}
+			if (boundary === "C6M") {
+				const prematureProjection = new Map(overrides);
+				prematureProjection.set(
+					receiptPhaseHandoffPath, `${prematureProjection.get(receiptPhaseHandoffPath).trimEnd()}\n\n${receiptBlock}\n`,
+				);
+				const prematureErrors = await callForwardPlan(
+					withOverrides(activeFixture, prematureProjection), syntheticAuthority,
+				);
+				if (!prematureErrors.some((error) => error.includes("receipt phase observed-state mismatch"))) {
+					throw new Error(`P07B-C C6M premature receipt projection hostile survived: ${prematureErrors.join("; ")}`);
+				}
+				adapterBlocks += 1;
+			}
+		}
+		const extension = runCurrentReceiptPhaseSelfReceiptExtension(boundary);
+		selfReceiptRejected += extension.rejected;
+		selfReceiptControls += extension.controls;
+	}
+	if (planC6GitLine(repositoryRoot, ["rev-parse", "--verify", "HEAD^{commit}"], "stable forward fixture HEAD") !== historyHead) {
+		throw new Error("forward fixture HEAD changed during self-test");
+	}
+	if (fullPlanControls !== 5 || adapterBlocks !== 10 || postTransitionControls !== 1) {
+		throw new Error(`forward receipt-phase control cardinality ${fullPlanControls}/${adapterBlocks}/${postTransitionControls}`);
+	}
+	return Object.freeze({
+		fullPlanControls, adapterBlocks, postTransitionControls, selfReceiptRejected, selfReceiptControls,
+		fixtureIsolationHostiles,
+	});
+}
+
 const c3pbLifecyclePhases = Object.freeze([
 	Object.freeze({ field: "before", phase: "C3M_ACTIVE" }),
 	Object.freeze({ field: "after", phase: "C3PB_ACTIVE" }),
@@ -6919,6 +9737,9 @@ const c3pbLifecyclePhases = Object.freeze([
 ]);
 
 function classifyC3PBHandoffPhase(body, c3Receipt, c3rAuthority, c3qAuthority, c3tAuthority, c3uAuthority) {
+	if (hasReceiptPhaseCapsule(body)) {
+		return `${classifyReceiptPhase(body).boundary}_ACTIVE`;
+	}
 	const visibleBody = visibleMarkdownLifecycleBody(body);
 	if (c3Receipt === undefined) {
 		const prematureC3B = visibleBody.includes("C3B receipt reconciliation is the active") ||
@@ -7041,6 +9862,15 @@ async function checkC3PReceiptPhase(root, overrides, status, handoff, errors, in
 	} catch (error) {
 		if (error.code !== "ENOENT") errors.push(`${c3pReceiptDeclarationPath}: unreadable (${error.message})`);
 	}
+	try {
+		const phase = classifyReceiptPhase(handoff);
+		const expectedState = receiptText === undefined ? "ABSENT" : "PRESENT";
+		if (phase.receipts.C3P !== expectedState) {
+			errors.push(`docs/HANDOFF_MODE_C.md: ${phase.boundary} phase contradicts ${expectedState.toLowerCase()} C3P receipt state`);
+		}
+	} catch (error) {
+		errors.push(`docs/HANDOFF_MODE_C.md: C3P receipt phase capsule invalid (${error.message})`);
+	}
 
 	if (receiptText === undefined) {
 		requireExactlyOnce(status, "- **State:** active pre-seal `SOURCE_FULL` prerequisite; every C3P grade below is `UNRECEIPTED`", c3pStatusPath, "C3P pre-seal source state", errors);
@@ -7129,6 +9959,7 @@ async function checkC3ReceiptPhase(
 	injectedC3QAuthority,
 	injectedC3TAuthority,
 	injectedC3UAuthority,
+	expectedReceiptPhaseBoundary,
 ) {
 	try {
 		status = visibleMarkdownLifecycleBody(status);
@@ -7173,8 +10004,13 @@ async function checkC3ReceiptPhase(
 			errors.push(`docs/HANDOFF_MODE_C.md: C3 pending receipt marker topology invalid (${error.message})`);
 		}
 		try {
-			const phase = classifyC3PBHandoffPhase(handoff);
-			if (phase !== "C3U_ACTIVE") errors.push(`docs/HANDOFF_MODE_C.md: C3 receipt-absent phase must be C3U-active, found ${phase}`);
+			const phase = classifyReceiptPhase(handoff);
+			if (phase.boundary !== expectedReceiptPhaseBoundary) {
+				errors.push(`docs/HANDOFF_MODE_C.md: expected ${expectedReceiptPhaseBoundary} phase, found ${phase.boundary}`);
+			}
+			if (phase.receipts.C3 !== "ABSENT") {
+				errors.push(`docs/HANDOFF_MODE_C.md: ${phase.boundary} phase contradicts absent C3 receipt state`);
+			}
 		} catch (error) {
 			errors.push(`docs/HANDOFF_MODE_C.md: C3 receipt-absent operational phase invalid (${error.message})`);
 		}
@@ -7280,21 +10116,15 @@ async function checkC3ReceiptPhase(
 		requireExactlyOnce(status, disclosure, c3StatusPath, "C3 source evidence disclosure", errors);
 	}
 	try {
-		const phase = classifyC3PBHandoffPhase(handoff, receipt, c3rAuthority, c3qAuthority, c3tAuthority, c3uAuthority);
-		if (phase !== "C3B_ACTIVE") errors.push(`docs/HANDOFF_MODE_C.md: C3 receipt-present phase must be C3B-active, found ${phase}`);
-	} catch (error) {
-		errors.push(`docs/HANDOFF_MODE_C.md: C3 receipt-present operational phase invalid (${error.message})`);
-	}
-	try {
-		const observedSection = currentStateSubsection(handoff, "### Active C3B source receipt reconciliation");
-		const expectedSection = c3bActiveMaintenanceSection(receipt, c3rAuthority, c3qAuthority, c3tAuthority, c3uAuthority);
-		if (observedSection !== expectedSection) {
-			const staleC3Q = observedSection.includes("Its planned nine-claim final ledger") ||
-				observedSection.includes("Every intended grade remains `UNRECEIPTED` at this boundary.");
-			errors.push(`docs/HANDOFF_MODE_C.md: C3B active maintenance section ${staleC3Q ? "retains stale C3Q active prose" : "payload mismatch"}`);
+		const phase = classifyReceiptPhase(handoff);
+		if (phase.boundary !== expectedReceiptPhaseBoundary) {
+			errors.push(`docs/HANDOFF_MODE_C.md: expected ${expectedReceiptPhaseBoundary} phase, found ${phase.boundary}`);
+		}
+		if (phase.receipts.C3 !== "PRESENT") {
+			errors.push(`docs/HANDOFF_MODE_C.md: ${phase.boundary} phase contradicts present C3 receipt state`);
 		}
 	} catch (error) {
-		errors.push(`docs/HANDOFF_MODE_C.md: C3B active maintenance section invalid (${error.message})`);
+		errors.push(`docs/HANDOFF_MODE_C.md: C3 receipt-present operational phase invalid (${error.message})`);
 	}
 	try {
 		const parsed = parseC3ReceiptBlock(handoff);
@@ -7417,7 +10247,16 @@ function syntheticC3PReceiptFixture() {
 }
 
 async function syntheticC3PReceiptPlanFixture(fixture, baseOverrides = new Map(), injectedLifecycle) {
-	const absent = await syntheticC3PAbsentPhaseFixture(baseOverrides);
+	const absent = injectedLifecycle === undefined
+		? await syntheticC3PAbsentPhaseFixture(baseOverrides)
+		: new Map([
+			...baseOverrides,
+			[c3pStatusPath, readSealedC3PStatusFixture()],
+			["docs/HANDOFF_MODE_C.md", withoutC3PReceiptBlock(await readText(
+				repositoryRoot, "docs/HANDOFF_MODE_C.md", baseOverrides,
+			))],
+			[c3pReceiptDeclarationPath, ABSENT_FIXTURE_PATH],
+		]);
 	let status = absent.get(c3pStatusPath);
 	const sourceState = "- **State:** active pre-seal `SOURCE_FULL` prerequisite; every C3P grade below is `UNRECEIPTED`";
 	const receiptState = c3pReconciledStatusState(fixture.receipt);
@@ -7438,31 +10277,27 @@ async function syntheticC3PReceiptPlanFixture(fixture, baseOverrides = new Map()
 			`C3P receipt-present row ${claim.label}`,
 		);
 	}
-	const lifecycle = injectedLifecycle ?? await currentC3LifecycleFixture(absent);
 	const receiptPhaseHandoff = absent.get("docs/HANDOFF_MODE_C.md");
-	const receiptPhase = classifyC3PBHandoffPhase(
-		receiptPhaseHandoff,
-		lifecycle.receipt,
-		lifecycle.c3rAuthority,
-		lifecycle.c3qAuthority,
-		lifecycle.c3tAuthority,
-		lifecycle.c3uAuthority,
-	);
-	if (receiptPhase !== lifecycle.phase) {
-		throw new Error(`P07B-C C3PB synthetic handoff must preserve ${lifecycle.phase}, found ${receiptPhase}`);
-	}
+	const sourceRow = classifyReceiptPhase(receiptPhaseHandoff);
+	const targetBoundary = injectedLifecycle === undefined ? "C3PB" : sourceRow.boundary;
 	if (!receiptPhaseHandoff.endsWith("\n") || parseC3PReceiptBlock(receiptPhaseHandoff).block !== undefined) {
 		throw new Error("P07B-C C3PB synthetic handoff precondition mismatch");
 	}
 	const block = c3pReceiptHandoffBlock(fixture.receipt);
-	const handoffWithReceipt = insertLegacyReceiptBlockBeforeOptionalTerminalC3(
+	let handoffWithReceipt = insertLegacyReceiptBlockBeforeOptionalTerminalC3(
 		receiptPhaseHandoff,
 		block,
 		"C3P synthetic receipt fixture",
 		"direct",
 	);
+	if (sourceRow.boundary !== targetBoundary) {
+		handoffWithReceipt = rewriteReceiptPhaseCapsule(handoffWithReceipt, sourceRow.boundary, targetBoundary);
+	}
 	const roundTrip = parseC3PReceiptBlock(handoffWithReceipt);
-	if (roundTrip.block !== block || roundTrip.stripped !== receiptPhaseHandoff) {
+	const expectedPrior = sourceRow.boundary === targetBoundary
+		? receiptPhaseHandoff
+		: rewriteReceiptPhaseCapsule(receiptPhaseHandoff, sourceRow.boundary, targetBoundary);
+	if (roundTrip.block !== block || roundTrip.stripped !== expectedPrior) {
 		throw new Error("P07B-C C3PB synthetic receipt block round-trip mismatch");
 	}
 	return {
@@ -7473,7 +10308,7 @@ async function syntheticC3PReceiptPlanFixture(fixture, baseOverrides = new Map()
 			[c3pReceiptDeclarationPath, `${JSON.stringify(fixture.receipt)}\n`],
 		]),
 		authority: fixture.authority,
-		priorHandoff: receiptPhaseHandoff,
+		priorHandoff: expectedPrior,
 	};
 }
 
@@ -7518,10 +10353,25 @@ function withoutC3PReceiptBlock(body) {
 
 async function syntheticC3PAbsentPhaseFixture(baseOverrides = new Map()) {
 	const status = readSealedC3PStatusFixture();
-	const currentHandoff = await readText(repositoryRoot, "docs/HANDOFF_MODE_C.md", baseOverrides);
+	let phaseOverrides = new Map(baseOverrides);
+	const lifecycle = await currentC3LifecycleFixture(phaseOverrides);
+	if (lifecycle.row.receipts.C3 === "PRESENT") {
+		const c3Fixture = syntheticC3ReceiptFixture(lifecycle.receipt);
+		c3Fixture.authority = await loadReceiptAuthorityFromGit(repositoryRoot, lifecycle.receipt);
+		c3Fixture.c3rAuthority = lifecycle.c3rAuthority;
+		c3Fixture.c3qAuthority = lifecycle.c3qAuthority;
+		c3Fixture.c3tAuthority = lifecycle.c3tAuthority;
+		c3Fixture.c3uAuthority = lifecycle.c3uAuthority;
+		phaseOverrides = await syntheticC3AbsentPlanFixture(c3Fixture, phaseOverrides);
+	}
+	let currentHandoff = await readText(repositoryRoot, "docs/HANDOFF_MODE_C.md", phaseOverrides);
+	const currentRow = classifyReceiptPhase(currentHandoff);
+	if (currentRow.boundary !== "C3M") {
+		currentHandoff = rewriteReceiptPhaseCapsule(currentHandoff, currentRow.boundary, "C3M");
+	}
 	const handoff = withoutC3PReceiptBlock(currentHandoff);
 	return new Map([
-		...baseOverrides,
+		...phaseOverrides,
 		[c3pStatusPath, status],
 		["docs/HANDOFF_MODE_C.md", handoff],
 		[c3pReceiptDeclarationPath, ABSENT_FIXTURE_PATH],
@@ -7529,6 +10379,11 @@ async function syntheticC3PAbsentPhaseFixture(baseOverrides = new Map()) {
 }
 
 async function currentC3LifecycleFixture(overrides = new Map()) {
+	const handoff = await readText(repositoryRoot, "docs/HANDOFF_MODE_C.md", overrides);
+	let row;
+	if (hasReceiptPhaseCapsule(handoff)) {
+		row = classifyReceiptPhase(handoff);
+	}
 	let receiptText;
 	try {
 		receiptText = await readText(repositoryRoot, c3ReceiptDeclarationPath, overrides);
@@ -7536,8 +10391,10 @@ async function currentC3LifecycleFixture(overrides = new Map()) {
 		if (error.code !== "ENOENT") throw error;
 	}
 	if (receiptText === undefined) {
+		const boundary = row?.boundary ?? "C3U";
 		return Object.freeze({
-			field: "c3u", phase: "C3U_ACTIVE", receipt: undefined,
+			row: row ?? p07bCReceiptPhaseRowsByBoundary.C3U,
+			field: "c3u", phase: `${boundary}_ACTIVE`, receipt: undefined,
 			c3rAuthority: undefined, c3qAuthority: undefined, c3tAuthority: undefined, c3uAuthority: undefined,
 		});
 	}
@@ -7551,7 +10408,12 @@ async function currentC3LifecycleFixture(overrides = new Map()) {
 	const c3qAuthority = await loadC3QAuthorityFromGit(repositoryRoot, c3rAuthority.commit);
 	const c3tAuthority = await loadC3TAuthorityFromGit(repositoryRoot, c3qAuthority.commit);
 	const c3uAuthority = await loadC3UAuthorityFromGit(repositoryRoot, c3tAuthority.commit);
-	return Object.freeze({ field: "c3b", phase: "C3B_ACTIVE", receipt, c3rAuthority, c3qAuthority, c3tAuthority, c3uAuthority });
+	const boundary = row?.boundary ?? "C3B";
+	return Object.freeze({
+		row: row ?? p07bCReceiptPhaseRowsByBoundary.C3B,
+		field: "c3b",
+		phase: `${boundary}_ACTIVE`, receipt, c3rAuthority, c3qAuthority, c3tAuthority, c3uAuthority,
+	});
 }
 
 export async function runC3PReceiptSelfTest() {
@@ -7569,6 +10431,11 @@ export async function runC3PReceiptSelfTest() {
 	rejected += runHermeticPresealSelfTest("C3T", c3tExpectedClaimArgv, c3tHermeticArgvPrefix);
 	rejected += runHermeticPresealSelfTest("C3U", c3uExpectedClaimArgv, c3uHermeticArgvPrefix);
 	rejected += runHermeticPresealSelfTest("C3B", c3bExpectedClaimArgv, c3bHermeticArgvPrefix);
+	rejected += runHermeticPresealSelfTest("C3D", c3dExpectedClaimArgv, c3dHermeticArgvPrefix);
+	rejected += runHermeticPresealSelfTest("C6A", c6aExpectedClaimArgv, c6aHermeticArgvPrefix);
+	rejected += runHermeticPresealSelfTest("C6M", c6mExpectedClaimArgv, c6mHermeticArgvPrefix);
+	rejected += runHermeticPresealSelfTest("C6B", c6bExpectedClaimArgv, c6bHermeticArgvPrefix);
+	rejected += runPlanC6SourceAuthoritySelfTest();
 	const requireError = (name, errors, expected) => {
 		if (!errors.some((error) => error.includes(expected))) {
 			throw new Error(`P07B-C C3P receipt checker self-test false negative: ${name} (${errors.join("; ")})`);
@@ -7591,21 +10458,14 @@ export async function runC3PReceiptSelfTest() {
 	const markerEnd = "<!-- P07B-C-C3P-SOURCE-RECEIPTS:END -->";
 	const liveUnstrippedHandoff = await readText(repositoryRoot, "docs/HANDOFF_MODE_C.md", new Map());
 	const lifecycle = await currentC3LifecycleFixture();
-	const lifecycleValue = (transition, field = lifecycle.field) =>
-		c3pbTransitionValue(transition, field, lifecycle.receipt);
-	const lifecycleText = (transition, field = lifecycle.field) => {
-		const value = lifecycleValue(transition, field);
-		const metadata = c3pbMetadataLineContracts[transition.name];
-		return metadata === undefined
-			? value
-			: metadata.render(value, field, lifecycle.receipt, lifecycle.c3rAuthority, lifecycle.c3qAuthority, lifecycle.c3tAuthority, lifecycle.c3uAuthority);
-	};
-	const phaseInvalidDiagnostic = lifecycle.receipt === undefined
-		? "C3 receipt-absent operational phase invalid"
-		: "C3 receipt-present operational phase invalid";
-	const phaseMismatchDiagnostic = lifecycle.receipt === undefined
-		? "C3 receipt-absent phase must be C3U-active"
-		: "C3 receipt-present phase must be C3B-active";
+	if (lifecycle.row.boundary !== p07bCActiveReceiptPhaseBoundary) {
+		throw new Error(`P07B-C live receipt phase must be ${p07bCActiveReceiptPhaseBoundary}, found ${lifecycle.row.boundary}`);
+	}
+	const generatedPhaseResult = await runReceiptPhaseTableSelfTest();
+	rejected += generatedPhaseResult.rejected;
+	phaseStabilityControls += generatedPhaseResult.accepted;
+	const phaseInvalidDiagnostic = "receipt phase capsule invalid";
+	const phaseMismatchDiagnostic = "expected active receipt phase";
 	if (withoutC3PReceiptBlock("prefix\nsuffix\n") !== "prefix\nsuffix\n") {
 		throw new Error("P07B-C C3P receipt-block marker-free identity baseline mismatch");
 	}
@@ -7621,7 +10481,7 @@ export async function runC3PReceiptSelfTest() {
 		requiredC3QDigest,
 		requiredC3TDigest,
 		requiredC3UDigest,
-		lifecycleValue(c3pbHandoffTransitions[0]),
+		renderReceiptPhaseCapsule(lifecycle.row),
 	]) {
 		if (!strippedLiveHandoff.includes(anchor)) throw new Error("P07B-C C3P live receipt stripping dropped interposed authority");
 	}
@@ -7637,8 +10497,20 @@ export async function runC3PReceiptSelfTest() {
 	requireStripError("reversed markers", `prefix\n${markerEnd}\nreceipt\n${markerStart}\nsuffix\n`, "receipt marker order");
 	requireStripError("inline start marker", `prefix ${markerStart}\nreceipt\n${markerEnd}\nsuffix\n`, "standalone LF lines");
 	requireStripError("inline end marker", `prefix\n${markerStart}\nreceipt\n${markerEnd} suffix\n`, "standalone LF lines");
+	for (const [name, path, body, unit] of [
+		["receipt-absent C3M self receipt", "docs/HANDOFF_MODE_C.md", "C3M is sealed and strict-clean.\n", "C3M"],
+		["receipt-absent external C3M self receipt", "docs/VERIFICATION.md", "C3M strict exit: 0\n", "C3M"],
+		["C3PB self receipt", "docs/HANDOFF_MODE_C.md", "C3PB is sealed and strict-clean.\n", "C3PB"],
+	]) {
+		const selfReceiptErrors = [];
+		rejectReceiptSelfClaims(body, path, unit, selfReceiptErrors);
+		requireError(name, selfReceiptErrors, `${unit} self-receipt`);
+	}
 	const absentOverrides = await syntheticC3PAbsentPhaseFixture();
-	const absentErrors = await checkPlan(repositoryRoot, absentOverrides);
+	const absentErrors = await checkPlan(
+		repositoryRoot, absentOverrides, undefined, undefined, undefined, undefined, undefined,
+		undefined, undefined, undefined, undefined, "C3M", p07bCActiveReceiptPhaseBoundary,
+	);
 	if (absentErrors.length > 0) throw new Error(`P07B-C C3P absent-phase baseline failed:\n${absentErrors.join("\n")}`);
 	const liveStatus = absentOverrides.get(c3pStatusPath);
 	const liveHandoff = absentOverrides.get("docs/HANDOFF_MODE_C.md");
@@ -7652,49 +10524,40 @@ export async function runC3PReceiptSelfTest() {
 		["C3F scope digest", requiredC3FDigest],
 		["C3S scope digest", requiredC3SDigest],
 		["C3R scope digest", requiredC3RDigest],
-		[`${lifecycle.phase} phase`, lifecycleValue(c3pbHandoffTransitions[0])],
+		["C3M phase capsule", renderReceiptPhaseCapsule(p07bCReceiptPhaseRowsByBoundary.C3M)],
 	]) {
 		if (!liveHandoff.includes(anchor)) throw new Error(`P07B-C C3P absent-phase fixture dropped carried ${name} authority`);
 	}
-	const rewriteOperationalPhase = (body, field, label) => c3pbHandoffTransitions.reduce(
-		(current, transition) => {
-			const metadataContract = c3pbMetadataLineContracts[transition.name];
-			const before = lifecycleText(transition);
-			const afterValue = c3pbTransitionValue(transition, field, lifecycle.receipt);
-			const after = metadataContract === undefined
-				? afterValue
-				: metadataContract.render(
-					afterValue, field, lifecycle.receipt, lifecycle.c3rAuthority, lifecycle.c3qAuthority, lifecycle.c3tAuthority, lifecycle.c3uAuthority,
-				);
-			return replaceFixtureExactlyOnce(current, before, after, `${label} ${transition.name}`);
-		},
-		body,
-	);
+	const phaseBoundaryAliases = Object.freeze({
+		before: "C3M", after: "C3PB", descendant: "C3A", c3l: "C3L", c3f: "C3F", c3s: "C3S",
+	});
+	const rewriteOperationalPhase = (body, boundary) =>
+		rewriteReceiptPhaseCapsule(body, classifyReceiptPhase(body).boundary, phaseBoundaryAliases[boundary] ?? boundary);
 	const relocateActiveTupleToHistory = (body, label) => {
-		const transition = c3pbHandoffTransitions[0];
+		const capsule = renderReceiptPhaseCapsule(classifyReceiptPhase(body));
 		const contradicted = replaceFixtureExactlyOnce(
 			body,
-			lifecycleValue(transition),
+			capsule,
 			"A differently worded current-state line claims an older phase is active.",
 			label,
 		);
-		return `${contradicted}\n### Historical relocated operational text — inert\n\n> ${lifecycleValue(transition)}\n`;
+		return `${contradicted}\n## Historical relocated operational text — inert\n\n${capsule}\n`;
 	};
 	const duplicateContradictoryMetadataSlot = (body, label) => {
-		const firstSubheading = "\n### C3P/C3V/C3M/C3PB/C3A/C3L/C3F/C3S/C3/C3R/C3Q/C3T/C3U/C3B scope declarations\n";
+		const capsule = renderReceiptPhaseCapsule(classifyReceiptPhase(body));
 		return replaceFixtureExactlyOnce(
 			body,
-			firstSubheading,
-			`\n- **Pipeline phase:** contradictory duplicate says C3PB is active.\n${firstSubheading}`,
+			capsule,
+			`${capsule}\n\n${capsule}`,
 			label,
 		);
 	};
 	const embedActiveTupleAsSameLineHistory = (body, label) => {
-		const transition = c3pbHandoffTransitions[0];
+		const capsule = renderReceiptPhaseCapsule(classifyReceiptPhase(body));
 		return replaceFixtureExactlyOnce(
 			body,
-			lifecycleValue(transition),
-			`A contradictory current phrase says C3PB is active; historical bytes only: ${lifecycleValue(transition)}`,
+			capsule,
+			`A contradictory current phrase embeds phase bytes: ${capsule}`,
 			label,
 		);
 	};
@@ -7709,28 +10572,24 @@ export async function runC3PReceiptSelfTest() {
 		const contentEnd = nextHeading === -1 ? body.length : nextHeading;
 		return `${body.slice(0, contentStart)}${opening}\n${body.slice(contentStart, contentEnd)}\n${closing}${body.slice(contentEnd)}`;
 	};
-	const absentOperationalPhaseCases = c3pbHandoffTransitions.flatMap((transition) => [
+	const absentCapsule = renderReceiptPhaseCapsule(p07bCReceiptPhaseRowsByBoundary.C3M);
+	const absentOperationalPhaseCases = [
 		{
-			name: `receipt-absent missing ${transition.name}`, path: "docs/HANDOFF_MODE_C.md",
-			value: replaceFixtureExactlyOnce(
-				liveHandoff,
-				lifecycleText(transition),
-				`C3 ${transition.name} omitted.`,
-				`receipt-absent missing ${transition.name}`,
-			),
+			name: "receipt-absent missing phase capsule", path: "docs/HANDOFF_MODE_C.md",
+			value: replaceFixtureExactlyOnce(liveHandoff, absentCapsule, "Phase omitted.", "missing phase capsule"),
 			expect: phaseInvalidDiagnostic,
 		},
 		{
-			name: `receipt-absent duplicate ${transition.name}`, path: "docs/HANDOFF_MODE_C.md",
-			value: `${liveHandoff}${lifecycleText(transition)}\n`,
+			name: "receipt-absent duplicate phase capsule", path: "docs/HANDOFF_MODE_C.md",
+			value: replaceFixtureExactlyOnce(liveHandoff, absentCapsule, `${absentCapsule}\n\n${absentCapsule}`, "duplicate phase capsule"),
 			expect: phaseInvalidDiagnostic,
 		},
 		{
-			name: `receipt-absent mixed ${transition.name}`, path: "docs/HANDOFF_MODE_C.md",
-			value: `${liveHandoff}${transition.after}\n`,
+			name: "receipt-absent mixed phase capsule", path: "docs/HANDOFF_MODE_C.md",
+			value: liveHandoff.replace("- **Parent:** `C3V`", "- **Parent:** `C3B`"),
 			expect: phaseInvalidDiagnostic,
 		},
-	]);
+	];
 	for (const testCase of [
 		{
 			name: "pre-receipt state drift", path: c3pStatusPath,
@@ -7771,11 +10630,6 @@ export async function runC3PReceiptSelfTest() {
 			expect: phaseMismatchDiagnostic,
 		},
 		{
-			name: "receipt-absent coherent C3M downgrade", path: "docs/HANDOFF_MODE_C.md",
-			value: rewriteOperationalPhase(liveHandoff, "before", "receipt-absent C3M downgrade"),
-			expect: phaseMismatchDiagnostic,
-		},
-		{
 			name: "receipt-absent coherent C3A downgrade", path: "docs/HANDOFF_MODE_C.md",
 			value: rewriteOperationalPhase(liveHandoff, "descendant", "receipt-absent C3A downgrade"),
 			expect: phaseMismatchDiagnostic,
@@ -7796,19 +10650,9 @@ export async function runC3PReceiptSelfTest() {
 			expect: phaseMismatchDiagnostic,
 		},
 		{
-			name: `receipt-absent ${lifecycle.receipt === undefined ? "C3U" : "C3B"} self receipt`, path: "docs/HANDOFF_MODE_C.md",
-			value: `${liveHandoff}\n${lifecycle.receipt === undefined ? "C3U" : "C3B"} is sealed and strict-clean.\n`,
-			expect: `${lifecycle.receipt === undefined ? "C3U" : "C3B"} self-receipt`,
-		},
-		{
 			name: "receipt-absent relocated active tuple", path: "docs/HANDOFF_MODE_C.md",
 			value: relocateActiveTupleToHistory(liveHandoff, "receipt-absent relocated active tuple"),
 			expect: phaseInvalidDiagnostic,
-		},
-		{
-			name: `receipt-absent external ${lifecycle.receipt === undefined ? "C3U" : "C3B"} self receipt`, path: "docs/VERIFICATION.md",
-			value: `${liveVerification}\n${lifecycle.receipt === undefined ? "C3U" : "C3B"} strict exit: 0\n`,
-			expect: `${lifecycle.receipt === undefined ? "C3U" : "C3B"} self-receipt`,
 		},
 		{
 			name: "receipt-absent duplicate metadata slot", path: "docs/HANDOFF_MODE_C.md",
@@ -7839,7 +10683,10 @@ export async function runC3PReceiptSelfTest() {
 	]) {
 		const overrides = new Map(absentOverrides);
 		overrides.set(testCase.path, testCase.value);
-		const errors = await checkPlan(repositoryRoot, overrides);
+		const errors = await checkPlan(
+			repositoryRoot, overrides, undefined, undefined, undefined, undefined, undefined,
+			undefined, undefined, undefined, undefined, "C3M", p07bCActiveReceiptPhaseBoundary,
+		);
 		requireError(testCase.name, errors, testCase.expect);
 	}
 
@@ -7882,13 +10729,16 @@ export async function runC3PReceiptSelfTest() {
 		requiredC3QDigest,
 		requiredC3TDigest,
 		requiredC3UDigest,
-		lifecycleValue(c3pbHandoffTransitions[0]),
+		renderReceiptPhaseCapsule(p07bCReceiptPhaseRowsByBoundary.C3PB),
 	]) {
 		if (!phase.overrides.get("docs/HANDOFF_MODE_C.md").includes(anchor)) {
 			throw new Error("P07B-C C3P receipt-present fixture dropped interposed authority");
 		}
 	}
-	const phaseErrors = await checkPlan(repositoryRoot, phase.overrides, undefined, undefined, undefined, phase.authority);
+	const phaseErrors = await checkPlan(
+		repositoryRoot, phase.overrides, undefined, undefined, undefined, phase.authority,
+		undefined, undefined, undefined, undefined, undefined, "C3PB", p07bCActiveReceiptPhaseBoundary,
+	);
 	if (phaseErrors.length > 0) throw new Error(`P07B-C C3P receipt-present phase baseline failed:\n${phaseErrors.join("\n")}`);
 	const rerunPhase = await syntheticC3PReceiptPlanFixture(
 		fixture,
@@ -7899,34 +10749,33 @@ export async function runC3PReceiptSelfTest() {
 			throw new Error(`P07B-C C3P receipt-present rerun changed ${path}`);
 		}
 	}
-	const rerunErrors = await checkPlan(repositoryRoot, rerunPhase.overrides, undefined, undefined, undefined, rerunPhase.authority);
+	const rerunErrors = await checkPlan(
+		repositoryRoot, rerunPhase.overrides, undefined, undefined, undefined, rerunPhase.authority,
+		undefined, undefined, undefined, undefined, undefined, "C3PB", p07bCActiveReceiptPhaseBoundary,
+	);
 	if (rerunErrors.length > 0) throw new Error(`P07B-C C3P receipt-present rerun baseline failed:\n${rerunErrors.join("\n")}`);
 	phaseStabilityControls += 1;
-	const operationalPhaseCases = c3pbHandoffTransitions.flatMap((transition) => [
+	const presentCapsule = renderReceiptPhaseCapsule(p07bCReceiptPhaseRowsByBoundary.C3PB);
+	const operationalPhaseCases = [
 		[
-			`receipt-present missing ${transition.name}`,
+			"receipt-present missing phase capsule",
 			"docs/HANDOFF_MODE_C.md",
-			(body) => replaceFixtureExactlyOnce(
-				body,
-				lifecycleText(transition),
-				`C3 ${transition.name} omitted.`,
-				`receipt-present missing ${transition.name}`,
-			),
+			(body) => replaceFixtureExactlyOnce(body, presentCapsule, "Phase omitted.", "missing phase capsule"),
 			phaseInvalidDiagnostic,
 		],
 		[
-			`receipt-present duplicate ${transition.name}`,
+			"receipt-present duplicate phase capsule",
 			"docs/HANDOFF_MODE_C.md",
-			(body) => `${body}${lifecycleText(transition)}\n`,
+			(body) => replaceFixtureExactlyOnce(body, presentCapsule, `${presentCapsule}\n\n${presentCapsule}`, "duplicate phase capsule"),
 			phaseInvalidDiagnostic,
 		],
 		[
-			`receipt-present mixed ${transition.name}`,
+			"receipt-present mixed phase capsule",
 			"docs/HANDOFF_MODE_C.md",
-			(body) => `${body}${transition.after}\n`,
+			(body) => body.replace("- **Parent:** `C3M`", "- **Parent:** `C3B`"),
 			phaseInvalidDiagnostic,
 		],
-	]);
+	];
 	for (const [name, path, mutate, expected] of [
 		["receipt status grade", c3pStatusPath, (body) => body.replace(
 			`| \`${c3pClaimLabels[0]}\` | \`${c3pClaimTypes[0]}\` | \`TREE-EXACT\` |`,
@@ -7945,8 +10794,8 @@ export async function runC3PReceiptSelfTest() {
 		), "missing required C3M ruling"],
 		["receipt-present active phase", "docs/HANDOFF_MODE_C.md", (body) => replaceFixtureExactlyOnce(
 			body,
-			lifecycleValue(c3pbHandoffTransitions[0]),
-			`${lifecycle.phase} phase omitted.`,
+			presentCapsule,
+			"C3PB phase omitted.",
 			"receipt-present active phase",
 		), phaseInvalidDiagnostic],
 		["receipt residue outside block", "docs/HANDOFF_MODE_C.md", (body) => `${body}C3P source commit \`${fixture.receipt.source_commit}\`, tree \`${fixture.receipt.source_tree}\`.\n`, "receipt residue outside block"],
@@ -7957,12 +10806,6 @@ export async function runC3PReceiptSelfTest() {
 			return `${body.replace(parsed.block, movedBlock)}${disclosure}\n`;
 		}, "receipt block payload mismatch"],
 		["receipt nested marker", "docs/HANDOFF_MODE_C.md", (body) => body.replace(c3pReceiptBlockStart, `${c3pReceiptBlockStart}\n${c3pReceiptBlockStart}`), "receipt block invalid"],
-		[`${lifecycle.receipt === undefined ? "C3U" : "C3B"} self receipt`, "docs/HANDOFF_MODE_C.md", (body) =>
-			`${body}\n${lifecycle.receipt === undefined ? "C3U" : "C3B"} is sealed and strict-clean.\n`,
-			`${lifecycle.receipt === undefined ? "C3U" : "C3B"} self-receipt`],
-		["receipt-present coherent C3PB downgrade", "docs/HANDOFF_MODE_C.md", (body) => rewriteOperationalPhase(
-			body, "after", "receipt-present C3PB downgrade",
-			), phaseMismatchDiagnostic],
 		["receipt-present coherent C3M downgrade", "docs/HANDOFF_MODE_C.md", (body) => rewriteOperationalPhase(
 			body, "before", "receipt-present C3M downgrade",
 		), phaseMismatchDiagnostic],
@@ -7998,7 +10841,10 @@ export async function runC3PReceiptSelfTest() {
 		const overrides = new Map(phase.overrides);
 		const sourceBody = overrides.has(path) ? overrides.get(path) : await readText(repositoryRoot, path, overrides);
 		overrides.set(path, mutate(sourceBody));
-		const errors = await checkPlan(repositoryRoot, overrides, undefined, undefined, undefined, phase.authority);
+		const errors = await checkPlan(
+			repositoryRoot, overrides, undefined, undefined, undefined, phase.authority,
+			undefined, undefined, undefined, undefined, undefined, "C3PB", p07bCActiveReceiptPhaseBoundary,
+		);
 		requireError(name, errors, expected);
 	}
 
@@ -8290,16 +11136,13 @@ function c3ReceiptStatusMetadata(receipt) {
 async function syntheticC3AbsentPlanFixture(fixture, current = new Map()) {
 	let status = current.get(c3StatusPath) ?? await readText(repositoryRoot, c3StatusPath, current);
 	let handoff = current.get("docs/HANDOFF_MODE_C.md") ?? await readText(repositoryRoot, "docs/HANDOFF_MODE_C.md", current);
-	let phase;
+	const sourceRow = classifyReceiptPhase(handoff);
 	const receiptOverride = current.get(c3ReceiptDeclarationPath);
 	const receiptPresent = receiptOverride !== ABSENT_FIXTURE_PATH &&
 		(receiptOverride !== undefined || !status.includes(c3PendingStatusState));
 	if (receiptPresent) {
-		phase = classifyC3PBHandoffPhase(
-			handoff, fixture.receipt, fixture.c3rAuthority, fixture.c3qAuthority, fixture.c3tAuthority, fixture.c3uAuthority,
-		);
-		if (phase !== "C3B_ACTIVE") {
-			throw new Error(`P07B-C C3 inverse fixture requires C3B-active input, found ${phase}`);
+		if (sourceRow.receipts.C3 !== "PRESENT") {
+			throw new Error(`P07B-C C3 inverse fixture requires a C3-receipt-present row, found ${sourceRow.boundary}`);
 		}
 		status = replaceFixtureExactlyOnce(
 			status, c3ReconciledStatusState(fixture.receipt), c3PendingStatusState, "C3B to C3U source state",
@@ -8315,41 +11158,25 @@ async function syntheticC3AbsentPlanFixture(fixture, current = new Map()) {
 				`C3B to C3U source receipt row ${claim.supporting_event_index}`,
 			);
 		}
-		handoff = replaceCurrentStateSubsection(
-			handoff,
-			"### Active C3B source receipt reconciliation",
-			c3uActiveMaintenanceSection(),
-		);
-		handoff = c3pbHandoffTransitions.filter(({ name }) =>
-			name !== "maintenance heading" && name !== "receipt presence").reduce((body, transition) => {
-			const metadata = c3pbMetadataLineContracts[transition.name];
-			const beforeValue = c3pbTransitionValue(transition, "c3b", fixture.receipt);
-			const before = metadata === undefined
-				? beforeValue
-				: metadata.render(
-					beforeValue, "c3b", fixture.receipt, fixture.c3rAuthority, fixture.c3qAuthority, fixture.c3tAuthority, fixture.c3uAuthority,
-				);
-			const after = metadata === undefined
-				? transition.c3u
-				: metadata.render(transition.c3u, "c3u");
-			return replaceFixtureExactlyOnce(body, before, after, `C3B to C3U ${transition.name}`);
-		}, handoff);
 		const parsed = parseC3ReceiptBlock(handoff);
 		const expectedBlock = c3ReceiptHandoffBlock(fixture.receipt);
 		if (parsed.block !== expectedBlock) {
 			throw new Error("P07B-C C3 inverse fixture requires the exact canonical receipt block");
 		}
 		handoff = parsed.stripped;
+		handoff = rewriteReceiptPhaseCapsule(handoff, sourceRow.boundary, "C3U");
 	} else {
 		if (!status.includes(c3PendingStatusState) || !status.includes("## Intended C3 source receipt map")) {
 			throw new Error("P07B-C C3 absent fixture status is not the canonical pending projection");
 		}
-		phase = classifyC3PBHandoffPhase(handoff);
-		if (phase !== "C3U_ACTIVE") {
-			throw new Error(`P07B-C C3 absent fixture requires C3U-active input, found ${phase}`);
+		if (sourceRow.receipts.C3 !== "ABSENT") {
+			throw new Error(`P07B-C C3 absent fixture requires a C3-receipt-absent row, found ${sourceRow.boundary}`);
 		}
 		if (parseC3ReceiptBlock(handoff).block !== undefined) {
 			throw new Error("P07B-C C3 absent fixture retains a receipt block");
+		}
+		if (sourceRow.boundary !== "C3U") {
+			handoff = rewriteReceiptPhaseCapsule(handoff, sourceRow.boundary, "C3U");
 		}
 	}
 	const absent = new Map([
@@ -8358,7 +11185,10 @@ async function syntheticC3AbsentPlanFixture(fixture, current = new Map()) {
 		["docs/HANDOFF_MODE_C.md", handoff],
 		[c3ReceiptDeclarationPath, ABSENT_FIXTURE_PATH],
 	]);
-	const errors = await checkPlan(repositoryRoot, absent);
+	const errors = await checkPlan(
+		repositoryRoot, absent, undefined, undefined, undefined, undefined, undefined,
+		undefined, undefined, undefined, undefined, "C3U", p07bCActiveReceiptPhaseBoundary,
+	);
 	if (errors.length > 0) {
 		throw new Error(`P07B-C C3 validated C3U-active absent fixture failed:\n${errors.join("\n")}`);
 	}
@@ -8383,29 +11213,11 @@ async function syntheticC3ReceiptPlanFixture(fixture, current = new Map()) {
 			`C3U to C3B source receipt row ${claim.supporting_event_index}`,
 		);
 	}
-	const phase = classifyC3PBHandoffPhase(handoff);
-	if (phase !== "C3U_ACTIVE") {
-		throw new Error(`P07B-C C3 receipt-present renderer requires C3U-active input, found ${phase}`);
+	const phase = classifyReceiptPhase(handoff);
+	if (phase.boundary !== "C3U") {
+		throw new Error(`P07B-C C3 receipt-present renderer requires C3U input, found ${phase.boundary}`);
 	}
-	handoff = replaceCurrentStateSubsection(
-		handoff,
-		"### Active C3U cross-phase receipt-fixture maintenance",
-		c3bActiveMaintenanceSection(fixture.receipt, fixture.c3rAuthority, fixture.c3qAuthority, fixture.c3tAuthority, fixture.c3uAuthority),
-	);
-	handoff = c3pbHandoffTransitions.filter(({ name }) =>
-		name !== "maintenance heading" && name !== "receipt presence").reduce((body, transition) => {
-		const metadata = c3pbMetadataLineContracts[transition.name];
-		const before = metadata === undefined
-			? transition.c3u
-			: metadata.render(transition.c3u, "c3u");
-		const afterValue = c3pbTransitionValue(transition, "c3b", fixture.receipt);
-		const after = metadata === undefined
-			? afterValue
-			: metadata.render(
-				afterValue, "c3b", fixture.receipt, fixture.c3rAuthority, fixture.c3qAuthority, fixture.c3tAuthority, fixture.c3uAuthority,
-			);
-		return replaceFixtureExactlyOnce(body, before, after, `C3U to C3B ${transition.name}`);
-	}, handoff);
+	handoff = rewriteReceiptPhaseCapsule(handoff, "C3U", "C3B");
 	if (!handoff.endsWith("\n") || parseC3ReceiptBlock(handoff).block !== undefined) {
 		throw new Error("P07B-C C3 receipt-present renderer requires a terminal-LF block-free handoff");
 	}
@@ -9137,17 +11949,17 @@ export async function runC3ReceiptSelfTest() {
 		["pending status fenced", c3StatusPath, (body) => `\`\`\`markdown\n${body}\`\`\`\n`, "pending source state"],
 		["pending status indented code", c3StatusPath, (body) => body.split("\n").map((line) => `    ${line}`).join("\n"), "pending source state"],
 		["premature marker", "docs/HANDOFF_MODE_C.md", (body) => `${body}\n${c3ReceiptBlockStart}\n`, "pending receipt marker"],
-		["C3F downgrade", "docs/HANDOFF_MODE_C.md", (body) => c3pbHandoffTransitions.reduce((currentBody, transition) => {
-			const metadata = c3pbMetadataLineContracts[transition.name];
-			const before = metadata === undefined ? transition.c3u : metadata.render(transition.c3u, "c3u");
-			const after = metadata === undefined ? transition.c3f : metadata.render(transition.c3f, "c3f");
-			return replaceFixtureExactlyOnce(currentBody, before, after, `C3 absent downgrade ${transition.name}`);
-		}, body), "must be C3U-active"],
+		["C3F downgrade", "docs/HANDOFF_MODE_C.md",
+			(body) => rewriteReceiptPhaseCapsule(body, "C3U", "C3F"),
+			"expected active receipt phase C3U"],
 	]) {
 		const overrides = new Map(absent);
 		const body = await readText(repositoryRoot, path, overrides);
 		overrides.set(path, mutate(body));
-		requireError(name, await checkPlan(repositoryRoot, overrides), expected);
+		requireError(name, await checkPlan(
+			repositoryRoot, overrides, undefined, undefined, undefined, undefined, undefined,
+			undefined, undefined, undefined, undefined, "C3U", p07bCActiveReceiptPhaseBoundary,
+		), expected);
 	}
 	const predecessorManifest = expectedC3PredecessorManifest();
 	predecessorManifest.source_parent.note_type = "tree";
@@ -9155,7 +11967,10 @@ export async function runC3ReceiptSelfTest() {
 	manifestOverrides.set(c3PredecessorManifestPath, `${JSON.stringify(predecessorManifest)}\n`);
 	requireError(
 		"exact predecessor manifest",
-		await checkPlan(repositoryRoot, manifestOverrides),
+		await checkPlan(
+			repositoryRoot, manifestOverrides, undefined, undefined, undefined, undefined, undefined,
+			undefined, undefined, undefined, undefined, "C3U", p07bCActiveReceiptPhaseBoundary,
+		),
 		"exact C3S/C3F/C3L/C3A authority manifest mismatch",
 	);
 	const exactPredecessorText = expectedC3PredecessorManifestBytes().toString("utf8");
@@ -9171,7 +11986,10 @@ export async function runC3ReceiptSelfTest() {
 		duplicateOverrides.set(c3PredecessorManifestPath, duplicate);
 		requireError(
 			name,
-			await checkPlan(repositoryRoot, duplicateOverrides),
+			await checkPlan(
+				repositoryRoot, duplicateOverrides, undefined, undefined, undefined, undefined, undefined,
+				undefined, undefined, undefined, undefined, "C3U", p07bCActiveReceiptPhaseBoundary,
+			),
 			"exact C3S/C3F/C3L/C3A authority manifest mismatch",
 		);
 	}
@@ -9180,39 +11998,14 @@ export async function runC3ReceiptSelfTest() {
 		["HTML-commented subsection heading", "C3Q-INERT-HTML-SUBSECTION-DECOY", "<!--\n### C3Q-INERT-HTML-SUBSECTION-DECOY\n-->"],
 		["fenced subsection heading", "C3Q-INERT-FENCE-SUBSECTION-DECOY", "```text\n### C3Q-INERT-FENCE-SUBSECTION-DECOY\n```"],
 	]) {
-		const liveHandoff = absent.get("docs/HANDOFF_MODE_C.md");
-		const heading = "### Active C3U cross-phase receipt-fixture maintenance";
-		const liveSection = currentStateSubsection(liveHandoff, heading);
-		const decoySection = replaceFixtureExactlyOnce(
-			liveSection,
-			`${heading}\n\n`,
-			`${heading}\n\n${inertDecoy}\n\n`,
-			name,
+		const baseline = receiptPhaseFixtureDocument(p07bCReceiptPhaseRowsByBoundary.C3U);
+		const capsule = renderReceiptPhaseCapsule(p07bCReceiptPhaseRowsByBoundary.C3U);
+		const withDecoy = replaceFixtureExactlyOnce(
+			baseline, capsule, `${inertDecoy}\n\n${capsule}`, name,
 		);
-		const decoyCurrent = new Map(absent);
-		decoyCurrent.set(
-			"docs/HANDOFF_MODE_C.md",
-			replaceCurrentStateSubsection(liveHandoff, heading, decoySection),
-		);
-		const transitioned = await syntheticC3ReceiptPlanFixture(fixture, decoyCurrent);
-		if (transitioned.get("docs/HANDOFF_MODE_C.md").includes(marker)) {
-			throw new Error(`P07B-C C3 receipt checker retained ${name}`);
-		}
-		const transitionedErrors = await checkPlan(
-			repositoryRoot,
-			transitioned,
-			undefined,
-			undefined,
-			undefined,
-			undefined,
-			fixture.authority,
-			fixture.c3rAuthority,
-			fixture.c3qAuthority,
-			fixture.c3tAuthority,
-			fixture.c3uAuthority,
-		);
-		if (transitionedErrors.length > 0) {
-			throw new Error(`P07B-C C3 receipt checker ${name} transition failed:\n${transitionedErrors.join("\n")}`);
+		const transitioned = rewriteReceiptPhaseCapsule(withDecoy, "C3U", "C3B");
+		if (!transitioned.includes(marker) || classifyReceiptPhase(transitioned).boundary !== "C3B") {
+			throw new Error(`P07B-C receipt-phase capsule ${name} control failed`);
 		}
 		subsectionDecoyControls += 1;
 	}
@@ -9229,6 +12022,8 @@ export async function runC3ReceiptSelfTest() {
 		fixture.c3qAuthority,
 		fixture.c3tAuthority,
 		fixture.c3uAuthority,
+		"C3B",
+		p07bCActiveReceiptPhaseBoundary,
 	);
 	if (presentErrors.length > 0) throw new Error(`P07B-C C3 receipt-present baseline failed:\n${presentErrors.join("\n")}`);
 	const presentHandoff = present.get("docs/HANDOFF_MODE_C.md");
@@ -9316,6 +12111,8 @@ export async function runC3ReceiptSelfTest() {
 		fixture.c3qAuthority,
 		fixture.c3tAuthority,
 		fixture.c3uAuthority,
+		"C3B",
+		p07bCActiveReceiptPhaseBoundary,
 	);
 	if (c3pOverC3Errors.length > 0) {
 		throw new Error(`P07B-C C3P-over-C3 actual fixture full-plan control failed:\n${c3pOverC3Errors.join("\n")}`);
@@ -9340,13 +12137,18 @@ export async function runC3ReceiptSelfTest() {
 		fixture.c3qAuthority,
 		fixture.c3tAuthority,
 		fixture.c3uAuthority,
+		"C3B",
+		p07bCActiveReceiptPhaseBoundary,
 	);
 	if (c2OverC3Errors.length > 0) {
 		throw new Error(`P07B-C C2-over-C3 full-plan control failed:\n${c2OverC3Errors.join("\n")}`);
 	}
 	if (liveControlledPaths !== undefined) {
 		for (const path of [c3StatusPath, "docs/HANDOFF_MODE_C.md", c3ReceiptDeclarationPath]) {
-			if (present.get(path) !== liveControlledPaths.get(path)) {
+			const observed = path === "docs/HANDOFF_MODE_C.md"
+				? rewriteReceiptPhaseCapsule(present.get(path), "C3B", p07bCActiveReceiptPhaseBoundary)
+				: present.get(path);
+			if (observed !== liveControlledPaths.get(path)) {
 				throw new Error(`P07B-C C3 live present round trip changed canonical ${path}`);
 			}
 		}
@@ -9365,6 +12167,8 @@ export async function runC3ReceiptSelfTest() {
 		fixture.c3qAuthority,
 		fixture.c3tAuthority,
 		sealedDescendantC3U,
+		"C3B",
+		p07bCActiveReceiptPhaseBoundary,
 	);
 	if (sealedDescendantErrors.length > 0) {
 		throw new Error(`P07B-C C3 sealed-descendant-head plan baseline failed:\n${sealedDescendantErrors.join("\n")}`);
@@ -9379,6 +12183,16 @@ export async function runC3ReceiptSelfTest() {
 	for (const path of [c3StatusPath, "docs/HANDOFF_MODE_C.md", c3ReceiptDeclarationPath]) {
 		if (rerun.get(path) !== present.get(path)) throw new Error(`P07B-C C3 receipt rerun changed ${path}`);
 	}
+	const frozenC3BSection = c3bActiveMaintenanceSection(
+		fixture.receipt, fixture.c3rAuthority, fixture.c3qAuthority,
+		fixture.c3tAuthority, fixture.c3uAuthority,
+	);
+	if (validateFrozenC3BMaintenanceSection(
+		frozenC3BSection, fixture.receipt, fixture.c3rAuthority, fixture.c3qAuthority,
+		fixture.c3tAuthority, fixture.c3uAuthority,
+	).length > 0) {
+		throw new Error("P07B-C frozen C3B maintenance-section baseline failed");
+	}
 	for (const [name, mutate] of [
 		["C3Q note blob handoff binding", (authority) => { authority.note_blob_oid = "d".repeat(40); }],
 		["C3Q note body handoff binding", (authority) => { authority.note_body_sha256 = "e".repeat(64); }],
@@ -9386,31 +12200,16 @@ export async function runC3ReceiptSelfTest() {
 	]) {
 		const hostileC3QAuthority = structuredClone(fixture.c3qAuthority);
 		mutate(hostileC3QAuthority);
-		const handoffPath = "docs/HANDOFF_MODE_C.md";
-		const heading = "### Active C3B source receipt reconciliation";
-		const liveHandoff = present.get(handoffPath);
-		const liveSection = currentStateSubsection(liveHandoff, heading);
 		const hostileSection = replaceFixtureExactlyOnce(
-			liveSection,
+			frozenC3BSection,
 			c3qSealOutcomeDisclosure(fixture.c3qAuthority),
 			c3qSealOutcomeDisclosure(hostileC3QAuthority),
 			name,
 		);
-		const hostilePresent = new Map(present);
-		hostilePresent.set(handoffPath, replaceCurrentStateSubsection(liveHandoff, heading, hostileSection));
-		requireError(name, await checkPlan(
-			repositoryRoot,
-			hostilePresent,
-			undefined,
-			undefined,
-			undefined,
-			undefined,
-			fixture.authority,
-			fixture.c3rAuthority,
-			fixture.c3qAuthority,
-			fixture.c3tAuthority,
-			fixture.c3uAuthority,
-		), "C3B active maintenance section payload mismatch");
+		requireError(name, validateFrozenC3BMaintenanceSection(
+			hostileSection, fixture.receipt, fixture.c3rAuthority, fixture.c3qAuthority,
+			fixture.c3tAuthority, fixture.c3uAuthority,
+		), "C3B frozen active maintenance section payload mismatch");
 	}
 	for (const [name, mutate] of [
 		["C3T note blob handoff binding", (authority) => { authority.note_blob_oid = "c".repeat(40); }],
@@ -9419,31 +12218,16 @@ export async function runC3ReceiptSelfTest() {
 	]) {
 		const hostileC3TAuthority = structuredClone(fixture.c3tAuthority);
 		mutate(hostileC3TAuthority);
-		const handoffPath = "docs/HANDOFF_MODE_C.md";
-		const heading = "### Active C3B source receipt reconciliation";
-		const liveHandoff = present.get(handoffPath);
-		const liveSection = currentStateSubsection(liveHandoff, heading);
 		const hostileSection = replaceFixtureExactlyOnce(
-			liveSection,
+			frozenC3BSection,
 			c3tSealOutcomeDisclosure(fixture.c3tAuthority),
 			c3tSealOutcomeDisclosure(hostileC3TAuthority),
 			name,
 		);
-		const hostilePresent = new Map(present);
-		hostilePresent.set(handoffPath, replaceCurrentStateSubsection(liveHandoff, heading, hostileSection));
-		requireError(name, await checkPlan(
-			repositoryRoot,
-			hostilePresent,
-			undefined,
-			undefined,
-			undefined,
-			undefined,
-			fixture.authority,
-			fixture.c3rAuthority,
-			fixture.c3qAuthority,
-			fixture.c3tAuthority,
-			fixture.c3uAuthority,
-		), "C3B active maintenance section payload mismatch");
+		requireError(name, validateFrozenC3BMaintenanceSection(
+			hostileSection, fixture.receipt, fixture.c3rAuthority, fixture.c3qAuthority,
+			fixture.c3tAuthority, fixture.c3uAuthority,
+		), "C3B frozen active maintenance section payload mismatch");
 	}
 	for (const [name, mutate] of [
 		["C3U note blob handoff binding", (authority) => { authority.note_blob_oid = "a".repeat(40); }],
@@ -9452,31 +12236,45 @@ export async function runC3ReceiptSelfTest() {
 	]) {
 		const hostileC3UAuthority = structuredClone(fixture.c3uAuthority);
 		mutate(hostileC3UAuthority);
-		const handoffPath = "docs/HANDOFF_MODE_C.md";
-		const heading = "### Active C3B source receipt reconciliation";
-		const liveHandoff = present.get(handoffPath);
-		const liveSection = currentStateSubsection(liveHandoff, heading);
 		const hostileSection = replaceFixtureExactlyOnce(
-			liveSection,
+			frozenC3BSection,
 			c3uSealOutcomeDisclosure(fixture.c3uAuthority),
 			c3uSealOutcomeDisclosure(hostileC3UAuthority),
 			name,
 		);
-		const hostilePresent = new Map(present);
-		hostilePresent.set(handoffPath, replaceCurrentStateSubsection(liveHandoff, heading, hostileSection));
-		requireError(name, await checkPlan(
-			repositoryRoot,
-			hostilePresent,
-			undefined,
-			undefined,
-			undefined,
-			undefined,
-			fixture.authority,
-			fixture.c3rAuthority,
-			fixture.c3qAuthority,
-			fixture.c3tAuthority,
-			fixture.c3uAuthority,
-		), "C3B active maintenance section payload mismatch");
+		requireError(name, validateFrozenC3BMaintenanceSection(
+			hostileSection, fixture.receipt, fixture.c3rAuthority, fixture.c3qAuthority,
+			fixture.c3tAuthority, fixture.c3uAuthority,
+		), "C3B frozen active maintenance section payload mismatch");
+	}
+	for (const [name, mutate, expected] of [
+		["stale C3Q planned prose", (body) => body.replace(
+			/\n\n$/u, "\n\nIts planned nine-claim final ledger remains pending.\n\n",
+		), "C3B frozen active maintenance section retains stale C3Q active prose"],
+		["inert raw-heading boundary decoy with stale C3Q prose", (body) => body.replace(
+			"### Active C3B source receipt reconciliation\n\n",
+			"### Active C3B source receipt reconciliation\n\n<!--\n### C3B-INERT-RAW-HEADING-DECOY\n-->\n\nIts planned nine-claim final ledger remains pending.\n\n",
+		), "C3B frozen active maintenance section retains stale C3Q active prose"],
+		["hidden stale C3Q unreceipted prose", (body) => body.replace(
+			/\n\n$/u, "\n\n<!-- Every intended grade remains `UNRECEIPTED` at this boundary. -->\n\n",
+		), "C3B frozen active maintenance section retains stale C3Q active prose"],
+		["phase-stable C3T corpus ruling removal", (body) => body.replace(
+			"C3Q's production refusal logic and synthetic C3Q/C3B renderer passed on its sealed tree",
+			"The closed checker repair is omitted:",
+		), "C3B frozen active maintenance section payload mismatch"],
+	]) {
+		requireError(name, validateFrozenC3BMaintenanceSection(
+			mutate(frozenC3BSection), fixture.receipt, fixture.c3rAuthority, fixture.c3qAuthority,
+			fixture.c3tAuthority, fixture.c3uAuthority,
+		), expected);
+	}
+	for (const [name, path, body] of [
+		["C3B self receipt", "docs/HANDOFF_MODE_C.md", "C3B is sealed and strict-clean.\n"],
+		["C3B external strict-zero self receipt", "docs/VERIFICATION.md", "C3B strict exit: 0\n"],
+	]) {
+		const selfReceiptErrors = [];
+		rejectReceiptSelfClaims(body, path, "C3B", selfReceiptErrors);
+		requireError(name, selfReceiptErrors, "C3B self-receipt");
 	}
 	for (const [name, path, mutate, expected] of [
 		["source grade", c3StatusPath, (body) => body.replace("| `TREE-EXACT` |", "| `UNRECEIPTED` |"), "source receipt map"],
@@ -9507,33 +12305,9 @@ export async function runC3ReceiptSelfTest() {
 		["receipt residue", "docs/HANDOFF_MODE_C.md", (body) => `${body}C3 source commit \`${fixture.receipt.source_commit}\`, tree \`${fixture.receipt.source_tree}\`.\n`, "residue outside block"],
 		["receipt post-block tail", "docs/HANDOFF_MODE_C.md", (body) => `${body}Unrelated trailing receipt-era prose.\n`,
 			"exact terminal handoff block"],
-		["C3Q lifecycle downgrade", "docs/HANDOFF_MODE_C.md", (body) => body.replace(c3bActiveHandoffState(fixture.receipt), c3qActiveHandoffState), "receipt-present operational phase"],
-		["stale C3Q planned prose", "docs/HANDOFF_MODE_C.md", (body) => {
-			const heading = "### Active C3B source receipt reconciliation";
-			const section = currentStateSubsection(body, heading);
-			return replaceCurrentStateSubsection(body, heading,
-				section.replace(/\n\n$/u, "\n\nIts planned nine-claim final ledger remains pending.\n\n"));
-		}, "C3B active maintenance section retains stale C3Q active prose"],
-		["inert raw-heading boundary decoy with stale C3Q prose", "docs/HANDOFF_MODE_C.md", (body) => {
-			const heading = "### Active C3B source receipt reconciliation";
-			const section = currentStateSubsection(body, heading);
-			return replaceCurrentStateSubsection(body, heading, section.replace(
-				`${heading}\n\n`,
-				`${heading}\n\n<!--\n### C3B-INERT-RAW-HEADING-DECOY\n-->\n\nIts planned nine-claim final ledger remains pending.\n\n`,
-			));
-		}, "C3B active maintenance section retains stale C3Q active prose"],
-		["hidden stale C3Q unreceipted prose", "docs/HANDOFF_MODE_C.md", (body) => {
-			const heading = "### Active C3B source receipt reconciliation";
-			const section = currentStateSubsection(body, heading);
-			return replaceCurrentStateSubsection(body, heading,
-				section.replace(/\n\n$/u, "\n\n<!-- Every intended grade remains `UNRECEIPTED` at this boundary. -->\n\n"));
-		}, "C3B active maintenance section retains stale C3Q active prose"],
-		["phase-stable C3T corpus ruling removal", "docs/HANDOFF_MODE_C.md", (body) => body.replace(
-			"C3Q's production refusal logic and synthetic C3Q/C3B renderer passed on its sealed tree",
-			"The closed checker repair is omitted:",
-		), "C3B active maintenance section payload mismatch"],
-		["C3B self receipt", "docs/HANDOFF_MODE_C.md", (body) => `${body}\nC3B is sealed and strict-clean.\n`, "C3B self-receipt"],
-		["C3B external strict-zero self receipt", "docs/VERIFICATION.md", (body) => `${body}\nC3B strict exit: 0\n`, "C3B self-receipt"],
+		["C3Q lifecycle downgrade", "docs/HANDOFF_MODE_C.md",
+			(body) => rewriteReceiptPhaseCapsule(body, "C3B", "C3Q"),
+			"expected active receipt phase C3B"],
 	]) {
 		const overrides = new Map(present);
 		overrides.set(path, mutate(overrides.get(path) ?? await readText(repositoryRoot, path, overrides)));
@@ -9549,6 +12323,8 @@ export async function runC3ReceiptSelfTest() {
 			fixture.c3qAuthority,
 			fixture.c3tAuthority,
 			fixture.c3uAuthority,
+			"C3B",
+			p07bCActiveReceiptPhaseBoundary,
 		), expected);
 	}
 	const root = await mkdtemp(resolve(tmpdir(), "countershape-c3-local-evidence-"));
@@ -9580,7 +12356,7 @@ export async function runC3ReceiptSelfTest() {
 	} finally {
 		await rm(root, { recursive: true, force: true });
 	}
-	console.log(`P07B-C C3 receipt checker self-test passed: ${rejected} declaration, exact-diff, Git-note, lifecycle, block, no-recursion, and local-evidence mutations rejected; absent-to-present and present-to-absent-to-present controlled paths are byte-stable; ${subsectionDecoyControls} inert raw-heading decoys removed by visible-boundary transition`);
+	console.log(`P07B-C C3 receipt checker self-test passed: ${rejected} declaration, exact-diff, Git-note, lifecycle, block, no-recursion, and local-evidence mutations rejected; absent-to-present and present-to-absent-to-present controlled paths are byte-stable; ${subsectionDecoyControls} inert Markdown decoys preserved without changing capsule classification`);
 	return Object.freeze({ rejected, present, fixture });
 }
 
@@ -9876,6 +12652,10 @@ export async function checkPlan(
 	c3qReceiptAuthority,
 	c3tReceiptAuthority,
 	c3uReceiptAuthority,
+	expectedReceiptPhaseBoundary = p07bCActiveReceiptPhaseBoundary,
+	selfReceiptBoundary = expectedReceiptPhaseBoundary,
+	selfReceiptCorpusOverrides = new Map(),
+	injectedC6ASourceAuthority,
 ) {
 	const errors = [];
 	const bodies = new Map();
@@ -9883,7 +12663,7 @@ export async function checkPlan(
 	if (computedMarkdownDigest !== planAuthorityMarkdownDigest) {
 		errors.push(`internal plan-authority Markdown corpus digest mismatch: ${computedMarkdownDigest}`);
 	}
-	for (const path of planAuthorityMarkdownPaths) {
+	for (const path of currentReceiptPhaseMarkdownPaths(expectedReceiptPhaseBoundary)) {
 		try {
 			bodies.set(path, await readText(root, path, overrides));
 		} catch (error) {
@@ -10165,6 +12945,24 @@ export async function checkPlan(
 			if (!body.includes(snippet)) errors.push(`${path}: missing required C3U ruling: ${JSON.stringify(snippet)}`);
 		}
 	}
+	for (const [path, snippets] of Object.entries(requiredC3DText)) {
+		let body;
+		try {
+			body = bodies.get(path) ?? await readText(root, path, overrides);
+			bodies.set(path, body);
+		} catch (error) {
+			errors.push(`${path}: unreadable (${error.message})`);
+			continue;
+		}
+		for (const snippet of snippets) {
+			if (!body.includes(snippet)) errors.push(`${path}: missing required C3D ruling: ${JSON.stringify(snippet)}`);
+		}
+		if (c3dNarrativePathSet.has(path)) {
+			for (const snippet of forbiddenC3DNarrativeSnippets) {
+				if (body.includes(snippet)) errors.push(`${path}: forbidden superseded C3D ruling: ${JSON.stringify(snippet)}`);
+			}
+		}
+	}
 	try {
 		const manifestBytes = await readBytes(root, c3PredecessorManifestPath, overrides);
 		const manifest = JSON.parse(decodeGitUTF8(manifestBytes, "C3 predecessor declaration"));
@@ -10215,6 +13013,7 @@ export async function checkPlan(
 		["C3T", requiredC3TPaths, requiredC3TDigest],
 		["C3U", requiredC3UPaths, requiredC3UDigest],
 		["C3B", requiredC3BPaths, requiredC3BDigest],
+		["C3D", requiredC3DPaths, requiredC3DDigest],
 	]) {
 		const computed = `sha256:${createHash("sha256").update(`${paths.join("\n")}\n`, "utf8").digest("hex")}`;
 		if (computed !== digest) errors.push(`internal ${unit} roster digest mismatch: ${computed}`);
@@ -10333,6 +13132,13 @@ export async function checkPlan(
 			requiredC3UDeclaration,
 			"docs/VERIFICATION.md",
 			"C3U cross-phase receipt-fixture maintenance scope declaration",
+			errors,
+		);
+		requireExactlyOnce(
+			verificationBody,
+			requiredC3DDeclaration,
+			"docs/VERIFICATION.md",
+			"C3D data-driven receipt-phase maintenance scope declaration",
 			errors,
 		);
 	}
@@ -10638,6 +13444,29 @@ export async function checkPlan(
 		}
 		rejectReceiptSelfClaims(c3uStatusBody, c3uStatusPath, "C3U", errors);
 	}
+	const c3dRawStatusBody = bodies.get(c3dStatusPath);
+	let c3dStatusBody;
+	if (c3dRawStatusBody !== undefined) {
+		try { c3dStatusBody = visibleMarkdownLifecycleBody(c3dRawStatusBody); } catch { /* reported above */ }
+	}
+	if (c3dStatusBody !== undefined) {
+		requireExactlyOnce(c3dStatusBody, requiredC3DDeclaration, c3dStatusPath, "C3D source scope", errors);
+		requireExactlyOnce(c3dStatusBody, c3dStatusBoundaryLine, c3dStatusPath, "C3D active boundary", errors);
+		requireExactlyOnce(c3dStatusBody, c3dStatusParentLine, c3dStatusPath, "C3D sealed parent identity", errors);
+		requireExactlyOnce(c3dStatusBody, c3dStatusUnreceiptedLine, c3dStatusPath, "C3D unreceipted state", errors);
+		requireExactlyOnce(c3dStatusBody, `- **Commit subject:** \`${c3dSourceSubject}\``, c3dStatusPath, "C3D commit subject", errors);
+		for (let index = 0; index < c3dClaimLabels.length; index += 1) {
+			requireExactlyOnce(
+				c3dStatusBody,
+				`| \`${c3dClaimLabels[index]}\` | \`${c3dClaimTypes[index]}\` | \`UNRECEIPTED\` |`,
+				c3dStatusPath,
+				"C3D intended claim map",
+				errors,
+			);
+			requireClaimLabelExactlyOnce(c3dStatusBody, c3dClaimLabels[index], c3dStatusPath, "C3D intended claim map", errors);
+		}
+		rejectReceiptSelfClaims(c3dStatusBody, c3dStatusPath, "C3D", errors);
+	}
 
 	try {
 		const maintenanceStatus = await readText(root, c1MaintenanceStatusPath, overrides);
@@ -10716,15 +13545,26 @@ export async function checkPlan(
 	} catch (error) {
 		errors.push(`${c3StatusPath}: unreadable (${error.message})`);
 	}
-	let c3ReceiptPresentForPhase = true;
-	try {
-		await readText(root, c3ReceiptDeclarationPath, overrides);
-	} catch (error) {
-		if (error.code === "ENOENT") c3ReceiptPresentForPhase = false;
-		else errors.push(`${c3ReceiptDeclarationPath}: unreadable (${error.message})`);
-	}
 	const status = bodies.get(statusPath);
 	const handoff = bodies.get("docs/HANDOFF_MODE_C.md");
+	if (handoff !== undefined) {
+		try {
+			const phase = classifyReceiptPhase(handoff);
+			if (phase.boundary !== expectedReceiptPhaseBoundary) {
+				errors.push(`docs/HANDOFF_MODE_C.md: expected active receipt phase ${expectedReceiptPhaseBoundary}, found ${phase.boundary}`);
+			}
+			try {
+				validateReceiptPresence(
+					phase,
+					await observedReceiptStates(root, overrides, phase.boundary, injectedC6ASourceAuthority),
+				);
+			} catch (error) {
+				errors.push(`docs/HANDOFF_MODE_C.md: receipt phase observed-state mismatch (${error.message})`);
+			}
+		} catch (error) {
+			errors.push(`docs/HANDOFF_MODE_C.md: receipt phase capsule invalid (${error.message})`);
+		}
+	}
 	if (status !== undefined && handoff !== undefined) {
 		await checkStatusPhase(root, overrides, status, handoff, errors, receiptAuthority);
 			if (c1Status !== undefined) {
@@ -10748,11 +13588,35 @@ export async function checkPlan(
 					c3qReceiptAuthority,
 					c3tReceiptAuthority,
 					c3uReceiptAuthority,
+					expectedReceiptPhaseBoundary,
 				);
 			}
 		}
-	const activeSelfReceiptUnit = c3ReceiptPresentForPhase ? "C3B" : "C3U";
-	rejectActiveUnitSelfReceipts(bodies, activeSelfReceiptUnit, errors);
+	// Historical receipt fixtures may intentionally classify as an older row. Callers
+	// that layer those fixtures over descendant docs explicitly retain the live pointer.
+	// A bounded corpus override exists only so an old active phase can be replayed against
+	// current descendant documentation without treating legitimate sealed history as a
+	// fresh self-receipt. Override keys must already belong to that phase's declared corpus.
+	if (!(selfReceiptCorpusOverrides instanceof Map)) {
+		errors.push("receipt-phase self-receipt corpus overrides must be a Map");
+	} else {
+		const selfReceiptPaths = currentReceiptPhaseMarkdownPaths(selfReceiptBoundary);
+		const selfReceiptPathSet = new Set(selfReceiptPaths);
+		for (const path of selfReceiptCorpusOverrides.keys()) {
+			if (!selfReceiptPathSet.has(path)) errors.push(`${path}: self-receipt corpus override is outside ${selfReceiptBoundary}`);
+		}
+		const selfReceiptBodies = new Map();
+		for (const path of selfReceiptPaths) {
+			const body = selfReceiptCorpusOverrides.has(path) ? selfReceiptCorpusOverrides.get(path) : bodies.get(path);
+			if (body === ABSENT_FIXTURE_PATH) continue;
+			if (typeof body !== "string") {
+				errors.push(`${path}: self-receipt corpus body is unavailable for ${selfReceiptBoundary}`);
+				continue;
+			}
+			selfReceiptBodies.set(path, body);
+		}
+		rejectActiveUnitSelfReceipts(selfReceiptBodies, selfReceiptBoundary, errors);
+	}
 
 	for (const path of controllingPaths) {
 		const body = bodies.get(path);
@@ -10938,6 +13802,12 @@ export async function checkPlan(
 		if (!isDeepStrictEqual(specification.units.C3T.prefixes, []) || specification.units.C3T.verification_profile !== "SOURCE_FULL") {
 			errors.push("spec/verification/p07b-c-unit-paths.json: C3T source profile mismatch");
 		}
+		if (!isDeepStrictEqual(specification.units.C3U.exact, requiredC3UPaths)) {
+			errors.push("spec/verification/p07b-c-unit-paths.json: C3U exact path roster mismatch");
+		}
+		if (!isDeepStrictEqual(specification.units.C3U.prefixes, []) || specification.units.C3U.verification_profile !== "SOURCE_FULL") {
+			errors.push("spec/verification/p07b-c-unit-paths.json: C3U source profile mismatch");
+		}
 		if (!isDeepStrictEqual(specification.units.C3B.exact, requiredC3BPaths)) {
 			errors.push("spec/verification/p07b-c-unit-paths.json: C3B exact path roster mismatch");
 		}
@@ -10947,6 +13817,15 @@ export async function checkPlan(
 		}
 		if (!isDeepStrictEqual(specification.units.C3B.receipt_claims, requiredC3BReceiptClaims)) {
 			errors.push("spec/verification/p07b-c-unit-paths.json: C3B receipt claim manifest mismatch");
+		}
+		if (!isDeepStrictEqual(specification.units.C3D.exact, requiredC3DPaths)) {
+			errors.push("spec/verification/p07b-c-unit-paths.json: C3D exact path roster mismatch");
+		}
+		if (!isDeepStrictEqual(specification.units.C3D.prefixes, []) || specification.units.C3D.verification_profile !== "SOURCE_FULL") {
+			errors.push("spec/verification/p07b-c-unit-paths.json: C3D source profile mismatch");
+		}
+		if (!isDeepStrictEqual(receiptPhaseRows(specification), p07bCReceiptPhaseRows)) {
+			errors.push("spec/verification/p07b-c-unit-paths.json: receipt phase table projection mismatch");
 		}
 	} catch (error) {
 		errors.push(`spec/verification/p07b-c-unit-paths.json: invalid (${error.message})`);
@@ -11454,7 +14333,11 @@ async function runSelfTest() {
 	const c3pReceiptMutations = await runC3PReceiptSelfTest();
 	const c3ReceiptResult = await runC3ReceiptSelfTest();
 	const c3ReceiptMutations = c3ReceiptResult.rejected;
-	const activeSelfReceiptMatrix = runActiveUnitSelfReceiptMatrixSelfTest();
+	const c3dPredecessorMutations = await runC3DSealedC3BCompatibilitySelfTest();
+	const finalRunbookControls = runFinalRunbookRendererSelfTest();
+	const historicalSelfReceiptMatrix = runFrozenHistoricalSelfReceiptMatrixSelfTest();
+	const currentSelfReceiptExtension = runCurrentReceiptPhaseSelfReceiptExtension();
+	const forwardPhaseResult = await runDeclaredForwardReceiptPhasePlanSelfTest();
 
 	const promptPath = "docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md";
 	const prompt = await readText(repositoryRoot, promptPath, new Map());
@@ -11593,6 +14476,8 @@ async function runSelfTest() {
 		c3ReceiptResult.fixture.c3qAuthority,
 		c3ReceiptResult.fixture.c3tAuthority,
 		c3ReceiptResult.fixture.c3uAuthority,
+		"C3B",
+		p07bCActiveReceiptPhaseBoundary,
 	);
 	if (terminalC0Errors.length > 0) {
 		throw new Error(`P07B-C C0-over-C3 actual fixture full-plan control failed:\n${terminalC0Errors.join("\n")}`);
@@ -11728,6 +14613,8 @@ async function runSelfTest() {
 		c3ReceiptResult.fixture.c3qAuthority,
 		c3ReceiptResult.fixture.c3tAuthority,
 		c3ReceiptResult.fixture.c3uAuthority,
+		"C3B",
+		p07bCActiveReceiptPhaseBoundary,
 	);
 	if (terminalC1Errors.length > 0) {
 		throw new Error(`P07B-C C1-over-C3 actual fixture full-plan control failed:\n${terminalC1Errors.join("\n")}`);
@@ -12825,7 +15712,7 @@ async function runSelfTest() {
 					candidate.units.C3M.exact = candidate.units.C3M.exact.filter((path) => path !== c3MaintenanceStatusPath);
 					return `${JSON.stringify(candidate, null, 2)}\n`;
 				})(),
-				expect: "C3M exact path roster mismatch",
+				expect: "receipt phase authority digest",
 			},
 			{
 				name: "C3M prefix introduction", path: configPath,
@@ -12853,7 +15740,7 @@ async function runSelfTest() {
 					candidate.units.C3PB.receipt_claims[0].label += " altered";
 					return `${JSON.stringify(candidate, null, 2)}\n`;
 				})(),
-				expect: "C3PB receipt claim manifest mismatch",
+				expect: "receipt phase authority digest",
 			},
 			{
 				name: "C3A unit removal", path: configPath,
@@ -12884,7 +15771,7 @@ async function runSelfTest() {
 					candidate.units.C3A.exact = candidate.units.C3A.exact.filter((path) => path !== c3aStatusPath);
 					return `${JSON.stringify(candidate, null, 2)}\n`;
 				})(),
-				expect: "C3A exact path roster mismatch",
+				expect: "receipt phase authority digest",
 			},
 			{
 				name: "C3A prefix introduction", path: configPath,
@@ -12934,7 +15821,7 @@ async function runSelfTest() {
 					candidate.units.C3L.exact = candidate.units.C3L.exact.filter((path) => path !== c3lStatusPath);
 					return `${JSON.stringify(candidate, null, 2)}\n`;
 				})(),
-				expect: "C3L exact path roster mismatch",
+				expect: "receipt phase authority digest",
 			},
 			{
 				name: "C3L prefix introduction", path: configPath,
@@ -12984,7 +15871,7 @@ async function runSelfTest() {
 					candidate.units.C3F.exact = candidate.units.C3F.exact.filter((path) => path !== c3fStatusPath);
 					return `${JSON.stringify(candidate, null, 2)}\n`;
 				})(),
-				expect: "C3F exact path roster mismatch",
+				expect: "receipt phase authority digest",
 			},
 			{
 				name: "C3F prefix introduction", path: configPath,
@@ -13034,7 +15921,7 @@ async function runSelfTest() {
 					candidate.units.C3S.exact = candidate.units.C3S.exact.filter((path) => path !== c3sStatusPath);
 					return `${JSON.stringify(candidate, null, 2)}\n`;
 				})(),
-				expect: "C3S exact path roster mismatch",
+				expect: "receipt phase authority digest",
 			},
 			{
 				name: "C3S prefix introduction", path: configPath,
@@ -13658,7 +16545,7 @@ async function runSelfTest() {
 		}
 	}
 
-	console.log(`P07B-C evolved plan checker self-test passed: ${cases.length + localEvidenceMutations + receiptModePhaseMutations + c2ReceiptMutations + c2SealedSourcePhaseMutations + c2LocalEvidenceMutations + c3pReceiptMutations + c3ReceiptMutations + activeSelfReceiptMatrix.rejected} authority, structure, C1/C2/C3P/C3 local-evidence, phase-isolation, semantic-projection, receipt, and allowlist mutations rejected; active-unit matrix phases=${activeSelfReceiptMatrix.phases} active-phases=C3U,C3B paths=${activeSelfReceiptMatrix.paths} forms=${activeSelfReceiptMatrix.forms} rejected=${activeSelfReceiptMatrix.rejected} positive-controls=${activeSelfReceiptMatrix.controls} supplemental-aliases=${activeSelfReceiptMatrix.supplementalAliases} supplemental-controls=${activeSelfReceiptMatrix.supplementalControls}; result=positive-form refusal only, not a general Markdown or security audit`);
+	console.log(`P07B-C evolved plan checker self-test passed: ${cases.length + localEvidenceMutations + receiptModePhaseMutations + c2ReceiptMutations + c2SealedSourcePhaseMutations + c2LocalEvidenceMutations + c3pReceiptMutations + c3ReceiptMutations + c3dPredecessorMutations + finalRunbookControls + historicalSelfReceiptMatrix.rejected + currentSelfReceiptExtension.rejected + forwardPhaseResult.adapterBlocks + forwardPhaseResult.selfReceiptRejected} authority, structure, C1/C2/C3P/C3 local-evidence, phase-isolation, semantic-projection, receipt, runbook, and allowlist mutations rejected; final-runbook-controls=${finalRunbookControls}; frozen-historical matrix phases=${historicalSelfReceiptMatrix.phases} historical-phases=C3U,C3B paths=${historicalSelfReceiptMatrix.paths} forms=${historicalSelfReceiptMatrix.forms} rejected=${historicalSelfReceiptMatrix.rejected} positive-controls=${historicalSelfReceiptMatrix.controls} supplemental-aliases=${historicalSelfReceiptMatrix.supplementalAliases} supplemental-controls=${historicalSelfReceiptMatrix.supplementalControls}; current-extension phase=${p07bCActiveReceiptPhaseBoundary} paths=${currentSelfReceiptExtension.paths} rejected=${currentSelfReceiptExtension.rejected} positive-controls=${currentSelfReceiptExtension.controls}; forward-declared full-plan-controls=${forwardPhaseResult.fullPlanControls} C6B-adapter-blocks=${forwardPhaseResult.adapterBlocks} self-receipt-rejected=${forwardPhaseResult.selfReceiptRejected} self-receipt-controls=${forwardPhaseResult.selfReceiptControls}; result=positive-form refusal only, not a general Markdown or security audit`);
 }
 
 async function verifyC2MaintenancePresealLedger() {
@@ -14253,6 +17140,136 @@ export async function verifyC3BPresealLedger() {
 	});
 }
 
+export async function verifyC3DPresealLedger() {
+	if (p07bCActiveReceiptPhaseBoundary !== "C3D") {
+		throw new Error(`P07B-C C3D preseal gate requires visible capsule boundary C3D, found ${p07bCActiveReceiptPhaseBoundary}`);
+	}
+	await requirePrivateFinalRunDirectories("C3D", c3dFinalRunDirectories);
+	await verifyC3DSealedC3BNote();
+	await verifyLivePresealLedger({
+		phase: "C3D",
+		expectedArgv: c3dExpectedClaimArgv,
+		claims: c3dClaimLabels.map((label, index) => ({ label, type: c3dClaimTypes[index] })),
+		receiptStates: [
+			{ path: c3pReceiptDeclarationPath, present: true },
+			{ path: c3ReceiptDeclarationPath, present: true },
+		],
+		hermeticArgvPrefix: c3dHermeticArgvPrefix,
+	});
+}
+
+async function requireCurrentC6PhaseAuthority(boundary) {
+	if (p07bCActiveReceiptPhaseBoundary !== boundary) {
+		throw new Error(`P07B-C ${boundary} preseal gate requires visible capsule boundary ${boundary}, found ${p07bCActiveReceiptPhaseBoundary}`);
+	}
+	await requireReceiptDeclarationPhase(
+		repositoryRoot, c6aSourceAuthorityPath, boundary === "C6M" || boundary === "C6B", boundary,
+	);
+	const observed = await observedReceiptStates(repositoryRoot, new Map(), boundary);
+	validateReceiptPresence(p07bCReceiptPhaseRowsByBoundary[boundary], observed);
+}
+
+export async function verifyC6APresealLedger() {
+	await requirePrivateFinalRunDirectories("C6A", c6aFinalRunDirectories);
+	await requireCurrentC6PhaseAuthority("C6A");
+	await verifyLivePresealLedger({
+		phase: "C6A",
+		expectedArgv: c6aExpectedClaimArgv,
+		claims: c6aClaimLabels.map((label, index) => ({ label, type: c6aClaimTypes[index] })),
+		receiptStates: [
+			{ path: c3pReceiptDeclarationPath, present: true },
+			{ path: c3ReceiptDeclarationPath, present: true },
+			{ path: c6aSourceAuthorityPath, present: false },
+			{ path: c6aReceiptDeclarationPath, present: false },
+		],
+		hermeticArgvPrefix: c6aHermeticArgvPrefix,
+	});
+}
+
+export async function verifyC6MPresealLedger() {
+	await requirePrivateFinalRunDirectories("C6M", c6mFinalRunDirectories);
+	await requireCurrentC6PhaseAuthority("C6M");
+	await verifyLivePresealLedger({
+		phase: "C6M",
+		expectedArgv: c6mExpectedClaimArgv,
+		claims: c6mClaimLabels.map((label, index) => ({ label, type: c6mClaimTypes[index] })),
+		receiptStates: [
+			{ path: c3pReceiptDeclarationPath, present: true },
+			{ path: c3ReceiptDeclarationPath, present: true },
+			{ path: c6aSourceAuthorityPath, present: true },
+			{ path: c6aReceiptDeclarationPath, present: false },
+		],
+		hermeticArgvPrefix: c6mHermeticArgvPrefix,
+	});
+}
+
+export async function verifyC6BPresealLedger() {
+	await requirePrivateFinalRunDirectories("C6B", c6bFinalRunDirectories);
+	await requireCurrentC6PhaseAuthority("C6B");
+	await verifyLivePresealLedger({
+		phase: "C6B",
+		expectedArgv: c6bExpectedClaimArgv,
+		claims: c6bClaimLabels.map((label, index) => ({ label, type: c6bClaimTypes[index] })),
+		receiptStates: [
+			{ path: c3pReceiptDeclarationPath, present: true },
+			{ path: c3ReceiptDeclarationPath, present: true },
+			{ path: c6aSourceAuthorityPath, present: true },
+			{ path: c6aReceiptDeclarationPath, present: true },
+		],
+		hermeticArgvPrefix: c6bHermeticArgvPrefix,
+	});
+}
+
+export async function verifyC6ASourceReceipt() {
+	if (p07bCActiveReceiptPhaseBoundary !== "C6B") {
+		throw new Error(`C6A source-receipt verification is admitted only in active C6B, found ${p07bCActiveReceiptPhaseBoundary}`);
+	}
+	const authority = resolvePlanC6ASourceAuthority(repositoryRoot, "C6B");
+	const manifestBytes = await readRegularNoFollow(resolve(repositoryRoot, c6aSourceAuthorityPath), 2 * 1024 * 1024);
+	const receiptBytes = await readRegularNoFollow(resolve(repositoryRoot, c6aReceiptDeclarationPath), 2 * 1024 * 1024);
+	const summaryBytes = await readRegularNoFollow(resolve(repositoryRoot, c6aEvidenceSummaryPath), 2 * 1024 * 1024);
+	const sealedSummaryBytes = planC6TreePathBytes(
+		repositoryRoot, authority.tree, c6aEvidenceSummaryPath, "C6A evidence summary",
+	);
+	if (!sealedSummaryBytes.equals(summaryBytes)) throw new Error("C6A evidence summary differs from sealed source tree");
+	validatePlanC6SourceAuthority(manifestBytes, authority);
+	validatePlanC6ReceiptDeclaration(receiptBytes, authority, manifestBytes, summaryBytes);
+	const planErrors = await checkPlan();
+	if (planErrors.length > 0) throw new Error(`P07B-C C6A source-receipt reconciliation failed:\n${planErrors.join("\n")}`);
+	console.log("P07B-C C6A source receipt passed: sealed source/note, strict 11/11 declaration, tracked summary, and byte-identical HANDOFF/evidence projections agree; C6B remains unreceipted");
+}
+
+export function runC6ASourceReceiptSelfTest() {
+	const rejected = runPlanC6SourceAuthoritySelfTest();
+	const fixtureHostiles = runForwardFixtureIsolationSelfTest();
+	console.log(`P07B-C C6A source-receipt self-test passed: ${rejected} manifest, declaration, summary, note, projection, and ancestry mutations plus ${fixtureHostiles} fixture-isolation hostiles rejected`);
+}
+
+export async function verifyC6ALocalEvidence() {
+	if (p07bCActiveReceiptPhaseBoundary !== "C6B") {
+		throw new Error(`C6A local-evidence verification is admitted only in active C6B, found ${p07bCActiveReceiptPhaseBoundary}`);
+	}
+	const authority = resolvePlanC6ASourceAuthority(repositoryRoot, "C6B");
+	const manifestBytes = await readRegularNoFollow(resolve(repositoryRoot, c6aSourceAuthorityPath), 2 * 1024 * 1024);
+	const receiptBytes = await readRegularNoFollow(resolve(repositoryRoot, c6aReceiptDeclarationPath), 2 * 1024 * 1024);
+	const summaryBytes = await readRegularNoFollow(resolve(repositoryRoot, c6aEvidenceSummaryPath), 2 * 1024 * 1024);
+	const sealedSummaryBytes = planC6TreePathBytes(
+		repositoryRoot, authority.tree, c6aEvidenceSummaryPath, "C6A evidence summary",
+	);
+	if (!sealedSummaryBytes.equals(summaryBytes)) throw new Error("C6A evidence summary differs from sealed source tree");
+	validatePlanC6SourceAuthority(manifestBytes, authority);
+	const { receipt } = validatePlanC6ReceiptDeclaration(receiptBytes, authority, manifestBytes, summaryBytes);
+	const planErrors = await checkPlan();
+	if (planErrors.length > 0) throw new Error(`P07B-C C6A local-evidence precondition failed:\n${planErrors.join("\n")}`);
+	const evidenceErrors = await verifyLocalEvidence(
+		repositoryRoot, receipt, c6aClaimLabels, c6aClaimTypes, c6aExpectedClaimArgv,
+	);
+	if (evidenceErrors.length > 0) {
+		throw new Error(`P07B-C C6A local-evidence verification failed:\n${evidenceErrors.join("\n")}`);
+	}
+	console.log("P07B-C C6A local evidence passed: exact HTML, ignored sealed-source ledger, sealed summary, and receipt declaration agree; the local snapshot is not portable strict authority");
+}
+
 export async function verifyC3PLocalEvidence() {
 	const receiptText = await readReceiptDeclarationSnapshot(repositoryRoot, c3pReceiptDeclarationPath, "C3P");
 	const planErrors = await checkPlan(repositoryRoot, new Map([[c3pReceiptDeclarationPath, receiptText]]));
@@ -14327,7 +17344,12 @@ export async function verifyC3BCredentialScan() {
 
 async function main() {
 	const mode = process.argv[2];
-	const usage = "usage: check-p07b-c-plan.mjs [--self-test|--print-plan-authority-corpus|--verify-sealed-c1-local-evidence|--verify-c1-local-evidence|--verify-c2-local-evidence|--verify-c2m-preseal-ledger|--verify-c2-preseal-ledger|--verify-c3v-preseal-ledger|--verify-c3m-preseal-ledger|--verify-c3a-preseal-ledger|--verify-c3l-preseal-ledger|--verify-c3f-preseal-ledger|--verify-c3s-preseal-ledger|--verify-c3-preseal-ledger|--verify-c3r-sealed-c3-note|--verify-c3r-preseal-ledger|--verify-c3q-sealed-c3r-note|--verify-c3q-preseal-ledger|--verify-c3t-sealed-c3q-note|--verify-c3t-preseal-ledger|--verify-c3u-sealed-c3t-note|--verify-c3u-preseal-ledger|--verify-c3-local-evidence|--verify-c3b-staged|--verify-c3b-credential-scan|--verify-c3b-preseal-ledger]";
+	const usage = "usage: check-p07b-c-plan.mjs [--check-candidate-phase <C3D|C4|C5|C6A|C6M|C6B>|--self-test|--print-plan-authority-corpus|--print-final-runbook <C3D|C6A|C6M|C6B>|--print-c6a-source-authority|--print-c6a-source-receipt-block|--self-test-c6a-source-receipt|--verify-c6a-source-receipt|--verify-c6a-local-evidence|--verify-sealed-c1-local-evidence|--verify-c1-local-evidence|--verify-c2-local-evidence|--verify-c2m-preseal-ledger|--verify-c2-preseal-ledger|--verify-c3v-preseal-ledger|--verify-c3m-preseal-ledger|--verify-c3a-preseal-ledger|--verify-c3l-preseal-ledger|--verify-c3f-preseal-ledger|--verify-c3s-preseal-ledger|--verify-c3-preseal-ledger|--verify-c3r-sealed-c3-note|--verify-c3r-preseal-ledger|--verify-c3q-sealed-c3r-note|--verify-c3q-preseal-ledger|--verify-c3t-sealed-c3q-note|--verify-c3t-preseal-ledger|--verify-c3u-sealed-c3t-note|--verify-c3u-preseal-ledger|--verify-c3-local-evidence|--verify-c3b-staged|--verify-c3b-credential-scan|--verify-c3b-preseal-ledger|--verify-c3d-sealed-c3b-note|--verify-c3d-preseal-ledger|--verify-c6a-preseal-ledger|--verify-c6m-preseal-ledger|--verify-c6b-preseal-ledger]";
+	if (mode === "--check-candidate-phase") {
+		if (process.argv.length !== 4) throw new Error(usage);
+		await verifyCandidateReceiptPhasePlan(process.argv[3]);
+		return;
+	}
 	if (mode === "--self-test") {
 		if (process.argv.length !== 3) throw new Error(usage);
 		await runSelfTest();
@@ -14336,6 +17358,36 @@ async function main() {
 	if (mode === "--print-plan-authority-corpus") {
 		if (process.argv.length !== 3) throw new Error(usage);
 		process.stdout.write(planAuthorityMarkdownCorpusReport());
+		return;
+	}
+	if (mode === "--print-final-runbook") {
+		if (process.argv.length !== 4) throw new Error(usage);
+		process.stdout.write(renderFinalRunbook(process.argv[3]));
+		return;
+	}
+	if (mode === "--print-c6a-source-authority") {
+		if (process.argv.length !== 3) throw new Error(usage);
+		await printC6ASourceAuthority();
+		return;
+	}
+	if (mode === "--print-c6a-source-receipt-block") {
+		if (process.argv.length !== 3) throw new Error(usage);
+		await printC6ASourceReceiptBlock();
+		return;
+	}
+	if (mode === "--self-test-c6a-source-receipt") {
+		if (process.argv.length !== 3) throw new Error(usage);
+		runC6ASourceReceiptSelfTest();
+		return;
+	}
+	if (mode === "--verify-c6a-source-receipt") {
+		if (process.argv.length !== 3) throw new Error(usage);
+		await verifyC6ASourceReceipt();
+		return;
+	}
+	if (mode === "--verify-c6a-local-evidence") {
+		if (process.argv.length !== 3) throw new Error(usage);
+		await verifyC6ALocalEvidence();
 		return;
 	}
 	if (mode === "--verify-sealed-c1-local-evidence") {
@@ -14491,6 +17543,31 @@ async function main() {
 		await verifyC3BPresealLedger();
 		return;
 	}
+	if (mode === "--verify-c3d-sealed-c3b-note") {
+		if (process.argv.length !== 3) throw new Error(usage);
+		await verifyC3DSealedC3BNote();
+		return;
+	}
+	if (mode === "--verify-c3d-preseal-ledger") {
+		if (process.argv.length !== 3) throw new Error(usage);
+		await verifyC3DPresealLedger();
+		return;
+	}
+	if (mode === "--verify-c6a-preseal-ledger") {
+		if (process.argv.length !== 3) throw new Error(usage);
+		await verifyC6APresealLedger();
+		return;
+	}
+	if (mode === "--verify-c6m-preseal-ledger") {
+		if (process.argv.length !== 3) throw new Error(usage);
+		await verifyC6MPresealLedger();
+		return;
+	}
+	if (mode === "--verify-c6b-preseal-ledger") {
+		if (process.argv.length !== 3) throw new Error(usage);
+		await verifyC6BPresealLedger();
+		return;
+	}
 	if (mode !== undefined) throw new Error(usage);
 
 	const errors = await checkPlan();
@@ -14501,14 +17578,7 @@ async function main() {
 		return;
 	}
 
-	let c3ReceiptPresent = true;
-	try { await lstat(resolve(repositoryRoot, c3ReceiptDeclarationPath)); } catch (error) {
-		if (error.code === "ENOENT") c3ReceiptPresent = false;
-		else throw error;
-	}
-	console.log(c3ReceiptPresent
-		? "P07B-C C3B plan check passed: sealed C3 source evidence, exact sealed C3R/C3Q/C3T/C3U checker ancestry, and the active receipt-only descendant are coherent; this gate does not re-run or upgrade any C3 source claim"
-		: "P07B-C C3U plan check passed: declared sealed-C3T identity, validated cross-phase legacy receipt fixtures with terminal C3 preservation, corpus-wide active-unit self-receipt refusal, pending C3 receipt grades, and the frozen C3B receipt boundary are coherent; live sealed-note authority is verified only by the dedicated compatibility and chain gates, and this gate confers no process-start or C4 authority");
+	console.log(`P07B-C ${p07bCActiveReceiptPhaseBoundary} plan check passed: the visible-capsule-selected v16 row, observed receipt states, sealed predecessor evidence, generated phase fixtures, and frozen historical regression oracles are coherent; this gate confers no product, process-start, C4, or current-unit receipt authority`);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
