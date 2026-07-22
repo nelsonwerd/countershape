@@ -3,10 +3,10 @@
 import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { constants as fsConstants, readFileSync } from "node:fs";
-import { lstat, mkdir, mkdtemp, open, opendir, readFile, readdir, realpath, rm, rmdir, symlink, writeFile } from "node:fs/promises";
+import { chmod, lstat, mkdir, mkdtemp, open, opendir, readFile, readdir, realpath, rm, rmdir, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
-import { fileURLToPath } from "node:url";
+import { basename, dirname, isAbsolute, relative, resolve, sep } from "node:path";
+import { fileURLToPath, pathToFileURL } from "node:url";
 import { isDeepStrictEqual } from "node:util";
 import { deflateSync, inflateSync } from "node:zlib";
 
@@ -24,11 +24,10 @@ import {
 	validateReceiptIndexModes,
 	validateSpecification,
 } from "./check-p07b-c-unit-scope.mjs";
-import { qualificationCaseIDs, qualificationMatrixDigest } from "./verify-go-test-repetition.mjs";
-
 export const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const ABSENT_FIXTURE_PATH = Symbol("ABSENT_FIXTURE_PATH");
 const STRICT_INDEX_SNAPSHOT = Symbol("STRICT_INDEX_SNAPSHOT");
+const B_FUTURE_SURFACE_ROWS_FIXTURE = Symbol("B_FUTURE_SURFACE_ROWS_FIXTURE");
 
 const c1PlanningPaths = Object.freeze({
 	targetSchema: "spec/schema/v1/contract-execution-target.schema.json",
@@ -61,6 +60,7 @@ const promptHeadings = Object.freeze([
 	"# C2 — add nonhead persistence and private interlock substrate",
 	"# C3P — correct the runtime epoch before live authority",
 	"# C3 — publish one exact pre-spawn target",
+	"# C4V — repair the execution-unit verification contract",
 	"# C4 — close a CLI candidate-profile run and publish its classification",
 	"# C5 — add HTTP and complete standalone-scope evidence",
 	"# C6 — cumulative closure, expert surfaces, and receipts",
@@ -92,6 +92,96 @@ const c3qStatusPath = "docs/status/P07B-C-C3Q-SELF-RECEIPT-MAINTENANCE.md";
 const c3tStatusPath = "docs/status/P07B-C-C3T-PHASE-SELFTEST-MAINTENANCE.md";
 const c3uStatusPath = "docs/status/P07B-C-C3U-CROSS-PHASE-RECEIPT-FIXTURE-MAINTENANCE.md";
 const c3dStatusPath = "docs/status/P07B-C-C3D-RECEIPT-PHASE-CONSOLIDATION.md";
+const c4vStatusPath = "docs/status/P07B-C-C4V-EXECUTION-CONTRACT-MAINTENANCE.md";
+const bFutureSurfaceAuthorityPath = "spec/verification/p07b-b-future-surface-authority.json";
+const bFutureSurfaceInstanceSchema = "countershape/p07b-b-future-surface-authority/v1";
+const bFutureSurfaceSchemaDigest = "91c4ca13a4b30a683b82066fdcdc1a7892de2679a2e5419a57142e36b22f5937";
+const bFutureSurfaceBaselinePolicyDigest = "5a1c3e2f33969143765612f4934ce4ca41cc1e3df95383b8d7780354461e3399";
+const bFutureSurfaceHistoricalInventoryDigest = "901d7cb5ca65cb9cb1ca7932ece1741fbfc82df5f9e375d43fadd6e057615960";
+const bFutureSurfaceTestVectorDigest = "4ebfb5ae2608f0cdaa2e316e087fd8c8e479a891e7e52d0a7aab7f9a45541807";
+const bFutureSurfaceFamilies = Object.freeze([
+	"ContractExecution", "ContractExecutionTarget", "FinalizedContractRun",
+]);
+const bFutureSurfaceHistoricalInventory = Object.freeze([
+	Object.freeze({ path: "internal/contractexec/model/execution.go", symbol: "ContractExecution" }),
+	Object.freeze({ path: "internal/contractexec/model/execution.go", symbol: "ContractExecutionClassifierProfile" }),
+	Object.freeze({ path: "internal/contractexec/model/execution.go", symbol: "ContractExecutionTarget" }),
+	Object.freeze({ path: "internal/contractexec/model/execution.go", symbol: "DeriveContractExecution" }),
+	Object.freeze({ path: "internal/contractexec/model/execution.go", symbol: "FinalizedContractRun" }),
+	Object.freeze({ path: "internal/contractexec/model/execution.go", symbol: "ParseContractExecution" }),
+	Object.freeze({ path: "internal/contractexec/model/run.go", symbol: "ContractExecutionTarget" }),
+	Object.freeze({ path: "internal/contractexec/model/run.go", symbol: "FinalizedContractRun" }),
+	Object.freeze({ path: "internal/contractexec/model/run.go", symbol: "NewFinalizedContractRun" }),
+	Object.freeze({ path: "internal/contractexec/model/run_parse.go", symbol: "ContractExecutionTarget" }),
+	Object.freeze({ path: "internal/contractexec/model/run_parse.go", symbol: "FinalizedContractRun" }),
+	Object.freeze({ path: "internal/contractexec/model/run_parse.go", symbol: "NewFinalizedContractRun" }),
+	Object.freeze({ path: "internal/contractexec/model/run_parse.go", symbol: "ParseFinalizedContractRun" }),
+	Object.freeze({ path: "internal/contractexec/model/target.go", symbol: "ContractExecutionTarget" }),
+	Object.freeze({ path: "internal/contractexec/model/target.go", symbol: "NewContractExecutionTarget" }),
+	Object.freeze({ path: "internal/contractexec/model/target.go", symbol: "ParseContractExecutionTarget" }),
+	Object.freeze({ path: "internal/contractexec/model/types.go", symbol: "ContractExecution" }),
+	Object.freeze({ path: "internal/contractexec/model/types.go", symbol: "ContractExecutionTarget" }),
+	Object.freeze({ path: "internal/contractexec/model/types.go", symbol: "FinalizedContractRun" }),
+	Object.freeze({ path: "internal/contractexec/target.go", symbol: "ContractExecutionTarget" }),
+	Object.freeze({ path: "internal/contractexec/target.go", symbol: "NewContractExecutionTarget" }),
+	Object.freeze({ path: "internal/contractexec/target.go", symbol: "ParseContractExecutionTarget" }),
+	Object.freeze({ path: "internal/store/nonhead_contract.go", symbol: "ContractExecution" }),
+	Object.freeze({ path: "internal/store/nonhead_contract.go", symbol: "ContractExecutionClassifierProfile" }),
+	Object.freeze({ path: "internal/store/nonhead_contract.go", symbol: "ContractExecutionTarget" }),
+	Object.freeze({ path: "internal/store/nonhead_contract.go", symbol: "FinalizedContractRun" }),
+	Object.freeze({ path: "internal/store/nonhead_contract.go", symbol: "ParseContractExecutionTarget" }),
+]);
+const bFutureSurfaceBoundaryOrder = Object.freeze(["C4", "C5"]);
+const bFutureSurfaceC4RequiredRows = Object.freeze([
+	Object.freeze({ boundary: "C4", path: "internal/store/contract_run_bridge.go", symbol: "ContractExecutionRecord" }),
+]);
+const bFutureSurfaceC4AllowedExact = Object.freeze([
+	"internal/store/contract_run_bridge.go", "internal/store/nonhead_contract.go",
+]);
+const bFutureSurfaceC4AllowedPrefixes = Object.freeze(["internal/contractexec/runner/"]);
+const bFutureSurfaceC4PresencePrefixes = Object.freeze(["internal/contractexec/runner/"]);
+const bFutureSurfaceC5AllowedPrefixes = Object.freeze([
+	"internal/contractexec/http/", "internal/contractexec/scope/",
+]);
+const bFutureSurfaceC5PresencePrefixes = bFutureSurfaceC5AllowedPrefixes;
+const bFutureSurfaceBaselinePolicy = Object.freeze({
+	schema: "countershape/p07b-b-future-surface-baseline-policy/v1",
+	candidate_source: "strict-index-snapshot",
+	ordinary_source: "stable-worktree-no-follow",
+	source_root: "internal",
+	include_suffix: ".go",
+	exclude_suffix: "_test.go",
+	required_mode: "100644",
+	byte_ceiling: 128 * 1024 * 1024,
+	encoding: "utf-8-fatal",
+	token_pattern: "[_\\p{L}][_\\p{L}\\p{N}]*",
+	family_match: "substring",
+	families: bFutureSurfaceFamilies,
+	historical_inventory_count: bFutureSurfaceHistoricalInventory.length,
+	historical_inventory_sha256: bFutureSurfaceHistoricalInventoryDigest,
+});
+const bFutureSurfaceSchemaDescriptor = Object.freeze({
+	schema: "countershape/p07b-b-future-surface-schema/v1",
+	instance_schema: bFutureSurfaceInstanceSchema,
+	baseline_policy_sha256: bFutureSurfaceBaselinePolicyDigest,
+	historical_inventory_count: bFutureSurfaceHistoricalInventory.length,
+	historical_inventory_sha256: bFutureSurfaceHistoricalInventoryDigest,
+	scanner: Object.freeze({
+		root: "internal", include_suffix: ".go", exclude_suffix: "_test.go",
+		token_pattern: "[_\\p{L}][_\\p{L}\\p{N}]*", family_match: "substring",
+	}),
+	families: bFutureSurfaceFamilies,
+	boundary_order: bFutureSurfaceBoundaryOrder,
+	row_keys: Object.freeze(["boundary", "path", "symbol"]),
+	c4_required_rows: bFutureSurfaceC4RequiredRows,
+	c4_allowed_exact: bFutureSurfaceC4AllowedExact,
+	c4_allowed_prefixes: bFutureSurfaceC4AllowedPrefixes,
+	c4_presence_prefixes: bFutureSurfaceC4PresencePrefixes,
+	c5_required_rows: Object.freeze([]),
+	c5_allowed_exact: Object.freeze([]),
+	c5_allowed_prefixes: bFutureSurfaceC5AllowedPrefixes,
+	c5_presence_prefixes: bFutureSurfaceC5PresencePrefixes,
+});
 const c6aSourceAuthorityPath = "spec/verification/p07b-c-c6a-source-authority.json";
 const c6aReceiptDeclarationPath = "spec/verification/p07b-c-c6a-receipt.json";
 const c6aEvidenceSummaryPath = "docs/captures/p07b-c/c6a-evidence-summary.json";
@@ -263,6 +353,16 @@ const sealedC3BIdentity = Object.freeze({
 	noteType: "blob",
 	noteBlob: "e447175c54e8fa864f540f09f8bf614962cd8e07",
 	noteBodySHA256: "7602ba5baa1e23fc1d309ea4d50c23b843dd87d6f05efe732e8cf656358b2d4b",
+});
+const sealedC3DIdentity = Object.freeze({
+	commit: "62422a2400edd702c82fb680c6ef0c6923eb6cfb",
+	tree: "7573f57017c6f56b434d1fbd5642ac585f7789c2",
+	parent: sealedC3BIdentity.commit,
+	subject: "fix: derive receipt fixtures from phase table",
+	noteRef: "refs/notes/didrun",
+	noteType: "blob",
+	noteBlob: "b9e6e4abe2e3e82a294f0cbfbb686b6a7d8d232e",
+	noteBodySHA256: "b78873dbc59a3c81ec14f5894bee090ed3c3e8dc868669fd25e557ea4cf9ae6c",
 });
 const c0ClaimLabels = Object.freeze([
 	"P07B C0 authority plan coherence",
@@ -440,7 +540,8 @@ const requiredText = Object.freeze({
 		"prompts/P07B-C-TARGET-RUN-EXECUTION.md",
 		"Only the higher contract runner may consume official target/admission authority",
 		"C3P defines the pre-C3 runtime-epoch prerequisite",
-		"C3 exact-target publication active",
+		"phase-independent execution contract",
+		"permanent prerequisite edge",
 	],
 	"docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md": [
 		"C0 → C1 → C1B → C2 → C2B → C3P → C3PB → C3 → C3B → C4 → C5 → C6",
@@ -536,12 +637,12 @@ const requiredText = Object.freeze({
 		"GOFLAGS=-mod=readonly -buildvcs=false -p=1",
 		"sha256:eb51c52657591df8faa5d3c4737291c071e40c07eb9c32bde88af1a36e68bf76",
 		"sha256:6032cc515978947743e1bfea72340e1065d77473ccc27b3b0fc036ebd4ceb2a5",
-		"Direct build, vet, and the exact general-package complement override only package jobs to `-p=2`",
+		"Direct build, vet, and the exact general-package complement now fix package jobs to `-p=1`",
 		"focused Go repetition runner",
 		"`RECEIPT_RECONCILIATION` is admitted only for an exact empty-prefix roster",
 	],
 	"spec/verification/p07b-c-unit-paths.json": [
-		"countershape/p07b-c-unit-paths/v16",
+		"countershape/p07b-c-unit-paths/v17",
 		"\"C0A\"",
 		"\"C1M\"",
 		"\"C1V\"",
@@ -750,6 +851,29 @@ const requiredC1VerificationPaths = Object.freeze([
 ]);
 const requiredC1VerificationDigest = "sha256:6032cc515978947743e1bfea72340e1065d77473ccc27b3b0fc036ebd4ceb2a5";
 const requiredQualificationMatrixDigest = "sha256:bf5803a752ffe6c2833e7869086ec6a4919e15c5e49e8cd012a5c8c16879fc37";
+const qualificationHelperPath = "tools/verify-go-test-repetition.mjs";
+const qualificationRuntimePath = "tools/verify-runtime-authority.mjs";
+const qualificationVerifierPath = "tools/verify-current.mjs";
+const sealedLegacyQualificationHelperSHA256 = "1321fb1381f1f74d0959b9ceb40b4dcc4abc637bb281ff2af759863ede3bfd5a";
+const requiredQualificationRuntimeImports = Object.freeze([
+	"acquireVerificationLock",
+	"admitTools",
+	"buildChildEnvironment",
+	"childResult",
+	"cleanupVerificationResources",
+	"createPrivateRoots",
+	"finalizeVerificationResources",
+	"repositoryRoot",
+]);
+const qualificationRuntimeBuiltinImports = Object.freeze(new Set([
+	"node:child_process", "node:crypto", "node:fs", "node:fs/promises", "node:os", "node:path", "node:url",
+]));
+const qualificationHelperBuiltinImports = Object.freeze(new Set([
+	"node:crypto", "node:os", "node:path", "node:url",
+]));
+const qualificationVerifierBuiltinImports = Object.freeze(new Set([
+	"node:child_process", "node:crypto", "node:fs", "node:fs/promises", "node:os", "node:path", "node:url",
+]));
 const requiredQualificationCaseIDs = Object.freeze([
 	"world-output-caps-50",
 	"world-output-independence-20",
@@ -766,6 +890,2667 @@ const requiredQualificationCaseIDs = Object.freeze([
 	"cli-physical-full-package-3",
 	"http-physical-full-package-3",
 ]);
+const requiredC4QualificationMatrixDigest = "sha256:3be703fae10155c83b19be54ae7cd79cfc5b1bbaddfcf86bb2c9781ad93f853a";
+const requiredC4QualificationCaseIDs = Object.freeze([
+	"processmechanics-output-caps-50",
+	"processmechanics-output-independence-20",
+	"processmechanics-simultaneous-overflow-20",
+	"world-lifecycle-readiness-20",
+	"contract-runner-admission-50",
+	"contract-cli-standalone-closure-20",
+	"compiler-generated-runtime-20",
+	"program-lifecycle-20",
+	"store-cross-process-cas-20",
+	...Array.from({ length: 20 }, (_, index) => `cli-physical-reducer-${String(index + 1).padStart(2, "0")}-of-20`),
+	...Array.from({ length: 20 }, (_, index) => `http-physical-reducer-${String(index + 1).padStart(2, "0")}-of-20`),
+	"parity-evaluator-20",
+	"parity-framing-20",
+	"parity-full-package-3",
+	"cli-physical-full-package-3",
+	"http-physical-full-package-3",
+]);
+const requiredC4QualificationDelta = Object.freeze({
+	"processmechanics-output-caps-50": Object.freeze({
+		packagePath: "github.com/nelsonwerd/countershape/internal/processmechanics", profile: "sensitive", count: 50,
+		expected: Object.freeze(["TestStdoutAndStderrHaveIndependentExactCaps"]),
+	}),
+	"processmechanics-output-independence-20": Object.freeze({
+		packagePath: "github.com/nelsonwerd/countershape/internal/processmechanics", profile: "sensitive", count: 20,
+		expected: Object.freeze(["TestStdoutAndStderrLimitsAreIndependentMutationGuard"]),
+	}),
+	"processmechanics-simultaneous-overflow-20": Object.freeze({
+		packagePath: "github.com/nelsonwerd/countershape/internal/processmechanics", profile: "sensitive", count: 20,
+		expected: Object.freeze(["TestSimultaneousChannelOverflowRetainsIndependentFacts"]),
+	}),
+	"contract-runner-admission-50": Object.freeze({
+		packagePath: "github.com/nelsonwerd/countershape/internal/contractexec/runner", profile: "sensitive", count: 50,
+		expected: Object.freeze([
+			"TestConcurrentAdmissionProducesExactlyOneStart",
+			"TestRunPermitConsumptionIsSingleUseAndAdjacentToStart",
+		]),
+	}),
+	"contract-cli-standalone-closure-20": Object.freeze({
+		packagePath: "github.com/nelsonwerd/countershape/testkit/contractexec/cli", profile: "sensitive", count: 20,
+		expected: Object.freeze([
+			"TestCLIContractExecutionClosesStandaloneScope",
+			"TestCLIContractExecutionForbiddenPositiveControls",
+		]),
+	}),
+});
+const requiredC5QualificationMatrixDigest = "sha256:08db7c338eb3ba900cf6df2545c04f27bed16889c81dd16e5fb18197c4d52958";
+const requiredC5QualificationCaseIDs = Object.freeze([
+	...requiredC4QualificationCaseIDs.slice(0, 6),
+	"contract-http-readiness-50",
+	"contract-http-teardown-20",
+	...requiredC4QualificationCaseIDs.slice(6),
+]);
+const requiredC5QualificationDelta = Object.freeze({
+	"contract-http-readiness-50": Object.freeze({
+		packagePath: "github.com/nelsonwerd/countershape/testkit/contractexec/http", profile: "sensitive", count: 50,
+		expected: Object.freeze(["TestHTTPChildReportedReadinessBindsExactService"]),
+	}),
+	"contract-http-teardown-20": Object.freeze({
+		packagePath: "github.com/nelsonwerd/countershape/testkit/contractexec/http", profile: "sensitive", count: 20,
+		expected: Object.freeze(["TestHTTPEarlyExitAndTeardownRetainCausalFacts"]),
+	}),
+});
+
+const qualificationASTParserProgram = String.raw`
+const acorn = require("internal/deps/acorn/acorn/dist/acorn");
+const input = JSON.parse(require("node:fs").readFileSync(0, "utf8"));
+const output = input.map(({ path, source }) => ({
+  path,
+  ast: acorn.parse(source, { ecmaVersion: "latest", sourceType: "module", allowHashBang: true }),
+}));
+process.stdout.write(JSON.stringify(output));
+`;
+
+function walkQualificationAST(node, visit, ancestors = []) {
+	if (!node || typeof node !== "object") return;
+	if (typeof node.type === "string") visit(node, ancestors);
+	const next = typeof node.type === "string" ? [...ancestors, node] : ancestors;
+	for (const [key, value] of Object.entries(node)) {
+		if (["start", "end", "loc"].includes(key)) continue;
+		if (Array.isArray(value)) {
+			for (const child of value) walkQualificationAST(child, visit, next);
+		} else if (value && typeof value === "object") {
+			walkQualificationAST(value, visit, next);
+		}
+	}
+}
+
+function qualificationMemberProperty(node) {
+	if (!node || node.type !== "MemberExpression") return null;
+	if (!node.computed && node.property?.type === "Identifier") return node.property.name;
+	if (node.computed && node.property?.type === "Literal" && typeof node.property.value === "string") return node.property.value;
+	return null;
+}
+
+function qualificationMemberPath(node) {
+	if (!node) return null;
+	if (node.type === "Identifier") return node.name;
+	if (node.type === "MetaProperty") return `${node.meta.name}.${node.property.name}`;
+	if (node.type !== "MemberExpression") return null;
+	const object = qualificationMemberPath(node.object);
+	const property = qualificationMemberProperty(node);
+	return object && property ? `${object}.${property}` : null;
+}
+
+function qualificationRootIdentifier(node) {
+	if (!node) return null;
+	if (node.type === "Identifier") return node.name;
+	if (node.type === "MemberExpression" || node.type === "CallExpression" || node.type === "NewExpression") {
+		return qualificationRootIdentifier(node.object ?? node.callee);
+	}
+	return null;
+}
+
+function qualificationLiteral(node, expected) {
+	return node?.type === "Literal" && node.value === expected;
+}
+
+function qualificationProcessArgvElement(node, index) {
+	return node?.type === "MemberExpression" && node.computed && qualificationMemberPath(node.object) === "process.argv" &&
+		qualificationLiteral(node.property, index);
+}
+
+function qualificationArgvElement(node, index) {
+	return node?.type === "MemberExpression" && node.computed &&
+		node.object?.type === "Identifier" && node.object.name === "argv" && qualificationLiteral(node.property, index);
+}
+
+function qualificationProcessArgvSlice(node) {
+	return node?.type === "CallExpression" && qualificationMemberPath(node.callee) === "process.argv.slice" &&
+		node.arguments.length === 1 && qualificationLiteral(node.arguments[0], 2);
+}
+
+function qualificationCaseBranchTest(node) {
+	return node?.type === "LogicalExpression" && node.operator === "&&" &&
+		node.left?.type === "BinaryExpression" && node.left.operator === "===" &&
+		qualificationMemberPath(node.left.left) === "argv.length" && qualificationLiteral(node.left.right, 2) &&
+		node.right?.type === "BinaryExpression" && node.right.operator === "===" &&
+		qualificationArgvElement(node.right.left, 0) && qualificationLiteral(node.right.right, "--case");
+}
+
+function qualificationFunctionParameterShape(node) {
+	if (node?.type === "Identifier") return node.name;
+	if (node?.type === "AssignmentPattern" && node.left?.type === "Identifier" && node.right?.type === "Identifier") {
+		return `${node.left.name}=${node.right.name}`;
+	}
+	return "<unsupported>";
+}
+
+function parseQualificationModuleASTs(sourceBodies) {
+	const entries = Object.entries(sourceBodies);
+	if (entries.length === 0 || entries.some(([path, source]) => typeof path !== "string" || typeof source !== "string" ||
+		Buffer.byteLength(source, "utf8") > 2 * 1024 * 1024)) {
+		throw new Error("qualification module AST input bounds");
+	}
+	const result = spawnSync(process.execPath, ["--expose-internals", "--input-type=commonjs", "-e", qualificationASTParserProgram], {
+		cwd: repositoryRoot,
+		input: JSON.stringify(entries.map(([path, source]) => ({ path, source }))),
+		encoding: "utf8",
+		env: { HOME: "/", PATH: "/usr/bin:/bin", LANG: "C", LC_ALL: "C", NO_COLOR: "1" },
+		timeout: 30_000,
+		maxBuffer: 16 * 1024 * 1024,
+	});
+	if (result.error || result.signal || result.status !== 0 || result.stderr !== "") {
+		throw new Error(`qualification module AST parser failed: ${result.status ?? result.signal ?? result.error?.message}: ${result.stderr || result.stdout}`);
+	}
+	let parsed;
+	try { parsed = JSON.parse(result.stdout); } catch (error) {
+		throw new Error(`qualification module AST output invalid: ${error.message}`);
+	}
+	if (!Array.isArray(parsed) || parsed.length !== entries.length ||
+		!isDeepStrictEqual(parsed.map(({ path }) => path), entries.map(([path]) => path))) {
+		throw new Error("qualification module AST row identity mismatch");
+	}
+	return new Map(parsed.map(({ path, ast }) => [path, ast]));
+}
+
+function qualificationModuleStaticShape(path, ast) {
+	const imports = [];
+	const exportedFunctions = new Map();
+	const exportedVariables = new Map();
+	const exportedNames = new Set();
+	const errors = [];
+	for (const statement of ast.body ?? []) {
+		if (statement.type === "ImportDeclaration") {
+			if (typeof statement.source?.value !== "string") {
+				errors.push(`${path}: nonliteral static import`);
+				continue;
+			}
+			const bindings = statement.specifiers.map((specifier) => {
+				if (specifier.type !== "ImportSpecifier" || specifier.local?.type !== "Identifier") return "<unsupported>";
+				const imported = specifier.imported?.name ?? specifier.imported?.value;
+				return imported === specifier.local.name ? imported : `${String(imported)}:${specifier.local.name}`;
+			});
+			imports.push({ source: statement.source.value, bindings });
+		}
+		if (statement.type === "ExportAllDeclaration" ||
+			(statement.type === "ExportNamedDeclaration" && statement.source !== null)) {
+			errors.push(`${path}: re-export source is forbidden`);
+		}
+		if (statement.type === "ExportDefaultDeclaration") errors.push(`${path}: default export is forbidden`);
+		if (statement.type === "ExportNamedDeclaration") {
+			if (statement.declaration?.type === "FunctionDeclaration") {
+				exportedNames.add(statement.declaration.id.name);
+				exportedFunctions.set(statement.declaration.id.name, statement.declaration);
+			} else if (statement.declaration?.type === "ClassDeclaration") {
+				exportedNames.add(statement.declaration.id.name);
+			} else if (statement.declaration?.type === "VariableDeclaration") {
+				for (const declaration of statement.declaration.declarations) {
+					if (declaration.id?.type !== "Identifier") errors.push(`${path}: destructured exported declaration is forbidden`);
+					else {
+						exportedNames.add(declaration.id.name);
+						exportedVariables.set(declaration.id.name, { declaration, kind: statement.declaration.kind });
+					}
+				}
+			}
+			for (const specifier of statement.specifiers ?? []) {
+				const name = specifier.exported?.name ?? specifier.exported?.value;
+				if (typeof name !== "string") errors.push(`${path}: unsupported local export`);
+				else exportedNames.add(name);
+			}
+		}
+	}
+	const forbiddenCallNames = new Set([
+		"require", "createRequire", "eval", "Function", "globalThis.eval", "globalThis.Function",
+		"process.getBuiltinModule",
+	]);
+	walkQualificationAST(ast, (node) => {
+		if (node.type === "ImportExpression") errors.push(`${path}: dynamic import is forbidden`);
+		if (node.type === "CallExpression" || node.type === "NewExpression") {
+			const callee = qualificationMemberPath(node.callee) ?? qualificationRootIdentifier(node.callee);
+			if (forbiddenCallNames.has(callee) || callee === "module.require") {
+				errors.push(`${path}: dynamic loader/evaluation call is forbidden: ${callee}`);
+			}
+		}
+	});
+	return { errors, exportedFunctions, exportedNames, exportedVariables, imports };
+}
+
+function qualificationImportClosureErrors(path, shape, builtinImports, relativeSource, exactRelativeBindings) {
+	const errors = [...shape.errors];
+	const relative = shape.imports.filter(({ source }) => source.startsWith("."));
+	const foreign = shape.imports.filter(({ source }) => !source.startsWith(".") && !builtinImports.has(source));
+	if (foreign.length > 0) errors.push(`${path}: non-builtin import authority ${foreign.map(({ source }) => source).join(",")}`);
+	if (shape.imports.some(({ bindings }) => bindings.length === 0)) {
+		errors.push(`${path}: side-effect or zero-binding import is forbidden`);
+	}
+	if (relativeSource === null) {
+		if (relative.length !== 0) errors.push(`${path}: relative import closure must be empty`);
+	} else if (relative.length !== 1 || relative[0].source !== relativeSource ||
+		!isDeepStrictEqual([...relative[0]?.bindings ?? []].sort(), [...exactRelativeBindings].sort())) {
+		errors.push(`${path}: exact relative import closure mismatch`);
+	}
+	if (shape.imports.some(({ bindings }) => bindings.includes("<unsupported>") || bindings.some((binding) => binding.includes(":")))) {
+		errors.push(`${path}: default, namespace, aliased, or side-effect import is forbidden`);
+	}
+	return errors;
+}
+
+function qualificationExactNamedImportErrors(path, shape, source, expectedBindings) {
+	const imports = shape.imports.filter((entry) => entry.source === source);
+	if (imports.length !== 1 || !isDeepStrictEqual(imports[0]?.bindings ?? [], expectedBindings)) {
+		return [`${path}: exact ${source} binding mismatch`];
+	}
+	return [];
+}
+
+function qualificationTopLevelBindingNames(ast) {
+	const names = [];
+	const addPattern = (pattern) => {
+		if (!pattern) return;
+		if (pattern.type === "Identifier") names.push(pattern.name);
+		else if (pattern.type === "RestElement") addPattern(pattern.argument);
+		else if (pattern.type === "AssignmentPattern") addPattern(pattern.left);
+		else if (pattern.type === "ArrayPattern") pattern.elements.forEach(addPattern);
+		else if (pattern.type === "ObjectPattern") pattern.properties.forEach((property) =>
+			addPattern(property.type === "RestElement" ? property.argument : property.value));
+	};
+	for (const statement of ast.body ?? []) {
+		if (statement.type === "ImportDeclaration") {
+			for (const specifier of statement.specifiers) addPattern(specifier.local);
+			continue;
+		}
+		const declaration = statement.type === "ExportNamedDeclaration" ? statement.declaration : statement;
+		if (declaration?.type === "FunctionDeclaration" || declaration?.type === "ClassDeclaration") {
+			addPattern(declaration.id);
+		} else if (declaration?.type === "VariableDeclaration") {
+			declaration.declarations.forEach(({ id }) => addPattern(id));
+		}
+	}
+	return names;
+}
+
+function qualificationProtectedBindingErrors(path, ast, expectedBindings = new Map()) {
+	const errors = [];
+	const counts = new Map();
+	for (const name of qualificationTopLevelBindingNames(ast)) counts.set(name, (counts.get(name) ?? 0) + 1);
+	for (const [name, expected] of expectedBindings) {
+		if ((counts.get(name) ?? 0) !== expected) errors.push(`${path}: protected binding ${name} count mismatch`);
+	}
+	walkQualificationAST(ast, (node) => {
+		if (node.type !== "AssignmentExpression" && node.type !== "UpdateExpression") return;
+		const target = node.type === "AssignmentExpression" ? node.left : node.argument;
+		const binding = target?.type === "Identifier" ? target.name : null;
+		const member = qualificationMemberPath(target);
+		if ([
+			"process", "Object", "Array", "Math", "String", "Map", "RegExp", "Set", "Error",
+			"undefined", "pathToFileURL", "main",
+		].includes(binding) || member === "Object.hasOwn") {
+			errors.push(`${path}: protected binding write is forbidden: ${binding ?? member}`);
+		}
+	});
+	return errors;
+}
+
+function qualificationPatternBindingNames(pattern, names) {
+	if (!pattern) return;
+	if (pattern.type === "Identifier") names.push(pattern.name);
+	else if (pattern.type === "RestElement") qualificationPatternBindingNames(pattern.argument, names);
+	else if (pattern.type === "AssignmentPattern") qualificationPatternBindingNames(pattern.left, names);
+	else if (pattern.type === "ArrayPattern") pattern.elements.forEach((element) => qualificationPatternBindingNames(element, names));
+	else if (pattern.type === "ObjectPattern") pattern.properties.forEach((property) =>
+		qualificationPatternBindingNames(property.type === "RestElement" ? property.argument : property.value, names));
+}
+
+function qualificationBodyBindingCounts(body) {
+	const names = [];
+	walkQualificationAST(body, (node, ancestors) => {
+		if (node.type === "VariableDeclarator") qualificationPatternBindingNames(node.id, names);
+		if (node.type === "FunctionDeclaration" || node.type === "ClassDeclaration") {
+			qualificationPatternBindingNames(node.id, names);
+		}
+		if (node.type === "CatchClause") qualificationPatternBindingNames(node.param, names);
+		if (["FunctionDeclaration", "FunctionExpression", "ArrowFunctionExpression"].includes(node.type) &&
+			ancestors.length > 0) {
+			for (const parameter of node.params ?? []) qualificationPatternBindingNames(parameter, names);
+		}
+	});
+	return new Map(names.map((name) => [name, names.filter((candidate) => candidate === name).length]));
+}
+
+function qualificationExactBodyBindingErrors(path, callable, expected, forbidden = []) {
+	const errors = [];
+	const counts = callable?.body ? qualificationBodyBindingCounts(callable.body) : new Map();
+	for (const [name, count] of Object.entries(expected)) {
+		if ((counts.get(name) ?? 0) !== count) errors.push(`${path}: local binding ${name} count mismatch`);
+	}
+	for (const name of forbidden) {
+		if ((counts.get(name) ?? 0) !== 0) errors.push(`${path}: local shadow is forbidden: ${name}`);
+	}
+	return errors;
+}
+
+function qualificationIdentifierIsPropertyLabel(node, ancestors) {
+	const parent = ancestors.at(-1);
+	return (parent?.type === "MemberExpression" && parent.property === node && !parent.computed) ||
+		(parent?.type === "Property" && parent.key === node && !parent.computed && !parent.shorthand);
+}
+
+function qualificationReferenceCanRunAtModuleEvaluation(ancestors) {
+	const functionIndex = ancestors.findIndex((ancestor) =>
+		["FunctionDeclaration", "FunctionExpression", "ArrowFunctionExpression"].includes(ancestor.type));
+	if (functionIndex < 0) return true;
+	const callable = ancestors[functionIndex];
+	if (callable.type === "FunctionDeclaration") return false;
+	return ancestors.slice(0, functionIndex).some((ancestor) => ancestor.type === "CallExpression" || ancestor.type === "NewExpression");
+}
+
+function qualificationTopLevelImportedReferenceErrors(path, ast, importedLocals, allowedDeclarator = null) {
+	const errors = [];
+	walkQualificationAST(ast, (node, ancestors) => {
+		if (node.type !== "Identifier" || !importedLocals.has(node.name) ||
+			ancestors.some((ancestor) => ancestor.type === "ImportDeclaration") ||
+			qualificationIdentifierIsPropertyLabel(node, ancestors) ||
+			(allowedDeclarator !== null && ancestors.includes(allowedDeclarator)) ||
+			!qualificationReferenceCanRunAtModuleEvaluation(ancestors)) return;
+		errors.push(`${path}: imported authority is referenced by module-evaluation code: ${node.name}`);
+	});
+	return errors;
+}
+
+function qualificationTopLevelIIFEErrors(path, ast) {
+	const errors = [];
+	walkQualificationAST(ast, (node, ancestors) => {
+		if (node.type !== "CallExpression" && node.type !== "NewExpression") return;
+		if (ancestors.some((ancestor) => ["FunctionDeclaration", "FunctionExpression", "ArrowFunctionExpression"].includes(ancestor.type))) return;
+		if (["FunctionExpression", "ArrowFunctionExpression"].includes(node.callee?.type)) {
+			errors.push(`${path}: top-level immediately invoked function is forbidden`);
+		}
+	});
+	return errors;
+}
+
+function qualificationTopLevelAuthorityWrapperErrors(path, ast, importedLocals, allowedTopLevelNames = new Set()) {
+	const functions = new Map();
+	for (const statement of ast.body ?? []) {
+		const declaration = statement.type === "ExportNamedDeclaration" ? statement.declaration : statement;
+		if (declaration?.type === "FunctionDeclaration" && declaration.id?.type === "Identifier") {
+			functions.set(declaration.id.name, declaration);
+		}
+		if (declaration?.type === "VariableDeclaration") {
+			for (const variable of declaration.declarations) {
+				if (variable.id?.type === "Identifier" &&
+					["FunctionExpression", "ArrowFunctionExpression"].includes(variable.init?.type)) {
+					functions.set(variable.id.name, variable.init);
+				}
+			}
+		}
+	}
+	const authorityBearing = new Set();
+	const callsByFunction = new Map();
+	for (const [name, callable] of functions) {
+		const calls = new Set();
+		walkQualificationAST(callable.body, (node) => {
+			if (node.type === "Identifier" && importedLocals.has(node.name)) authorityBearing.add(name);
+			if (node.type === "CallExpression") {
+				const root = qualificationRootIdentifier(node.callee);
+				if (functions.has(root)) calls.add(root);
+			}
+		});
+		callsByFunction.set(name, calls);
+	}
+	let changed = true;
+	while (changed) {
+		changed = false;
+		for (const [name, calls] of callsByFunction) {
+			if (!authorityBearing.has(name) && [...calls].some((called) => authorityBearing.has(called))) {
+				authorityBearing.add(name);
+				changed = true;
+			}
+		}
+	}
+	const errors = [];
+	walkQualificationAST(ast, (node, ancestors) => {
+		if (node.type !== "CallExpression" && node.type !== "NewExpression") return;
+		if (ancestors.some((ancestor) => ["FunctionDeclaration", "FunctionExpression", "ArrowFunctionExpression"].includes(ancestor.type))) return;
+		const root = qualificationRootIdentifier(node.callee);
+		if (authorityBearing.has(root) && !allowedTopLevelNames.has(root)) {
+			errors.push(`${path}: local authority wrapper executes at module evaluation: ${root}`);
+		}
+		for (const argument of node.arguments ?? []) {
+			walkQualificationAST(argument, (candidate, candidateAncestors) => {
+				if (candidate.type !== "Identifier" || !authorityBearing.has(candidate.name) ||
+					qualificationIdentifierIsPropertyLabel(candidate, candidateAncestors)) return;
+				errors.push(`${path}: local authority wrapper is forwarded by module-evaluation code: ${candidate.name}`);
+			});
+		}
+	});
+	return errors;
+}
+
+const qualificationPureImportedModuleCalls = Object.freeze({
+	basename: "node:path",
+	dirname: "node:path",
+	fileURLToPath: "node:url",
+	resolve: "node:path",
+});
+const qualificationPureGlobalModuleCalls = Object.freeze(new Set([
+	"Math.ceil", "Math.floor", "Math.max", "Math.min", "Object.freeze",
+]));
+const qualificationPureModuleConstructors = Object.freeze(new Set(["Map", "RegExp", "Set"]));
+
+function qualificationTopLevelInitializerMap(ast) {
+	const bindings = new Map();
+	for (const statement of ast.body ?? []) {
+		const declaration = statement.type === "ExportNamedDeclaration" ? statement.declaration : statement;
+		if (declaration?.type !== "VariableDeclaration") continue;
+		for (const variable of declaration.declarations) {
+			if (variable.id?.type === "Identifier") bindings.set(variable.id.name, variable.init);
+		}
+	}
+	return bindings;
+}
+
+function qualificationImportProvenance(ast) {
+	const provenance = new Map();
+	for (const statement of ast.body ?? []) {
+		if (statement.type !== "ImportDeclaration" || typeof statement.source?.value !== "string") continue;
+		for (const specifier of statement.specifiers ?? []) {
+			if (specifier.type === "ImportSpecifier" && specifier.local?.type === "Identifier" &&
+				(specifier.imported?.name ?? specifier.imported?.value) === specifier.local.name) {
+				provenance.set(specifier.local.name, statement.source.value);
+			}
+		}
+	}
+	return provenance;
+}
+
+function qualificationInertModuleExpression(node, bindings, imports, visiting = new Set(), depth = 0) {
+	if (!node || depth > 64) return false;
+	if (node.type === "Literal" || node.type === "FunctionExpression" || node.type === "ArrowFunctionExpression") return true;
+	if (node.type === "MetaProperty") return qualificationMemberPath(node) === "import.meta";
+	if (node.type === "Identifier") {
+		if (node.name === "undefined") return true;
+		if (!bindings.has(node.name) || visiting.has(node.name)) return false;
+		const next = new Set(visiting);
+		next.add(node.name);
+		return qualificationInertModuleExpression(bindings.get(node.name), bindings, imports, next, depth + 1);
+	}
+	if (node.type === "ArrayExpression") {
+		return node.elements.every((element) => element !== null && element.type !== "SpreadElement" &&
+			qualificationInertModuleExpression(element, bindings, imports, visiting, depth + 1));
+	}
+	if (node.type === "ObjectExpression") {
+		return node.properties.every((property) => property.type === "Property" && property.kind === "init" &&
+			!property.method && !property.computed && property.type !== "SpreadElement" &&
+			qualificationInertModuleExpression(property.value, bindings, imports, visiting, depth + 1));
+	}
+	if (node.type === "TemplateLiteral") {
+		return node.expressions.every((expression) =>
+			qualificationInertModuleExpression(expression, bindings, imports, visiting, depth + 1));
+	}
+	if (node.type === "UnaryExpression") {
+		return ["!", "+", "-", "~", "typeof", "void"].includes(node.operator) &&
+			qualificationInertModuleExpression(node.argument, bindings, imports, visiting, depth + 1);
+	}
+	if (node.type === "BinaryExpression" || node.type === "LogicalExpression") {
+		return qualificationInertModuleExpression(node.left, bindings, imports, visiting, depth + 1) &&
+			qualificationInertModuleExpression(node.right, bindings, imports, visiting, depth + 1);
+	}
+	if (node.type === "ConditionalExpression") {
+		return qualificationInertModuleExpression(node.test, bindings, imports, visiting, depth + 1) &&
+			qualificationInertModuleExpression(node.consequent, bindings, imports, visiting, depth + 1) &&
+			qualificationInertModuleExpression(node.alternate, bindings, imports, visiting, depth + 1);
+	}
+	if (node.type === "SequenceExpression") {
+		return node.expressions.every((expression) =>
+			qualificationInertModuleExpression(expression, bindings, imports, visiting, depth + 1));
+	}
+	if (node.type === "MemberExpression") {
+		if (qualificationMemberPath(node) === "import.meta.url") return true;
+		return qualificationInertModuleExpression(node.object, bindings, imports, visiting, depth + 1) &&
+			(!node.computed || qualificationInertModuleExpression(node.property, bindings, imports, visiting, depth + 1));
+	}
+	if (node.type === "CallExpression") {
+		const callee = qualificationMemberPath(node.callee);
+		const importedSource = node.callee?.type === "Identifier" ? imports.get(node.callee.name) : undefined;
+		const exactImportedPure = node.callee?.type === "Identifier" &&
+			qualificationPureImportedModuleCalls[node.callee.name] === importedSource;
+		if (!(qualificationPureGlobalModuleCalls.has(callee) || exactImportedPure) || node.optional) return false;
+		return node.arguments.every((argument) => argument.type !== "SpreadElement" &&
+			qualificationInertModuleExpression(argument, bindings, imports, visiting, depth + 1));
+	}
+	if (node.type === "NewExpression") {
+		return node.callee?.type === "Identifier" && qualificationPureModuleConstructors.has(node.callee.name) &&
+			node.arguments.every((argument) => argument.type !== "SpreadElement" &&
+				qualificationInertModuleExpression(argument, bindings, imports, visiting, depth + 1));
+	}
+	return false;
+}
+
+function qualificationModuleEvaluationErrors(path, ast, { directGuard = null } = {}) {
+	const errors = [];
+	const bindings = qualificationTopLevelInitializerMap(ast);
+	const imports = qualificationImportProvenance(ast);
+	for (const [index, statement] of (ast.body ?? []).entries()) {
+		if (statement.type === "ImportDeclaration" || statement.type === "FunctionDeclaration" ||
+			statement.type === "ClassDeclaration" || statement.type === "VariableDeclaration") continue;
+		if (statement.type === "ExportNamedDeclaration" &&
+			(statement.declaration === null || ["FunctionDeclaration", "ClassDeclaration", "VariableDeclaration"].includes(statement.declaration?.type))) continue;
+		if (directGuard !== null && statement === directGuard && index === ast.body.length - 1) continue;
+		errors.push(`${path}: top-level statement is not an inert declaration or final direct guard: ${statement.type}`);
+	}
+	for (const [name, initializer] of bindings) {
+		if (initializer !== null && !qualificationInertModuleExpression(initializer, bindings, imports, new Set([name]))) {
+			errors.push(`${path}: top-level initializer is not recursively inert: ${name}`);
+		}
+	}
+	walkQualificationAST(ast, (node, ancestors) => {
+		if (!qualificationReferenceCanRunAtModuleEvaluation(ancestors)) return;
+		const insideDirectGuard = directGuard !== null && ancestors.includes(directGuard);
+		if (node.type === "StaticBlock") {
+			errors.push(`${path}: class static block is forbidden at module evaluation`);
+			return;
+		}
+		if ((node.type === "MethodDefinition" || node.type === "PropertyDefinition") && node.computed) {
+			errors.push(`${path}: computed class key is forbidden at module evaluation`);
+			return;
+		}
+		if (node.type === "PropertyDefinition" && node.static && node.value !== null &&
+			!qualificationInertModuleExpression(node.value, bindings, imports)) {
+			errors.push(`${path}: effectful static class initializer is forbidden at module evaluation`);
+			return;
+		}
+		if (["AssignmentExpression", "UpdateExpression", "TaggedTemplateExpression", "YieldExpression"].includes(node.type)) {
+			errors.push(`${path}: effectful ${node.type} is forbidden at module evaluation`);
+			return;
+		}
+		if (node.type === "AwaitExpression") {
+			const call = node.argument;
+			if (!(insideDirectGuard && call?.type === "CallExpression" && qualificationMemberPath(call.callee) === "main" &&
+				call.arguments.length === 0)) {
+				errors.push(`${path}: top-level await is forbidden outside the exact direct guard`);
+			}
+			return;
+		}
+		if (node.type !== "CallExpression" && node.type !== "NewExpression") return;
+		const callee = qualificationMemberPath(node.callee) ?? qualificationRootIdentifier(node.callee);
+		if (insideDirectGuard && ((callee === "pathToFileURL" && node.arguments.length === 1) ||
+			(callee === "main" && node.arguments.length === 0))) return;
+		const allowed = qualificationInertModuleExpression(node, bindings, imports);
+		if (!allowed) errors.push(`${path}: effectful module-evaluation call is forbidden: ${callee ?? "<dynamic>"}`);
+	});
+	return errors;
+}
+
+function qualificationCanonicalDirectGuard(node) {
+	return node?.type === "LogicalExpression" && node.operator === "&&" &&
+		node.left?.type === "BinaryExpression" && node.left.operator === "!==" &&
+		qualificationProcessArgvElement(node.left.left, 1) && node.left.right?.type === "Identifier" && node.left.right.name === "undefined" &&
+		node.right?.type === "BinaryExpression" && node.right.operator === "===" &&
+		qualificationMemberPath(node.right.left) === null && node.right.left?.type === "MemberExpression" &&
+		qualificationMemberProperty(node.right.left) === "href" &&
+		node.right.left.object?.type === "CallExpression" && qualificationMemberPath(node.right.left.object.callee) === "pathToFileURL" &&
+		node.right.left.object.arguments.length === 1 && qualificationProcessArgvElement(node.right.left.object.arguments[0], 1) &&
+		qualificationMemberPath(node.right.right) === "import.meta.url";
+}
+
+function qualificationSingleReturn(consequent) {
+	if (consequent?.type === "ReturnStatement") return consequent;
+	return consequent?.type === "BlockStatement" && consequent.body.length === 1 &&
+		consequent.body[0]?.type === "ReturnStatement" ? consequent.body[0] : null;
+}
+
+function qualificationSingleThrow(consequent) {
+	if (consequent?.type === "ThrowStatement") return consequent;
+	return consequent?.type === "BlockStatement" && consequent.body.length === 1 &&
+		consequent.body[0]?.type === "ThrowStatement" ? consequent.body[0] : null;
+}
+
+function qualificationSingleInertThrow(consequent) {
+	const thrown = qualificationSingleThrow(consequent);
+	const argument = thrown?.argument;
+	return argument?.type === "NewExpression" && argument.callee?.type === "Identifier" &&
+		argument.callee.name === "Error" && argument.arguments.length === 1 &&
+		typeof argument.arguments[0]?.value === "string"
+		? thrown
+		: null;
+}
+
+function qualificationLogicalTerms(node, operator) {
+	if (node?.type === "LogicalExpression" && node.operator === operator) {
+		return [...qualificationLogicalTerms(node.left, operator), ...qualificationLogicalTerms(node.right, operator)];
+	}
+	return [node];
+}
+
+function qualificationParserPreambleTest(node) {
+	const terms = qualificationLogicalTerms(node, "||");
+	if (terms.length !== 6) return false;
+	const [length, parity, ...flags] = terms;
+	if (length?.type !== "BinaryExpression" || length.operator !== "<" ||
+		qualificationMemberPath(length.left) !== "argv.length" || !qualificationLiteral(length.right, 10)) return false;
+	if (parity?.type !== "BinaryExpression" || parity.operator !== "!==" || !qualificationLiteral(parity.right, 0) ||
+		parity.left?.type !== "BinaryExpression" || parity.left.operator !== "%" ||
+		qualificationMemberPath(parity.left.left) !== "argv.length" || !qualificationLiteral(parity.left.right, 2)) return false;
+	return isDeepStrictEqual(flags.map((term, index) => {
+		if (term?.type !== "BinaryExpression" || term.operator !== "!==" ||
+			!qualificationArgvElement(term.left, [0, 2, 4, 6][index]) ||
+			typeof term.right?.value !== "string") return null;
+		return term.right.value;
+	}), ["--package", "--profile", "--count", "--run"]);
+}
+
+function qualificationTemplateInterpolation(node, prefix, expressionPath) {
+	return node?.type === "TemplateLiteral" && node.expressions.length === 1 && node.quasis.length === 2 &&
+		node.quasis[0]?.value?.cooked === prefix && node.quasis[1]?.value?.cooked === "" &&
+		qualificationMemberPath(node.expressions[0]) === expressionPath;
+}
+
+function qualificationMatrixCaseMember(node, boundary) {
+	return node?.type === "MemberExpression" && node.computed &&
+		qualificationMemberPath(node.object) === `qualificationMatrices.${boundary}.cases` &&
+		node.property?.type === "Identifier" && node.property.name === "caseID";
+}
+
+function qualificationMatrixHasOwnCall(node, boundary) {
+	return node?.type === "CallExpression" && qualificationMemberPath(node.callee) === "Object.hasOwn" &&
+		node.arguments.length === 2 && qualificationMemberPath(node.arguments[0]) === `qualificationMatrices.${boundary}.cases` &&
+		node.arguments[1]?.type === "Identifier" && node.arguments[1].name === "caseID";
+}
+
+function qualificationFrozenLiteralInitializerErrors(node, label) {
+	const errors = [];
+	let visited = 0;
+	const visit = (candidate, path, depth) => {
+		visited += 1;
+		if (visited > 20_000 || depth > 16) {
+			errors.push(`${label}: frozen literal initializer bounds exceeded`);
+			return;
+		}
+		if (candidate?.type === "Literal" &&
+			(candidate.value === null || ["string", "number", "boolean"].includes(typeof candidate.value))) return;
+		if (candidate?.type !== "CallExpression" || qualificationMemberPath(candidate.callee) !== "Object.freeze" ||
+			candidate.arguments.length !== 1 || !["ArrayExpression", "ObjectExpression"].includes(candidate.arguments[0]?.type)) {
+			errors.push(`${path}: aggregate must be an inline Object.freeze literal`);
+			return;
+		}
+		const aggregate = candidate.arguments[0];
+		if (aggregate.type === "ArrayExpression") {
+			if (aggregate.elements.some((element) => element === null || element.type === "SpreadElement")) {
+				errors.push(`${path}: frozen literal array holes/spreads are forbidden`);
+				return;
+			}
+			aggregate.elements.forEach((element, index) => visit(element, `${path}[${index}]`, depth + 1));
+			return;
+		}
+		const keys = [];
+		for (const property of aggregate.properties) {
+			if (property.type !== "Property" || property.kind !== "init" || property.computed || property.method ||
+				property.shorthand || !["Identifier", "Literal"].includes(property.key?.type) ||
+				!(property.key.type === "Identifier" || typeof property.key.value === "string")) {
+				errors.push(`${path}: frozen literal object property shape mismatch`);
+				continue;
+			}
+			const key = property.key.type === "Identifier" ? property.key.name : property.key.value;
+			keys.push(key);
+			visit(property.value, `${path}.${key}`, depth + 1);
+		}
+		if (new Set(keys).size !== keys.length) errors.push(`${path}: duplicate frozen literal object key`);
+	};
+	visit(node, label, 0);
+	return errors;
+}
+
+function qualificationDecodeFrozenLiteral(node, label, depth = 0) {
+	if (depth > 16) throw new Error(`${label}: frozen literal decode depth`);
+	if (node?.type === "Literal" &&
+		(node.value === null || ["string", "number", "boolean"].includes(typeof node.value))) return node.value;
+	if (node?.type !== "CallExpression" || qualificationMemberPath(node.callee) !== "Object.freeze" ||
+		node.arguments.length !== 1 || !["ArrayExpression", "ObjectExpression"].includes(node.arguments[0]?.type)) {
+		throw new Error(`${label}: frozen literal decode shape`);
+	}
+	const aggregate = node.arguments[0];
+	if (aggregate.type === "ArrayExpression") {
+		return Object.freeze(aggregate.elements.map((element, index) =>
+			qualificationDecodeFrozenLiteral(element, `${label}[${index}]`, depth + 1)));
+	}
+	const entries = aggregate.properties.map((property) => {
+		const key = property.key.type === "Identifier" ? property.key.name : property.key.value;
+		return [key, qualificationDecodeFrozenLiteral(property.value, `${label}.${key}`, depth + 1)];
+	});
+	return Object.freeze(Object.fromEntries(entries));
+}
+
+function qualificationCatalogInitializerErrors(helperShape) {
+	const errors = [];
+	const matrices = helperShape.exportedVariables.get("qualificationMatrices");
+	if (!matrices || matrices.kind !== "const") {
+		errors.push(`${qualificationHelperPath}: qualificationMatrices must be an exported const`);
+	} else {
+		errors.push(...qualificationFrozenLiteralInitializerErrors(
+			matrices.declaration.init, `${qualificationHelperPath}: qualificationMatrices`,
+		));
+	}
+	for (const [name, expected] of [
+		["qualificationCaseIDs", "qualificationMatrices.C4.caseIDs"],
+		["qualificationCases", "qualificationMatrices.C4.cases"],
+	]) {
+		const exported = helperShape.exportedVariables.get(name);
+		if (!exported || exported.kind !== "const" || qualificationMemberPath(exported.declaration.init) !== expected) {
+			errors.push(`${qualificationHelperPath}: ${name} must be an exact const identity alias of ${expected}`);
+		}
+	}
+	return errors;
+}
+
+function qualificationStaticAuthority(sourceBodies) {
+	const asts = parseQualificationModuleASTs(sourceBodies);
+	const helperAST = asts.get(qualificationHelperPath);
+	if (!helperAST) throw new Error("future qualification helper AST unavailable");
+	const helperShape = qualificationModuleStaticShape(qualificationHelperPath, helperAST);
+	const declaration = helperShape.exportedVariables.get("qualificationMatrices")?.declaration;
+	if (!declaration) throw new Error("future qualification matrix literal unavailable");
+	const matrices = qualificationDecodeFrozenLiteral(
+		declaration.init, `${qualificationHelperPath}: qualificationMatrices`,
+	);
+	const authority = {
+		qualificationMatrices: matrices,
+		qualificationCaseIDs: matrices.C4.caseIDs,
+		qualificationCases: matrices.C4.cases,
+		qualificationMatrixDigest(boundary = "C4") {
+			if (boundary === "C4" || boundary === "C5") return matrices[boundary].digest;
+			throw new Error("GO_REPETITION_QUALIFICATION_MATRIX");
+		},
+		qualificationCaseForID(caseID) {
+			if (Object.hasOwn(matrices.C4.cases, caseID)) return matrices.C4.cases[caseID];
+			if (Object.hasOwn(matrices.C5.cases, caseID)) return matrices.C5.cases[caseID];
+			throw new Error("GO_REPETITION_QUALIFICATION_CASE");
+		},
+		parseRunArguments(argv) {
+			if (Array.isArray(argv) && argv.length === 2 && argv[0] === "--case") {
+				return authority.qualificationCaseForID(argv[1]);
+			}
+			throw new Error("GO_REPETITION_ARGUMENTS");
+		},
+		validateExecutionSpecification(specification) {
+			if (!specification || typeof specification.caseID !== "string") {
+				throw new Error("GO_REPETITION_SPECIFICATION");
+			}
+			const canonical = authority.qualificationCaseForID(specification.caseID);
+			if (specification !== canonical) throw new Error("GO_REPETITION_SPECIFICATION");
+			return canonical;
+		},
+		buildGoTestArguments(specification) {
+			const jobs = specification.profile === "general" ? 2 : 1;
+			return Object.freeze([
+				"test", "-json", "-mod=readonly", "-buildvcs=false", `-p=${jobs}`, "-parallel=2",
+				`-count=${specification.count}`, "-timeout=20m", "-run", specification.run, specification.packagePath,
+			]);
+		},
+	};
+	return Object.freeze(authority);
+}
+
+function qualificationCaseLookupErrors(helperAST, helperShape) {
+	const errors = [];
+	const selector = helperShape.exportedFunctions.get("qualificationCaseForID");
+	if (!selector || selector.async || selector.generator ||
+		!isDeepStrictEqual(selector.params.map(qualificationFunctionParameterShape), ["caseID"])) {
+		errors.push(`${qualificationHelperPath}: qualificationCaseForID(caseID) export mismatch`);
+	}
+	const selectorStatements = selector?.body?.body ?? [];
+	for (const [index, boundary] of ["C4", "C5"].entries()) {
+		const statement = selectorStatements[index];
+		const returned = statement?.type === "IfStatement" && statement.alternate === null
+			? qualificationSingleReturn(statement.consequent)
+			: null;
+		if (!qualificationMatrixHasOwnCall(statement?.test, boundary) ||
+			!qualificationMatrixCaseMember(returned?.argument, boundary)) {
+			errors.push(`${qualificationHelperPath}: qualificationCaseForID ${boundary} exact identity branch mismatch`);
+		}
+	}
+	if (selectorStatements.length !== 3 || !qualificationSingleInertThrow(selectorStatements[2])) {
+		errors.push(`${qualificationHelperPath}: qualificationCaseForID exact terminal refusal mismatch`);
+	}
+	const parseDeclarations = helperAST.body.flatMap((statement) => {
+		const declaration = statement.type === "ExportNamedDeclaration" ? statement.declaration : statement;
+		return declaration?.type === "FunctionDeclaration" && declaration.id?.name === "parseRunArguments"
+			? [declaration]
+			: [];
+	});
+	const parse = parseDeclarations.length === 1 ? parseDeclarations[0] : null;
+	const selectorCalls = [];
+	if (parse) {
+		walkQualificationAST(parse.body, (node) => {
+			if (node.type === "CallExpression" && qualificationMemberPath(node.callee) === "qualificationCaseForID") {
+				selectorCalls.push(node);
+			}
+		});
+	}
+	const firstStatement = parse?.body?.body?.[0];
+	const branchReturn = firstStatement?.type === "IfStatement" && firstStatement.alternate === null &&
+		firstStatement.consequent?.type === "BlockStatement" && firstStatement.consequent.body.length === 1 &&
+		firstStatement.consequent.body[0]?.type === "ReturnStatement"
+		? firstStatement.consequent.body[0]
+		: null;
+	const selectorCall = branchReturn?.argument;
+	if (!parse || parse.async || parse.generator ||
+		!isDeepStrictEqual(parse.params.map(qualificationFunctionParameterShape), ["argv"]) ||
+		!qualificationCaseBranchTest(firstStatement?.test) || selectorCall?.type !== "CallExpression" ||
+		qualificationMemberPath(selectorCall.callee) !== "qualificationCaseForID" || selectorCall.arguments.length !== 1 ||
+		!qualificationArgvElement(selectorCall.arguments[0], 1) ||
+		selectorCalls.length !== 1 || selectorCalls[0] !== selectorCall) {
+		errors.push(`${qualificationHelperPath}: parseRunArguments(argv) exact --case branch mismatch`);
+	}
+	const preamble = parse?.body?.body?.[1];
+	if (preamble?.type !== "IfStatement" || preamble.alternate !== null ||
+		!qualificationParserPreambleTest(preamble.test) || !qualificationSingleInertThrow(preamble.consequent)) {
+		errors.push(`${qualificationHelperPath}: parseRunArguments(argv) exact fail-closed ad-hoc preamble mismatch`);
+	}
+	const parseStatements = parse?.body?.body ?? [];
+	if (parseStatements.length !== 3 || !qualificationSingleInertThrow(parseStatements[2])) {
+		errors.push(`${qualificationHelperPath}: parseRunArguments(argv) exact terminal refusal mismatch`);
+	}
+	errors.push(...qualificationExactBodyBindingErrors(
+		`${qualificationHelperPath}: qualificationCaseForID`, selector, {}, ["caseID", "Object", "Error"],
+	));
+	errors.push(...qualificationExactBodyBindingErrors(
+		`${qualificationHelperPath}: parseRunArguments`, parse, {}, ["qualificationCaseForID", "argv", "Error"],
+	));
+	return errors;
+}
+
+function qualificationDigestSelectorErrors(helperShape) {
+	const errors = [];
+	const digest = helperShape.exportedFunctions.get("qualificationMatrixDigest");
+	const parameter = digest?.params?.[0];
+	const statements = digest?.body?.body ?? [];
+	const branch = statements[0];
+	const returned = branch?.type === "IfStatement" && branch.alternate === null
+		? qualificationSingleReturn(branch.consequent)
+		: null;
+	const terms = qualificationLogicalTerms(branch?.test, "||");
+	const exactBoundaryTerms = terms.length === 2 && ["C4", "C5"].every((boundary, index) => {
+		const term = terms[index];
+		return term?.type === "BinaryExpression" && term.operator === "===" &&
+			term.left?.type === "Identifier" && term.left.name === "boundary" && qualificationLiteral(term.right, boundary);
+	});
+	const returnedDigest = returned?.argument;
+	const exactReturn = returnedDigest?.type === "MemberExpression" && !returnedDigest.computed &&
+		qualificationMemberProperty(returnedDigest) === "digest" && returnedDigest.object?.type === "MemberExpression" &&
+		returnedDigest.object.computed && qualificationMemberPath(returnedDigest.object.object) === "qualificationMatrices" &&
+		returnedDigest.object.property?.type === "Identifier" && returnedDigest.object.property.name === "boundary";
+	if (!digest || digest.async || digest.generator || digest.params.length !== 1 ||
+		parameter?.type !== "AssignmentPattern" || parameter.left?.type !== "Identifier" || parameter.left.name !== "boundary" ||
+		!qualificationLiteral(parameter.right, "C4") || statements.length !== 2 || !exactBoundaryTerms || !exactReturn ||
+		!qualificationSingleInertThrow(statements[1])) {
+		errors.push(`${qualificationHelperPath}: qualificationMatrixDigest exact C4/C5 selector mismatch`);
+	}
+	errors.push(...qualificationExactBodyBindingErrors(
+		`${qualificationHelperPath}: qualificationMatrixDigest`, digest, {}, ["boundary", "Error"],
+	));
+	return errors;
+}
+
+function qualificationBuildArgumentsErrors(build) {
+	const statements = build?.body?.body ?? [];
+	const jobs = statements[0]?.type === "VariableDeclaration" && statements[0].kind === "const" &&
+		statements[0].declarations.length === 1 && statements[0].declarations[0].id?.type === "Identifier" &&
+		statements[0].declarations[0].id.name === "jobs" ? statements[0].declarations[0] : null;
+	const selector = jobs?.init;
+	const exactJobs = selector?.type === "ConditionalExpression" &&
+		selector.test?.type === "BinaryExpression" && selector.test.operator === "===" &&
+		qualificationMemberPath(selector.test.left) === "specification.profile" &&
+		qualificationLiteral(selector.test.right, "general") && qualificationLiteral(selector.consequent, 2) &&
+		qualificationLiteral(selector.alternate, 1);
+	const returned = statements[1]?.type === "ReturnStatement" ? statements[1].argument : null;
+	const frozen = returned?.type === "CallExpression" && qualificationMemberPath(returned.callee) === "Object.freeze" &&
+		returned.arguments.length === 1 ? returned.arguments[0] : null;
+	const elements = frozen?.type === "ArrayExpression" ? frozen.elements : [];
+	const exactElements = elements.length === 11 &&
+		qualificationLiteral(elements[0], "test") && qualificationLiteral(elements[1], "-json") &&
+		qualificationLiteral(elements[2], "-mod=readonly") && qualificationLiteral(elements[3], "-buildvcs=false") &&
+		qualificationTemplateInterpolation(elements[4], "-p=", "jobs") &&
+		qualificationLiteral(elements[5], "-parallel=2") &&
+		qualificationTemplateInterpolation(elements[6], "-count=", "specification.count") &&
+		qualificationLiteral(elements[7], "-timeout=20m") && qualificationLiteral(elements[8], "-run") &&
+		qualificationMemberPath(elements[9]) === "specification.run" &&
+		qualificationMemberPath(elements[10]) === "specification.packagePath";
+	return statements.length === 2 && exactJobs && exactElements
+		? []
+		: [`${qualificationHelperPath}: buildGoTestArguments exact frozen Go argv mismatch`];
+}
+
+function qualificationDirectConstDeclarators(block, name) {
+	return (block?.body ?? []).flatMap((statement) => statement.type === "VariableDeclaration" && statement.kind === "const"
+		? statement.declarations.filter((declaration) => declaration.id?.type === "Identifier" && declaration.id.name === name)
+		: []);
+}
+
+function qualificationExactResultFailureTest(node) {
+	const terms = qualificationLogicalTerms(node, "||");
+	if (terms.length !== 4) return false;
+	return qualificationMemberPath(terms[0]) === "result.error" &&
+		qualificationMemberPath(terms[1]) === "result.signal" &&
+		terms[2]?.type === "BinaryExpression" && terms[2].operator === "!==" &&
+		qualificationMemberPath(terms[2].left) === "result.status" && qualificationLiteral(terms[2].right, 0) &&
+		terms[3]?.type === "BinaryExpression" && terms[3].operator === "!==" &&
+		qualificationMemberPath(terms[3].left) === "result.stderr" && qualificationLiteral(terms[3].right, "");
+}
+
+function qualificationExactFailureConsequent(node) {
+	if (node?.type !== "BlockStatement" || node.body.length !== 2) return false;
+	const detail = node.body[0]?.type === "VariableDeclaration" && node.body[0].kind === "const" &&
+		node.body[0].declarations.length === 1 && node.body[0].declarations[0].id?.type === "Identifier" &&
+		node.body[0].declarations[0].id.name === "detail" ? node.body[0].declarations[0] : null;
+	const failure = node.body[1]?.type === "ExpressionStatement" ? node.body[1].expression : null;
+	return detail !== null && detail.init !== null && failure?.type === "CallExpression" &&
+		qualificationMemberPath(failure.callee) === "fail" && failure.arguments.length === 2 &&
+		qualificationLiteral(failure.arguments[0], "GO_REPETITION_CHILD") &&
+		failure.arguments[1]?.type === "Identifier" && failure.arguments[1].name === "detail";
+}
+
+function qualificationTerminalWriteErrors(call) {
+	const errors = [];
+	if (call?.type !== "CallExpression" || qualificationMemberPath(call.callee) !== "write" || call.arguments.length !== 1) {
+		return ["success terminal must be one exact write call"];
+	}
+	const argument = call.arguments[0];
+	const requiredMembers = new Set([
+		"executionSpecification.caseID",
+		"executionSpecification.packagePath",
+		"executionSpecification.profile",
+		"summary.repetitions",
+		"executionSpecification.expected.join",
+		"summary.events",
+		"authorities.digest",
+	]);
+	const observedMembers = new Set();
+	const calls = [];
+	let rawSpecification = false;
+	walkQualificationAST(argument, (node, ancestors) => {
+		if (node.type === "MemberExpression") {
+			const member = qualificationMemberPath(node);
+			if (member) observedMembers.add(member);
+		}
+		if (node.type === "CallExpression") calls.push(node);
+		if (node.type === "Identifier" && node.name === "specification" &&
+			!qualificationIdentifierIsPropertyLabel(node, ancestors)) rawSpecification = true;
+	});
+	for (const member of requiredMembers) {
+		if (!observedMembers.has(member)) errors.push(`success terminal missing validated provenance ${member}`);
+	}
+	if (rawSpecification) errors.push("success terminal references raw specification");
+	if (calls.length !== 1 || qualificationMemberPath(calls[0].callee) !== "executionSpecification.expected.join" ||
+		calls[0].arguments.length !== 1 || !qualificationLiteral(calls[0].arguments[0], ",")) {
+		errors.push("success terminal test roster must derive from executionSpecification.expected.join");
+	}
+	const staticText = [];
+	walkQualificationAST(argument, (node) => {
+		if (node.type === "Literal" && typeof node.value === "string") staticText.push(node.value);
+		if (node.type === "TemplateElement") staticText.push(node.value?.cooked ?? "");
+	});
+	const joined = staticText.join("");
+	for (const token of [
+		"Go repetition verification passed: case=", "qualification=", "package=", "profile=", "count=",
+		"tests=", "events=", "authorities_sha256:", "\n",
+	]) {
+		if (!joined.includes(token)) errors.push(`success terminal static token missing: ${JSON.stringify(token)}`);
+	}
+	return errors;
+}
+
+function qualificationFailFunctionErrors(helperAST) {
+	const declarations = (helperAST.body ?? []).flatMap((statement) => {
+		const declaration = statement.type === "ExportNamedDeclaration" ? statement.declaration : statement;
+		return declaration?.type === "FunctionDeclaration" && declaration.id?.name === "fail" ? [declaration] : [];
+	});
+	const fail = declarations.length === 1 ? declarations[0] : null;
+	const statement = fail?.body?.body?.length === 1 ? fail.body.body[0] : null;
+	const argument = statement?.type === "ThrowStatement" ? statement.argument : null;
+	if (!fail || fail.async || fail.generator ||
+		!isDeepStrictEqual(fail.params.map(qualificationFunctionParameterShape), ["code", "detail"]) ||
+		argument?.type !== "NewExpression" || argument.callee?.type !== "Identifier" ||
+		argument.callee.name !== "GoRepetitionError" || argument.arguments.length !== 2 ||
+		argument.arguments[0]?.type !== "Identifier" || argument.arguments[0].name !== "code" ||
+		argument.arguments[1]?.type !== "Identifier" || argument.arguments[1].name !== "detail") {
+		return [`${qualificationHelperPath}: fail(code, detail) must unconditionally throw GoRepetitionError`];
+	}
+	return qualificationExactBodyBindingErrors(
+		`${qualificationHelperPath}: fail`, fail, {}, ["Error", "GoRepetitionError", "code", "detail"],
+	);
+}
+
+function qualificationExecutionRouteErrors(helperAST, helperShape) {
+	const errors = [];
+	const validate = helperShape.exportedFunctions.get("validateExecutionSpecification");
+	const run = helperShape.exportedFunctions.get("runRepetition");
+	const build = helperShape.exportedFunctions.get("buildGoTestArguments");
+	if (!validate || validate.async || validate.generator ||
+		!isDeepStrictEqual(validate.params.map(qualificationFunctionParameterShape), ["specification"])) {
+		errors.push(`${qualificationHelperPath}: validateExecutionSpecification(specification) export mismatch`);
+	}
+	if (!build || build.async || build.generator ||
+		!isDeepStrictEqual(build.params.map(qualificationFunctionParameterShape), ["specification"])) {
+		errors.push(`${qualificationHelperPath}: buildGoTestArguments(specification) export mismatch`);
+	}
+	errors.push(...qualificationBuildArgumentsErrors(build));
+	const runSecond = run?.params?.[1];
+	if (!run || !run.async || run.generator || run.params.length !== 2 ||
+		run.params[0]?.type !== "Identifier" || run.params[0].name !== "specification" ||
+		runSecond?.type !== "AssignmentPattern" || runSecond.left?.type !== "Identifier" ||
+		runSecond.left.name !== "dependencies" || runSecond.right?.type !== "ObjectExpression" ||
+		runSecond.right.properties.length !== 0) {
+		errors.push(`${qualificationHelperPath}: runRepetition(specification, dependencies = {}) export mismatch`);
+	}
+	const namedBranch = validate?.body?.body?.[0];
+	const exactNamedTest = namedBranch?.type === "IfStatement" &&
+		namedBranch.test?.type === "BinaryExpression" && namedBranch.test.operator === "===" &&
+		namedBranch.test.left?.type === "UnaryExpression" && namedBranch.test.left.operator === "typeof" &&
+		qualificationMemberPath(namedBranch.test.left.argument) === "specification.caseID" &&
+		qualificationLiteral(namedBranch.test.right, "string");
+	const namedBody = exactNamedTest && namedBranch.alternate === null && namedBranch.consequent?.type === "BlockStatement"
+		? namedBranch.consequent.body
+		: [];
+	const canonicalDeclaration = namedBody[0]?.type === "VariableDeclaration" && namedBody[0].kind === "const" &&
+		namedBody[0].declarations.length === 1 && namedBody[0].declarations[0].id?.type === "Identifier" &&
+		namedBody[0].declarations[0].id.name === "canonical"
+		? namedBody[0].declarations[0]
+		: null;
+	const canonicalCall = canonicalDeclaration?.init;
+	const identityRefusal = namedBody[1];
+	const exactIdentityRefusal = identityRefusal?.type === "IfStatement" && identityRefusal.alternate === null &&
+		identityRefusal.test?.type === "BinaryExpression" && identityRefusal.test.operator === "!==" &&
+		identityRefusal.test.left?.type === "Identifier" && identityRefusal.test.left.name === "canonical" &&
+		identityRefusal.test.right?.type === "Identifier" && identityRefusal.test.right.name === "specification" &&
+		qualificationSingleInertThrow(identityRefusal.consequent) !== null;
+	const canonicalReturn = namedBody[2];
+	const validatorSelectorCalls = [];
+	let validatorRawAliasLookup = false;
+	if (validate) {
+		walkQualificationAST(validate.body, (node) => {
+			if (node.type === "CallExpression" && qualificationMemberPath(node.callee) === "qualificationCaseForID") {
+				validatorSelectorCalls.push(node);
+			}
+			if (node.type === "MemberExpression" && node.computed &&
+				qualificationMemberPath(node.object) === "qualificationCases") validatorRawAliasLookup = true;
+		});
+	}
+	if (!exactNamedTest || namedBody.length !== 3 || canonicalCall?.type !== "CallExpression" ||
+		qualificationMemberPath(canonicalCall.callee) !== "qualificationCaseForID" || canonicalCall.arguments.length !== 1 ||
+		qualificationMemberPath(canonicalCall.arguments[0]) !== "specification.caseID" ||
+		!exactIdentityRefusal ||
+		canonicalReturn?.type !== "ReturnStatement" || canonicalReturn.argument?.type !== "Identifier" ||
+		canonicalReturn.argument.name !== "canonical" || validatorSelectorCalls.length !== 1 ||
+		validatorSelectorCalls[0] !== canonicalCall || validatorRawAliasLookup) {
+		errors.push(`${qualificationHelperPath}: named execution specification must canonicalize through qualificationCaseForID`);
+	}
+	const validateStatements = validate?.body?.body ?? [];
+	if (validateStatements.length !== 2 || validateStatements[0] !== namedBranch ||
+		!qualificationSingleInertThrow(validateStatements[1])) {
+		errors.push(`${qualificationHelperPath}: validateExecutionSpecification exact terminal refusal mismatch`);
+	}
+	errors.push(...qualificationExactBodyBindingErrors(
+		`${qualificationHelperPath}: validateExecutionSpecification`, validate,
+		{ canonical: 1 }, ["qualificationCaseForID", "specification", "Error"],
+	));
+	errors.push(...qualificationExactBodyBindingErrors(
+		`${qualificationHelperPath}: buildGoTestArguments`, build,
+		{ jobs: 1 }, ["buildGoTestArguments", "specification", "Object"],
+	));
+	const runFirst = run?.body?.body?.[0];
+	const executionDeclaration = runFirst?.type === "VariableDeclaration" && runFirst.kind === "const" &&
+		runFirst.declarations.length === 1 && runFirst.declarations[0].id?.type === "Identifier" &&
+		runFirst.declarations[0].id.name === "executionSpecification"
+		? runFirst.declarations[0]
+		: null;
+	if (executionDeclaration?.init?.type !== "CallExpression" ||
+		qualificationMemberPath(executionDeclaration.init.callee) !== "validateExecutionSpecification" ||
+		executionDeclaration.init.arguments.length !== 1 || executionDeclaration.init.arguments[0]?.type !== "Identifier" ||
+		executionDeclaration.init.arguments[0].name !== "specification") {
+			errors.push(`${qualificationHelperPath}: runRepetition must begin with exact execution-specification validation`);
+	}
+	errors.push(...qualificationExactBodyBindingErrors(
+		`${qualificationHelperPath}: runRepetition`, run,
+		{
+			executionSpecification: 1, acquire: 1, executeChild: 1, admit: 1, createRoots: 1,
+			makeEnvironment: 1, finalize: 1, remove: 1, write: 1,
+			admitted: 1, childEnvironment: 1, authorities: 1, step: 1,
+			args: 1, result: 1, detail: 1, summary: 1,
+		},
+		[
+			"validateExecutionSpecification", "buildGoTestArguments", "assertGoTestJSON", "authorityRoster",
+			"authorityText", "acquireVerificationLock", "childResult", "admitTools", "createPrivateRoots",
+			"buildChildEnvironment", "finalizeVerificationResources", "cleanupVerificationResources",
+			"fail", "specification", "dependencies", "Error",
+		],
+	));
+	const runStatements = run?.body?.body ?? [];
+	const directTries = runStatements.filter((statement) => statement.type === "TryStatement");
+	const executionTry = directTries.length === 1 ? directTries[0] : null;
+	const tryStatements = executionTry?.block?.body ?? [];
+	const argsDeclarations = qualificationDirectConstDeclarators(executionTry?.block, "args");
+	const resultDeclarations = qualificationDirectConstDeclarators(executionTry?.block, "result");
+	const summaryDeclarations = qualificationDirectConstDeclarators(executionTry?.block, "summary");
+	const argsDeclaration = argsDeclarations.length === 1 ? argsDeclarations[0] : null;
+	const resultDeclaration = resultDeclarations.length === 1 ? resultDeclarations[0] : null;
+	const summaryDeclaration = summaryDeclarations.length === 1 ? summaryDeclarations[0] : null;
+	const argsStatementIndex = tryStatements.findIndex((statement) =>
+		statement.type === "VariableDeclaration" && statement.declarations.includes(argsDeclaration));
+	const resultStatement = tryStatements[argsStatementIndex + 1];
+	const failureStatement = tryStatements[argsStatementIndex + 2];
+	const summaryStatement = tryStatements[argsStatementIndex + 3];
+	const finalizeStatement = tryStatements[argsStatementIndex + 4];
+	const finalizedStatement = tryStatements[argsStatementIndex + 5];
+	const terminalStatement = tryStatements[argsStatementIndex + 6];
+	const exactBuildUse = argsDeclaration?.init?.type === "CallExpression" &&
+		qualificationMemberPath(argsDeclaration.init.callee) === "buildGoTestArguments" &&
+		argsDeclaration.init.arguments.length === 1 && argsDeclaration.init.arguments[0]?.type === "Identifier" &&
+		argsDeclaration.init.arguments[0].name === "executionSpecification";
+	const resultAwait = resultDeclaration?.init?.type === "AwaitExpression" ? resultDeclaration.init.argument : null;
+	const options = resultAwait?.arguments?.at(-1);
+	const exactChildArgs = resultAwait?.type === "CallExpression" && qualificationMemberPath(resultAwait.callee) === "executeChild" &&
+		resultAwait.arguments.length === 4 && resultAwait.arguments[0]?.type === "Identifier" && resultAwait.arguments[0].name === "step" &&
+		resultAwait.arguments[1]?.type === "Identifier" && resultAwait.arguments[1].name === "admitted" &&
+		resultAwait.arguments[2]?.type === "Identifier" && resultAwait.arguments[2].name === "childEnvironment" &&
+		options?.type === "ObjectExpression" && options.properties.length === 1 &&
+		options.properties[0]?.type === "Property" && options.properties[0].kind === "init" && !options.properties[0].computed &&
+		((options.properties[0].key?.type === "Identifier" && options.properties[0].key.name === "args") ||
+			qualificationLiteral(options.properties[0].key, "args")) &&
+		options.properties[0].value?.type === "Identifier" && options.properties[0].value.name === "args";
+	const exactResultStatement = resultStatement?.type === "VariableDeclaration" &&
+		resultStatement.declarations.length === 1 && resultStatement.declarations[0] === resultDeclaration;
+	const exactFailure = failureStatement?.type === "IfStatement" && failureStatement.alternate === null &&
+		qualificationExactResultFailureTest(failureStatement.test) &&
+		qualificationExactFailureConsequent(failureStatement.consequent);
+	const summaryCall = summaryDeclaration?.init;
+	const exactSummary = summaryStatement?.type === "VariableDeclaration" && summaryStatement.declarations.length === 1 &&
+		summaryStatement.declarations[0] === summaryDeclaration && summaryCall?.type === "CallExpression" &&
+		qualificationMemberPath(summaryCall.callee) === "assertGoTestJSON" && summaryCall.arguments.length === 2 &&
+		qualificationMemberPath(summaryCall.arguments[0]) === "result.stdout" &&
+		summaryCall.arguments[1]?.type === "Identifier" && summaryCall.arguments[1].name === "executionSpecification";
+	const finalizeCall = finalizeStatement?.type === "ExpressionStatement" &&
+		finalizeStatement.expression?.type === "AwaitExpression" ? finalizeStatement.expression.argument : null;
+	const exactFinalize = finalizeCall?.type === "CallExpression" && qualificationMemberPath(finalizeCall.callee) === "finalize" &&
+		finalizeCall.arguments.length === 2 && finalizeCall.arguments[0]?.type === "Identifier" && finalizeCall.arguments[0].name === "lock" &&
+		qualificationMemberPath(finalizeCall.arguments[1]) === "roots.runRoot";
+	const exactFinalized = finalizedStatement?.type === "ExpressionStatement" &&
+		finalizedStatement.expression?.type === "AssignmentExpression" && finalizedStatement.expression.operator === "=" &&
+		finalizedStatement.expression.left?.type === "Identifier" && finalizedStatement.expression.left.name === "finalized" &&
+		qualificationLiteral(finalizedStatement.expression.right, true);
+	const terminalCall = terminalStatement?.type === "ExpressionStatement" ? terminalStatement.expression : null;
+	const terminalErrors = qualificationTerminalWriteErrors(terminalCall);
+	if (!executionTry || directTries.length !== 1 || !exactBuildUse || !exactResultStatement || !exactChildArgs ||
+		!exactFailure || !exactSummary || !exactFinalize || !exactFinalized || terminalErrors.length > 0) {
+		errors.push(`${qualificationHelperPath}: runRepetition exact validated child-result success spine mismatch${
+			terminalErrors.length > 0 ? ` (${terminalErrors.join(", ")})` : ""}`);
+	}
+	const directDeclaration = (name) => {
+		const values = qualificationDirectConstDeclarators(run?.body, name);
+		return values.length === 1 ? values[0] : null;
+	};
+	const executeAlias = directDeclaration("executeChild");
+	const acquireAlias = directDeclaration("acquire");
+	const admitAlias = directDeclaration("admit");
+	const createRootsAlias = directDeclaration("createRoots");
+	const environmentAlias = directDeclaration("makeEnvironment");
+	const finalizeAlias = directDeclaration("finalize");
+	const removeAlias = directDeclaration("remove");
+	const writeAlias = directDeclaration("write");
+	const exactDependencyAlias = (declaration, member, fallback) => declaration?.init?.type === "LogicalExpression" &&
+		declaration.init.operator === "??" && qualificationMemberPath(declaration.init.left) === `dependencies.${member}` &&
+		declaration.init.right?.type === "Identifier" && declaration.init.right.name === fallback;
+	if (!exactDependencyAlias(acquireAlias, "acquireVerificationLock", "acquireVerificationLock") ||
+		!exactDependencyAlias(executeAlias, "childResult", "childResult") ||
+		!exactDependencyAlias(admitAlias, "admitTools", "admitTools") ||
+		!exactDependencyAlias(createRootsAlias, "createPrivateRoots", "createPrivateRoots") ||
+		!exactDependencyAlias(environmentAlias, "buildChildEnvironment", "buildChildEnvironment") ||
+		!exactDependencyAlias(finalizeAlias, "finalizeVerificationResources", "finalizeVerificationResources") ||
+		!exactDependencyAlias(removeAlias, "remove", "cleanupVerificationResources") ||
+		writeAlias?.init?.type !== "LogicalExpression" || writeAlias.init.operator !== "??" ||
+		qualificationMemberPath(writeAlias.init.left) !== "dependencies.write") {
+		errors.push(`${qualificationHelperPath}: runRepetition exact dependency-injected authority aliases mismatch`);
+	}
+	const admitted = qualificationDirectConstDeclarators(executionTry?.block, "admitted");
+	const childEnvironment = qualificationDirectConstDeclarators(executionTry?.block, "childEnvironment");
+	const authorities = qualificationDirectConstDeclarators(executionTry?.block, "authorities");
+	const exactAdmitted = admitted.length === 1 && admitted[0].init?.type === "AwaitExpression" &&
+		admitted[0].init.argument?.type === "CallExpression" && qualificationMemberPath(admitted[0].init.argument.callee) === "admit" &&
+		admitted[0].init.argument.arguments.length === 0;
+	const exactEnvironment = childEnvironment.length === 1 && childEnvironment[0].init?.type === "CallExpression" &&
+		qualificationMemberPath(childEnvironment[0].init.callee) === "makeEnvironment" && childEnvironment[0].init.arguments.length === 2 &&
+		childEnvironment[0].init.arguments[0]?.type === "Identifier" && childEnvironment[0].init.arguments[0].name === "admitted" &&
+		childEnvironment[0].init.arguments[1]?.type === "Identifier" && childEnvironment[0].init.arguments[1].name === "roots";
+	const exactAuthorities = authorities.length === 1 && authorities[0].init?.type === "CallExpression" &&
+		qualificationMemberPath(authorities[0].init.callee) === "authorityRoster" && authorities[0].init.arguments.length === 1 &&
+		authorities[0].init.arguments[0]?.type === "Identifier" && authorities[0].init.arguments[0].name === "admitted";
+	const authorityWrites = tryStatements.filter((statement) => statement.type === "ExpressionStatement" &&
+		statement.expression?.type === "CallExpression" && qualificationMemberPath(statement.expression.callee) === "write" &&
+		statement.expression.arguments.length === 1 && statement.expression.arguments[0]?.type === "CallExpression" &&
+		qualificationMemberPath(statement.expression.arguments[0].callee) === "authorityText" &&
+		statement.expression.arguments[0].arguments.length === 1 &&
+		statement.expression.arguments[0].arguments[0]?.type === "Identifier" &&
+		statement.expression.arguments[0].arguments[0].name === "authorities");
+	if (!exactAdmitted || !exactEnvironment || !exactAuthorities || authorityWrites.length !== 1 ||
+		tryStatements.indexOf(authorityWrites[0]) >= argsStatementIndex) {
+		errors.push(`${qualificationHelperPath}: runRepetition admitted authority-to-child route mismatch`);
+	}
+	let directReturn = false;
+	const protectedRunBindings = new Set([
+		"executionSpecification", "acquire", "executeChild", "admit", "createRoots", "makeEnvironment",
+		"finalize", "remove", "write",
+		"admitted", "childEnvironment", "authorities", "step", "args", "result", "summary",
+	]);
+	let protectedRunWrite = false;
+	if (run) {
+		walkQualificationAST(run.body, (node, ancestors) => {
+			if (ancestors.some((ancestor) => ["FunctionDeclaration", "FunctionExpression", "ArrowFunctionExpression"].includes(ancestor.type))) return;
+			if (node.type === "ReturnStatement") directReturn = true;
+			if (node.type === "AssignmentExpression" || node.type === "UpdateExpression") {
+				const target = node.type === "AssignmentExpression" ? node.left : node.argument;
+				if (protectedRunBindings.has(qualificationRootIdentifier(target))) protectedRunWrite = true;
+			}
+		});
+	}
+	let rawSpecificationReferences = 0;
+	if (run && executionDeclaration) {
+		walkQualificationAST(run.body, (node, ancestors) => {
+			if (node.type === "Identifier" && node.name === "specification" && node !== executionDeclaration.init.arguments[0] &&
+				!qualificationIdentifierIsPropertyLabel(node, ancestors)) rawSpecificationReferences += 1;
+		});
+	}
+	if (directReturn || rawSpecificationReferences !== 0 || protectedRunWrite) {
+		errors.push(`${qualificationHelperPath}: runRepetition raw specification or direct return bypass`);
+	}
+	return errors;
+}
+
+function qualificationObjectPropertyName(property) {
+	if (property?.type !== "Property" || property.computed) return null;
+	if (property.key?.type === "Identifier") return property.key.name;
+	return typeof property.key?.value === "string" ? property.key.value : null;
+}
+
+function qualificationDormantC5SelfTestErrors(helperAST) {
+	const errors = [];
+	const functions = new Map();
+	for (const statement of helperAST.body ?? []) {
+		const declaration = statement.type === "ExportNamedDeclaration" ? statement.declaration : statement;
+		if (declaration?.type === "FunctionDeclaration" && declaration.id?.type === "Identifier") {
+			const existing = functions.get(declaration.id.name) ?? [];
+			existing.push(declaration);
+			functions.set(declaration.id.name, existing);
+		}
+	}
+	const dormantDeclarations = functions.get("dormantQualificationSelfTest") ?? [];
+	const dormant = dormantDeclarations.length === 1 ? dormantDeclarations[0] : null;
+	if (!dormant || !dormant.async || dormant.generator ||
+		!isDeepStrictEqual(dormant.params.map(qualificationFunctionParameterShape), ["caseID"])) {
+		return [`${qualificationHelperPath}: async dormantQualificationSelfTest(caseID) mismatch`];
+	}
+	const statements = dormant.body.body;
+	const directConst = (index, name) => {
+		const statement = statements[index];
+		return statement?.type === "VariableDeclaration" && statement.kind === "const" &&
+			statement.declarations.length === 1 && statement.declarations[0].id?.type === "Identifier" &&
+			statement.declarations[0].id.name === name ? statement.declarations[0] : null;
+	};
+	const parsed = directConst(0, "parsed");
+	const canonical = directConst(1, "canonical");
+	const args = directConst(2, "args");
+	const exactParsed = parsed?.init?.type === "CallExpression" && qualificationMemberPath(parsed.init.callee) === "parseRunArguments" &&
+		parsed.init.arguments.length === 1 && parsed.init.arguments[0]?.type === "ArrayExpression" &&
+		parsed.init.arguments[0].elements.length === 2 && qualificationLiteral(parsed.init.arguments[0].elements[0], "--case") &&
+		parsed.init.arguments[0].elements[1]?.type === "Identifier" && parsed.init.arguments[0].elements[1].name === "caseID";
+	const exactCanonical = canonical?.init?.type === "CallExpression" &&
+		qualificationMemberPath(canonical.init.callee) === "validateExecutionSpecification" && canonical.init.arguments.length === 1 &&
+		canonical.init.arguments[0]?.type === "Identifier" && canonical.init.arguments[0].name === "parsed";
+	const exactArgs = args?.init?.type === "CallExpression" && qualificationMemberPath(args.init.callee) === "buildGoTestArguments" &&
+		args.init.arguments.length === 1 && args.init.arguments[0]?.type === "Identifier" && args.init.arguments[0].name === "canonical";
+	const freezeBranch = statements[3];
+	const freezeTest = freezeBranch?.type === "IfStatement" && freezeBranch.alternate === null &&
+		freezeBranch.test?.type === "UnaryExpression" && freezeBranch.test.operator === "!" ? freezeBranch.test.argument : null;
+	const exactFreeze = freezeTest?.type === "CallExpression" && qualificationMemberPath(freezeTest.callee) === "Object.isFrozen" &&
+		freezeTest.arguments.length === 1 && freezeTest.arguments[0]?.type === "Identifier" && freezeTest.arguments[0].name === "args" &&
+		qualificationSingleInertThrow(freezeBranch.consequent) !== null;
+	const awaitedRun = statements[4]?.type === "ExpressionStatement" && statements[4].expression?.type === "AwaitExpression"
+		? statements[4].expression.argument
+		: null;
+	const dependencyObject = awaitedRun?.type === "CallExpression" && qualificationMemberPath(awaitedRun.callee) === "runRepetition" &&
+		awaitedRun.arguments.length === 2 && awaitedRun.arguments[0]?.type === "Identifier" && awaitedRun.arguments[0].name === "canonical" &&
+		awaitedRun.arguments[1]?.type === "ObjectExpression" ? awaitedRun.arguments[1] : null;
+	const expectedDependencyKeys = [
+		"platform", "arch", "acquireVerificationLock", "admitTools", "createPrivateRoots",
+		"buildChildEnvironment", "childResult", "finalizeVerificationResources", "remove", "write",
+	];
+	const dependencyKeys = dependencyObject?.properties.map(qualificationObjectPropertyName) ?? [];
+	const exactDependencies = dependencyObject !== null &&
+		isDeepStrictEqual([...dependencyKeys].sort(), [...expectedDependencyKeys].sort()) &&
+		new Set(dependencyKeys).size === expectedDependencyKeys.length;
+	const childProperty = dependencyObject?.properties.find((property) => qualificationObjectPropertyName(property) === "childResult");
+	const childReturns = [];
+	if (childProperty?.value?.body) {
+		walkQualificationAST(childProperty.value.body, (node, ancestors) => {
+			if (node.type === "ReturnStatement" &&
+				!ancestors.some((ancestor) => ["FunctionDeclaration", "FunctionExpression", "ArrowFunctionExpression"].includes(ancestor.type))) {
+				childReturns.push(node);
+			}
+		});
+	}
+	const childReturnArgument = childReturns.length === 1 ? childReturns[0].argument : null;
+	const childResult = childReturnArgument?.type === "ObjectExpression"
+		? childReturnArgument
+		: childReturnArgument?.type === "CallExpression" && qualificationMemberPath(childReturnArgument.callee) === "Object.freeze" &&
+			childReturnArgument.arguments.length === 1 && childReturnArgument.arguments[0]?.type === "ObjectExpression"
+			? childReturnArgument.arguments[0]
+			: null;
+	const stdoutProperty = childResult?.properties.find((property) => qualificationObjectPropertyName(property) === "stdout");
+	const cleanCall = stdoutProperty?.value;
+	const exactCleanStdout = cleanCall?.type === "CallExpression" && qualificationMemberPath(cleanCall.callee) === "encoded" &&
+		cleanCall.arguments.length === 1 && cleanCall.arguments[0]?.type === "CallExpression" &&
+		qualificationMemberPath(cleanCall.arguments[0].callee) === "cleanEvents" && cleanCall.arguments[0].arguments.length === 1 &&
+		cleanCall.arguments[0].arguments[0]?.type === "Identifier" && cleanCall.arguments[0].arguments[0].name === "canonical";
+	const importedAuthorityNames = new Set(requiredQualificationRuntimeImports);
+	let importedAuthorityReference = false;
+	walkQualificationAST(dormant.body, (node, ancestors) => {
+		if (node.type === "Identifier" && importedAuthorityNames.has(node.name) &&
+			!qualificationIdentifierIsPropertyLabel(node, ancestors)) importedAuthorityReference = true;
+	});
+	if (statements.length !== 5 || !exactParsed || !exactCanonical || !exactArgs || !exactFreeze ||
+		!exactDependencies || !exactCleanStdout || importedAuthorityReference) {
+		errors.push(`${qualificationHelperPath}: dormant C5 self-test exact no-authority execution route mismatch ${JSON.stringify({
+			statements: statements.length, exactParsed, exactCanonical, exactArgs, exactFreeze,
+			exactDependencies, exactCleanStdout, importedAuthorityReference, childReturns: childReturns.length,
+			childResultType: childReturns[0]?.argument?.type, stdoutType: cleanCall?.type,
+			stdoutCallee: qualificationMemberPath(cleanCall?.callee),
+			cleanEventsType: cleanCall?.arguments?.[0]?.type,
+			cleanEventsCallee: qualificationMemberPath(cleanCall?.arguments?.[0]?.callee),
+			cleanEventsArgument: qualificationMemberPath(cleanCall?.arguments?.[0]?.arguments?.[0]),
+		})}`);
+	}
+	errors.push(...qualificationExactBodyBindingErrors(
+		`${qualificationHelperPath}: dormantQualificationSelfTest`, dormant,
+		{ parsed: 1, canonical: 1, args: 1 },
+		[
+			"caseID", "parseRunArguments", "validateExecutionSpecification", "buildGoTestArguments",
+			"runRepetition", "encoded", "cleanEvents", "Object", "Error",
+		],
+	));
+	const selfTestDeclarations = functions.get("selfTest") ?? [];
+	const selfTest = selfTestDeclarations.length === 1 ? selfTestDeclarations[0] : null;
+	if (!selfTest || !selfTest.async || selfTest.generator || selfTest.params.length !== 0) {
+		errors.push(`${qualificationHelperPath}: async selfTest() mismatch`);
+		return errors;
+	}
+	const calls = [];
+	for (const statement of selfTest.body.body) {
+		const call = statement.type === "ExpressionStatement" && statement.expression?.type === "AwaitExpression"
+			? statement.expression.argument
+			: null;
+		if (call?.type === "CallExpression" && qualificationMemberPath(call.callee) === "dormantQualificationSelfTest") calls.push(call);
+	}
+	const ids = calls.map((call) => call.arguments.length === 1 && typeof call.arguments[0]?.value === "string"
+		? call.arguments[0].value
+		: null);
+	const exactIDs = ["contract-http-readiness-50", "contract-http-teardown-20"];
+	let selfTestTermination = false;
+	walkQualificationAST(selfTest.body, (node, ancestors) => {
+		if (ancestors.some((ancestor) => ["FunctionDeclaration", "FunctionExpression", "ArrowFunctionExpression"].includes(ancestor.type))) return;
+		if (node.type === "ReturnStatement" || node.type === "ThrowStatement" ||
+			(node.type === "CallExpression" && ["process.exit", "process.abort"].includes(qualificationMemberPath(node.callee)))) {
+			selfTestTermination = true;
+		}
+	});
+	if (!isDeepStrictEqual(ids, exactIDs) || calls.length !== 2 || selfTestTermination) {
+		errors.push(`${qualificationHelperPath}: selfTest must directly await both dormant C5-only identities exactly once`);
+	}
+	return errors;
+}
+
+function qualificationDirectEntrypointErrors(helperAST) {
+	const errors = [];
+	const mainDeclarations = helperAST.body.flatMap((statement) => {
+		const declaration = statement.type === "ExportNamedDeclaration" ? statement.declaration : statement;
+		return declaration?.type === "FunctionDeclaration" && declaration.id?.name === "main" ? [declaration] : [];
+	});
+	const main = mainDeclarations.length === 1 ? mainDeclarations[0] : null;
+	if (!main || main.async !== true || main.generator === true ||
+		mainDeclarations[0].params.length !== 0) {
+		errors.push(`${qualificationHelperPath}: async main() entrypoint mismatch`);
+	}
+	const mainStatements = main?.body?.body ?? [];
+	const selfTestBranch = mainStatements[0];
+	const selfTestBody = selfTestBranch?.type === "IfStatement" && selfTestBranch.alternate === null &&
+		selfTestBranch.test?.type === "LogicalExpression" && selfTestBranch.test.operator === "&&" &&
+		selfTestBranch.test.left?.type === "BinaryExpression" && selfTestBranch.test.left.operator === "===" &&
+		qualificationMemberPath(selfTestBranch.test.left.left) === "process.argv.length" &&
+		qualificationLiteral(selfTestBranch.test.left.right, 3) &&
+		selfTestBranch.test.right?.type === "BinaryExpression" && selfTestBranch.test.right.operator === "===" &&
+		qualificationProcessArgvElement(selfTestBranch.test.right.left, 2) &&
+		qualificationLiteral(selfTestBranch.test.right.right, "--self-test") &&
+		selfTestBranch.consequent?.type === "BlockStatement"
+		? selfTestBranch.consequent.body
+		: [];
+	const selfTestAwait = selfTestBody[0]?.type === "ExpressionStatement" &&
+		selfTestBody[0].expression?.type === "AwaitExpression" ? selfTestBody[0].expression.argument : null;
+	const exactSelfTestBranch = selfTestBody.length === 2 && selfTestAwait?.type === "CallExpression" &&
+		qualificationMemberPath(selfTestAwait.callee) === "selfTest" && selfTestAwait.arguments.length === 0 &&
+		selfTestBody[1]?.type === "ReturnStatement" && selfTestBody[1].argument === null;
+	const mainFinalStatement = mainStatements.at(-1);
+	const mainRunCall = mainFinalStatement?.type === "ExpressionStatement" &&
+		mainFinalStatement.expression?.type === "AwaitExpression" &&
+		mainFinalStatement.expression.argument?.type === "CallExpression" &&
+		qualificationMemberPath(mainFinalStatement.expression.argument.callee) === "runRepetition"
+		? mainFinalStatement.expression.argument
+		: null;
+	const mainParseCall = mainRunCall?.arguments.length === 1 && mainRunCall.arguments[0]?.type === "CallExpression" &&
+		qualificationMemberPath(mainRunCall.arguments[0].callee) === "parseRunArguments"
+		? mainRunCall.arguments[0]
+		: null;
+	const parseCalls = [];
+	const runCalls = [];
+	if (main) {
+		walkQualificationAST(main.body, (node) => {
+			if (node.type !== "CallExpression") return;
+			if (qualificationMemberPath(node.callee) === "parseRunArguments") parseCalls.push(node);
+			if (qualificationMemberPath(node.callee) === "runRepetition") runCalls.push(node);
+		});
+	}
+	if (mainStatements.length !== 2 || !exactSelfTestBranch || !mainParseCall || mainParseCall.arguments.length !== 1 ||
+		!qualificationProcessArgvSlice(mainParseCall.arguments[0]) ||
+		parseCalls.length !== 1 || parseCalls[0] !== mainParseCall ||
+		runCalls.length !== 1 || runCalls[0] !== mainRunCall) {
+		errors.push(`${qualificationHelperPath}: main() exact parse-to-run route mismatch`);
+	}
+	const directCandidates = helperAST.body.filter((statement) => {
+		if (statement.type !== "IfStatement") return false;
+		let callsMain = false;
+		walkQualificationAST(statement.consequent, (node) => {
+			if (node.type === "CallExpression" && qualificationMemberPath(node.callee) === "main") callsMain = true;
+		});
+		return callsMain;
+	});
+	const direct = directCandidates.length === 1 ? directCandidates[0] : null;
+	const directBody = direct?.consequent?.type === "BlockStatement" && direct.consequent.body.length === 1
+		? direct.consequent.body[0]
+		: null;
+	const awaited = directBody?.type === "ExpressionStatement" && directBody.expression?.type === "AwaitExpression"
+		? directBody.expression.argument
+		: null;
+	const topLevelMainCalls = [];
+	walkQualificationAST(helperAST, (node, ancestors) => {
+		if (node.type === "CallExpression" && qualificationMemberPath(node.callee) === "main" &&
+			!ancestors.some((ancestor) => ["FunctionDeclaration", "FunctionExpression", "ArrowFunctionExpression"].includes(ancestor.type))) {
+			topLevelMainCalls.push(node);
+		}
+	});
+	if (!direct || direct.alternate !== null || !qualificationCanonicalDirectGuard(direct.test) ||
+		!awaited || awaited.arguments.length !== 0 || qualificationMemberPath(awaited.callee) !== "main" ||
+		topLevelMainCalls.length !== 1 || topLevelMainCalls[0] !== awaited || helperAST.body.at(-1) !== direct) {
+		errors.push(`${qualificationHelperPath}: exact awaited direct-entry guard mismatch`);
+	}
+	return errors;
+}
+
+function qualificationVerifierEntrypointErrors(verifierAST) {
+	const errors = [];
+	const mains = verifierAST.body.flatMap((statement) => {
+		const declaration = statement.type === "ExportNamedDeclaration" ? statement.declaration : statement;
+		return declaration?.type === "FunctionDeclaration" && declaration.id?.name === "main" ? [declaration] : [];
+	});
+	const main = mains.length === 1 ? mains[0] : null;
+	if (!main || main.async !== true || main.generator === true || main.params.length !== 0) {
+		errors.push(`${qualificationVerifierPath}: async main() entrypoint mismatch`);
+	}
+	const direct = verifierAST.body.at(-1);
+	const body = direct?.type === "IfStatement" && direct.alternate === null &&
+		direct.consequent?.type === "BlockStatement" && direct.consequent.body.length === 1
+		? direct.consequent.body[0]
+		: null;
+	const awaited = body?.type === "ExpressionStatement" && body.expression?.type === "AwaitExpression"
+		? body.expression.argument
+		: null;
+	const topLevelMainCalls = [];
+	walkQualificationAST(verifierAST, (node, ancestors) => {
+		if (node.type === "CallExpression" && qualificationMemberPath(node.callee) === "main" &&
+			!ancestors.some((ancestor) => ["FunctionDeclaration", "FunctionExpression", "ArrowFunctionExpression"].includes(ancestor.type))) {
+			topLevelMainCalls.push(node);
+		}
+	});
+	if (!qualificationCanonicalDirectGuard(direct?.test) || awaited?.type !== "CallExpression" ||
+		qualificationMemberPath(awaited.callee) !== "main" || awaited.arguments.length !== 0 ||
+		topLevelMainCalls.length !== 1 || topLevelMainCalls[0] !== awaited) {
+		errors.push(`${qualificationVerifierPath}: exact awaited direct-entry guard mismatch`);
+	}
+	return errors;
+}
+
+function validateQualificationModuleClosure(sourceBodies) {
+	let asts;
+	try { asts = parseQualificationModuleASTs(sourceBodies); } catch (error) {
+		return [`future qualification module closure unavailable: ${error.message}`];
+	}
+	const helperAST = asts.get(qualificationHelperPath);
+	const runtimeAST = asts.get(qualificationRuntimePath);
+	const verifierAST = asts.get(qualificationVerifierPath);
+	if (!helperAST || !runtimeAST || !verifierAST) return ["future qualification module closure source roster mismatch"];
+	const helperShape = qualificationModuleStaticShape(qualificationHelperPath, helperAST);
+	const runtimeShape = qualificationModuleStaticShape(qualificationRuntimePath, runtimeAST);
+	const verifierShape = qualificationModuleStaticShape(qualificationVerifierPath, verifierAST);
+	const helperDirectGuard = helperAST.body.at(-1);
+	const verifierDirectGuard = verifierAST.body.at(-1);
+	const errors = [
+		...qualificationImportClosureErrors(
+			qualificationHelperPath, helperShape, qualificationHelperBuiltinImports,
+			"./verify-runtime-authority.mjs", requiredQualificationRuntimeImports,
+		),
+		...qualificationImportClosureErrors(
+			qualificationRuntimePath, runtimeShape, qualificationRuntimeBuiltinImports, null, [],
+		),
+		...qualificationImportClosureErrors(
+			qualificationVerifierPath, verifierShape, qualificationVerifierBuiltinImports,
+			"./verify-runtime-authority.mjs", requiredQualificationRuntimeImports,
+		),
+		...qualificationExactNamedImportErrors(
+			qualificationHelperPath, helperShape, "node:url", ["pathToFileURL"],
+		),
+		...qualificationExactNamedImportErrors(
+			qualificationVerifierPath, verifierShape, "node:url", ["pathToFileURL"],
+		),
+		...qualificationCaseLookupErrors(helperAST, helperShape),
+		...qualificationCatalogInitializerErrors(helperShape),
+		...qualificationDigestSelectorErrors(helperShape),
+		...qualificationFailFunctionErrors(helperAST),
+		...qualificationExecutionRouteErrors(helperAST, helperShape),
+		...qualificationDormantC5SelfTestErrors(helperAST),
+		...qualificationDirectEntrypointErrors(helperAST),
+		...qualificationVerifierEntrypointErrors(verifierAST),
+		...qualificationProtectedBindingErrors(qualificationHelperPath, helperAST, new Map([
+			["process", 0], ["Object", 0], ["Array", 0], ["Math", 0], ["String", 0],
+			["Map", 0], ["RegExp", 0], ["Set", 0], ["Error", 0], ["undefined", 0],
+			["pathToFileURL", 1], ["GoRepetitionError", 1], ["fail", 1],
+			["qualificationCaseForID", 1], ["parseRunArguments", 1],
+			["validateExecutionSpecification", 1], ["buildGoTestArguments", 1],
+			["assertGoTestJSON", 1], ["runRepetition", 1],
+			["dormantQualificationSelfTest", 1], ["selfTest", 1], ["main", 1],
+		])),
+		...qualificationProtectedBindingErrors(qualificationRuntimePath, runtimeAST, new Map([
+			["process", 0], ["Object", 0], ["Array", 0], ["Math", 0], ["String", 0],
+			["Map", 0], ["RegExp", 0], ["Set", 0], ["Error", 0], ["undefined", 0],
+		])),
+		...qualificationProtectedBindingErrors(qualificationVerifierPath, verifierAST, new Map([
+			["process", 0], ["Object", 0], ["Array", 0], ["Math", 0], ["String", 0],
+			["Map", 0], ["RegExp", 0], ["Set", 0], ["Error", 0], ["undefined", 0],
+			["pathToFileURL", 1], ["main", 1],
+		])),
+		...qualificationModuleEvaluationErrors(qualificationHelperPath, helperAST, { directGuard: helperDirectGuard }),
+		...qualificationModuleEvaluationErrors(qualificationRuntimePath, runtimeAST),
+		...qualificationModuleEvaluationErrors(qualificationVerifierPath, verifierAST, { directGuard: verifierDirectGuard }),
+	];
+	for (const name of requiredQualificationRuntimeImports) {
+		if (!runtimeShape.exportedNames.has(name)) errors.push(`${qualificationRuntimePath}: missing shared export ${name}`);
+	}
+	for (const name of [
+		"qualificationMatrices", "qualificationMatrixDigest", "qualificationCaseForID",
+		"qualificationCaseIDs", "qualificationCases", "parseRunArguments",
+		"validateExecutionSpecification", "buildGoTestArguments", "assertGoTestJSON", "runRepetition",
+	]) {
+		if (!helperShape.exportedNames.has(name)) errors.push(`${qualificationHelperPath}: missing future export ${name}`);
+	}
+	const helperRuntimeLocals = new Set(helperShape.imports
+		.filter(({ source }) => source === "./verify-runtime-authority.mjs").flatMap(({ bindings }) => bindings));
+	const verifierRuntimeLocals = new Set(verifierShape.imports
+		.filter(({ source }) => source === "./verify-runtime-authority.mjs").flatMap(({ bindings }) => bindings));
+	errors.push(...qualificationTopLevelImportedReferenceErrors(qualificationHelperPath, helperAST, helperRuntimeLocals));
+	errors.push(...qualificationTopLevelImportedReferenceErrors(qualificationVerifierPath, verifierAST, verifierRuntimeLocals));
+	const runtimeSideEffectBindings = new Set(runtimeShape.imports.filter(({ source }) =>
+		source === "node:child_process" || source === "node:fs" || source === "node:fs/promises",
+	).flatMap(({ bindings }) => bindings).filter((binding) => !binding.startsWith("constants")));
+	errors.push(...qualificationTopLevelImportedReferenceErrors(qualificationRuntimePath, runtimeAST, runtimeSideEffectBindings));
+	errors.push(...qualificationTopLevelAuthorityWrapperErrors(
+		qualificationHelperPath, helperAST, helperRuntimeLocals, new Set(["main"]),
+	));
+	errors.push(...qualificationTopLevelAuthorityWrapperErrors(qualificationRuntimePath, runtimeAST, runtimeSideEffectBindings));
+	errors.push(...qualificationTopLevelAuthorityWrapperErrors(
+		qualificationVerifierPath, verifierAST, verifierRuntimeLocals, new Set(["main"]),
+	));
+	errors.push(...qualificationTopLevelIIFEErrors(qualificationHelperPath, helperAST));
+	errors.push(...qualificationTopLevelIIFEErrors(qualificationRuntimePath, runtimeAST));
+	errors.push(...qualificationTopLevelIIFEErrors(qualificationVerifierPath, verifierAST));
+	return errors;
+}
+
+async function qualificationSnapshotBytes(root, path, overrides) {
+	if (root !== repositoryRoot) throw new Error("qualification source root must be the canonical repository root");
+	const bytes = await readBytes(root, path, overrides);
+	const strictEntries = overrides.get(STRICT_INDEX_SNAPSHOT);
+	if (strictEntries !== undefined) {
+		if (!Array.isArray(strictEntries)) throw new Error("qualification strict index inventory unavailable");
+		const entry = strictEntries.find((candidate) => candidate.path === path);
+		if (!entry || entry.mode !== "100644") throw new Error(`qualification source staged mode mismatch: ${path}`);
+	}
+	const worktree = await readStableCandidateWorktreeBytes(path, "100644");
+	if (!bytes.equals(worktree)) throw new Error(`qualification source staged/worktree byte mismatch: ${path}`);
+	return bytes;
+}
+
+async function loadQualificationAuthority(root, overrides, requiresC4Qualification) {
+	const helperBytes = await qualificationSnapshotBytes(root, qualificationHelperPath, overrides);
+	const helperDigest = createHash("sha256").update(helperBytes).digest("hex");
+	if (!requiresC4Qualification) {
+		if (helperDigest !== sealedLegacyQualificationHelperSHA256) {
+			throw new Error(`legacy qualification helper digest mismatch: sha256:${helperDigest}`);
+		}
+		const url = pathToFileURL(resolve(root, qualificationHelperPath));
+		url.searchParams.set("countershape_sha256", helperDigest);
+		return import(url.href);
+	}
+	const runtimeBytes = await qualificationSnapshotBytes(root, qualificationRuntimePath, overrides);
+	const verifierBytes = await qualificationSnapshotBytes(root, qualificationVerifierPath, overrides);
+	const sourceBodies = {
+		[qualificationHelperPath]: helperBytes.toString("utf8"),
+		[qualificationRuntimePath]: runtimeBytes.toString("utf8"),
+		[qualificationVerifierPath]: verifierBytes.toString("utf8"),
+	};
+	const closureErrors = validateQualificationModuleClosure(sourceBodies);
+	if (closureErrors.length > 0) throw new Error(closureErrors.join("; "));
+	return qualificationStaticAuthority(sourceBodies);
+}
+
+function projectedQualificationCase(caseID, specification) {
+	const expected = [...specification.expected].sort();
+	return {
+		caseID,
+		count: specification.count,
+		expected,
+		packagePath: specification.packagePath,
+		profile: specification.profile,
+		qualification: true,
+		run: expected.length === 1 ? `^${expected[0]}$` : `^(?:${expected.join("|")})$`,
+	};
+}
+
+function projectedC4QualificationCases(authority) {
+	const { qualificationCaseIDs, qualificationCases } = authority;
+	if (isDeepStrictEqual(qualificationCaseIDs, requiredC4QualificationCaseIDs)) {
+		return Object.fromEntries(requiredC4QualificationCaseIDs.map((caseID) => [caseID, qualificationCases[caseID]]));
+	}
+	if (!isDeepStrictEqual(qualificationCaseIDs, requiredQualificationCaseIDs)) {
+		throw new Error("live qualification roster is neither the sealed C1V matrix nor the frozen C4 matrix");
+	}
+	const replacements = new Map([
+		["world-output-caps-50", ["processmechanics-output-caps-50", requiredC4QualificationDelta["processmechanics-output-caps-50"]]],
+		["world-output-independence-20", ["processmechanics-output-independence-20", requiredC4QualificationDelta["processmechanics-output-independence-20"]]],
+		["world-simultaneous-overflow-20", ["processmechanics-simultaneous-overflow-20", requiredC4QualificationDelta["processmechanics-simultaneous-overflow-20"]]],
+	]);
+	const entries = [];
+	for (const historicalID of requiredQualificationCaseIDs) {
+		const replacement = replacements.get(historicalID);
+		if (replacement) entries.push([replacement[0], projectedQualificationCase(replacement[0], replacement[1])]);
+		else entries.push([historicalID, qualificationCases[historicalID]]);
+		if (historicalID === "world-lifecycle-readiness-20") {
+			for (const caseID of ["contract-runner-admission-50", "contract-cli-standalone-closure-20"]) {
+				entries.push([caseID, projectedQualificationCase(caseID, requiredC4QualificationDelta[caseID])]);
+			}
+		}
+	}
+	return Object.fromEntries(entries);
+}
+
+function projectedC5QualificationCases(authority) {
+	const c4Cases = projectedC4QualificationCases(authority);
+	const entries = [];
+	for (const caseID of requiredC4QualificationCaseIDs) {
+		entries.push([caseID, c4Cases[caseID]]);
+		if (caseID === "contract-cli-standalone-closure-20") {
+			for (const c5CaseID of Object.keys(requiredC5QualificationDelta)) {
+				entries.push([c5CaseID, projectedQualificationCase(c5CaseID, requiredC5QualificationDelta[c5CaseID])]);
+			}
+		}
+	}
+	return Object.fromEntries(entries);
+}
+
+function exactFrozenPlainObject(value, expectedKeys, label, errors) {
+	if (!value || typeof value !== "object" || Array.isArray(value) || Object.getPrototypeOf(value) !== Object.prototype) {
+		errors.push(`${label} is not a plain object`);
+		return false;
+	}
+	const descriptors = Object.getOwnPropertyDescriptors(value);
+	const ownKeys = Reflect.ownKeys(descriptors);
+	if (ownKeys.some((key) => typeof key !== "string") ||
+		!isDeepStrictEqual(ownKeys.sort(), [...expectedKeys].sort()) ||
+		ownKeys.some((key) => !("value" in descriptors[key]))) {
+		errors.push(`${label} exact data-property roster mismatch`);
+		return false;
+	}
+	if (!Object.isFrozen(value)) errors.push(`${label} is not frozen`);
+	return true;
+}
+
+function exactFrozenArray(value, expected, label, errors) {
+	if (!Array.isArray(value) || !Object.isFrozen(value) || !isDeepStrictEqual(value, expected)) {
+		errors.push(`${label} value/freeze mismatch`);
+		return false;
+	}
+	const ownKeys = Reflect.ownKeys(value);
+	const expectedKeys = [...expected.keys()].map(String).concat("length");
+	if (!isDeepStrictEqual(ownKeys, expectedKeys)) {
+		errors.push(`${label} exact own-key roster mismatch`);
+		return false;
+	}
+	return true;
+}
+
+function qualificationMatrixRecordErrors(record, boundary, expectedCaseIDs, expectedCases, expectedDigest) {
+	const errors = [];
+	if (!exactFrozenPlainObject(record, ["caseIDs", "cases", "digest"], `${boundary} qualification matrix record`, errors)) {
+		return errors;
+	}
+	exactFrozenArray(record.caseIDs, expectedCaseIDs, `${boundary} qualification case ID roster`, errors);
+	if (!exactFrozenPlainObject(record.cases, expectedCaseIDs, `${boundary} qualification cases`, errors)) return errors;
+	if (!isDeepStrictEqual(Object.keys(record.cases), expectedCaseIDs) || !isDeepStrictEqual(record.cases, expectedCases)) {
+		errors.push(`${boundary} qualification cases mismatch`);
+	}
+	for (const caseID of expectedCaseIDs) {
+		const specification = record.cases[caseID];
+		if (!exactFrozenPlainObject(
+			specification,
+			["caseID", "count", "expected", "packagePath", "profile", "qualification", "run"],
+			`${boundary} qualification case ${caseID}`,
+			errors,
+		)) continue;
+		exactFrozenArray(
+			specification.expected, expectedCases[caseID].expected,
+			`${boundary} qualification case ${caseID} expected roster`, errors,
+		);
+	}
+	const computed = createHash("sha256").update(JSON.stringify(record.cases)).digest("hex");
+	if (record.digest !== expectedDigest.slice("sha256:".length) || computed !== record.digest) {
+		errors.push(`${boundary} qualification matrix digest mismatch: sha256:${computed}`);
+	}
+	return errors;
+}
+
+function qualificationCaseSelectorErrors(authority, matrices) {
+	const errors = [];
+	const descriptor = authority && typeof authority === "object"
+		? Object.getOwnPropertyDescriptor(authority, "qualificationCaseForID")
+		: undefined;
+	if (!descriptor || !("value" in descriptor) || typeof descriptor.value !== "function") {
+		return ["future qualification case selector is missing or accessor-backed"];
+	}
+	const selector = descriptor.value;
+	for (const caseID of requiredC5QualificationCaseIDs) {
+		const expected = Object.hasOwn(matrices.C4.cases, caseID)
+			? matrices.C4.cases[caseID]
+			: matrices.C5.cases[caseID];
+		try {
+			const first = selector(caseID);
+			const second = selector(caseID);
+			if (first !== expected || second !== expected) {
+				errors.push(`future qualification case selector is not stable identity authority: ${caseID}`);
+			}
+		} catch (error) {
+			errors.push(`future qualification case selector threw for ${caseID}: ${error.message}`);
+		}
+	}
+	for (const rejected of ["", "unknown", "C4", "C5", null, undefined, 0]) {
+		let failed = false;
+		try { selector(rejected); } catch { failed = true; }
+		if (!failed) errors.push(`future qualification case selector accepted hostile ID ${JSON.stringify(rejected)}`);
+	}
+	return errors;
+}
+
+function qualificationExpectedGoArguments(specification) {
+	const jobs = specification.profile === "general" ? 2 : 1;
+	return [
+		"test", "-json", "-mod=readonly", "-buildvcs=false", `-p=${jobs}`, "-parallel=2",
+		`-count=${specification.count}`, "-timeout=20m", "-run", specification.run, specification.packagePath,
+	];
+}
+
+const qualificationReceiptAuthorityNames = Object.freeze(["go", "node", "git", "sh", "cc", "cxx"]);
+const qualificationReceiptAuthorityVariables = Object.freeze({
+	go: "COUNTERSHAPE_GO",
+	node: "COUNTERSHAPE_NODE",
+	git: "COUNTERSHAPE_GIT",
+	sh: "COUNTERSHAPE_SH",
+	cc: "COUNTERSHAPE_CC",
+	cxx: "COUNTERSHAPE_CXX",
+});
+const qualificationReceiptToolReadLimit = 512 * 1024 * 1024;
+
+function qualificationReceiptAuthorityDigest(authorities) {
+	return createHash("sha256").update(JSON.stringify(authorities)).digest("hex");
+}
+
+async function qualificationExpectedReceiptAuthorities(phase, hermeticArgvPrefix) {
+	const environment = parseHermeticArgvPrefix(`${phase} qualification authority`, hermeticArgvPrefix);
+	const authorities = [];
+	for (const name of qualificationReceiptAuthorityNames) {
+		const variable = qualificationReceiptAuthorityVariables[name];
+		const supplied = environment.get(variable);
+		if (typeof supplied !== "string" || !isAbsolute(supplied) ||
+			/[\u0000-\u001f\u007f]/u.test(supplied) || supplied.includes(":")) {
+			throw new Error(`P07B-C ${phase} qualification authority path mismatch: ${name}`);
+		}
+		const canonical = await realpath(supplied);
+		if (!isAbsolute(canonical) || /[\u0000-\u001f\u007f]/u.test(canonical) || canonical.includes(":")) {
+			throw new Error(`P07B-C ${phase} qualification canonical authority path mismatch: ${name}`);
+		}
+		const before = await lstat(canonical);
+		if (!before.isFile() || before.isSymbolicLink() || (before.mode & 0o111) === 0 ||
+			!Number.isSafeInteger(before.size) || before.size < 1 || before.size > qualificationReceiptToolReadLimit) {
+			throw new Error(`P07B-C ${phase} qualification authority is not a bounded executable regular file: ${name}`);
+		}
+		const bytes = await readRegularNoFollow(canonical, qualificationReceiptToolReadLimit);
+		const after = await lstat(canonical);
+		if (!after.isFile() || after.isSymbolicLink() || before.dev !== after.dev || before.ino !== after.ino ||
+			before.mode !== after.mode || before.size !== after.size || before.mtimeMs !== after.mtimeMs ||
+			before.ctimeMs !== after.ctimeMs) {
+			throw new Error(`P07B-C ${phase} qualification authority changed during independent admission: ${name}`);
+		}
+		authorities.push(Object.freeze({
+			name,
+			path: canonical,
+			sha256: createHash("sha256").update(bytes).digest("hex"),
+		}));
+	}
+	const nodePath = authorities.find(({ name }) => name === "node")?.path;
+	if (nodePath !== await realpath(process.execPath)) {
+		throw new Error(`P07B-C ${phase} qualification Node authority did not invoke the checker`);
+	}
+	return Object.freeze(authorities);
+}
+
+function qualificationReceiptOutputErrors(stdout, specification, expectedAuthorities) {
+	const errors = [];
+	if (!Array.isArray(expectedAuthorities) ||
+		!isDeepStrictEqual(expectedAuthorities.map(({ name }) => name), qualificationReceiptAuthorityNames) ||
+		expectedAuthorities.some((entry) => !entry || !isDeepStrictEqual(Object.keys(entry), ["name", "path", "sha256"]) ||
+			typeof entry.path !== "string" || !isAbsolute(entry.path) || !/^[0-9a-f]{64}$/u.test(entry.sha256))) {
+		return ["qualification receipt independent authority roster mismatch"];
+	}
+	if (typeof stdout !== "string" || stdout.length === 0 || !stdout.endsWith("\n") || stdout.includes("\r") || stdout.includes("\0")) {
+		return ["qualification receipt stdout framing mismatch"];
+	}
+	const lines = stdout.slice(0, -1).split("\n");
+	if (lines.length !== qualificationReceiptAuthorityNames.length + 1) {
+		return ["qualification receipt stdout line cardinality mismatch"];
+	}
+	const authorities = [];
+	for (const [index, name] of qualificationReceiptAuthorityNames.entries()) {
+		const line = lines[index];
+		const prefix = `GO_REPETITION_AUTHORITY name=${name} path=`;
+		const marker = " sha256:";
+		const markerIndex = line.lastIndexOf(marker);
+		if (!line.startsWith(prefix) || markerIndex <= prefix.length ||
+			!/^[0-9a-f]{64}$/u.test(line.slice(markerIndex + marker.length))) {
+			errors.push(`qualification receipt authority line mismatch: ${name}`);
+			continue;
+		}
+		let path;
+		try { path = JSON.parse(line.slice(prefix.length, markerIndex)); } catch {}
+		if (typeof path !== "string" || !isAbsolute(path) || /[\u0000-\u001f\u007f]/u.test(path)) {
+			errors.push(`qualification receipt authority path mismatch: ${name}`);
+			continue;
+		}
+		authorities.push(Object.freeze({ name, path, sha256: line.slice(markerIndex + marker.length) }));
+	}
+	if (authorities.length !== qualificationReceiptAuthorityNames.length) return errors;
+	if (!isDeepStrictEqual(authorities, expectedAuthorities)) {
+		errors.push("qualification receipt authority roster does not match independent executable admission");
+	}
+	const authorityDigest = qualificationReceiptAuthorityDigest(expectedAuthorities);
+	const terminal = lines.at(-1);
+	const prefix = `Go repetition verification passed: case=${specification.caseID} qualification=true ` +
+		`package=${specification.packagePath} profile=${specification.profile} count=${specification.count} ` +
+		`tests=${specification.expected.join(",")} events=`;
+	const suffix = ` authorities_sha256:${authorityDigest}`;
+	if (!terminal.startsWith(prefix) || !terminal.endsWith(suffix)) {
+		errors.push(`qualification receipt terminal result mismatch: ${specification.caseID}`);
+		return errors;
+	}
+	const eventText = terminal.slice(prefix.length, -suffix.length);
+	if (!/^[1-9][0-9]*$/u.test(eventText)) {
+		errors.push(`qualification receipt event count mismatch: ${specification.caseID}`);
+		return errors;
+	}
+	const minimumEvents = 2 + (2 * specification.count * specification.expected.length);
+	if (Number(eventText) < minimumEvents) errors.push(`qualification receipt event count below exact lifecycle minimum: ${specification.caseID}`);
+	return errors;
+}
+
+function runQualificationReceiptOutputSelfTest() {
+	const specification = Object.freeze({
+		caseID: "receipt-control", count: 2, expected: Object.freeze(["TestAlpha", "TestBeta"]),
+		packagePath: "github.com/nelsonwerd/countershape/internal/receiptcontrol", profile: "general",
+		qualification: true, run: "^(?:TestAlpha|TestBeta)$",
+	});
+	const authorities = Object.freeze(qualificationReceiptAuthorityNames.map((name, index) => Object.freeze({
+		name, path: `/authority/${name}`, sha256: String(index + 1).padStart(64, "0"),
+	})));
+	const digest = qualificationReceiptAuthorityDigest(authorities);
+	const authorityLines = authorities.map(({ name, path, sha256 }) =>
+		`GO_REPETITION_AUTHORITY name=${name} path=${JSON.stringify(path)} sha256:${sha256}`);
+	const terminal = `Go repetition verification passed: case=${specification.caseID} qualification=true ` +
+		`package=${specification.packagePath} profile=${specification.profile} count=${specification.count} ` +
+		`tests=${specification.expected.join(",")} events=10 authorities_sha256:${digest}`;
+	const baseline = [...authorityLines, terminal].join("\n") + "\n";
+	if (qualificationReceiptOutputErrors(baseline, specification, authorities).length !== 0) {
+		throw new Error("qualification receipt output positive control failed");
+	}
+	const foreignAuthorities = Object.freeze(authorities.map((entry) => Object.freeze({
+		...entry, path: `/foreign${entry.path}`,
+	})));
+	const foreignDigest = qualificationReceiptAuthorityDigest(foreignAuthorities);
+	const foreignLines = foreignAuthorities.map(({ name, path, sha256 }) =>
+		`GO_REPETITION_AUTHORITY name=${name} path=${JSON.stringify(path)} sha256:${sha256}`);
+	const selfConsistentForeign = [...foreignLines, terminal.replace(digest, foreignDigest)].join("\n") + "\n";
+	const hostiles = [
+		baseline.slice(0, -1),
+		baseline.replace("\n", "\r\n"),
+		[...authorityLines.slice(1), authorityLines[0], terminal].join("\n") + "\n",
+		baseline.replace("sha256:000000", "sha256:ffffff"),
+		baseline.replace(`authorities_sha256:${digest}`, `authorities_sha256:${"f".repeat(64)}`),
+		baseline.replace("case=receipt-control", "case=other"),
+		baseline.replace("profile=general", "profile=sensitive"),
+		baseline.replace("count=2", "count=3"),
+		baseline.replace("tests=TestAlpha,TestBeta", "tests=TestAlpha"),
+		baseline.replace("events=10", "events=9"),
+		baseline + "extra\n",
+		selfConsistentForeign,
+		baseline.replace(JSON.stringify(authorities[0].path), JSON.stringify("/foreign/go")),
+		baseline.replace(authorities[0].sha256, "f".repeat(64)),
+	];
+	const rejected = hostiles.filter((value) =>
+		qualificationReceiptOutputErrors(value, specification, authorities).length > 0).length;
+	if (rejected !== 14) throw new Error(`qualification receipt output hostile cardinality drift: ${rejected}`);
+	return rejected;
+}
+
+function qualificationExecutionPathErrors(authority, matrices) {
+	const errors = [];
+	const operations = {};
+	for (const name of ["parseRunArguments", "validateExecutionSpecification", "buildGoTestArguments"]) {
+		const descriptor = authority && typeof authority === "object" ? Object.getOwnPropertyDescriptor(authority, name) : undefined;
+		if (!descriptor || !("value" in descriptor) || typeof descriptor.value !== "function") {
+			errors.push(`future qualification ${name} is missing or accessor-backed`);
+		} else {
+			operations[name] = descriptor.value;
+		}
+	}
+	if (Object.keys(operations).length !== 3) return errors;
+	for (const caseID of requiredC5QualificationCaseIDs) {
+		const expected = Object.hasOwn(matrices.C4.cases, caseID) ? matrices.C4.cases[caseID] : matrices.C5.cases[caseID];
+		try {
+			const parsed = operations.parseRunArguments(["--case", caseID]);
+			if (parsed !== expected) errors.push(`future qualification parser identity mismatch: ${caseID}`);
+			const validated = operations.validateExecutionSpecification(parsed);
+			if (validated !== expected) errors.push(`future qualification validator identity mismatch: ${caseID}`);
+			const argv = operations.buildGoTestArguments(validated);
+			exactFrozenArray(argv, qualificationExpectedGoArguments(expected), `future qualification argv ${caseID}`, errors);
+			let copiedAccepted = false;
+			try { operations.validateExecutionSpecification({ ...expected }); copiedAccepted = true; } catch {}
+			if (copiedAccepted) errors.push(`future qualification validator accepted copied specification: ${caseID}`);
+		} catch (error) {
+			errors.push(`future qualification execution path threw for ${caseID}: ${error.message}`);
+		}
+	}
+	for (const argv of [
+		[], ["--case"], ["--case", requiredC5QualificationCaseIDs[0], "extra"],
+		["--CASE", requiredC5QualificationCaseIDs[0]], ["--case", "unknown"],
+	]) {
+		let accepted = false;
+		try { operations.parseRunArguments(argv); accepted = true; } catch {}
+		if (accepted) errors.push(`future qualification parser accepted hostile argv ${JSON.stringify(argv)}`);
+	}
+	return errors;
+}
+
+function validateFutureQualificationAuthority(authority, expectedC4Cases, expectedC5Cases) {
+	const errors = [];
+	const matricesDescriptor = authority && typeof authority === "object"
+		? Object.getOwnPropertyDescriptor(authority, "qualificationMatrices")
+		: undefined;
+	if (!matricesDescriptor || !("value" in matricesDescriptor)) {
+		return ["future qualification authority exports are missing or accessor-backed"];
+	}
+	const matrices = matricesDescriptor.value;
+	if (!exactFrozenPlainObject(matrices, ["C4", "C5"], "future qualification matrices", errors)) return errors;
+	errors.push(...qualificationMatrixRecordErrors(
+		matrices.C4, "C4", requiredC4QualificationCaseIDs, expectedC4Cases, requiredC4QualificationMatrixDigest,
+	));
+	errors.push(...qualificationMatrixRecordErrors(
+		matrices.C5, "C5", requiredC5QualificationCaseIDs, expectedC5Cases, requiredC5QualificationMatrixDigest,
+	));
+	if (!matrices.C4 || typeof matrices.C4 !== "object" ||
+		authority.qualificationCaseIDs !== matrices.C4.caseIDs || authority.qualificationCases !== matrices.C4.cases) {
+		errors.push("future qualification C4 legacy aliases are not identity-bound");
+	}
+	if (typeof authority.qualificationMatrixDigest !== "function") {
+		errors.push("future qualification digest function missing");
+	} else {
+		for (const [args, expected, label] of [
+			[[], matrices.C4?.digest, "default"],
+			[["C4"], matrices.C4?.digest, "C4"],
+			[["C5"], matrices.C5?.digest, "C5"],
+		]) {
+			try {
+				if (authority.qualificationMatrixDigest(...args) !== expected) {
+					errors.push(`future qualification digest ${label} selector mismatch`);
+				}
+			} catch (error) {
+				errors.push(`future qualification digest ${label} selector threw: ${error.message}`);
+			}
+		}
+		for (const rejected of ["", "c4", "c5", "C6", null]) {
+			let failed = false;
+			try { authority.qualificationMatrixDigest(rejected); } catch { failed = true; }
+			if (!failed) errors.push(`future qualification digest accepted hostile selector ${JSON.stringify(rejected)}`);
+		}
+	}
+	if (matrices.C4?.cases && matrices.C5?.cases) {
+		errors.push(...qualificationCaseSelectorErrors(authority, matrices));
+		errors.push(...qualificationExecutionPathErrors(authority, matrices));
+	}
+	return errors;
+}
+
+function syntheticFutureQualificationAuthority(legacyAuthority, options = {}) {
+	const cloneCases = (cases) => Object.fromEntries(Object.entries(cases).map(([caseID, specification]) => [caseID, {
+		...specification, expected: [...specification.expected],
+	}]));
+	const data = {
+		C4: {
+			caseIDs: [...requiredC4QualificationCaseIDs],
+			cases: cloneCases(projectedC4QualificationCases(legacyAuthority)),
+			digest: requiredC4QualificationMatrixDigest.slice("sha256:".length),
+		},
+		C5: {
+			caseIDs: [...requiredC5QualificationCaseIDs],
+			cases: cloneCases(projectedC5QualificationCases(legacyAuthority)),
+			digest: requiredC5QualificationMatrixDigest.slice("sha256:".length),
+		},
+	};
+	options.mutateData?.(data);
+	const freezeRecord = (record, boundary) => {
+		for (const [caseID, specification] of Object.entries(record.cases)) {
+			if (!(options.leaveExpectedMutable === `${boundary}:${caseID}`)) Object.freeze(specification.expected);
+			Object.freeze(specification);
+		}
+		Object.freeze(record.cases);
+		Object.freeze(record.caseIDs);
+		return Object.freeze(record);
+	};
+	const matrices = Object.freeze({ C4: freezeRecord(data.C4, "C4"), C5: freezeRecord(data.C5, "C5") });
+	const authority = {
+		qualificationMatrices: matrices,
+		qualificationCaseIDs: options.aliasClone ? Object.freeze([...matrices.C4.caseIDs]) : matrices.C4.caseIDs,
+		qualificationCases: matrices.C4.cases,
+		qualificationMatrixDigest(boundary = "C4") {
+			if (boundary === "C4" || boundary === "C5") return matrices[boundary].digest;
+			throw new Error("GO_REPETITION_QUALIFICATION_MATRIX");
+		},
+		qualificationCaseForID(caseID) {
+			if (Object.hasOwn(matrices.C4.cases, caseID)) {
+				return options.selectorCloneCaseID === caseID ? { ...matrices.C4.cases[caseID] } : matrices.C4.cases[caseID];
+			}
+			if (Object.hasOwn(matrices.C5.cases, caseID)) {
+				return options.selectorCloneCaseID === caseID ? { ...matrices.C5.cases[caseID] } : matrices.C5.cases[caseID];
+			}
+			if (options.acceptUnknownSelector) return matrices.C4.cases[matrices.C4.caseIDs[0]];
+			throw new Error("GO_REPETITION_QUALIFICATION_CASE");
+		},
+		parseRunArguments(argv) {
+			if (options.acceptHostileArguments || (Array.isArray(argv) && argv.length === 2 && argv[0] === "--case")) {
+				return authority.qualificationCaseForID(argv[1]);
+			}
+			throw new Error("GO_REPETITION_ARGUMENTS");
+		},
+		validateExecutionSpecification(specification) {
+			const canonical = specification && typeof specification.caseID === "string"
+				? authority.qualificationCaseForID(specification.caseID)
+				: null;
+			if (canonical === null || (!options.acceptCopiedSpecification && canonical !== specification)) {
+				throw new Error("GO_REPETITION_SPECIFICATION");
+			}
+			return canonical;
+		},
+		buildGoTestArguments(specification) {
+			const argv = qualificationExpectedGoArguments(specification);
+			if (options.reverseBuildJobs) argv[4] = specification.profile === "general" ? "-p=1" : "-p=2";
+			return Object.freeze(argv);
+		},
+	};
+	options.mutateAuthority?.(authority, matrices);
+	return Object.freeze(authority);
+}
+
+function runQualificationModuleClosureSelfTest() {
+	const runtimeBindings = requiredQualificationRuntimeImports.join(", ");
+	const baseline = Object.freeze({
+		[qualificationHelperPath]: `
+import { pathToFileURL } from "node:url";
+import { ${runtimeBindings} } from "./verify-runtime-authority.mjs";
+export class GoRepetitionError extends Error {}
+function fail(code, detail) { throw new GoRepetitionError(code, detail); }
+export const qualificationMatrices = Object.freeze({
+  C4: Object.freeze({
+    caseIDs: Object.freeze(["known"]),
+    cases: Object.freeze({ known: Object.freeze({
+      caseID: "known", count: 1, expected: Object.freeze(["TestKnown"]),
+      packagePath: "github.com/nelsonwerd/countershape/internal/known", profile: "general",
+      qualification: true, run: "^TestKnown$",
+    }) }),
+    digest: "digest-c4",
+  }),
+  C5: Object.freeze({
+    caseIDs: Object.freeze(["contract-http-readiness-50", "contract-http-teardown-20"]),
+    cases: Object.freeze({
+      "contract-http-readiness-50": Object.freeze({
+        caseID: "contract-http-readiness-50", count: 50, expected: Object.freeze(["TestHTTPChildReportedReadinessBindsExactService"]),
+        packagePath: "github.com/nelsonwerd/countershape/testkit/contractexec/http", profile: "sensitive",
+        qualification: true, run: "^TestHTTPChildReportedReadinessBindsExactService$",
+      }),
+      "contract-http-teardown-20": Object.freeze({
+        caseID: "contract-http-teardown-20", count: 20, expected: Object.freeze(["TestHTTPEarlyExitAndTeardownRetainCausalFacts"]),
+        packagePath: "github.com/nelsonwerd/countershape/testkit/contractexec/http", profile: "sensitive",
+        qualification: true, run: "^TestHTTPEarlyExitAndTeardownRetainCausalFacts$",
+      }),
+    }),
+    digest: "digest-c5",
+  }),
+});
+export const qualificationCaseIDs = qualificationMatrices.C4.caseIDs;
+export const qualificationCases = qualificationMatrices.C4.cases;
+export function qualificationMatrixDigest(boundary = "C4") {
+  if (boundary === "C4" || boundary === "C5") return qualificationMatrices[boundary].digest;
+  throw new Error("matrix");
+}
+export function qualificationCaseForID(caseID) {
+  if (Object.hasOwn(qualificationMatrices.C4.cases, caseID)) return qualificationMatrices.C4.cases[caseID];
+  if (Object.hasOwn(qualificationMatrices.C5.cases, caseID)) return qualificationMatrices.C5.cases[caseID];
+  throw new Error("case");
+}
+export function parseRunArguments(argv) {
+  if (argv.length === 2 && argv[0] === "--case") { return qualificationCaseForID(argv[1]); }
+  if (argv.length < 10 || argv.length % 2 !== 0 || argv[0] !== "--package" || argv[2] !== "--profile" || argv[4] !== "--count" || argv[6] !== "--run") {
+    throw new Error("arguments");
+  }
+  throw new Error("arguments");
+}
+export function validateExecutionSpecification(specification) {
+  if (typeof specification.caseID === "string") {
+    const canonical = qualificationCaseForID(specification.caseID);
+    if (canonical !== specification) throw new Error("specification");
+    return canonical;
+  }
+  throw new Error("specification");
+}
+export function buildGoTestArguments(specification) {
+  const jobs = specification.profile === "general" ? 2 : 1;
+  return Object.freeze([
+    "test", "-json", "-mod=readonly", "-buildvcs=false", \`-p=\${jobs}\`, "-parallel=2",
+    \`-count=\${specification.count}\`, "-timeout=20m", "-run", specification.run, specification.packagePath,
+  ]);
+}
+export function assertGoTestJSON(stdout, specification) {
+  void stdout;
+  return Object.freeze({ events: 2, repetitions: specification.count });
+}
+function authorityRoster(admitted) {
+  void admitted;
+  return Object.freeze({ digest: "0000000000000000000000000000000000000000000000000000000000000000" });
+}
+function authorityText(authorities) { void authorities; return "authorities\\n"; }
+function encoded(events) { return JSON.stringify(events) + "\\n"; }
+function cleanEvents(specification) {
+  return Object.freeze([
+    Object.freeze({ Action: "start", Package: specification.packagePath }),
+    Object.freeze({ Action: "pass", Package: specification.packagePath }),
+  ]);
+}
+export async function runRepetition(specification, dependencies = {}) {
+  const executionSpecification = validateExecutionSpecification(specification);
+  const acquire = dependencies.acquireVerificationLock ?? acquireVerificationLock;
+  const executeChild = dependencies.childResult ?? childResult;
+  const admit = dependencies.admitTools ?? admitTools;
+  const createRoots = dependencies.createPrivateRoots ?? createPrivateRoots;
+  const makeEnvironment = dependencies.buildChildEnvironment ?? buildChildEnvironment;
+  const finalize = dependencies.finalizeVerificationResources ?? finalizeVerificationResources;
+  const remove = dependencies.remove ?? cleanupVerificationResources;
+  const write = dependencies.write ?? ((value) => process.stdout.write(value));
+  const lock = await acquire();
+  let roots;
+  let finalized = false;
+  let failure;
+  try {
+    const admitted = await admit();
+    roots = await createRoots(repositoryRoot, admitted);
+    const childEnvironment = makeEnvironment(admitted, roots);
+    const authorities = authorityRoster(admitted);
+    write(authorityText(authorities));
+    const step = Object.freeze({ id: "go-test-repetition", tool: "go", tools: Object.freeze(["go", "node", "git", "sh", "cc", "cxx"]) });
+    const args = buildGoTestArguments(executionSpecification);
+    const result = await executeChild(step, admitted, childEnvironment, { args });
+    if (result.error || result.signal || result.status !== 0 || result.stderr !== "") {
+      const detail = "child failure";
+      fail("GO_REPETITION_CHILD", detail);
+    }
+    const summary = assertGoTestJSON(result.stdout, executionSpecification);
+    await finalize(lock, roots.runRoot);
+    finalized = true;
+    write(
+      \`Go repetition verification passed: case=\${executionSpecification.caseID ?? "AD_HOC"} qualification=\${executionSpecification.caseID !== null} \` +
+      \`package=\${executionSpecification.packagePath} profile=\${executionSpecification.profile} count=\${summary.repetitions} \` +
+      \`tests=\${executionSpecification.expected.join(",")} events=\${summary.events} authorities_sha256:\${authorities.digest}\\n\`,
+    );
+  } catch (error) {
+    failure = error;
+  } finally {
+    if (!finalized) { await remove(lock, roots); }
+  }
+  if (failure) throw failure;
+}
+async function dormantQualificationSelfTest(caseID) {
+  const parsed = parseRunArguments(["--case", caseID]);
+  const canonical = validateExecutionSpecification(parsed);
+  const args = buildGoTestArguments(canonical);
+  if (!Object.isFrozen(args)) throw new Error("dormant argv");
+  await runRepetition(canonical, {
+    platform: "darwin",
+    arch: "arm64",
+    async acquireVerificationLock() { return Object.freeze({ async release() {} }); },
+    async admitTools() {
+      return Object.freeze({
+        go: Object.freeze({ path: "/authority/go", sha256: "1000000000000000000000000000000000000000000000000000000000000000" }),
+        node: Object.freeze({ path: "/authority/node", sha256: "2000000000000000000000000000000000000000000000000000000000000000" }),
+        git: Object.freeze({ path: "/authority/git", sha256: "3000000000000000000000000000000000000000000000000000000000000000" }),
+        sh: Object.freeze({ path: "/authority/sh", sha256: "4000000000000000000000000000000000000000000000000000000000000000" }),
+        cc: Object.freeze({ path: "/authority/cc", sha256: "5000000000000000000000000000000000000000000000000000000000000000" }),
+        cxx: Object.freeze({ path: "/authority/cxx", sha256: "6000000000000000000000000000000000000000000000000000000000000000" }),
+      });
+    },
+    async createPrivateRoots() { return Object.freeze({ runRoot: "/private/dormant" }); },
+    buildChildEnvironment() { return Object.freeze({}); },
+    async childResult() {
+      return Object.freeze({ status: 0, signal: null, error: null, stdout: encoded(cleanEvents(canonical)), stderr: "" });
+    },
+    async finalizeVerificationResources(lock) { await lock.release(); },
+    async remove() {},
+    write() {},
+  });
+}
+async function selfTest() {
+  await dormantQualificationSelfTest("contract-http-readiness-50");
+  await dormantQualificationSelfTest("contract-http-teardown-20");
+}
+async function main() {
+  if (process.argv.length === 3 && process.argv[2] === "--self-test") { await selfTest(); return; }
+  await runRepetition(parseRunArguments(process.argv.slice(2)));
+}
+if (process.argv[1] !== undefined && pathToFileURL(process.argv[1]).href === import.meta.url) {
+  await main();
+}
+`,
+		[qualificationRuntimePath]: `
+import { spawnSync } from "node:child_process";
+import { rm } from "node:fs/promises";
+export const repositoryRoot = "/repository";
+export async function acquireVerificationLock() { return null; }
+export async function admitTools() { return null; }
+export function buildChildEnvironment() { return null; }
+export function childResult() { void spawnSync; return null; }
+export async function cleanupVerificationResources() { void rm; }
+export async function createPrivateRoots() { return null; }
+export async function finalizeVerificationResources() {}
+`,
+		[qualificationVerifierPath]: `
+import { createHash } from "node:crypto";
+import { pathToFileURL } from "node:url";
+import { ${runtimeBindings} } from "./verify-runtime-authority.mjs";
+export function verifierClosureControl() {
+  void createHash; void acquireVerificationLock; void admitTools; void buildChildEnvironment;
+  void childResult; void cleanupVerificationResources; void createPrivateRoots; void finalizeVerificationResources; void repositoryRoot;
+}
+async function main() { verifierClosureControl(); }
+if (process.argv[1] !== undefined && pathToFileURL(process.argv[1]).href === import.meta.url) {
+  await main();
+}
+`,
+	});
+	const baselineErrors = validateQualificationModuleClosure(baseline);
+	if (baselineErrors.length > 0) throw new Error(`qualification module closure positive control: ${baselineErrors.join(", ")}`);
+	const projected = qualificationStaticAuthority(baseline);
+	const projectedKnown = projected.qualificationMatrices.C4.cases.known;
+	if (projected.parseRunArguments(["--case", "known"]) !== projectedKnown ||
+		projected.validateExecutionSpecification(projectedKnown) !== projectedKnown ||
+		!Object.isFrozen(projected.buildGoTestArguments(projectedKnown))) {
+		throw new Error("qualification checker-owned static projection positive control failed");
+	}
+	let copiedProjectionAccepted = false;
+	try { projected.validateExecutionSpecification({ ...projectedKnown }); copiedProjectionAccepted = true; } catch {}
+	if (copiedProjectionAccepted) throw new Error("qualification checker-owned static projection accepted a copied specification");
+	let rejected = 0;
+	const refuse = (name, mutate, expected) => {
+		const sources = { ...baseline };
+		mutate(sources);
+		const errors = validateQualificationModuleClosure(sources);
+		if (!errors.some((error) => error.includes(expected))) {
+			throw new Error(`qualification module closure hostile accepted: ${name}; errors=${errors.join(", ")}`);
+		}
+		rejected += 1;
+	};
+	refuse("helper relative edge", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace("./verify-runtime-authority.mjs", "./verify-current.mjs");
+	}, "exact relative import closure mismatch");
+	refuse("runtime relative edge", (sources) => {
+		sources[qualificationRuntimePath] += "\nimport \"./verify-current.mjs\";\n";
+	}, "relative import closure must be empty");
+	refuse("verifier missing runtime edge", (sources) => {
+		sources[qualificationVerifierPath] = sources[qualificationVerifierPath].replace(/import \{[\s\S]*?\} from "\.\/verify-runtime-authority\.mjs";\n/u, "");
+	}, "exact relative import closure mismatch");
+	refuse("dynamic import", (sources) => {
+		sources[qualificationHelperPath] += "\nconst dynamicAuthority = import(\"./verify-runtime-authority.mjs\");\n";
+	}, "dynamic import is forbidden");
+	refuse("aliased runtime import", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace(
+			"acquireVerificationLock, admitTools", "acquireVerificationLock as acquireLock, admitTools",
+		);
+	}, "aliased, or side-effect import is forbidden");
+	refuse("side-effect builtin import", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace(
+			'import { pathToFileURL } from "node:url";', 'import "node:url";\nimport { pathToFileURL } from "node:url";',
+		);
+	}, "side-effect or zero-binding import is forbidden");
+	refuse("direct guard binding provenance", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace(
+			'import { pathToFileURL } from "node:url";', 'import { fileURLToPath } from "node:url";',
+		);
+	}, "exact node:url binding mismatch");
+	refuse("Object binding shadow", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace(
+			'import { pathToFileURL } from "node:url";', 'import { pathToFileURL } from "node:url";\nconst Object = globalThis.Object;',
+		);
+	}, "protected binding Object count mismatch");
+	refuse("process binding shadow", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace(
+			'import { pathToFileURL } from "node:url";', 'import { pathToFileURL } from "node:url";\nconst process = globalThis.process;',
+		);
+	}, "protected binding process count mismatch");
+	refuse("case lookup bypass", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace(
+			"return qualificationCaseForID(argv[1]);", "return qualificationCases[argv[1]];",
+		);
+	}, "exact --case branch mismatch");
+	refuse("case selector result ignored", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace(
+			"return qualificationCaseForID(argv[1]);", "qualificationCaseForID(argv[1]); return qualificationCases.known;",
+		);
+	}, "exact --case branch mismatch");
+	refuse("case selector cardinality drift", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace("argv.length === 2", "argv.length === 3");
+	}, "exact --case branch mismatch");
+	refuse("case selector flag drift", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace('argv[0] === "--case"', 'argv[0] === "--matrix"');
+	}, "exact --case branch mismatch");
+	refuse("case selector C4 branch drift", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace(
+			"if (Object.hasOwn(qualificationMatrices.C4.cases, caseID)) return qualificationMatrices.C4.cases[caseID];",
+			"if (Object.hasOwn(qualificationMatrices.C5.cases, caseID)) return qualificationMatrices.C5.cases[caseID];",
+		);
+	}, "C4 exact identity branch mismatch");
+	refuse("legacy alias clone", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace(
+			"export const qualificationCaseIDs = qualificationMatrices.C4.caseIDs;",
+			"export const qualificationCaseIDs = Object.freeze([...qualificationMatrices.C4.caseIDs]);",
+		);
+	}, "exact const identity alias");
+	refuse("digest selector drift", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace(
+			"return qualificationMatrices[boundary].digest;", "return qualificationMatrices.C4.digest;",
+		);
+	}, "qualificationMatrixDigest exact C4/C5 selector mismatch");
+	refuse("parser preamble cardinality drift", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace("argv.length < 10", "argv.length < 9");
+	}, "exact fail-closed ad-hoc preamble mismatch");
+	refuse("parser preamble refusal removed", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace(
+			'    throw new Error("arguments");', "    void argv;",
+		);
+	}, "exact fail-closed ad-hoc preamble mismatch");
+	refuse("selector refusal invokes authority", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace(
+			'throw new Error("case");', 'throw new Error(acquireVerificationLock());',
+		);
+	}, "qualificationCaseForID exact terminal refusal mismatch");
+	refuse("parser selector local shadow", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace(
+			"export function parseRunArguments(argv) {",
+			"export function parseRunArguments(argv) {\n  function qualificationCaseForID() { throw new Error(\"shadow\"); }",
+		);
+	}, "local shadow is forbidden: qualificationCaseForID");
+	refuse("validator early return", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace(
+			"export function validateExecutionSpecification(specification) {",
+			"export function validateExecutionSpecification(specification) {\n  return specification;",
+		);
+	}, "named execution specification must canonicalize");
+	refuse("validator identity refusal removed", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace(
+			'    if (canonical !== specification) throw new Error("specification");', "    void canonical;",
+		);
+	}, "named execution specification must canonicalize");
+	refuse("builder job policy drift", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace(
+			'profile === "general" ? 2 : 1', 'profile === "general" ? 1 : 2',
+		);
+	}, "buildGoTestArguments exact frozen Go argv mismatch");
+	refuse("builder timeout drift", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace('"-timeout=20m"', '"-timeout=19m"');
+	}, "buildGoTestArguments exact frozen Go argv mismatch");
+	refuse("runner raw build authority", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace(
+			"buildGoTestArguments(executionSpecification)", "buildGoTestArguments(specification)",
+		);
+	}, "exact validated child-result success spine mismatch");
+	refuse("runner child argv substitution", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace(
+			"const result = await executeChild(step, admitted, childEnvironment, { args });",
+			"const result = await executeChild(step, admitted, childEnvironment, { args: Object.freeze([]) });",
+		);
+	}, "exact validated child-result success spine mismatch");
+	refuse("runner validator local shadow", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace(
+			"export async function runRepetition(specification, dependencies = {}) {",
+			"export async function runRepetition(specification, dependencies = {}) {\n  function validateExecutionSpecification(value) { return value; }",
+		);
+	}, "local shadow is forbidden: validateExecutionSpecification");
+	refuse("runner child await removed", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace(
+			"const result = await executeChild(step, admitted, childEnvironment, { args });",
+			"const result = executeChild(step, admitted, childEnvironment, { args });",
+		);
+	}, "exact validated child-result success spine mismatch");
+	refuse("runner child signal refusal removed", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace("result.error || result.signal ||", "result.error ||");
+	}, "exact validated child-result success spine mismatch");
+	refuse("runner Go JSON summary fabricated", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace(
+			"const summary = assertGoTestJSON(result.stdout, executionSpecification);",
+			"const summary = Object.freeze({ repetitions: executionSpecification.count, events: 2 });",
+		);
+	}, "exact validated child-result success spine mismatch");
+	refuse("runner terminal authority fabricated", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace(
+			/authorities_sha256:\$\{authorities\.digest\}/u,
+			"authorities_sha256:0000000000000000000000000000000000000000000000000000000000000000",
+		);
+	}, "success terminal missing validated provenance authorities.digest");
+	refuse("runner raw specification reused after validation", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace(
+			"const acquire = dependencies.acquireVerificationLock", "void specification;\n  const acquire = dependencies.acquireVerificationLock",
+		);
+	}, "raw specification or direct return bypass");
+	refuse("module local resolve wrapper", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace(
+			'import { pathToFileURL } from "node:url";',
+			'import { pathToFileURL } from "node:url";\nfunction resolve() { return acquireVerificationLock(); }\nconst resolvedAtLoad = resolve();',
+		);
+	}, "top-level initializer is not recursively inert: resolvedAtLoad");
+	refuse("module getter enumeration", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace(
+			'import { pathToFileURL } from "node:url";',
+			'import { pathToFileURL } from "node:url";\nconst getterControl = { get value() { return 1; } };\nconst getterRead = Object.values(getterControl);',
+		);
+	}, "effectful module-evaluation call is forbidden: Object.values");
+	refuse("dormant C5 identity omitted", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace(
+			'  await dormantQualificationSelfTest("contract-http-teardown-20");',
+			'  void "contract-http-teardown-20";',
+		);
+	}, "selfTest must directly await both dormant C5-only identities exactly once");
+	refuse("dormant parser bypass", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace(
+			'const parsed = parseRunArguments(["--case", caseID]);', "const parsed = qualificationCaseForID(caseID);",
+		);
+	}, "dormant C5 self-test exact no-authority execution route mismatch");
+	refuse("dormant imported authority call", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace(
+			"  await runRepetition(canonical, {", "  await admitTools();\n  await runRepetition(canonical, {",
+		);
+	}, "dormant C5 self-test exact no-authority execution route mismatch");
+	refuse("main parser bypass", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace(
+			"await runRepetition(parseRunArguments(process.argv.slice(2)));",
+			"void parseRunArguments; await runRepetition(qualificationCases.known);",
+		);
+	}, "exact parse-to-run route mismatch");
+	refuse("main argv slice drift", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace("process.argv.slice(2)", "process.argv.slice(3)");
+	}, "exact parse-to-run route mismatch");
+	refuse("direct await removal", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace("await main();", "main();");
+	}, "exact awaited direct-entry guard mismatch");
+	refuse("main self-test route drift", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace("process.argv.length === 3", "process.argv.length === 2");
+	}, "main() exact parse-to-run route mismatch");
+	refuse("direct guard is not terminal", (sources) => {
+		sources[qualificationHelperPath] += "\nconst lateDeclaration = 1;\n";
+	}, "exact awaited direct-entry guard mismatch");
+	refuse("helper process exit at module evaluation", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace(
+			"if (process.argv[1] !== undefined", "process.exit(0);\nif (process.argv[1] !== undefined",
+		);
+	}, "effectful module-evaluation call is forbidden");
+	refuse("authority wrapper callback", (sources) => {
+		sources[qualificationHelperPath] = sources[qualificationHelperPath].replace(
+			"if (process.argv[1] !== undefined", "const deferred = queueMicrotask(main);\nif (process.argv[1] !== undefined",
+		);
+	}, "local authority wrapper is forwarded");
+	refuse("helper import-time authority", (sources) => {
+		sources[qualificationHelperPath] += "\nacquireVerificationLock();\n";
+	}, "referenced by module-evaluation code");
+	refuse("runtime import-time authority", (sources) => {
+		sources[qualificationRuntimePath] += "\nrm(\"/tmp/qualification-hostile\");\n";
+	}, "referenced by module-evaluation code");
+	refuse("runtime static initialization", (sources) => {
+		sources[qualificationRuntimePath] += "\nclass RuntimeEffect { static { rm(\"/tmp/qualification-static\"); } }\n";
+	}, "class static block is forbidden");
+	refuse("verifier direct guard drift", (sources) => {
+		sources[qualificationVerifierPath] = sources[qualificationVerifierPath].replace("await main();", "main();");
+	}, "exact awaited direct-entry guard mismatch");
+	if (rejected !== 48) throw new Error(`qualification module closure hostile cardinality drift: ${rejected}`);
+	return rejected;
+}
+
+async function runFutureQualificationAuthoritySelfTest() {
+	const livePhaseIndex = p07bCReceiptPhaseRows.findIndex(({ boundary }) => boundary === p07bCActiveReceiptPhaseBoundary);
+	const c4PhaseIndex = p07bCReceiptPhaseRows.findIndex(({ boundary }) => boundary === "C4");
+	const requiresC4Qualification = livePhaseIndex >= c4PhaseIndex;
+	const liveAuthority = await loadQualificationAuthority(repositoryRoot, new Map(), requiresC4Qualification);
+	const expectedC4 = projectedC4QualificationCases(liveAuthority);
+	const expectedC5 = projectedC5QualificationCases(liveAuthority);
+	const baseline = syntheticFutureQualificationAuthority(liveAuthority);
+	const baselineErrors = validateFutureQualificationAuthority(baseline, expectedC4, expectedC5);
+	if (baselineErrors.length > 0) throw new Error(`future qualification authority positive control: ${baselineErrors.join(", ")}`);
+	let rejected = 0;
+	const refuse = (name, options, expected) => {
+		const errors = validateFutureQualificationAuthority(
+			syntheticFutureQualificationAuthority(liveAuthority, options), expectedC4, expectedC5,
+		);
+		if (!errors.some((error) => error.includes(expected))) {
+			throw new Error(`future qualification authority hostile accepted: ${name}; errors=${errors.join(", ")}`);
+		}
+		rejected += 1;
+	};
+	refuse("missing matrices", { mutateAuthority(authority) { delete authority.qualificationMatrices; } }, "exports are missing");
+	refuse("extra record key", { mutateData(data) { data.C4.extra = true; } }, "exact data-property roster");
+	refuse("mutable nested expected", {
+		leaveExpectedMutable: `C4:${requiredC4QualificationCaseIDs[0]}`,
+	}, "expected roster value/freeze mismatch");
+	refuse("C4 ID order", { mutateData(data) { data.C4.caseIDs.reverse(); } }, "case ID roster value/freeze mismatch");
+	refuse("C5 case order", { mutateData(data) {
+		const entries = Object.entries(data.C5.cases);
+		[entries[0], entries[1]] = [entries[1], entries[0]];
+		data.C5.cases = Object.fromEntries(entries);
+	} }, "qualification cases mismatch");
+	refuse("C4 case drift with pinned digest", { mutateData(data) {
+		data.C4.cases[requiredC4QualificationCaseIDs[0]].count -= 1;
+		data.C4.digest = createHash("sha256").update(JSON.stringify(data.C4.cases)).digest("hex");
+	} }, "qualification cases mismatch");
+	refuse("C5 digest drift", { mutateData(data) { data.C5.digest = "0".repeat(64); } }, "matrix digest mismatch");
+	refuse("legacy alias clone", { aliasClone: true }, "legacy aliases are not identity-bound");
+	refuse("missing case selector", { mutateAuthority(authority) {
+		delete authority.qualificationCaseForID;
+	} }, "case selector is missing");
+	refuse("case selector clone", { selectorCloneCaseID: requiredC4QualificationCaseIDs[0] }, "not stable identity authority");
+	refuse("unknown case selector", { acceptUnknownSelector: true }, "accepted hostile ID");
+	refuse("digest C5 misroute", { mutateAuthority(authority, matrices) {
+		authority.qualificationMatrixDigest = (boundary = "C4") => boundary === "C5" ? matrices.C4.digest : matrices.C4.digest;
+	} }, "digest C5 selector mismatch");
+	refuse("missing parser", { mutateAuthority(authority) {
+		delete authority.parseRunArguments;
+	} }, "parseRunArguments is missing");
+	refuse("missing validator", { mutateAuthority(authority) {
+		delete authority.validateExecutionSpecification;
+	} }, "validateExecutionSpecification is missing");
+	refuse("missing builder", { mutateAuthority(authority) {
+		delete authority.buildGoTestArguments;
+	} }, "buildGoTestArguments is missing");
+	refuse("hostile parser acceptance", { acceptHostileArguments: true }, "parser accepted hostile argv");
+	refuse("copied specification acceptance", { acceptCopiedSpecification: true }, "validator accepted copied specification");
+	refuse("builder job reversal", { reverseBuildJobs: true }, "qualification argv");
+	const liveErrors = validateFutureQualificationAuthority(liveAuthority, expectedC4, expectedC5);
+	if (!requiresC4Qualification && liveErrors.length === 0) {
+		throw new Error("current legacy qualification authority unexpectedly satisfies future C4 contract");
+	}
+	if (requiresC4Qualification && liveErrors.length > 0) {
+		throw new Error(`current C4/C5 qualification authority fails its live contract: ${liveErrors.join(", ")}`);
+	}
+	if (rejected !== 18) throw new Error(`future qualification authority hostile cardinality drift: ${rejected}`);
+	const total = rejected + runQualificationModuleClosureSelfTest() + runQualificationReceiptOutputSelfTest() + 2;
+	if (total !== 82) throw new Error(`future qualification authority self-test total drift: ${total}`);
+	return total;
+}
 const documentedQualificationCaseSnippets = Object.freeze([
 	"world-output-caps-50",
 	"world-output-independence-20",
@@ -928,7 +3713,7 @@ const requiredC1EvidenceMaintenanceText = Object.freeze({
 			"later independently sealed, delimited handoff/receipt descendant",
 	],
 		"spec/verification/p07b-c-unit-paths.json": [
-			"countershape/p07b-c-unit-paths/v16",
+			"countershape/p07b-c-unit-paths/v17",
 		"\"C1E\"",
 	],
 		"tools/check-p07b-c-plan.mjs": [
@@ -2479,6 +5264,208 @@ const c3dFinalRunDirectories = Object.freeze([
 	...["home", "tmp", "gotmp", "gocache", "gopath", "gomodcache"]
 		.map((name) => resolve(c3dFinalRunRoot, name)),
 ]);
+const c4vQualificationClaimLabels = Object.freeze(requiredQualificationCaseIDs.map((caseID) =>
+	`P07B-C C4V qualification ${caseID}`));
+const c4vA2StabilityClaimLabels = Object.freeze(Array.from({ length: 3 }, (_, index) =>
+	`P07B-C C4V A2 architecture stability pass ${index + 1}`));
+const c4vCumulativeClaimLabels = Object.freeze(Array.from({ length: 3 }, (_, index) =>
+	`P07B-C C4V cumulative verification pass ${index + 1}`));
+const c4vClaimLabels = Object.freeze([
+	"P07B-C C4V execution-contract phase plan coherence",
+	"P07B-C C4V independent candidate transition authority",
+	"P07B-C C4V execution-contract defensive self-test",
+	"P07B-C C4V sealed-C3D Git-note and ancestry compatibility",
+	"P07B-C C4V unit-scope defensive self-test",
+	"P07B-C C4V cumulative verifier self-test",
+	"P07B-C C4V focused repetition helper self-test",
+	...c4vQualificationClaimLabels,
+	...c4vA2StabilityClaimLabels,
+	...c4vCumulativeClaimLabels,
+	"P07B-C C4V exact eleven-path staged scope and diff integrity",
+	"P07B-C C4V scoped staged credential-pattern scan",
+	"P07B-C C4V sealed-C3D predecessor and preceding didrun chain integrity",
+]);
+const c4vClaimTypes = Object.freeze([...Array(65).fill("tests-pass"), ...Array(3).fill("command-succeeded")]);
+const c4vFinalRunRoot = resolve(repositoryRoot, ".countershape/p07bc-c4v-final");
+const c4vHermeticArgvPrefix = Object.freeze(c3dHermeticArgvPrefix.map((argument) =>
+	argument.replaceAll(c3dFinalRunRoot, c4vFinalRunRoot)));
+const c4vHermeticArgv = (...tail) => Object.freeze([...c4vHermeticArgvPrefix, ...tail]);
+const c4vFinalCommandTails = Object.freeze([
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--check-candidate-phase", "C4V"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--candidate-phase", "C4V"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--self-test"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--verify-c4v-sealed-c3d-note"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--self-test"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current-selftest.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-go-test-repetition.mjs", "--self-test"]),
+	...requiredQualificationCaseIDs.map((caseID) => Object.freeze([
+		"/opt/homebrew/bin/node", "tools/verify-go-test-repetition.mjs", "--case", caseID,
+	])),
+	...Array.from({ length: 3 }, () => Object.freeze([
+		"/opt/homebrew/bin/node", "tools/check-p07b-a2-architecture-selftest.mjs",
+	])),
+	...Array.from({ length: 3 }, () => Object.freeze([
+		"/opt/homebrew/bin/node", "tools/verify-current.mjs",
+	])),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C4V", "--source-final-gate"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C4V", "--credential-scan"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--verify-c4v-preseal-ledger"]),
+]);
+const c4vExpectedClaimArgv = Object.freeze(c4vFinalCommandTails.map((tail) => c4vHermeticArgv(...tail)));
+const c4vFinalCommandOrderMarkdown = c4vFinalCommandTails
+	.map((tail, index) => `${index + 1}. \`${tail.join(" ")}\``).join("\n");
+const c4vFinalRunDirectories = Object.freeze([
+	c4vFinalRunRoot,
+	...["home", "tmp", "gotmp", "gocache", "gopath", "gomodcache"].map((name) => resolve(c4vFinalRunRoot, name)),
+]);
+const c4QualificationClaimLabels = Object.freeze(requiredC4QualificationCaseIDs.map(
+	(caseID) => `P07B-C C4 isolated qualification case ${caseID}`,
+));
+const c4QualificationCommandTails = Object.freeze(requiredC4QualificationCaseIDs.map(
+	(caseID) => Object.freeze(["/opt/homebrew/bin/node", "tools/verify-go-test-repetition.mjs", "--case", caseID]),
+));
+const c4ClaimLabels = Object.freeze([
+	"P07B-C C4 candidate phase plan coherence",
+	"P07B-C C4 independent candidate transition authority",
+	"P07B-C C4 Darwin process-mechanics extraction and world-parity profile",
+	"P07B-C C4 fresh admission StartClaim and single-use RunPermit profile",
+	"P07B-C C4 CLI capture and standalone-scope closure profile",
+	"P07B-C C4 finalized-run durability and interlock-release profile",
+	"P07B-C C4 classifier publication and classification-only recovery profile",
+	"P07B-C C4 exact authority race and boundary-fault profile",
+	"P07B-C C4 cumulative architecture boundary",
+	"P07B-C C4 architecture defensive self-test",
+	"P07B-C C4 predecessor U6 compatibility",
+	"P07B-C C4 predecessor U6 defensive self-test",
+	"P07B-C C4 predecessor B compatibility",
+	"P07B-C C4 predecessor B defensive self-test",
+	"P07B-C C4 inherited U2 mutation-driver compatibility self-test",
+	"P07B-C C4 inherited U3 mutation-driver compatibility self-test",
+	"P07B-C C4 repetition-profile relocation defensive self-test",
+	...c4QualificationClaimLabels,
+	"P07B-C C4 sealed-C4V Git-note and C3D ancestry compatibility",
+	"P07B-C C4 unit-scope defensive self-test",
+	"P07B-C C4 cumulative verifier self-test",
+	"P07B-C C4 cumulative verification pass one",
+	"P07B-C C4 cumulative verification pass two",
+	"P07B-C C4 cumulative verification pass three",
+	"P07B-C C4 exact admitted staged scope and diff integrity",
+	"P07B-C C4 scoped staged credential-pattern scan",
+	"P07B-C C4 sealed-C4V predecessor C3D ancestry and preceding didrun chain integrity",
+]);
+const c4ClaimTypes = Object.freeze([...Array(77).fill("tests-pass"), ...Array(3).fill("command-succeeded")]);
+const c4FinalRunRoot = resolve(repositoryRoot, ".countershape/p07bc-c4-final");
+const c4HermeticArgvPrefix = Object.freeze(c3dHermeticArgvPrefix.map((argument) =>
+	argument.replaceAll(c3dFinalRunRoot, c4FinalRunRoot)));
+const c4HermeticArgv = (...tail) => Object.freeze([...c4HermeticArgvPrefix, ...tail]);
+const c4FinalCommandTails = Object.freeze([
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--check-candidate-phase", "C4"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--candidate-phase", "C4"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-architecture.mjs", "--run-go-json", "c4-processmechanics-parity"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-architecture.mjs", "--run-go-json", "c4-admission-permit"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-architecture.mjs", "--run-go-json", "c4-cli-closure"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-architecture.mjs", "--run-go-json", "c4-finalized-run-release"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-architecture.mjs", "--run-go-json", "c4-classification-recovery"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-architecture.mjs", "--run-go-json", "c4-authority-race"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-architecture.mjs", "--c4"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-architecture-selftest.mjs", "--c4"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-u6-architecture.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-u6-architecture-selftest.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-b-architecture.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-b-architecture-selftest.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "--test", "tools/test-mutate-u2.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/mutate-u3.mjs", "--self-test"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-go-test-repetition.mjs", "--self-test"]),
+	...c4QualificationCommandTails,
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--verify-c4-sealed-c4v-note"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--self-test"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current-selftest.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C4", "--source-final-gate"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C4", "--credential-scan"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--verify-c4-preseal-ledger"]),
+]);
+const c4ExpectedClaimArgv = Object.freeze(c4FinalCommandTails.map((tail) => c4HermeticArgv(...tail)));
+const c4QualificationEventOffset = c4ClaimLabels.indexOf(c4QualificationClaimLabels[0]);
+const c4FinalCommandOrderMarkdown = c4FinalCommandTails
+	.map((tail, index) => `${index + 1}. \`${tail.join(" ")}\``).join("\n");
+const c4FinalRunDirectories = Object.freeze([
+	c4FinalRunRoot,
+	...["home", "tmp", "gotmp", "gocache", "gopath", "gomodcache"].map((name) => resolve(c4FinalRunRoot, name)),
+]);
+const c5QualificationClaimLabels = Object.freeze(requiredC5QualificationCaseIDs.map(
+	(caseID) => `P07B-C C5 isolated qualification case ${caseID}`,
+));
+const c5QualificationCommandTails = Object.freeze(requiredC5QualificationCaseIDs.map(
+	(caseID) => Object.freeze(["/opt/homebrew/bin/node", "tools/verify-go-test-repetition.mjs", "--case", caseID]),
+));
+const c5ClaimLabels = Object.freeze([
+	"P07B-C C5 candidate phase plan coherence",
+	"P07B-C C5 independent candidate transition authority",
+	"P07B-C C5 locked raw-HTTP behavior profile",
+	"P07B-C C5 child-reported readiness binding and teardown profile",
+	"P07B-C C5 five-domain scope closure and forbidden-positive profile",
+	"P07B-C C5 cross-target CLI HTTP and Go Node parity profile",
+	"P07B-C C5 exact HTTP authority race and boundary-fault profile",
+	"P07B-C C5 cumulative architecture boundary",
+	"P07B-C C5 architecture defensive self-test",
+	"P07B-C C5 predecessor U6 compatibility",
+	"P07B-C C5 predecessor U6 defensive self-test",
+	"P07B-C C5 predecessor B compatibility",
+	"P07B-C C5 predecessor B defensive self-test",
+	"P07B-C C5 repetition-profile defensive self-test",
+	...c5QualificationClaimLabels,
+	"P07B-C C5 sealed-C4 Git-note and C4V C3D ancestry compatibility",
+	"P07B-C C5 unit-scope defensive self-test",
+	"P07B-C C5 cumulative verifier self-test",
+	"P07B-C C5 cumulative verification pass one",
+	"P07B-C C5 cumulative verification pass two",
+	"P07B-C C5 cumulative verification pass three",
+	"P07B-C C5 exact admitted staged scope and diff integrity",
+	"P07B-C C5 scoped staged credential-pattern scan",
+	"P07B-C C5 sealed-C4 predecessor C4V C3D ancestry and preceding didrun chain integrity",
+]);
+const c5ClaimTypes = Object.freeze([...Array(76).fill("tests-pass"), ...Array(3).fill("command-succeeded")]);
+const c5FinalRunRoot = resolve(repositoryRoot, ".countershape/p07bc-c5-final");
+const c5HermeticArgvPrefix = Object.freeze(c3dHermeticArgvPrefix.map((argument) =>
+	argument.replaceAll(c3dFinalRunRoot, c5FinalRunRoot)));
+const c5HermeticArgv = (...tail) => Object.freeze([...c5HermeticArgvPrefix, ...tail]);
+const c5FinalCommandTails = Object.freeze([
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--check-candidate-phase", "C5"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--candidate-phase", "C5"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-architecture.mjs", "--run-go-json", "c5-http-behavior"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-architecture.mjs", "--run-go-json", "c5-readiness-teardown"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-architecture.mjs", "--run-go-json", "c5-scope-closure"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-architecture.mjs", "--run-go-json", "c5-cross-profile-parity"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-architecture.mjs", "--run-go-json", "c5-http-authority-race"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-architecture.mjs", "--c5"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-architecture-selftest.mjs", "--c5"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-u6-architecture.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-u6-architecture-selftest.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-b-architecture.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-b-architecture-selftest.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-go-test-repetition.mjs", "--self-test"]),
+	...c5QualificationCommandTails,
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--verify-c5-sealed-c4-note"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--self-test"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current-selftest.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C5", "--source-final-gate"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C5", "--credential-scan"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--verify-c5-preseal-ledger"]),
+]);
+const c5ExpectedClaimArgv = Object.freeze(c5FinalCommandTails.map((tail) => c5HermeticArgv(...tail)));
+const c5QualificationEventOffset = c5ClaimLabels.indexOf(c5QualificationClaimLabels[0]);
+const c5FinalCommandOrderMarkdown = c5FinalCommandTails
+	.map((tail, index) => `${index + 1}. \`${tail.join(" ")}\``).join("\n");
+const c5FinalRunDirectories = Object.freeze([
+	c5FinalRunRoot,
+	...["home", "tmp", "gotmp", "gocache", "gopath", "gomodcache"].map((name) => resolve(c5FinalRunRoot, name)),
+]);
 const c6aClaimLabels = Object.freeze([
 	"P07B-C C6A candidate phase plan coherence",
 	"P07B-C C6A independent candidate transition authority",
@@ -2700,6 +5687,87 @@ function validateSealedC3SNote(note, identity = sealedC3SIdentity) {
 
 function validateSealedC3BNote(note, identity = sealedC3BIdentity) {
 	return validateSealedNote(note, identity, c3bClaimLabels, c3bClaimTypes, c3bExpectedClaimArgv, c3bHermeticArgvPrefix);
+}
+
+function validateSealedC3DNote(note, identity = sealedC3DIdentity) {
+	return validateSealedNote(note, identity, c3dClaimLabels, c3dClaimTypes, c3dExpectedClaimArgv, c3dHermeticArgvPrefix);
+}
+
+const futureNotePreviewRedaction = "«redacted:high-entropy»";
+const futureNoteDoubleRedactionPositions = new Set([2, 4, 5, 6, 7, 8]);
+const futureNoteBareRedactionPositions = new Set([31, 32, 33, 35, 36]);
+
+function futureNoteExpectedRedactionProjection(position) {
+	if (futureNoteDoubleRedactionPositions.has(position)) {
+		return `${futureNotePreviewRedaction}.${futureNotePreviewRedaction}`;
+	}
+	if (futureNoteBareRedactionPositions.has(position)) return futureNotePreviewRedaction;
+	return undefined;
+}
+
+function validateFutureClaimPreview(index, argv, expectedArgv, hermeticPrefix) {
+	const expected = expectedArgv[index];
+	if (!expected || !Array.isArray(argv) || argv.length !== expected.length ||
+		!isDeepStrictEqual(expected.slice(0, hermeticPrefix.length), [...hermeticPrefix]) ||
+		argv.some((argument) => typeof argument !== "string" || argument.length === 0 ||
+			argument.length > 4096 || /[\u0000-\u001f\u007f]/u.test(argument))) {
+		return false;
+	}
+	for (let position = 0; position < hermeticPrefix.length; position += 1) {
+		if (argv[position] === expected[position]) continue;
+		if (argv[position] !== futureNoteExpectedRedactionProjection(position)) return false;
+	}
+	return isDeepStrictEqual(argv.slice(hermeticPrefix.length), expected.slice(hermeticPrefix.length));
+}
+
+function validateFutureSealedNote(note, identity, claimLabels, claimTypes, expectedArgv, hermeticPrefix, label) {
+	const errors = [];
+	const rootKeys = ["claims", "commit", "coverage", "secrets_override", "tree", "version"];
+	if (!note || typeof note !== "object" || Array.isArray(note) ||
+		!isDeepStrictEqual(Object.keys(note).sort(), rootKeys) || note.version !== 1 ||
+		note.commit !== identity.commit || note.tree !== identity.tree || typeof note.secrets_override !== "boolean" ||
+		!Array.isArray(note.claims) || note.claims.length !== claimLabels.length ||
+		expectedArgv.length !== claimLabels.length || hermeticPrefix.length === 0) {
+		return [`${label}: didrun note root, identity, or claim roster`];
+	}
+	for (let index = 0; index < claimLabels.length; index += 1) {
+		const recorded = note.claims[index];
+		const claim = recorded?.claim;
+		if (!recorded || typeof recorded !== "object" || Array.isArray(recorded) ||
+			!isDeepStrictEqual(Object.keys(recorded).sort(), ["claim", "delta", "exit_code", "grade", "reason", "supporting_event_index"]) ||
+			!claim || typeof claim !== "object" || Array.isArray(claim) ||
+			!isDeepStrictEqual(Object.keys(claim).sort(), ["argv_preview", "ctype", "declared_at_index", "event_indices", "label", "pathspecs"]) ||
+			claim.label !== claimLabels[index] || claim.ctype !== claimTypes[index] || claim.declared_at_index !== index ||
+			!isDeepStrictEqual(claim.event_indices, [index]) || !isDeepStrictEqual(claim.pathspecs, []) ||
+			!validateFutureClaimPreview(index, claim.argv_preview, expectedArgv, hermeticPrefix) ||
+			recorded.supporting_event_index !== index || recorded.grade !== "tree-exact" || recorded.exit_code !== 0 ||
+			recorded.reason !== "self-stable command ran against the sealed tree" || !isDeepStrictEqual(recorded.delta, [])) {
+			errors.push(`${label}: didrun note claim ${index + 1}`);
+		}
+	}
+	if (!note.coverage || typeof note.coverage !== "object" || Array.isArray(note.coverage) ||
+		!isDeepStrictEqual(Object.keys(note.coverage).sort(), ["by_coverage", "total_events"]) ||
+		note.coverage.total_events !== claimLabels.length || !note.coverage.by_coverage ||
+		typeof note.coverage.by_coverage !== "object" || Array.isArray(note.coverage.by_coverage) ||
+		!isDeepStrictEqual(Object.keys(note.coverage.by_coverage), ["complete"]) ||
+		note.coverage.by_coverage.complete !== claimLabels.length) {
+		errors.push(`${label}: didrun note exact event coverage`);
+	}
+	return errors;
+}
+
+function validateSealedC4VNote(note, identity) {
+	return validateFutureSealedNote(
+		note, identity, c4vClaimLabels, c4vClaimTypes, c4vExpectedClaimArgv, c4vHermeticArgvPrefix,
+		"C4V authority",
+	);
+}
+
+function validateSealedC4Note(note, identity) {
+	return validateFutureSealedNote(
+		note, identity, c4ClaimLabels, c4ClaimTypes, c4ExpectedClaimArgv, c4HermeticArgvPrefix,
+		"C4 authority",
+	);
 }
 
 function runHermeticPresealSelfTest(phase, expectedArgv, prefix) {
@@ -3297,12 +6365,92 @@ const c3dSourceSubject = "fix: derive receipt fixtures from phase table";
 const c3dStatusBoundaryLine = "- **Boundary:** active pre-seal `SOURCE_FULL` checker maintenance after sealed C3B and before C4. Classification: `DEFECT_REPAIR`.";
 const c3dStatusParentLine = `- **Parent:** sealed C3B commit \`${sealedC3BIdentity.commit}\`, tree \`${sealedC3BIdentity.tree}\`, is note-present with note blob \`${sealedC3BIdentity.noteBlob}\`, note-body SHA-256 \`${sealedC3BIdentity.noteBodySHA256}\`, \`7/7 claims recorded-exact\`, strict exit \`0\`, and recorded \`secrets_override: true\`.`;
 const c3dStatusUnreceiptedLine = "Every intended C3D grade remains `UNRECEIPTED` until one exact staged tree runs the declared commands through a fresh didrun ledger, commits, seals, exposes a readable Git note, and passes `NO_COLOR=1 didrun verify --strict`. This status cannot receipt C3D itself.";
-const finalRunbookBoundaryOrder = Object.freeze(["C3D", "C6A", "C6M", "C6B"]);
+const requiredC4VPaths = Object.freeze([
+	"docs/HANDOFF_MODE_C.md",
+	"docs/PROMPT_PACK.md",
+	"docs/THREAT_MODEL.md",
+	"docs/VERIFICATION.md",
+	"docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md",
+	"docs/status/P07B-C-C4V-EXECUTION-CONTRACT-MAINTENANCE.md",
+	"spec/verification/p07b-c-unit-paths.json",
+	"tools/check-p07b-c-plan.mjs",
+	"tools/check-p07b-c-unit-scope.mjs",
+	"tools/verify-current-selftest.mjs",
+	"tools/verify-current.mjs",
+]);
+const requiredC4VDigest = "sha256:535a64fbb9f0d3c3672b4b8197fc7815da315117b1794a668e6565faa16df3f1";
+const requiredC4VRosterText = requiredC4VPaths
+	.map((path, index) => `${index === requiredC4VPaths.length - 1 ? "and " : ""}\`${path}\``).join(", ");
+const requiredC4VDeclaration = `C4V owns exactly these ${requiredC4VPaths.length} paths: ${requiredC4VRosterText}. Their sorted-newline roster digest is \`${requiredC4VDigest}\`.`;
+const c4vSourceSubject = "fix: declare executable C4 and C5 contracts";
+const c4vStatusBoundaryLine = "- **Boundary:** active pre-seal `SOURCE_FULL` execution-contract maintenance after sealed C3D and before C4. Classification: `DEFECT_REPAIR`.";
+const c4vStatusParentLine = `- **Parent:** sealed C3D commit \`${sealedC3DIdentity.commit}\`, tree \`${sealedC3DIdentity.tree}\`, is note-present with note blob \`${sealedC3DIdentity.noteBlob}\`, note-body SHA-256 \`${sealedC3DIdentity.noteBodySHA256}\`, \`10/10 claims recorded-exact\`, strict exit \`0\`, and recorded \`secrets_override: true\`.`;
+const c4vStatusUnreceiptedLine = "Every intended C4V grade remains `UNRECEIPTED` until one exact staged tree runs the declared commands through a fresh didrun ledger, commits, seals, exposes a readable Git note, and passes `NO_COLOR=1 didrun verify --strict`. This status cannot receipt C4V itself.";
+const c4StatusPath = "docs/status/P07B-C-C4-CLI-PROFILE.md";
+const requiredC4Paths = Object.freeze([
+	"docs/ARCHITECTURE.md", "docs/CLAIM_VOCABULARY.md", "docs/HANDOFF_MODE_C.md", "docs/PROMPT_PACK.md",
+	"docs/SEMANTICS.md", "docs/STATE_MACHINES.md", "docs/THREAT_MODEL.md", "docs/VERIFICATION.md",
+	"docs/status/P07B-C-C4-CLI-PROFILE.md", "internal/store/contract_run_bridge.go",
+	"internal/store/contract_run_bridge_test.go", "internal/store/execution_interlock.go",
+	"internal/store/execution_interlock_test.go", "internal/store/nonhead_contract.go",
+	"internal/store/nonhead_contract_test.go", "internal/store/private_contract_run.go",
+	"internal/store/private_contract_run_test.go", "internal/store/public_api_test.go", "internal/world/capture.go",
+	"internal/world/process.go", "internal/world/process_darwin.go", "internal/world/process_darwin_test.go",
+	"internal/world/process_mutation_darwin_test.go", "internal/world/process_unsupported.go",
+	"spec/verification/p07b-b-future-surface-authority.json",
+	"tools/check-p07b-b-architecture-selftest.mjs", "tools/check-p07b-b-architecture.mjs",
+	"tools/check-p07b-c-architecture-selftest.mjs", "tools/check-p07b-c-architecture.mjs",
+	"tools/check-u6-architecture-selftest.mjs", "tools/check-u6-architecture.mjs", "tools/mutate-u2.mjs",
+	"tools/mutate-u3.mjs", "tools/test-mutate-u2.mjs", "tools/verify-current-selftest.mjs",
+	"tools/verify-current.mjs", "tools/verify-go-test-repetition.mjs", "tools/verify-runtime-authority.mjs",
+]);
+const requiredC4Prefixes = Object.freeze([
+	"internal/contractexec/runner/", "internal/processmechanics/", "testkit/contractexec/cli/",
+]);
+const requiredC4AddedExactPaths = new Set([
+	c4StatusPath,
+	"internal/store/contract_run_bridge.go",
+	"internal/store/contract_run_bridge_test.go",
+	"spec/verification/p07b-b-future-surface-authority.json",
+	"tools/verify-runtime-authority.mjs",
+]);
+const requiredC4Digest = "sha256:99bda0d3e5c2f2a2ee4f354945188bf2e5563716c9e26511211a4bfc9197bf56";
+const requiredC4PrefixDigest = "sha256:f5f7b8cdfeba3581e8632c0d6686287f5afa00aef224bb4babe39ee1fdc7f4b2";
+const c4SourceSubject = "feat: finalize CLI contract executions";
+const c5StatusPath = "docs/status/P07B-C-C5-HTTP-SCOPE.md";
+const requiredC5Paths = Object.freeze([
+	"docs/ARCHITECTURE.md", "docs/CLAIM_VOCABULARY.md", "docs/HANDOFF_MODE_C.md", "docs/SEMANTICS.md",
+	"docs/STATE_MACHINES.md", "docs/THREAT_MODEL.md", "docs/VERIFICATION.md", "docs/status/P07B-C-C5-HTTP-SCOPE.md",
+	"tools/check-p07b-c-architecture-selftest.mjs", "tools/check-p07b-c-architecture.mjs",
+	"tools/verify-current-selftest.mjs", "tools/verify-current.mjs",
+]);
+const requiredC5Prefixes = Object.freeze([
+	"internal/contractexec/http/", "internal/contractexec/scope/", "testkit/contractexec/http/",
+]);
+const requiredC5Digest = "sha256:d16ba74582e53dc5c791b8c34fbcd6200338dc066ec13230c2908eb6ba257bf5";
+const requiredC5PrefixDigest = "sha256:a9212680066fdbddc8f25eef04a41c264ac9148a506238dd92c39978e3e35f84";
+const c5SourceSubject = "feat: complete standalone contract execution";
+const finalRunbookBoundaryOrder = Object.freeze(["C3D", "C4V", "C4", "C5", "C6A", "C6M", "C6B"]);
 const finalRunbookRegistry = Object.freeze({
 	C3D: Object.freeze({
 		subject: c3dSourceSubject, parent: "sealed C3B", profile: "SOURCE_FULL",
 		labels: c3dClaimLabels, types: c3dClaimTypes, argv: c3dExpectedClaimArgv,
 		prefix: c3dHermeticArgvPrefix, directories: c3dFinalRunDirectories,
+	}),
+	C4V: Object.freeze({
+		subject: c4vSourceSubject, parent: "sealed C3D", profile: "SOURCE_FULL",
+		labels: c4vClaimLabels, types: c4vClaimTypes, argv: c4vExpectedClaimArgv,
+		prefix: c4vHermeticArgvPrefix, directories: c4vFinalRunDirectories,
+	}),
+	C4: Object.freeze({
+		subject: c4SourceSubject, parent: "sealed C4V", profile: "SOURCE_FULL",
+		labels: c4ClaimLabels, types: c4ClaimTypes, argv: c4ExpectedClaimArgv,
+		prefix: c4HermeticArgvPrefix, directories: c4FinalRunDirectories,
+	}),
+	C5: Object.freeze({
+		subject: c5SourceSubject, parent: "sealed C4", profile: "SOURCE_FULL",
+		labels: c5ClaimLabels, types: c5ClaimTypes, argv: c5ExpectedClaimArgv,
+		prefix: c5HermeticArgvPrefix, directories: c5FinalRunDirectories,
 	}),
 	C6A: Object.freeze({
 		subject: c6aSourceSubject, parent: "declared C5", profile: "SOURCE_FULL",
@@ -3389,10 +6537,132 @@ function finalLedgerArchivePath(boundary, commit) {
 	return `${finalLedgerArchiveRoot(boundary, commit.slice(0, 12))}/.didrun/`;
 }
 
+const finalRunbookParentAuthorityCommand = "/usr/bin/env -i HOME=/ PATH=/usr/bin:/bin LANG=C LC_ALL=C NO_COLOR=1 /opt/homebrew/bin/node tools/check-p07b-c-plan.mjs --verify-final-runbook-parent-authority";
+
+function finalRunbookDirectoryMetadataError(metadata, expectedUID, privateLeaf = false) {
+	if (!metadata.isDirectory() || metadata.isSymbolicLink()) return "not a real directory";
+	if (metadata.uid !== expectedUID) return `owner uid ${metadata.uid} does not match ${expectedUID}`;
+	if ((metadata.mode & 0o022) !== 0) return `mode ${(metadata.mode & 0o777).toString(8)} is group/other writable`;
+	if (privateLeaf && (metadata.mode & 0o7777) !== 0o700) {
+		return `private evidence mode ${(metadata.mode & 0o7777).toString(8)} is not exact 0700`;
+	}
+	return null;
+}
+
+async function requireFinalRunbookDirectoryAuthority(path, label, expectedUID, { optional = false, privateLeaf = false } = {}) {
+	let metadata;
+	try {
+		metadata = await lstat(path);
+	} catch (error) {
+		if (optional && error?.code === "ENOENT") return;
+		throw new Error(`P07B-C final runbook parent authority ${label}: ${error.message}`);
+	}
+	const metadataError = finalRunbookDirectoryMetadataError(metadata, expectedUID, privateLeaf);
+	if (metadataError !== null) throw new Error(`P07B-C final runbook parent authority ${label}: ${metadataError}`);
+	let canonical;
+	try {
+		canonical = await realpath(path);
+	} catch (error) {
+		throw new Error(`P07B-C final runbook parent authority ${label}: ${error.message}`);
+	}
+	if (canonical !== path) {
+		throw new Error(`P07B-C final runbook parent authority ${label}: canonical path ${canonical} does not equal ${path}`);
+	}
+}
+
+export async function verifyFinalRunbookParentAuthority(root = repositoryRoot, expectedRoot = repositoryRoot) {
+	if (typeof process.getuid !== "function") {
+		throw new Error("P07B-C final runbook parent authority: current uid is unavailable");
+	}
+	if (typeof root !== "string" || typeof expectedRoot !== "string" || !isAbsolute(root) ||
+		resolve(root) !== root || resolve(expectedRoot) !== expectedRoot || root !== expectedRoot) {
+		throw new Error("P07B-C final runbook parent authority: exact absolute canonical repository root required");
+	}
+	const expectedUID = process.getuid();
+	await requireFinalRunbookDirectoryAuthority(root, "repository root", expectedUID);
+	await requireFinalRunbookDirectoryAuthority(resolve(root, ".countershape"), ".countershape", expectedUID);
+	await requireFinalRunbookDirectoryAuthority(resolve(root, ".didrun-history"), ".didrun-history", expectedUID);
+	await requireFinalRunbookDirectoryAuthority(resolve(root, ".countershape/evidence"), ".countershape/evidence", expectedUID, {
+		optional: true, privateLeaf: true,
+	});
+}
+
+async function runFinalRunbookParentAuthoritySelfTest() {
+	const makeFixture = async ({ evidence = true } = {}) => {
+		const created = await mkdtemp(resolve(tmpdir(), "countershape-runbook-authority-"));
+		const root = await realpath(created);
+		await chmod(root, 0o700);
+		await mkdir(resolve(root, ".countershape"), { mode: 0o700 });
+		await mkdir(resolve(root, ".didrun-history"), { mode: 0o700 });
+		if (evidence) await mkdir(resolve(root, ".countershape/evidence"), { mode: 0o700 });
+		return root;
+	};
+	let controls = 0;
+	for (const evidence of [true, false]) {
+		const root = await makeFixture({ evidence });
+		try {
+			await verifyFinalRunbookParentAuthority(root, root);
+			controls += 1;
+		} finally {
+			await rm(root, { recursive: true, force: true });
+		}
+	}
+	const refuse = async (name, mutate, invoke = async (root) => verifyFinalRunbookParentAuthority(root, root)) => {
+		const root = await makeFixture();
+		let extraCleanup;
+		try {
+			extraCleanup = await mutate(root);
+			let failed = false;
+			try { await invoke(root); } catch (error) {
+				failed = typeof error?.message === "string" && error.message.includes("P07B-C final runbook parent authority");
+			}
+			if (!failed) throw new Error(`final runbook parent authority hostile accepted: ${name}`);
+			controls += 1;
+		} finally {
+			if (typeof extraCleanup === "function") await extraCleanup();
+			await rm(root, { recursive: true, force: true });
+		}
+	};
+	await refuse("missing history parent", async (root) => rm(resolve(root, ".didrun-history"), { recursive: true }));
+	await refuse("regular countershape parent", async (root) => {
+		await rm(resolve(root, ".countershape"), { recursive: true });
+		await writeFile(resolve(root, ".countershape"), "not-a-directory\n", { mode: 0o600 });
+	});
+	await refuse("countershape symlink", async (root) => {
+		const target = resolve(root, "countershape-real");
+		await mkdir(target, { mode: 0o700 });
+		await rm(resolve(root, ".countershape"), { recursive: true });
+		await symlink(target, resolve(root, ".countershape"));
+	});
+	await refuse("group-writable parent", async (root) => chmod(resolve(root, ".countershape"), 0o770));
+	await refuse("other-writable root", async (root) => chmod(root, 0o707));
+	await refuse("evidence symlink", async (root) => {
+		const target = resolve(root, "evidence-real");
+		await mkdir(target, { mode: 0o700 });
+		await rm(resolve(root, ".countershape/evidence"), { recursive: true });
+		await symlink(target, resolve(root, ".countershape/evidence"));
+	});
+	await refuse("evidence noncanonical owner-only mode", async (root) => chmod(resolve(root, ".countershape/evidence"), 0o500));
+	await refuse("repository alias", async (root) => {
+		const aliasParent = `${root}-ancestor-alias`;
+		await symlink(dirname(root), aliasParent);
+		return async () => rm(aliasParent, { force: true });
+	}, async (root) => {
+		const aliasRoot = resolve(`${root}-ancestor-alias`, basename(root));
+		await verifyFinalRunbookParentAuthority(aliasRoot, aliasRoot);
+	});
+	const uid = process.getuid();
+	const ownerError = finalRunbookDirectoryMetadataError({
+		isDirectory: () => true, isSymbolicLink: () => false, mode: 0o40700, uid: uid + 1,
+	}, uid);
+	if (!ownerError?.includes("owner uid")) throw new Error("final runbook parent authority owner hostile accepted");
+	return controls + 1;
+}
+
 export function renderFinalRunbook(boundary) {
 	const runbook = finalRunbookRegistry[boundary];
 	if (runbook === undefined || !finalRunbookBoundaryOrder.includes(boundary)) {
-		throw new Error(`final runbook unavailable for ${String(boundary)}; C4 and C5 are topology-only until their owning boundaries declare executable contracts`);
+		throw new Error(`final runbook unavailable for ${String(boundary)}; the boundary has no parent-sealed executable contract`);
 	}
 	if (runbook.labels.length !== runbook.types.length || runbook.labels.length !== runbook.argv.length) {
 		throw new Error(`final runbook ${boundary} claim/argv cardinality mismatch`);
@@ -3410,7 +6680,7 @@ export function renderFinalRunbook(boundary) {
 		`- Exact commands/claims: \`${runbook.labels.length}\``,
 		`- Private final root: \`${runbook.directories[0]}\``,
 		"- Shell-fence state: every fence is an isolated subshell with `set -eu`, independently re-enters and asserts the canonical repository root, and cannot continue to a claim or later mutation after a failed command; every post-commit fence re-derives the current immutable HEAD and its exact first 12 hexadecimal characters under the same sole-writer boundary.",
-		"- C4 and C5 remain topology-only table rows and deliberately have no executable final runbook here.",
+		"- C4 has a parent-sealed executable contract; C5's contract is predeclared and becomes parent-sealed only after C4 closes. Every unknown or topology-only boundary still rejects.",
 		"",
 		"## Prepare one fresh evidence boundary",
 		"",
@@ -3418,6 +6688,8 @@ export function renderFinalRunbook(boundary) {
 		"",
 		"```sh",
 		...finalRunbookFenceLines(
+			"umask 077",
+			finalRunbookParentAuthorityCommand,
 			`/bin/test ! -e ${shellQuote(".didrun")}`,
 			`/bin/test ! -e ${shellQuote(runbook.directories[0])}`,
 			`/bin/mkdir -p ${shellQuote(".countershape/evidence")}`,
@@ -3490,6 +6762,8 @@ export function renderFinalRunbook(boundary) {
 		"```sh",
 		...finalRunbookFenceLines(
 			...finalRunbookCommitBindingLines(),
+			"umask 077",
+			finalRunbookParentAuthorityCommand,
 			`archive_root="${finalLedgerArchivePrefix(boundary)}\${short}"`,
 			"/bin/test ! -e \"$archive_root\"",
 			"/bin/mkdir -p \"$archive_root\"",
@@ -3504,12 +6778,13 @@ export function renderFinalRunbook(boundary) {
 	return `${lines.join("\n")}\n`;
 }
 
-function runFinalRunbookRendererSelfTest() {
+async function runFinalRunbookRendererSelfTest() {
+	const namespaceControls = await runFinalRunbookParentAuthoritySelfTest();
 	if (!isDeepStrictEqual(Object.keys(finalRunbookRegistry), finalRunbookBoundaryOrder)) {
 		throw new Error("final runbook boundary order");
 	}
-	const expectedCardinality = Object.freeze({ C3D: 10, C6A: 11, C6M: 10, C6B: 9 });
-	const expectedTests = Object.freeze({ C3D: 7, C6A: 8, C6M: 7, C6B: 5 });
+	const expectedCardinality = Object.freeze({ C3D: 10, C4V: 68, C4: 80, C5: 79, C6A: 11, C6M: 10, C6B: 9 });
+	const expectedTests = Object.freeze({ C3D: 7, C4V: 65, C4: 77, C5: 76, C6A: 8, C6M: 7, C6B: 5 });
 	let controls = 0;
 	for (const boundary of finalRunbookBoundaryOrder) {
 		const spec = finalRunbookRegistry[boundary];
@@ -3531,7 +6806,7 @@ function runFinalRunbookRendererSelfTest() {
 			!rendered.includes("every fence is an isolated subshell with `set -eu`") ||
 			!rendered.includes("cannot continue to a claim or later mutation after a failed command") ||
 			!rendered.includes("exact first 12 hexadecimal characters") ||
-			!rendered.includes("C4 and C5 remain topology-only table rows")) {
+			!rendered.includes("C5's contract is predeclared and becomes parent-sealed only after C4 closes")) {
 			throw new Error(`final runbook ${boundary} deterministic envelope`);
 		}
 		const rootEntry = `cd -P -- ${shellQuote(repositoryRoot)}\n/bin/test \"$PWD\" = ${shellQuote(repositoryRoot)}\n`;
@@ -3541,6 +6816,21 @@ function runFinalRunbookRendererSelfTest() {
 			shellBlocks.some((block) => !block.startsWith(fencePrologue) || !block.endsWith(")\n")) ||
 			rendered.indexOf(rootEntry) > rendered.indexOf("/bin/test ! -e '.didrun'")) {
 			throw new Error(`final runbook ${boundary} isolated fail-fast repository-root binding`);
+		}
+		const preparationUmask = shellBlocks[0].indexOf("umask 077");
+		const archiveUmask = shellBlocks.at(-1).indexOf("umask 077");
+		const preparationGuard = shellBlocks[0].indexOf(finalRunbookParentAuthorityCommand);
+		const archiveGuard = shellBlocks.at(-1).indexOf(finalRunbookParentAuthorityCommand);
+		const archiveCopy = shellBlocks.at(-1).indexOf("/bin/cp -R '.didrun'");
+		if (rendered.split(finalRunbookParentAuthorityCommand).length !== 3 ||
+			rendered.split("umask 077").length !== 3 ||
+			!shellBlocks[0].includes(finalRunbookParentAuthorityCommand) ||
+			!shellBlocks.at(-1).includes(finalRunbookParentAuthorityCommand) ||
+			shellBlocks.slice(1, -1).some((block) => block.includes(finalRunbookParentAuthorityCommand)) ||
+			preparationUmask < 0 || archiveUmask < 0 || preparationGuard < 0 || archiveGuard < 0 || archiveCopy < 0 ||
+			preparationUmask > preparationGuard || archiveUmask > archiveGuard ||
+			preparationGuard > shellBlocks[0].indexOf("/bin/mkdir") || archiveGuard > archiveCopy) {
+			throw new Error(`final runbook ${boundary} parent namespace guard ordering`);
 		}
 		const commitBinding = `${finalRunbookCommitBindingLines().join("\n")}\n`;
 		if (shellBlocks.slice(spec.argv.length + 1).length !== 5 ||
@@ -3615,7 +6905,7 @@ function runFinalRunbookRendererSelfTest() {
 		if (decodeShellQuotedToken(shellQuote(token)) !== token) throw new Error("final runbook hostile shell token round trip");
 		controls += 1;
 	}
-	for (const rejected of ["C4", "C5", "c3d", "", "C7", undefined]) {
+	for (const rejected of ["c3d", "c4v", "c4", "c5", "", "C7", undefined]) {
 		let failed = false;
 		try { renderFinalRunbook(rejected); } catch { failed = true; }
 		if (!failed) throw new Error(`final runbook unsupported boundary ${String(rejected)}`);
@@ -3628,7 +6918,7 @@ function runFinalRunbookRendererSelfTest() {
 		!c6bFinalCommandTails[6].includes("--receipt-final-gate")) {
 		throw new Error("final runbook C6B receipt-specific topology");
 	}
-	return controls + 1;
+	return controls + namespaceControls + 1;
 }
 const requiredC3AddedPaths = new Set([
 	"docs/status/P07B-C-C3-TARGET.md",
@@ -3950,7 +7240,7 @@ const requiredC3FText = Object.freeze({
 		c3fStatusUnreceiptedLine,
 		...c3fClaimLabels.map((label) => `\`${label}\``),
 	],
-	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v16", "\"C3F\""],
+	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v17", "\"C3F\""],
 	"tools/check-p07b-b-architecture.mjs": [
 		"c3OfficialTargetSurface", "completeC3Surface", "partitionFutureSymbols",
 		"internal/store/nonhead_contract.go:ParseContractExecutionTarget",
@@ -4010,7 +7300,7 @@ const requiredC3SText = Object.freeze({
 		c3sStatusUnreceiptedLine,
 		...c3sClaimLabels.map((label) => `\`${label}\``),
 	],
-	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v16", "\"C3S\""],
+	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v17", "\"C3S\""],
 	"tools/check-p07b-c-plan.mjs": [
 		"requiredC3SPaths", "C3S_ACTIVE", "--verify-c3s-preseal-ledger", "requirePrivateC3SFinalRunDirectories",
 		"requireSealedC3FPredecessorAuthority", "validateSealedC3FNote",
@@ -4050,8 +7340,9 @@ const requiredC3Text = Object.freeze({
 		"2908.769",
 	],
 	"docs/PROMPT_PACK.md": [
-		"C3 exact-target publication is the active forty-path source unit",
 		"P07B-C C3 exact-target publication",
+		"phase-independent execution contract",
+		"sole live phase/receipt cursor",
 		requiredC3Digest,
 		requiredC3BDigest,
 	],
@@ -4202,7 +7493,7 @@ const requiredC3RText = Object.freeze({
 		"does not prove plain-seal-first sequencing",
 		...c3rClaimLabels.map((label) => `\`${label}\``),
 	],
-	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v16", "\"C3R\""],
+	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v17", "\"C3R\""],
 	"tools/check-p07b-c-plan.mjs": [
 		"requiredC3RPaths", "C3R_ACTIVE", "validateC3RClaimPreview", "validateC3RAuthority",
 		"c3rSealOutcomeDisclosure",
@@ -4283,7 +7574,7 @@ const requiredC3QText = Object.freeze({
 		"C3Q changes no verifier roster",
 		...c3qClaimLabels.map((label) => `\`${label}\``),
 	],
-	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v16", "\"C3Q\""],
+	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v17", "\"C3Q\""],
 	"tools/check-p07b-c-plan.mjs": [
 		"requiredC3QPaths", "C3Q_ACTIVE", "validateC3QClaimPreview", "validateC3QAuthority",
 		"planAuthorityMarkdownPaths", "planAuthorityMarkdownDigest", "computedPlanAuthorityMarkdownDigest",
@@ -4341,7 +7632,7 @@ const requiredC3TText = Object.freeze({
 		"## Final command order", c3tFinalCommandOrderMarkdown,
 		...c3tClaimLabels.map((label) => `\`${label}\``),
 	],
-	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v16", "\"C3T\""],
+	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v17", "\"C3T\""],
 	"tools/check-p07b-c-plan.mjs": [
 		"requiredC3TPaths", "C3T_ACTIVE", "syntheticC3AbsentPlanFixture",
 		"validateC3TClaimPreview", "validateC3TAuthority", "loadC3TAuthorityWithRunner",
@@ -4395,7 +7686,7 @@ const requiredC3UText = Object.freeze({
 		"## Final command order", c3uFinalCommandOrderMarkdown,
 		...c3uClaimLabels.map((label) => `\`${label}\``),
 	],
-	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v16", "\"C3U\""],
+	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v17", "\"C3U\""],
 	"tools/check-p07b-c-plan.mjs": [
 		"requiredC3UPaths", "C3U_ACTIVE", "insertLegacyReceiptBlockBeforeOptionalTerminalC3",
 		"validateC3UClaimPreview", "validateC3UAuthority", "loadC3UAuthorityWithRunner",
@@ -4458,8 +7749,8 @@ const requiredC3DText = Object.freeze({
 		"## C3D data-driven receipt-phase machinery", requiredC3DDeclaration,
 		"countershape/p07b-c-unit-paths/v16", "receiptPhaseRows", "renderReceiptPhaseCapsule",
 		"sha256:91ace265208883f3df976cc6a58d4a9d816d9c7c9fd2ba58887ccab13c3561fc",
-		"C3D alone owns that specification in the forward horizon",
-		"staged/worktree specification is byte-identical to the pinned parent",
+		"C3D alone owns that historical specification in its sealed forward horizon",
+		"staged/worktree specification bytes must equal the pinned C4V-sealed parent authority",
 		"C6M is predeclared between C6A and C6B", "git write-tree",
 		"classifyReceiptPhase", "rewriteReceiptPhaseCapsule", "generatedReceiptPhaseCases",
 		"666", "C3R_NOTE_PREVIEW", "C3Q_EXTERNAL_SELF_RECEIPT",
@@ -4470,7 +7761,7 @@ const requiredC3DText = Object.freeze({
 		"non-self-receipting prompt transition",
 		"ordinary current-C3D overrides", "historical-C3B scanner corpus", "singleton refusal",
 		"--check-candidate-phase <unit>", "no-argument plan command",
-		"six admitted forward edges and 37 hostile snapshot cases", "same-user actor can attempt an ABA mutation",
+		"seven admitted forward edges and 41 hostile snapshot cases", "same-user actor can attempt an ABA mutation",
 		"1,320", "440", "ten-claim final ledger",
 		"spec/verification/p07b-c-c6a-source-authority.json", "full byte-identical projections",
 		"spec/verification/p07b-c-c6a-receipt.json", "docs/captures/p07b-c/c6a-evidence-summary.json",
@@ -4523,7 +7814,7 @@ const requiredC3DText = Object.freeze({
 		...c3dClaimLabels.map((label) => `\`${label}\``),
 	],
 	"spec/verification/p07b-c-unit-paths.json": [
-		"countershape/p07b-c-unit-paths/v16", "\"C3D\"", "\"C6M\"", "\"parent\"", "\"receipt_states\"",
+		"countershape/p07b-c-unit-paths/v17", "\"C3D\"", "\"C6M\"", "\"parent\"", "\"receipt_states\"",
 		"docs/status/P07B-C-C6M-RECEIPT-ADAPTER-MAINTENANCE.md",
 		"spec/verification/p07b-c-c6a-source-authority.json",
 		"docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md", "P07B-C C6B exact five-path staged scope and diff integrity",
@@ -4556,9 +7847,9 @@ const requiredC3DText = Object.freeze({
 		"--verify-c6a-preseal-ledger", "--verify-c6m-preseal-ledger", "--verify-c6b-preseal-ledger",
 	],
 	"tools/check-p07b-c-unit-scope.mjs": [
-		"\"C3D\"", "p07b-c-unit-paths/v16", "activeReceiptPhaseBoundary",
+		"\"C3D\"", "p07b-c-unit-paths/v17", "activeReceiptPhaseBoundary",
 		"receiptPhaseRows", "receipt_states", "c6mDeclaredAdapterContract", "c6bDeclaredReceiptContract",
-		"receiptPhaseAuthorityDigest", "91ace265208883f3df976cc6a58d4a9d816d9c7c9fd2ba58887ccab13c3561fc",
+		"receiptPhaseAuthorityDigest", "11f96a7809d845ef21671d8f847bd3b9f324e84c539cd2f93ab2bc14929ecd46",
 		"validateIndependentCandidateSnapshot", "runIndependentCandidatePhaseGate",
 		"runIndependentCandidatePhaseSelfTest", "--candidate-phase",
 		"c6aSourceAuthorityPath", "c6aSourceAuthoritySchema", "renderC6ASourceAuthorityManifest",
@@ -4570,6 +7861,204 @@ const requiredC3DText = Object.freeze({
 		"docs/captures/p07b-c/authority.MD", "docs/captures/p07b-c/authority.markdown",
 	],
 });
+const bFutureSurfaceNarrativeSnippets = Object.freeze([
+	bFutureSurfaceAuthorityPath,
+	bFutureSurfaceSchemaDigest,
+	bFutureSurfaceBaselinePolicyDigest,
+	bFutureSurfaceHistoricalInventoryDigest,
+	bFutureSurfaceTestVectorDigest,
+	"TEST_VECTOR_ONLY/INCOMPLETE",
+]);
+const qualificationStaticNarrativeSnippets = Object.freeze([
+	"At live C4/C5, `qualificationStaticAuthority` decodes the recursively frozen literal catalog into a checker-owned projection and never imports or evaluates future candidate helper bytes.",
+	"The static gate does not execute candidate parser, selector, validator, or builder exports",
+]);
+const qualificationReceiptNarrativeSnippets = Object.freeze([
+	"[go,node,git,sh,cc,cxx]", "512 MiB", "JSON.stringify(roster)",
+	"self-consistent foreign", "swap-and-restore/TOCTOU",
+]);
+const requiredC4VText = Object.freeze({
+	"docs/HANDOFF_MODE_C.md": [
+		...bFutureSurfaceNarrativeSnippets, ...qualificationStaticNarrativeSnippets,
+		...qualificationReceiptNarrativeSnippets,
+		requiredC4VDeclaration, sealedC3DIdentity.commit, sealedC3DIdentity.tree,
+		sealedC3DIdentity.noteBlob, sealedC3DIdentity.noteBodySHA256,
+		"DEFECT_ALREADY_REPAIRED", "INTENTIONAL_HYBRID", "DECLINED_WITH_REASON",
+		"countershape/p07b-c-unit-paths/v17", "11f96a7809d845ef21671d8f847bd3b9f324e84c539cd2f93ab2bc14929ecd46",
+		"722 cases", "726 cases", requiredC4Digest,
+		"46 sorted Markdown authorities", "sha256:b480bb8e93d9ddd6075a57bdf8dbe99cb663eb1f0a11228af31698b54a5dd2f2",
+		requiredC4PrefixDigest, requiredC5Digest, requiredC5PrefixDigest,
+		requiredC4QualificationMatrixDigest, requiredC5QualificationMatrixDigest,
+		"becomes parent-sealed only after C4", "tools/verify-runtime-authority.mjs",
+		"qualificationMatrices", "qualificationCaseForID", "parseRunArguments(argv)", "--case <id>",
+		"validateExecutionSpecification(specification)", "buildGoTestArguments(specification)",
+		"runRepetition(specification, dependencies = {})", "dormant C5-only identities",
+		"C4-present/C5-absent", "C4+C5-present", "C5 owns its C architecture checker and self-test",
+		sealedLegacyQualificationHelperSHA256, "Acorn static closure", "its own didrun event",
+		"80 claims", "79-command", "sterile `/usr/bin/env -i`", "--verify-final-runbook-parent-authority",
+		"68 claims", "direct build, vet, and general-package jobs from `p=2` to `p=1`",
+		".didrun-history/p07b-c-c4v-final-attempt-1-ast-sigterm/.didrun/",
+		"--print-final-runbook C4V", "--print-final-runbook C4", "--print-final-runbook C5",
+	],
+	"docs/PROMPT_PACK.md": [
+		...bFutureSurfaceNarrativeSnippets, ...qualificationStaticNarrativeSnippets,
+		...qualificationReceiptNarrativeSnippets,
+		"phase-independent execution contract", "sole live phase/receipt cursor",
+		"C4V authors the exact eleven-path", requiredC4VDigest,
+		"countershape/p07b-c-unit-paths/v17", "11f96a7809d845ef21671d8f847bd3b9f324e84c539cd2f93ab2bc14929ecd46",
+		"C4V predeclares both remaining product boundaries",
+		"46 sorted Markdown paths", "sha256:b480bb8e93d9ddd6075a57bdf8dbe99cb663eb1f0a11228af31698b54a5dd2f2",
+		requiredC4Digest, requiredC4PrefixDigest, requiredC5Digest, requiredC5PrefixDigest,
+		requiredC4QualificationMatrixDigest, requiredC5QualificationMatrixDigest,
+		"tools/verify-runtime-authority.mjs", "qualificationMatrices", "qualificationCaseForID",
+		"parseRunArguments(argv)", "separate `--case <id>` didrun events", "80-command", "79-command",
+		"validateExecutionSpecification(specification)", "buildGoTestArguments(specification)",
+		"runRepetition(specification, dependencies = {})", "dormant C5-only identities",
+		"C4-present/C5-absent", "C4+C5-present", "C5 owns its C architecture checker and self-test",
+		sealedLegacyQualificationHelperSHA256, "umask 077", "--verify-final-runbook-parent-authority",
+		"68-claim replacement gate", "direct build, vet, and general-package jobs to `p=1`",
+		"--verify-c4-preseal-ledger", "--verify-c5-preseal-ledger", "--verify-c5-sealed-c4-note",
+		"P07B-C C4V execution-contract maintenance",
+	],
+	"docs/THREAT_MODEL.md": [
+		"### T17 — Verifier concurrency and cross-run cache substitution",
+		"Current general direct package jobs are closed at one",
+		"explicit recurrence refusal fired",
+		"direct build, vet, and general testing to `p=1`",
+		"without extending deadlines, removing tests",
+		"the one-job current profile",
+	],
+	"docs/VERIFICATION.md": [
+		...bFutureSurfaceNarrativeSnippets, ...qualificationStaticNarrativeSnippets,
+		...qualificationReceiptNarrativeSnippets,
+		"## C4V executable execution-unit contract maintenance", requiredC4VDeclaration,
+		"countershape/p07b-c-unit-paths/v17", "11f96a7809d845ef21671d8f847bd3b9f324e84c539cd2f93ab2bc14929ecd46",
+		"365/361", "7/41", "7/24",
+		"46 sorted Markdown paths", "sha256:b480bb8e93d9ddd6075a57bdf8dbe99cb663eb1f0a11228af31698b54a5dd2f2",
+		requiredC4Digest, requiredC4PrefixDigest, requiredC5Digest, requiredC5PrefixDigest,
+		requiredC4QualificationMatrixDigest, requiredC5QualificationMatrixDigest,
+		"tools/verify-runtime-authority.mjs", "qualificationMatrices", "qualificationCaseForID(caseID)",
+		"parseRunArguments(argv)", "no shared session", "separate didrun event",
+		"validateExecutionSpecification(specification)", "buildGoTestArguments(specification)",
+		"runRepetition(specification, dependencies = {})", "dormant C5-only identities",
+		"C4-present/C5-absent", "C4+C5-present", "C5 owns its C architecture checker and self-test",
+		sealedLegacyQualificationHelperSHA256, "bounded sterile Acorn", "umask 077",
+		"--verify-final-runbook-parent-authority",
+		"--verify-c4v-sealed-c3d-note", "--verify-c4v-preseal-ledger",
+		"--verify-c5-sealed-c4-note", "--verify-c5-preseal-ledger", "--print-final-runbook C5",
+		"outer HEAD observed by both loads", "80-command", "79-command",
+		"exactly 68 claims", "general_jobs=1 nested_jobs=1 gomaxprocs=2",
+		".didrun-history/p07b-c-c4v-final-attempt-1-ast-sigterm/.didrun/",
+	],
+	"docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md": [
+		...bFutureSurfaceNarrativeSnippets, ...qualificationStaticNarrativeSnippets,
+		...qualificationReceiptNarrativeSnippets,
+		"# C4V — repair the execution-unit verification contract", requiredC4VDigest,
+		c4vSourceSubject, c4SourceSubject, c5SourceSubject,
+		"11f96a7809d845ef21671d8f847bd3b9f324e84c539cd2f93ab2bc14929ecd46",
+		"sole live phase/receipt cursor",
+		"46 sorted Markdown authorities", "sha256:b480bb8e93d9ddd6075a57bdf8dbe99cb663eb1f0a11228af31698b54a5dd2f2",
+		requiredC4Digest, requiredC4PrefixDigest, requiredC5Digest, requiredC5PrefixDigest,
+		requiredC4QualificationMatrixDigest, requiredC5QualificationMatrixDigest,
+		"tools/verify-runtime-authority.mjs", "zero-based argv indexes",
+		sealedLegacyQualificationHelperSHA256, "qualificationMatrices", "qualificationCaseForID(caseID)",
+		"parseRunArguments(argv)", "final canonical `pathToFileURL`-bound direct entry awaits `main()`", "static closure conformance",
+		"validateExecutionSpecification(specification)", "buildGoTestArguments(specification)",
+		"runRepetition(specification, dependencies = {})", "dormant C5-only identities",
+		"C4-present/C5-absent", "C4+C5-present", "C5 owns its C architecture checker and self-test",
+		"no shared qualification session", "80 commands", "79 commands",
+		"exactly 68 claims", "direct build, vet, and general testing use `p=1`",
+		".didrun-history/p07b-c-c4v-final-attempt-1-ast-sigterm/.didrun/",
+		"--verify-c4-sealed-c4v-note", "--verify-c5-sealed-c4-note",
+		"--verify-c4-preseal-ledger", "--verify-c5-preseal-ledger",
+	],
+	[c4vStatusPath]: [
+		...bFutureSurfaceNarrativeSnippets, ...qualificationStaticNarrativeSnippets,
+		...qualificationReceiptNarrativeSnippets,
+		"# P07B-C C4V — execution-contract maintenance", "Classification: `DEFECT_REPAIR`",
+		requiredC4VDeclaration, c4vStatusBoundaryLine, c4vStatusParentLine, c4vStatusUnreceiptedLine,
+		`- **Commit subject:** \`${c4vSourceSubject}\``, "countershape/p07b-c-unit-paths/v17",
+		"11f96a7809d845ef21671d8f847bd3b9f324e84c539cd2f93ab2bc14929ecd46",
+		"722 cases", "726 cases", "365 accepted controls", "361 hostile rejections", "7 accepted and 41 rejected",
+		"46 sorted Markdown authorities", "sha256:b480bb8e93d9ddd6075a57bdf8dbe99cb663eb1f0a11228af31698b54a5dd2f2",
+		requiredC4Digest, requiredC4PrefixDigest, requiredC5Digest, requiredC5PrefixDigest,
+		requiredC4QualificationMatrixDigest, requiredC5QualificationMatrixDigest,
+		"tools/verify-runtime-authority.mjs", "qualificationMatrices", "qualificationCaseForID(caseID)",
+		"parseRunArguments(argv)", "final exact Node-import-bound guard awaits `main()`", "no shared session",
+		"validateExecutionSpecification(specification)", "buildGoTestArguments(specification)",
+		"runRepetition(specification, dependencies = {})", "dormant C5-only identities",
+		"C4-present/C5-absent", "C4+C5-present", "C5 owns its C architecture checker and self-test",
+		sealedLegacyQualificationHelperSHA256, "sterile Acorn", "umask 077", "80 commands", "79 commands",
+		"--verify-final-runbook-parent-authority",
+		"required, realized prefixes", "--verify-c5-sealed-c4-note", "--verify-c5-preseal-ledger",
+		"68 exact claims", "C4V therefore changes only `generalJobs` from two to one",
+		".didrun-history/p07b-c-c4v-final-attempt-1-ast-sigterm/.didrun/",
+		"## Final command order", c4vFinalCommandOrderMarkdown,
+		"### C4 exact final command order", c4FinalCommandOrderMarkdown,
+		"### C5 exact final command order", c5FinalCommandOrderMarkdown,
+		...c4vClaimLabels.map((label) => `\`${label}\``),
+	],
+	"spec/verification/p07b-c-unit-paths.json": [
+		"countershape/p07b-c-unit-paths/v17", "\"C4V\"", "\"C4\"", "\"C5\"",
+		"internal/contractexec/runner/", "internal/contractexec/http/", bFutureSurfaceAuthorityPath,
+	],
+	"tools/check-p07b-c-plan.mjs": [
+		"requiredC4VText", "requiredC4Paths", "requiredC4Prefixes", "requiredC5Paths", "requiredC5Prefixes",
+		"projectedC4QualificationCases", "projectedC5QualificationCases", "validateSealedC4Authority",
+		"validateFutureQualificationAuthority", "qualificationMatrices", "qualificationCaseForID",
+		"qualificationASTParserProgram", "validateQualificationModuleClosure", "loadQualificationAuthority",
+		"qualificationStaticAuthority", "qualificationModuleEvaluationErrors", "qualificationBuildArgumentsErrors",
+		"qualificationExecutionPathErrors", "qualificationReceiptOutputErrors", "runQualificationReceiptOutputSelfTest",
+		"verifyQualificationLedgerEvidence", "qualificationEvidence",
+		"qualificationCaseSelectorErrors", "qualificationCaseLookupErrors",
+		"qualificationExecutionRouteErrors", "qualificationDirectEntrypointErrors",
+		"validateExecutionSpecification", "buildGoTestArguments", "runRepetition",
+		"bFutureSurfaceSchemaDescriptor", "bFutureSurfaceHistoricalInventory",
+		"validateBFutureSurfaceManifest", "collectBFutureSurfaceInput", "validateBFutureSurfaceState",
+		"validateLiveBFutureSurfaceAuthority", "runBFutureSurfaceAuthoritySelfTest",
+		"B_FUTURE_SURFACE_ROWS_FIXTURE", bFutureSurfaceAuthorityPath,
+		"syntheticFutureQualificationAuthority", "runFutureQualificationAuthoritySelfTest", "runQualificationModuleClosureSelfTest",
+		"c4QualificationClaimLabels", "c4QualificationCommandTails",
+		"c5QualificationClaimLabels", "c5QualificationCommandTails",
+		"c4vA2StabilityClaimLabels", "c4vCumulativeClaimLabels",
+		"verifyFinalRunbookParentAuthority", "--verify-final-runbook-parent-authority",
+		"runSealedC4AuthoritySelfTest", "verifyC5SealedC4Note", "verifyC5PresealLedger",
+		"--verify-c5-sealed-c4-note", "--verify-c5-preseal-ledger", "--print-final-runbook",
+	],
+	"tools/check-p07b-c-unit-scope.mjs": [
+		"p07b-c-unit-paths/v17", "c4vDeclaredMaintenanceContract", "c4DeclaredSourceContract",
+		"c5DeclaredSourceContract", "tools/verify-runtime-authority.mjs", bFutureSurfaceAuthorityPath,
+		"unrealizedRequiredPrefixes", "--candidate-phase",
+	],
+	"tools/verify-current-selftest.mjs": [
+		'exactStep("go-build"', 'args: ["build", "-mod=readonly", "-buildvcs=false", "-p=1", "./..."]',
+		'exactStep("go-vet"', 'args: ["vet", "-mod=readonly", "-buildvcs=false", "-p=1", "./..."]',
+		'exactStep("go-test-general"', 'args: ["test", "-mod=readonly", "-buildvcs=false", "-p=1", "-parallel=2"',
+		"7cf294fcbe8247e7a4de2d8996fb6b960780a35d018a8d00069af15940f0efb8",
+	],
+	"tools/verify-current.mjs": [
+		"const generalJobs = 1;", "const goTestParallelism = 2;",
+		"general_jobs=${generalJobs} nested_jobs=1 gomaxprocs=2",
+	],
+});
+const c4vNarrativePathSet = new Set([
+	"docs/HANDOFF_MODE_C.md",
+	"docs/PROMPT_PACK.md",
+	"docs/THREAT_MODEL.md",
+	"docs/VERIFICATION.md",
+	"docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md",
+	c4vStatusPath,
+]);
+const forbiddenC4VNarrativeSnippets = Object.freeze([
+	"C5 owns neither checker",
+	"C5 owns neither checker/specification",
+	"C5 owns neither specification/checker",
+	"before importing the helper",
+	"before helper evaluation",
+	"validates those actual exports",
+	"direct two-job `go build`/`go vet`",
+	"direct build/vet/general work already uses qualified `-p=2`",
+]);
 const forbiddenC3DNarrativeSnippets = Object.freeze([
 	"sha256:33046a2de60af9624c408cd734b8c5ec86130e9e4a5abc957f075ced195217e9",
 	"sha256:c50005a1e06c513934545e04b9f3d3969f024fa6e30eb4e154b11bb405903f58",
@@ -4611,10 +8100,12 @@ const planAuthorityMarkdownPaths = Object.freeze([...new Set([
 		requiredC3QText,
 		requiredC3TText,
 		requiredC3UText,
+		requiredC3DText,
+		requiredC4VText,
 	].flatMap((authority) => Object.keys(authority)),
 ].filter(receiptPhaseMarkdownAuthorityPath))].sort((left, right) =>
 	Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8"))));
-const planAuthorityMarkdownDigest = "sha256:1c5bf120f1ab948586bfa594e6ae634fc6acf7a5544febcccb2c4dc475a59a49";
+const planAuthorityMarkdownDigest = "sha256:b480bb8e93d9ddd6075a57bdf8dbe99cb663eb1f0a11228af31698b54a5dd2f2";
 
 function computedPlanAuthorityMarkdownDigest() {
 	return `sha256:${createHash("sha256")
@@ -4698,6 +8189,512 @@ function canonicalJSON(value) {
 
 function typedDigest(kind, body) {
 	return `sha256:${createHash("sha256").update(`countershape/v1/${kind}\0`).update(canonicalJSON(body)).digest("hex")}`;
+}
+
+function bFutureSurfaceObservedRowCompare(left, right) {
+	return Buffer.compare(
+		Buffer.from(`${left.path}\0${left.symbol}`, "utf8"),
+		Buffer.from(`${right.path}\0${right.symbol}`, "utf8"),
+	);
+}
+
+function bFutureSurfaceManifestRowCompare(left, right) {
+	const boundaryDelta = bFutureSurfaceBoundaryOrder.indexOf(left.boundary) -
+		bFutureSurfaceBoundaryOrder.indexOf(right.boundary);
+	return boundaryDelta || bFutureSurfaceObservedRowCompare(left, right);
+}
+
+function bFutureSurfaceManifest(rows) {
+	return {
+		schema: bFutureSurfaceInstanceSchema,
+		schema_sha256: bFutureSurfaceSchemaDigest,
+		rows: rows.map(({ boundary, path, symbol }) => ({ boundary, path, symbol })),
+	};
+}
+
+function bFutureSurfaceManifestBytes(manifest) {
+	return Buffer.from(`${JSON.stringify(manifest)}\n`, "utf8");
+}
+
+function validateC5PreservedBFutureSurfaceManifest(stagedManifest, parentManifest) {
+	if (!Buffer.isBuffer(stagedManifest)) return ["C5 candidate lacks the C4-sealed B future-surface manifest"];
+	if (!Buffer.isBuffer(parentManifest)) return ["C5 parent lacks the sealed B future-surface manifest"];
+	if (!stagedManifest.equals(parentManifest)) return ["C5 candidate changed the C4-sealed B future-surface manifest"];
+	return [];
+}
+
+function bFutureSurfaceRowPathAllowed(row) {
+	if (row.boundary === "C4") {
+		return bFutureSurfaceC4AllowedExact.includes(row.path) ||
+			bFutureSurfaceC4AllowedPrefixes.some((prefix) => row.path.startsWith(prefix));
+	}
+	if (row.boundary === "C5") {
+		return bFutureSurfaceC5AllowedPrefixes.some((prefix) => row.path.startsWith(prefix));
+	}
+	return false;
+}
+
+function validateBFutureSurfaceManifest(manifest) {
+	const errors = [];
+	if (!manifest || typeof manifest !== "object" || Array.isArray(manifest) ||
+		!isDeepStrictEqual(Object.keys(manifest), ["schema", "schema_sha256", "rows"])) {
+		return ["root keys/order"];
+	}
+	if (manifest.schema !== bFutureSurfaceInstanceSchema) errors.push("schema");
+	if (manifest.schema_sha256 !== bFutureSurfaceSchemaDigest) errors.push("schema digest");
+	if (!Array.isArray(manifest.rows) || manifest.rows.length === 0 || manifest.rows.length > 4096) {
+		errors.push("row cardinality");
+		return errors;
+	}
+	const rows = [];
+	for (let index = 0; index < manifest.rows.length; index += 1) {
+		const row = manifest.rows[index];
+		if (!row || typeof row !== "object" || Array.isArray(row) ||
+			!isDeepStrictEqual(Object.keys(row), ["boundary", "path", "symbol"])) {
+			errors.push(`row ${index} keys/order`);
+			continue;
+		}
+		if (!bFutureSurfaceBoundaryOrder.includes(row.boundary)) errors.push(`row ${index} boundary`);
+		const pathValid = typeof row.path === "string" && row.path.length > 0 && row.path.length <= 4096 &&
+			row.path.startsWith("internal/") && row.path.endsWith(".go") && !row.path.endsWith("_test.go") &&
+			!isAbsolute(row.path) && !row.path.startsWith("./") && !row.path.includes("\\") && !row.path.includes("//") &&
+			!row.path.split("/").some((part) => part === "" || part === "." || part === "..") &&
+			!/[\u0000-\u001f\u007f]/u.test(row.path);
+		if (!pathValid) {
+			errors.push(`row ${index} path`);
+		}
+		if (typeof row.symbol !== "string" || !/^[_\p{L}][_\p{L}\p{N}]*$/u.test(row.symbol) ||
+			!bFutureSurfaceFamilies.some((family) => row.symbol.includes(family))) {
+			errors.push(`row ${index} symbol`);
+		}
+		if (pathValid && !bFutureSurfaceRowPathAllowed(row)) errors.push(`row ${index} location`);
+		rows.push({ boundary: row.boundary, path: row.path, symbol: row.symbol });
+	}
+	const sortedRows = [...rows].sort(bFutureSurfaceManifestRowCompare);
+	if (!isDeepStrictEqual(rows, sortedRows)) errors.push("row order");
+	const rowKeys = rows.map(({ boundary, path, symbol }) => `${boundary}\0${path}\0${symbol}`);
+	if (new Set(rowKeys).size !== rowKeys.length) errors.push("duplicate row");
+	for (const required of bFutureSurfaceC4RequiredRows) {
+		if (!rows.some((row) => isDeepStrictEqual(row, required))) errors.push(`missing required row ${required.path}:${required.symbol}`);
+	}
+	return errors;
+}
+
+function bFutureSurfaceRowsInSource(path, source) {
+	const symbols = new Set();
+	for (const match of source.matchAll(/[_\p{L}][_\p{L}\p{N}]*/gu)) {
+		if (bFutureSurfaceFamilies.some((family) => match[0].includes(family))) symbols.add(match[0]);
+	}
+	return [...symbols].map((symbol) => ({ path, symbol })).sort(bFutureSurfaceObservedRowCompare);
+}
+
+function validateBFutureSurfaceObservedRows(rows, label) {
+	if (!Array.isArray(rows) || rows.length > 8192) throw new Error(`${label} row cardinality`);
+	const normalized = [];
+	for (const [index, row] of rows.entries()) {
+		if (!row || typeof row !== "object" || Array.isArray(row) ||
+			!isDeepStrictEqual(Object.keys(row), ["path", "symbol"]) ||
+			typeof row.path !== "string" || typeof row.symbol !== "string" ||
+			!row.path.startsWith("internal/") || !row.path.endsWith(".go") || row.path.endsWith("_test.go") ||
+			!/^[_\p{L}][_\p{L}\p{N}]*$/u.test(row.symbol) ||
+			!bFutureSurfaceFamilies.some((family) => row.symbol.includes(family))) {
+			throw new Error(`${label} row ${index}`);
+		}
+		normalized.push({ path: row.path, symbol: row.symbol });
+	}
+	const sortedRows = [...normalized].sort(bFutureSurfaceObservedRowCompare);
+	if (!isDeepStrictEqual(normalized, sortedRows) ||
+		new Set(normalized.map(({ path, symbol }) => `${path}\0${symbol}`)).size !== normalized.length) {
+		throw new Error(`${label} order/uniqueness`);
+	}
+	return Object.freeze(normalized.map(Object.freeze));
+}
+
+function validateBFutureSurfaceProductionPaths(paths, label) {
+	if (!Array.isArray(paths) || paths.length > 8192) throw new Error(`${label} path cardinality`);
+	const normalized = [];
+	for (const [index, path] of paths.entries()) {
+		if (typeof path !== "string" || !path.startsWith("internal/") || !path.endsWith(".go") ||
+			path.endsWith("_test.go") || isAbsolute(path) || path.includes("\\") || path.includes("//") ||
+			path.split("/").some((part) => part === "" || part === "." || part === "..") ||
+			/[\u0000-\u001f\u007f]/u.test(path)) {
+			throw new Error(`${label} path ${index}`);
+		}
+		normalized.push(path);
+	}
+	const sortedPaths = [...normalized].sort((left, right) =>
+		Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8")));
+	if (!isDeepStrictEqual(normalized, sortedPaths) || new Set(normalized).size !== normalized.length) {
+		throw new Error(`${label} path order/uniqueness`);
+	}
+	return Object.freeze(normalized);
+}
+
+async function bFutureSurfaceLiveProductionPaths(root) {
+	if (root !== repositoryRoot) throw new Error("B future-surface source root must be canonical");
+	const rootReal = await realpath(root);
+	const internal = resolve(root, "internal");
+	const internalStat = await lstat(internal);
+	if (!internalStat.isDirectory() || internalStat.isSymbolicLink() ||
+		await realpath(internal) !== resolve(rootReal, "internal")) {
+		throw new Error("B future-surface internal root is not a stable directory");
+	}
+	const queue = [internal];
+	const paths = [];
+	let entriesSeen = 0;
+	for (let cursor = 0; cursor < queue.length; cursor += 1) {
+		if (queue.length > 2048) throw new Error("B future-surface directory ceiling");
+		const entries = await readdir(queue[cursor], { withFileTypes: true });
+		entries.sort((left, right) => Buffer.compare(Buffer.from(left.name, "utf8"), Buffer.from(right.name, "utf8")));
+		for (const entry of entries) {
+			entriesSeen += 1;
+			if (entriesSeen > 32768) throw new Error("B future-surface entry ceiling");
+			const absolute = resolve(queue[cursor], entry.name);
+			const status = await lstat(absolute);
+			if (status.isSymbolicLink()) throw new Error(`B future-surface symlink: ${relative(root, absolute)}`);
+			if (status.isDirectory()) {
+				queue.push(absolute);
+				continue;
+			}
+			if (!status.isFile()) throw new Error(`B future-surface nonregular entry: ${relative(root, absolute)}`);
+			const path = relative(root, absolute).split(sep).join("/");
+			if (path.endsWith(".go") && !path.endsWith("_test.go")) paths.push(path);
+		}
+	}
+	return paths.sort((left, right) => Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8")));
+}
+
+async function collectBFutureSurfaceInput(root, overrides) {
+	if (overrides.has(B_FUTURE_SURFACE_ROWS_FIXTURE)) {
+		if (overrides.has(STRICT_INDEX_SNAPSHOT)) throw new Error("B future-surface fixture cannot replace a strict index snapshot");
+		const fixture = overrides.get(B_FUTURE_SURFACE_ROWS_FIXTURE);
+		if (!fixture || typeof fixture !== "object" || Array.isArray(fixture) ||
+			!isDeepStrictEqual(Object.keys(fixture), ["observedRows", "productionPaths"])) {
+			throw new Error("B future-surface fixture shape");
+		}
+		return Object.freeze({
+			observedRows: validateBFutureSurfaceObservedRows(fixture.observedRows, "B future-surface fixture"),
+			productionPaths: validateBFutureSurfaceProductionPaths(fixture.productionPaths, "B future-surface fixture"),
+		});
+	}
+	const strictEntries = overrides.get(STRICT_INDEX_SNAPSHOT);
+	let productionPaths;
+	if (strictEntries !== undefined) {
+		if (!Array.isArray(strictEntries)) throw new Error("B future-surface strict index inventory unavailable");
+		productionPaths = strictEntries.filter(({ path }) =>
+			path.startsWith("internal/") && path.endsWith(".go") && !path.endsWith("_test.go"))
+			.map(({ mode, path }) => {
+				if (mode !== "100644") throw new Error(`B future-surface production mode mismatch: ${path}`);
+				return path;
+			});
+	} else {
+		productionPaths = await bFutureSurfaceLiveProductionPaths(root);
+	}
+	productionPaths = validateBFutureSurfaceProductionPaths(productionPaths, "B future-surface production");
+	const observedRows = [];
+	let totalBytes = 0;
+	for (const path of productionPaths) {
+		const bytes = strictEntries === undefined
+			? await readStableCandidateWorktreeBytes(path, "100644")
+			: await readBytes(root, path, overrides);
+		totalBytes += bytes.length;
+		if (totalBytes > 128 * 1024 * 1024) throw new Error("B future-surface source byte ceiling");
+		let source;
+		try { source = new TextDecoder("utf-8", { fatal: true }).decode(bytes); } catch {
+			throw new Error(`B future-surface source is not UTF-8: ${path}`);
+		}
+		observedRows.push(...bFutureSurfaceRowsInSource(path, source));
+	}
+	observedRows.sort(bFutureSurfaceObservedRowCompare);
+	return Object.freeze({
+		observedRows: validateBFutureSurfaceObservedRows(observedRows, "B future-surface observed"),
+		productionPaths,
+	});
+}
+
+function validateBFutureSurfaceBaselineInput(input) {
+	const errors = [];
+	if (!isDeepStrictEqual(input.observedRows, bFutureSurfaceHistoricalInventory)) {
+		errors.push("sealed-C3D 27-row historical baseline");
+	}
+	for (const prefix of [...bFutureSurfaceC4PresencePrefixes, ...bFutureSurfaceC5PresencePrefixes]) {
+		if (input.productionPaths.some((path) => path.startsWith(prefix))) {
+			errors.push(`C4V topology premature ${prefix}`);
+		}
+	}
+	return errors;
+}
+
+async function validateLiveBFutureSurfaceBaseline(root, overrides) {
+	let input;
+	try { input = await collectBFutureSurfaceInput(root, overrides); } catch (error) {
+		return [`independent sealed-C3D source scan failed (${error.message})`];
+	}
+	return validateBFutureSurfaceBaselineInput(input);
+}
+
+function validateBFutureSurfaceState(manifest, observedRows, productionPaths, boundary) {
+	const errors = validateBFutureSurfaceManifest(manifest);
+	if (errors.length > 0) return errors.map((error) => `manifest ${error}`);
+	const historicalKeys = new Set(bFutureSurfaceHistoricalInventory.map(({ path, symbol }) => `${path}\0${symbol}`));
+	const historical = observedRows.filter(({ path, symbol }) => historicalKeys.has(`${path}\0${symbol}`));
+	if (!isDeepStrictEqual(historical, bFutureSurfaceHistoricalInventory)) errors.push("historical 27-row inventory");
+	const future = observedRows.filter(({ path, symbol }) => !historicalKeys.has(`${path}\0${symbol}`));
+	const expectedFuture = manifest.rows.filter(({ boundary: owner }) => boundary === "C4" ? owner === "C4" : true)
+		.map(({ path, symbol }) => ({ path, symbol })).sort(bFutureSurfaceObservedRowCompare);
+	if (!isDeepStrictEqual(future, expectedFuture)) errors.push(`${boundary} observed future rows`);
+	const realized = (prefix) => productionPaths.some((path) => path.startsWith(prefix));
+	for (const prefix of bFutureSurfaceC4PresencePrefixes) {
+		if (!realized(prefix)) errors.push(`C4 topology missing ${prefix}`);
+	}
+	for (const prefix of bFutureSurfaceC5PresencePrefixes) {
+		if (boundary === "C4" ? realized(prefix) : !realized(prefix)) {
+			errors.push(`${boundary} topology ${boundary === "C4" ? "premature" : "missing"} ${prefix}`);
+		}
+	}
+	return errors;
+}
+
+async function validateLiveBFutureSurfaceAuthority(root, overrides, boundary) {
+	const errors = [];
+	let manifestBytes;
+	try {
+		manifestBytes = await readBytes(root, bFutureSurfaceAuthorityPath, overrides);
+		if (!overrides.has(STRICT_INDEX_SNAPSHOT) && !overrides.has(B_FUTURE_SURFACE_ROWS_FIXTURE)) {
+			const stable = await readStableCandidateWorktreeBytes(bFutureSurfaceAuthorityPath, "100644");
+			if (!manifestBytes.equals(stable)) throw new Error("manifest changed during stable read");
+		}
+	} catch (error) {
+		return [`${bFutureSurfaceAuthorityPath}: unreadable (${error.message})`];
+	}
+	let manifest;
+	try {
+		const text = new TextDecoder("utf-8", { fatal: true }).decode(manifestBytes);
+		manifest = JSON.parse(text);
+		if (!manifestBytes.equals(bFutureSurfaceManifestBytes(manifest))) {
+			errors.push(`${bFutureSurfaceAuthorityPath}: noncanonical one-line JSON`);
+		}
+	} catch (error) {
+		return [`${bFutureSurfaceAuthorityPath}: invalid JSON/UTF-8 (${error.message})`];
+	}
+	let input;
+	try { input = await collectBFutureSurfaceInput(root, overrides); } catch (error) {
+		return [...errors, `${bFutureSurfaceAuthorityPath}: independent source scan failed (${error.message})`];
+	}
+	for (const error of validateBFutureSurfaceState(manifest, input.observedRows, input.productionPaths, boundary)) {
+		errors.push(`${bFutureSurfaceAuthorityPath}: ${error}`);
+	}
+	return errors;
+}
+
+function bFutureSurfaceSelfTestFixture() {
+	const rows = [
+		{ boundary: "C4", path: "internal/contractexec/runner/runner.go", symbol: "ContractExecutionRunner" },
+		{ boundary: "C4", path: "internal/store/contract_run_bridge.go", symbol: "ContractExecutionRecord" },
+		{ boundary: "C5", path: "internal/contractexec/http/handler.go", symbol: "ContractExecutionHTTPHandler" },
+		{ boundary: "C5", path: "internal/contractexec/scope/scope.go", symbol: "ContractExecutionScope" },
+	];
+	const c4Future = rows.filter(({ boundary }) => boundary === "C4").map(({ path, symbol }) => ({ path, symbol }));
+	const allFuture = rows.map(({ path, symbol }) => ({ path, symbol }));
+	const observed = (future) => [...structuredClone(bFutureSurfaceHistoricalInventory), ...future]
+		.sort(bFutureSurfaceObservedRowCompare);
+	const production = (future) => [...new Set([
+		...bFutureSurfaceHistoricalInventory.map(({ path }) => path), ...future.map(({ path }) => path),
+	])].sort((left, right) => Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8")));
+	return Object.freeze({
+		manifest: bFutureSurfaceManifest(rows),
+		c4Observed: observed(c4Future),
+		c5Observed: observed(allFuture),
+		c4Production: production(c4Future),
+		c5Production: production(allFuture),
+	});
+}
+
+function bFutureSurfaceStrictBaselineOverrides() {
+	const rowsByPath = new Map();
+	for (const row of bFutureSurfaceHistoricalInventory) {
+		if (!rowsByPath.has(row.path)) rowsByPath.set(row.path, []);
+		rowsByPath.get(row.path).push(row.symbol);
+	}
+	const entries = [...rowsByPath.keys()]
+		.sort((left, right) => Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8")))
+		.map((path) => ({ mode: "100644", path }));
+	const overrides = new Map([[STRICT_INDEX_SNAPSHOT, entries]]);
+	for (const { path } of entries) {
+		overrides.set(path, Buffer.from(
+		`${rowsByPath.get(path).map((symbol) => `var ${symbol} = 0`).join("\n")}\n`, "utf8",
+		));
+	}
+	return overrides;
+}
+
+async function runBFutureSurfaceAuthoritySelfTest() {
+	const baselinePolicyDigest = createHash("sha256")
+		.update(JSON.stringify(bFutureSurfaceBaselinePolicy), "utf8").digest("hex");
+	if (baselinePolicyDigest !== bFutureSurfaceBaselinePolicyDigest) {
+		throw new Error(`B future-surface baseline policy digest ${baselinePolicyDigest}`);
+	}
+	const schemaDigest = createHash("sha256").update(JSON.stringify(bFutureSurfaceSchemaDescriptor), "utf8").digest("hex");
+	if (schemaDigest !== bFutureSurfaceSchemaDigest) throw new Error(`B future-surface schema digest ${schemaDigest}`);
+	const historicalDigest = createHash("sha256").update(
+		JSON.stringify(bFutureSurfaceHistoricalInventory), "utf8",
+	).digest("hex");
+	if (bFutureSurfaceHistoricalInventory.length !== 27 || historicalDigest !== bFutureSurfaceHistoricalInventoryDigest) {
+		throw new Error(`B future-surface historical inventory ${bFutureSurfaceHistoricalInventory.length}/${historicalDigest}`);
+	}
+	const testVector = bFutureSurfaceManifest(bFutureSurfaceC4RequiredRows);
+	const testVectorDigest = createHash("sha256").update(JSON.stringify(testVector), "utf8").digest("hex");
+	if (testVectorDigest !== bFutureSurfaceTestVectorDigest) {
+		throw new Error(`B future-surface TEST_VECTOR_ONLY_INCOMPLETE digest ${testVectorDigest}`);
+	}
+	const fixture = bFutureSurfaceSelfTestFixture();
+	if (validateBFutureSurfaceManifest(fixture.manifest).length > 0 ||
+		validateBFutureSurfaceState(fixture.manifest, fixture.c4Observed, fixture.c4Production, "C4").length > 0 ||
+		validateBFutureSurfaceState(fixture.manifest, fixture.c5Observed, fixture.c5Production, "C5").length > 0) {
+		throw new Error("B future-surface authority positive fixture");
+	}
+	const liveBaselineErrors = await validateLiveBFutureSurfaceBaseline(repositoryRoot, new Map());
+	if (liveBaselineErrors.length > 0) {
+		throw new Error(`B future-surface live sealed-C3D baseline failed: ${liveBaselineErrors.join(", ")}`);
+	}
+	const strictBaselineOverrides = bFutureSurfaceStrictBaselineOverrides();
+	const strictBaselineErrors = await validateLiveBFutureSurfaceBaseline(repositoryRoot, strictBaselineOverrides);
+	if (strictBaselineErrors.length > 0) {
+		throw new Error(`B future-surface strict baseline failed: ${strictBaselineErrors.join(", ")}`);
+	}
+	let rejected = 0;
+	const refuseManifest = (name, mutate, expected) => {
+		const hostile = structuredClone(fixture.manifest);
+		const replacement = mutate(hostile) ?? hostile;
+		const errors = validateBFutureSurfaceManifest(replacement);
+		if (!errors.some((error) => error.includes(expected))) {
+			throw new Error(`B future-surface manifest hostile survived: ${name} (${errors.join(", ")})`);
+		}
+		rejected += 1;
+	};
+	refuseManifest("root key order", (value) => ({ rows: value.rows, schema: value.schema, schema_sha256: value.schema_sha256 }), "root keys/order");
+	refuseManifest("extra root key", (value) => { value.extra = true; }, "root keys/order");
+	refuseManifest("schema", (value) => { value.schema += "-foreign"; }, "schema");
+	refuseManifest("schema digest", (value) => { value.schema_sha256 = "0".repeat(64); }, "schema digest");
+	refuseManifest("empty rows", (value) => { value.rows = []; }, "row cardinality");
+	refuseManifest("row key order", (value) => {
+		const row = value.rows[0];
+		value.rows[0] = { path: row.path, boundary: row.boundary, symbol: row.symbol };
+	}, "keys/order");
+	refuseManifest("unsorted rows", (value) => { [value.rows[0], value.rows[1]] = [value.rows[1], value.rows[0]]; }, "row order");
+	refuseManifest("duplicate row", (value) => { value.rows.splice(1, 0, structuredClone(value.rows[0])); }, "duplicate row");
+	refuseManifest("wrong boundary", (value) => { value.rows[0].boundary = "C6"; }, "boundary");
+	refuseManifest("null path", (value) => { value.rows[0].path = null; }, "path");
+	refuseManifest("numeric path", (value) => { value.rows[0].path = 7; }, "path");
+	refuseManifest("test path", (value) => { value.rows[0].path = "internal/contractexec/runner/runner_test.go"; }, "path");
+	refuseManifest("outside path", (value) => { value.rows[0].path = "cmd/countershape/main.go"; }, "path");
+	refuseManifest("prefix lookalike", (value) => { value.rows[0].path = "internal/contractexec/runner-evil/runner.go"; }, "location");
+	refuseManifest("symbol syntax", (value) => { value.rows[0].symbol = "ContractExecution-Runner"; }, "symbol");
+	refuseManifest("Unicode lookalike", (value) => { value.rows[0].symbol = "ContractExecutiоnRunner"; }, "symbol");
+	refuseManifest("missing bridge", (value) => {
+		value.rows = value.rows.filter(({ path }) => path !== "internal/store/contract_run_bridge.go");
+	}, "missing required row");
+	const refuseState = (name, boundary, observedRows, productionPaths, expected) => {
+		const errors = validateBFutureSurfaceState(fixture.manifest, observedRows, productionPaths, boundary);
+		if (!errors.some((error) => error.includes(expected))) {
+			throw new Error(`B future-surface state hostile survived: ${name} (${errors.join(", ")})`);
+		}
+		rejected += 1;
+	};
+	refuseState("historical deletion", "C4", fixture.c4Observed.slice(1), fixture.c4Production, "historical 27-row inventory");
+	refuseState("manifest row absent from C4 source", "C4", fixture.c4Observed.filter(({ symbol }) => symbol !== "ContractExecutionRunner"), fixture.c4Production, "observed future rows");
+	refuseState("extra C4 source row", "C4", [...fixture.c4Observed, { path: "internal/contractexec/runner/runner.go", symbol: "ContractExecutionExtra" }].sort(bFutureSurfaceObservedRowCompare), fixture.c4Production, "observed future rows");
+	refuseState("premature C5 row", "C4", fixture.c5Observed, fixture.c4Production, "observed future rows");
+	refuseState("C5 declared row absent", "C5", fixture.c4Observed, fixture.c5Production, "observed future rows");
+	refuseState("C4 runner absent", "C4", fixture.c4Observed, fixture.c4Production.filter((path) => !path.startsWith("internal/contractexec/runner/")), "C4 topology missing");
+	refuseState("C4 HTTP premature", "C4", fixture.c4Observed, [...fixture.c4Production, "internal/contractexec/http/empty.go"].sort(), "C4 topology premature internal/contractexec/http/");
+	refuseState("C4 scope premature", "C4", fixture.c4Observed, [...fixture.c4Production, "internal/contractexec/scope/empty.go"].sort(), "C4 topology premature internal/contractexec/scope/");
+	refuseState("C5 without C4", "C5", fixture.c5Observed, fixture.c5Production.filter((path) => !path.startsWith("internal/contractexec/runner/")), "C4 topology missing");
+	refuseState("C5 HTTP absent", "C5", fixture.c5Observed, fixture.c5Production.filter((path) => !path.startsWith("internal/contractexec/http/")), "C5 topology missing internal/contractexec/http/");
+	refuseState("C5 scope absent", "C5", fixture.c5Observed, fixture.c5Production.filter((path) => !path.startsWith("internal/contractexec/scope/")), "C5 topology missing internal/contractexec/scope/");
+	const fixtureOverrides = new Map([
+		[bFutureSurfaceAuthorityPath, bFutureSurfaceManifestBytes(fixture.manifest)],
+		[B_FUTURE_SURFACE_ROWS_FIXTURE, {
+			observedRows: fixture.c4Observed, productionPaths: fixture.c4Production,
+		}],
+	]);
+	if ((await validateLiveBFutureSurfaceAuthority(repositoryRoot, fixtureOverrides, "C4")).length > 0) {
+		throw new Error("B future-surface live fixture baseline");
+	}
+	const preservedManifest = bFutureSurfaceManifestBytes(fixture.manifest);
+	if (validateC5PreservedBFutureSurfaceManifest(preservedManifest, preservedManifest).length > 0) {
+		throw new Error("B future-surface C5 preservation positive control");
+	}
+	for (const [name, staged, parent, expected] of [
+		["missing staged manifest", undefined, preservedManifest, "candidate lacks"],
+		["missing parent manifest", preservedManifest, undefined, "parent lacks"],
+		["altered staged manifest", Buffer.concat([preservedManifest, Buffer.from(" ")]), preservedManifest, "candidate changed"],
+	]) {
+		const errors = validateC5PreservedBFutureSurfaceManifest(staged, parent);
+		if (!errors.some((error) => error.includes(expected))) {
+			throw new Error(`B future-surface C5 preservation hostile survived: ${name} (${errors.join(", ")})`);
+		}
+		rejected += 1;
+	}
+	for (const [name, bytes, expected] of [
+		["pretty manifest", Buffer.from(`${JSON.stringify(fixture.manifest, null, 2)}\n`, "utf8"), "noncanonical"],
+		["BOM manifest", Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), bFutureSurfaceManifestBytes(fixture.manifest)]), "noncanonical"],
+		["invalid UTF-8 manifest", Buffer.from([0xff]), "invalid JSON/UTF-8"],
+		["malformed manifest", Buffer.from("{\n", "utf8"), "invalid JSON/UTF-8"],
+	]) {
+		const hostile = new Map(fixtureOverrides);
+		hostile.set(bFutureSurfaceAuthorityPath, bytes);
+		const errors = await validateLiveBFutureSurfaceAuthority(repositoryRoot, hostile, "C4");
+		if (!errors.some((error) => error.includes(expected))) {
+			throw new Error(`B future-surface byte hostile survived: ${name} (${errors.join(", ")})`);
+		}
+		rejected += 1;
+	}
+	let strictFixtureRejected = false;
+	try {
+		await collectBFutureSurfaceInput(repositoryRoot, new Map([
+			[B_FUTURE_SURFACE_ROWS_FIXTURE, { observedRows: [], productionPaths: [] }],
+			[STRICT_INDEX_SNAPSHOT, []],
+		]));
+	} catch (error) { strictFixtureRejected = error.message.includes("cannot replace a strict index snapshot"); }
+	if (!strictFixtureRejected) throw new Error("B future-surface strict snapshot accepted synthetic injection");
+	rejected += 1;
+	const refuseStrictBaseline = async (name, mutate, expected) => {
+		const hostile = bFutureSurfaceStrictBaselineOverrides();
+		mutate(hostile);
+		const errors = await validateLiveBFutureSurfaceBaseline(repositoryRoot, hostile);
+		if (!errors.some((error) => error.includes(expected))) {
+			throw new Error(`B future-surface strict baseline hostile survived: ${name} (${errors.join(", ")})`);
+		}
+		rejected += 1;
+	};
+	await refuseStrictBaseline("wrong production mode", (value) => {
+		value.get(STRICT_INDEX_SNAPSHOT)[0].mode = "100755";
+	}, "source scan failed");
+	await refuseStrictBaseline("missing pinned blob", (value) => {
+		value.delete(value.get(STRICT_INDEX_SNAPSHOT)[0].path);
+	}, "source scan failed");
+	await refuseStrictBaseline("invalid source UTF-8", (value) => {
+		value.set(value.get(STRICT_INDEX_SNAPSHOT)[0].path, Buffer.from([0xff]));
+	}, "source scan failed");
+	await refuseStrictBaseline("historical row deletion", (value) => {
+		const path = value.get(STRICT_INDEX_SNAPSHOT)[0].path;
+		value.set(path, Buffer.from(value.get(path).toString("utf8").replace(
+			bFutureSurfaceHistoricalInventory.find((row) => row.path === path).symbol, "HistoricalRemoved",
+		), "utf8"));
+	}, "27-row historical baseline");
+	await refuseStrictBaseline("extra reserved token", (value) => {
+		const path = value.get(STRICT_INDEX_SNAPSHOT)[0].path;
+		value.set(path, Buffer.concat([value.get(path), Buffer.from("var ContractExecutionUnexpected = 0\n", "utf8")]));
+	}, "27-row historical baseline");
+	await refuseStrictBaseline("premature runner topology", (value) => {
+		const path = "internal/contractexec/runner/empty.go";
+		value.get(STRICT_INDEX_SNAPSHOT).push({ mode: "100644", path });
+		value.get(STRICT_INDEX_SNAPSHOT).sort((left, right) =>
+			Buffer.compare(Buffer.from(left.path, "utf8"), Buffer.from(right.path, "utf8")));
+		value.set(path, Buffer.from("package runner\n", "utf8"));
+	}, "C4V topology premature");
+	return rejected;
 }
 
 function closedObjectRequiredRostersExact(schema) {
@@ -6340,6 +10337,498 @@ async function runC3DSealedC3BCompatibilitySelfTest() {
 	return 1;
 }
 
+function sealedC3DReceiptProjection() {
+	return {
+		source_commit: sealedC3DIdentity.commit,
+		source_tree: sealedC3DIdentity.tree,
+		source_subject: sealedC3DIdentity.subject,
+		secrets_override: true,
+		coverage_complete_events: c3dClaimLabels.length,
+		coverage_total_events: c3dClaimLabels.length,
+		evidence: {
+			git_note: {
+				version: 1,
+				blob_oid: sealedC3DIdentity.noteBlob,
+				body_sha256: sealedC3DIdentity.noteBodySHA256,
+			},
+		},
+	};
+}
+
+function validateFutureSourceDiff(authority, paths, addedPath) {
+	const errors = [];
+	const entries = authority?.source_diff;
+	if (!Array.isArray(entries)) return ["source diff roster"];
+	const observedPaths = entries.map((entry) => entry?.path);
+	if (new Set(observedPaths).size !== observedPaths.length || !isDeepStrictEqual(observedPaths, paths)) {
+		errors.push("source diff exact path roster");
+	}
+	let added = 0;
+	let modified = 0;
+	for (const path of paths) {
+		const entry = entries.find((candidate) => candidate?.path === path);
+		if (!entry || !isDeepStrictEqual(Object.keys(entry).sort(), ["new_mode", "new_oid", "old_mode", "old_oid", "path", "status"])) {
+			errors.push(`source diff row ${path}`);
+			continue;
+		}
+		const objectPattern = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/u;
+		const newObjectValid = objectPattern.test(entry.new_oid) && !/^0+$/u.test(entry.new_oid);
+		if (path === addedPath) {
+			added += 1;
+			if (entry.status !== "A" || entry.old_mode !== "000000" || entry.new_mode !== "100644" ||
+				!objectPattern.test(entry.old_oid) || !/^0+$/u.test(entry.old_oid) || !newObjectValid ||
+				entry.old_oid.length !== entry.new_oid.length) {
+				errors.push(`source diff added row ${path}`);
+			}
+		} else {
+			modified += 1;
+			if (entry.status !== "M" || entry.old_mode !== "100644" || entry.new_mode !== "100644" ||
+				!objectPattern.test(entry.old_oid) || /^0+$/u.test(entry.old_oid) || !newObjectValid ||
+				entry.old_oid.length !== entry.new_oid.length || entry.old_oid === entry.new_oid) {
+				errors.push(`source diff modified row ${path}`);
+			}
+		}
+	}
+	if (added !== 1 || modified !== paths.length - 1) {
+		errors.push(`source diff status partition A=${added} M=${modified}`);
+	}
+	return errors;
+}
+
+function validateSealedC3DAuthority(authority, requireCurrentHead = false) {
+	const errors = [];
+	if (!authority || typeof authority !== "object" || Array.isArray(authority)) return ["missing Git/didrun authority"];
+	if (authority.commit !== sealedC3DIdentity.commit) errors.push("commit");
+	if (authority.tree !== sealedC3DIdentity.tree) errors.push("tree");
+	if (authority.parent !== sealedC3DIdentity.parent || !isDeepStrictEqual(authority.parents, [sealedC3DIdentity.parent])) errors.push("parent");
+	if (authority.subject !== sealedC3DIdentity.subject) errors.push("subject");
+	if (authority.ancestor_of_head !== true) errors.push("ancestor of HEAD");
+	if (requireCurrentHead && authority.head_commit !== sealedC3DIdentity.commit) errors.push("sealed C3D is not current HEAD");
+	if (authority.note_type !== sealedC3DIdentity.noteType) errors.push("note type");
+	if (authority.note_blob_oid !== sealedC3DIdentity.noteBlob) errors.push("note blob");
+	if (authority.note_body_sha256 !== sealedC3DIdentity.noteBodySHA256) errors.push("note body digest");
+	errors.push(...validateFutureSourceDiff(authority, requiredC3DPaths, c3dStatusPath));
+	errors.push(...validateSealedC3DNote(authority.note));
+	return errors;
+}
+
+export async function verifyC4VSealedC3DNote() {
+	const authority = await loadReceiptAuthorityFromGit(repositoryRoot, sealedC3DReceiptProjection());
+	const errors = validateSealedC3DAuthority(authority, true);
+	if (errors.length > 0) throw new Error(`P07B-C C4V sealed-C3D authority mismatch: ${errors.join(", ")}`);
+	console.log(`P07B-C C4V sealed-C3D note exact: commit=${authority.commit} tree=${authority.tree} note=${authority.note_blob_oid} claims=${c3dClaimLabels.length}`);
+}
+
+function validateSealedC4VAuthority(authority, requireCurrentHead = false) {
+	const errors = [];
+	if (!authority || typeof authority !== "object" || Array.isArray(authority)) return ["missing Git/didrun authority"];
+	const identity = { commit: authority.commit, tree: authority.tree };
+	if (!/^[0-9a-f]{40}$/u.test(authority.commit ?? "") || /^0+$/u.test(authority.commit ?? "")) errors.push("commit");
+	if (!/^[0-9a-f]{40}$/u.test(authority.tree ?? "") || /^0+$/u.test(authority.tree ?? "")) errors.push("tree");
+	if (authority.parent !== sealedC3DIdentity.commit || !isDeepStrictEqual(authority.parents, [sealedC3DIdentity.commit])) errors.push("sealed C3D parent");
+	if (authority.subject !== c4vSourceSubject) errors.push("subject");
+	if (authority.ancestor_of_head !== true) errors.push("ancestor of HEAD");
+	if (requireCurrentHead && authority.head_commit !== authority.commit) errors.push("sealed C4V is not current HEAD");
+	if (authority.note_type !== "blob") errors.push("note type");
+	if (!/^[0-9a-f]{40}$/u.test(authority.note_blob_oid ?? "") || /^0+$/u.test(authority.note_blob_oid ?? "")) errors.push("note blob");
+	if (!/^[0-9a-f]{64}$/u.test(authority.note_body_sha256 ?? "") || /^0+$/u.test(authority.note_body_sha256 ?? "")) errors.push("note body digest");
+	errors.push(...validateFutureSourceDiff(authority, requiredC4VPaths, c4vStatusPath));
+	errors.push(...validateSealedC4VNote(authority.note, identity));
+	return errors;
+}
+
+function validatePrefixedFutureSourceDiff(authority, exactPaths, prefixes) {
+	const errors = [];
+	const entries = authority?.source_diff;
+	if (!Array.isArray(entries)) return ["source diff roster"];
+	const observedPaths = entries.map((entry) => entry?.path);
+	const byteSortedPaths = [...observedPaths].sort((left, right) =>
+		Buffer.compare(Buffer.from(String(left), "utf8"), Buffer.from(String(right), "utf8")));
+	if (observedPaths.some((path) => typeof path !== "string" || path.length === 0) ||
+		new Set(observedPaths).size !== observedPaths.length || !isDeepStrictEqual(observedPaths, byteSortedPaths)) {
+		errors.push("source diff unique sorted path roster");
+	}
+	for (const path of exactPaths) {
+		if (!observedPaths.includes(path)) errors.push(`source diff missing exact path ${path}`);
+	}
+	const prefixCounts = new Map(prefixes.map((prefix) => [prefix, 0]));
+	for (const path of observedPaths.filter((candidate) => !exactPaths.includes(candidate))) {
+		const matches = prefixes.filter((prefix) => path.startsWith(prefix) && path.length > prefix.length);
+		if (matches.length !== 1) errors.push(`source diff path outside declared prefixes ${path}`);
+		else prefixCounts.set(matches[0], prefixCounts.get(matches[0]) + 1);
+	}
+	for (const [prefix, count] of prefixCounts) {
+		if (count === 0) errors.push(`source diff unrealized prefix ${prefix}`);
+	}
+	const objectPattern = /^(?:[0-9a-f]{40}|[0-9a-f]{64})$/u;
+	let added = 0;
+	let modified = 0;
+	for (const entry of entries) {
+		const path = entry?.path ?? "<missing>";
+		if (!entry || !isDeepStrictEqual(Object.keys(entry).sort(), ["new_mode", "new_oid", "old_mode", "old_oid", "path", "status"])) {
+			errors.push(`source diff row ${path}`);
+			continue;
+		}
+		const newObjectValid = objectPattern.test(entry.new_oid) && !/^0+$/u.test(entry.new_oid);
+		if (entry.status === "A") {
+			added += 1;
+			if (entry.old_mode !== "000000" || entry.new_mode !== "100644" || !objectPattern.test(entry.old_oid) ||
+				!/^0+$/u.test(entry.old_oid) || !newObjectValid || entry.old_oid.length !== entry.new_oid.length) {
+				errors.push(`source diff added row ${path}`);
+			}
+		} else if (entry.status === "M") {
+			modified += 1;
+			if (entry.old_mode !== "100644" || entry.new_mode !== "100644" || !objectPattern.test(entry.old_oid) ||
+				/^0+$/u.test(entry.old_oid) || !newObjectValid || entry.old_oid.length !== entry.new_oid.length ||
+				entry.old_oid === entry.new_oid) {
+				errors.push(`source diff modified row ${path}`);
+			}
+		} else {
+			errors.push(`source diff status ${path}`);
+		}
+	}
+	if (added === 0 || modified === 0) errors.push(`source diff A/M partition A=${added} M=${modified}`);
+	return errors;
+}
+
+function validateSealedC4Authority(authority, expectedParent, requireCurrentHead = false) {
+	const errors = [];
+	if (!authority || typeof authority !== "object" || Array.isArray(authority)) return ["missing Git/didrun authority"];
+	const identity = { commit: authority.commit, tree: authority.tree };
+	if (!/^[0-9a-f]{40}$/u.test(authority.commit ?? "") || /^0+$/u.test(authority.commit ?? "")) errors.push("commit");
+	if (!/^[0-9a-f]{40}$/u.test(authority.tree ?? "") || /^0+$/u.test(authority.tree ?? "")) errors.push("tree");
+	if (!/^[0-9a-f]{40}$/u.test(expectedParent ?? "") || /^0+$/u.test(expectedParent ?? "") || authority.parent !== expectedParent ||
+		!isDeepStrictEqual(authority.parents, [expectedParent])) errors.push("sealed C4V parent");
+	if (authority.subject !== c4SourceSubject) errors.push("subject");
+	if (authority.ancestor_of_head !== true) errors.push("ancestor of HEAD");
+	if (requireCurrentHead && authority.head_commit !== authority.commit) errors.push("sealed C4 is not current HEAD");
+	if (authority.note_type !== "blob") errors.push("note type");
+	if (!/^[0-9a-f]{40}$/u.test(authority.note_blob_oid ?? "") || /^0+$/u.test(authority.note_blob_oid ?? "")) errors.push("note blob");
+	if (!/^[0-9a-f]{64}$/u.test(authority.note_body_sha256 ?? "") || /^0+$/u.test(authority.note_body_sha256 ?? "")) errors.push("note body digest");
+	errors.push(...validatePrefixedFutureSourceDiff(authority, requiredC4Paths, requiredC4Prefixes));
+	if (Array.isArray(authority.source_diff)) {
+		for (const entry of authority.source_diff) {
+			const prefixOwned = requiredC4Prefixes.some((prefix) => entry?.path?.startsWith(prefix));
+			const expectedStatus = requiredC4AddedExactPaths.has(entry?.path) || prefixOwned ? "A" : "M";
+			if (entry?.status !== expectedStatus) errors.push(`C4 source diff frozen status ${entry?.path ?? "<missing>"}`);
+		}
+	}
+	errors.push(...validateSealedC4Note(authority.note, identity));
+	return errors;
+}
+
+function validateSealedC4Chain(c4Authority, c4vAuthority, requireCurrentHead = false) {
+	const errors = [
+		...validateSealedC4Authority(c4Authority, c4vAuthority?.commit, requireCurrentHead),
+		...validateSealedC4VAuthority(c4vAuthority, false).map((error) => `C4V ancestry ${error}`),
+	];
+	if (c4vAuthority?.head_commit !== c4Authority?.commit) {
+		errors.push("C4V ancestry outer HEAD does not equal sealed C4");
+	}
+	return errors;
+}
+
+export async function verifyC4SealedC4VNote() {
+	const head = decodeCandidateGitOID(
+		await gitOutput(["rev-parse", "--verify", "HEAD^{commit}"]), "C4 sealed-C4V HEAD",
+	);
+	const authority = await loadReceiptAuthorityFromGit(repositoryRoot, { source_commit: head });
+	const errors = validateSealedC4VAuthority(authority, true);
+	if (errors.length > 0) throw new Error(`P07B-C C4 sealed-C4V authority mismatch: ${errors.join(", ")}`);
+	console.log(`P07B-C C4 sealed-C4V note exact: commit=${authority.commit} tree=${authority.tree} note=${authority.note_blob_oid} claims=${c4vClaimLabels.length}; parent=${sealedC3DIdentity.commit}`);
+}
+
+export async function verifyC5SealedC4Note() {
+	const head = decodeCandidateGitOID(
+		await gitOutput(["rev-parse", "--verify", "HEAD^{commit}"]), "C5 sealed-C4 HEAD",
+	);
+	const c4Authority = await loadReceiptAuthorityFromGit(repositoryRoot, { source_commit: head });
+	const c4vAuthority = await loadReceiptAuthorityFromGit(repositoryRoot, { source_commit: c4Authority.parent });
+	const errors = validateSealedC4Chain(c4Authority, c4vAuthority, true);
+	if (errors.length > 0) throw new Error(`P07B-C C5 sealed-C4 authority mismatch: ${errors.join(", ")}`);
+	console.log(`P07B-C C5 sealed-C4 note exact: commit=${c4Authority.commit} tree=${c4Authority.tree} note=${c4Authority.note_blob_oid} claims=${c4ClaimLabels.length}; C4V=${c4vAuthority.commit}; C3D=${sealedC3DIdentity.commit}`);
+}
+
+async function runC4VSealedC3DCompatibilitySelfTest() {
+	const loaded = await loadReceiptAuthorityFromGit(repositoryRoot, sealedC3DReceiptProjection());
+	const baseline = structuredClone(loaded);
+	baseline.head_commit = sealedC3DIdentity.commit;
+	const baselineErrors = validateSealedC3DAuthority(baseline, true);
+	if (baselineErrors.length > 0) {
+		throw new Error(`P07B-C C4V sealed-C3D self-test baseline failed: ${baselineErrors.join(", ")}`);
+	}
+	const descendant = structuredClone(baseline);
+	descendant.head_commit = "f".repeat(40);
+	const errors = validateSealedC3DAuthority(descendant, true);
+	if (!errors.includes("sealed C3D is not current HEAD")) {
+		throw new Error("P07B-C C4V sealed-C3D self-test accepted an intervening HEAD");
+	}
+	return 1;
+}
+
+function syntheticFutureSealedNote(identity, labels, types, expectedArgv) {
+	return {
+		claims: labels.map((label, index) => ({
+			claim: {
+				argv_preview: [...expectedArgv[index]], ctype: types[index], declared_at_index: index,
+				event_indices: [index], label, pathspecs: [],
+			},
+			delta: [], exit_code: 0, grade: "tree-exact",
+			reason: "self-stable command ran against the sealed tree", supporting_event_index: index,
+		})),
+		commit: identity.commit,
+		coverage: { by_coverage: { complete: labels.length }, total_events: labels.length },
+		secrets_override: false,
+		tree: identity.tree,
+		version: 1,
+	};
+}
+
+function syntheticSealedC4VAuthority() {
+	const commit = "a".repeat(40);
+	const tree = "b".repeat(40);
+	return {
+		head_commit: commit,
+		commit,
+		tree,
+		parent: sealedC3DIdentity.commit,
+		parents: [sealedC3DIdentity.commit],
+		source_diff: requiredC4VPaths.map((path) => path === c4vStatusPath ? {
+			old_mode: "000000", new_mode: "100644", old_oid: "0".repeat(40), new_oid: "2".repeat(40), status: "A", path,
+		} : {
+			old_mode: "100644", new_mode: "100644", old_oid: "1".repeat(40), new_oid: "2".repeat(40), status: "M", path,
+		}),
+		subject: c4vSourceSubject,
+		ancestor_of_head: true,
+		note: syntheticFutureSealedNote({ commit, tree }, c4vClaimLabels, c4vClaimTypes, c4vExpectedClaimArgv),
+		note_type: "blob",
+		note_blob_oid: "c".repeat(40),
+		note_body_sha256: "d".repeat(64),
+	};
+}
+
+function runSealedC4VAuthoritySelfTest() {
+	const baseline = syntheticSealedC4VAuthority();
+	const baselineErrors = validateSealedC4VAuthority(baseline, true);
+	if (baselineErrors.length > 0) {
+		throw new Error(`P07B-C sealed-C4V authority self-test baseline failed: ${baselineErrors.join(", ")}`);
+	}
+	const redacted = structuredClone(baseline);
+	for (const record of redacted.note.claims) {
+		for (const position of [...futureNoteDoubleRedactionPositions, ...futureNoteBareRedactionPositions]) {
+			record.claim.argv_preview[position] = futureNoteExpectedRedactionProjection(position);
+		}
+	}
+	const redactedErrors = validateSealedC4VAuthority(redacted, true);
+	if (redactedErrors.length > 0) {
+		throw new Error(`P07B-C sealed-C4V redacted authority self-test baseline failed: ${redactedErrors.join(", ")}`);
+	}
+	let rejected = 0;
+	const refuse = (name, mutate, expected) => {
+		const hostile = structuredClone(baseline);
+		mutate(hostile);
+		const errors = validateSealedC4VAuthority(hostile, true);
+		if (!errors.some((error) => error.includes(expected))) {
+			throw new Error(`P07B-C sealed-C4V authority self-test false negative: ${name} (${errors.join(", ") || "accepted"})`);
+		}
+		rejected += 1;
+	};
+	refuse("wrong parent", (value) => { value.parent = "f".repeat(40); }, "sealed C3D parent");
+	refuse("merge parent", (value) => { value.parents.push("e".repeat(40)); }, "sealed C3D parent");
+	refuse("wrong subject", (value) => { value.subject += " altered"; }, "subject");
+	refuse("non-current HEAD", (value) => { value.head_commit = "e".repeat(40); }, "sealed C4V is not current HEAD");
+	refuse("zero commit", (value) => { value.commit = "0".repeat(40); }, "commit");
+	refuse("zero tree", (value) => { value.tree = "0".repeat(40); }, "tree");
+	refuse("zero note blob", (value) => { value.note_blob_oid = "0".repeat(40); }, "note blob");
+	refuse("zero note digest", (value) => { value.note_body_sha256 = "0".repeat(64); }, "note body digest");
+	refuse("path order", (value) => { [value.source_diff[0], value.source_diff[1]] = [value.source_diff[1], value.source_diff[0]]; }, "source diff exact path roster");
+	refuse("path member", (value) => { value.source_diff[0].path = "wrong/path"; }, "source diff exact path roster");
+	refuse("added mode", (value) => { value.source_diff.find((row) => row.status === "A").new_mode = "100755"; }, "source diff added row");
+	refuse("zero added new object", (value) => { value.source_diff.find((row) => row.status === "A").new_oid = "0".repeat(40); }, "source diff added row");
+	refuse("zero modified old object", (value) => { value.source_diff.find((row) => row.status === "M").old_oid = "0".repeat(40); }, "source diff modified row");
+	refuse("modified object identity", (value) => {
+		const row = value.source_diff.find((candidate) => candidate.status === "M"); row.new_oid = row.old_oid;
+	}, "source diff modified row");
+	refuse("note commit", (value) => { value.note.commit = "e".repeat(40); }, "didrun note root, identity, or claim roster");
+	refuse("note tree", (value) => { value.note.tree = "e".repeat(40); }, "didrun note root, identity, or claim roster");
+	refuse("claim label", (value) => { value.note.claims[0].claim.label += " altered"; }, "didrun note claim 1");
+	refuse("claim type", (value) => { value.note.claims[0].claim.ctype = "command-succeeded"; }, "didrun note claim 1");
+	refuse("extra argv prefix", (value) => { value.note.claims[0].claim.argv_preview.unshift("/bin/true"); }, "didrun note claim 1");
+	refuse("missing argv prefix", (value) => { value.note.claims[0].claim.argv_preview.shift(); }, "didrun note claim 1");
+	refuse("substituted argv prefix", (value) => { value.note.claims[0].claim.argv_preview[0] = "/bin/true"; }, "didrun note claim 1");
+	refuse("appended argv token", (value) => { value.note.claims[0].claim.argv_preview.push("--extra"); }, "didrun note claim 1");
+	refuse("forbidden redaction position", (value) => { value.note.claims[0].claim.argv_preview[1] = futureNotePreviewRedaction; }, "didrun note claim 1");
+	refuse("wrong redaction form", (value) => { value.note.claims[0].claim.argv_preview[2] = futureNotePreviewRedaction; }, "didrun note claim 1");
+	refuse("shifted redaction", (value) => {
+		value.note.claims[0].claim.argv_preview[3] = futureNoteExpectedRedactionProjection(2);
+	}, "didrun note claim 1");
+	refuse("command tail drift", (value) => {
+		const argv = value.note.claims[0].claim.argv_preview; argv[argv.length - 1] += "-altered";
+	}, "didrun note claim 1");
+	refuse("control-character argv", (value) => { value.note.claims[0].claim.argv_preview[1] = "bad\nargv"; }, "didrun note claim 1");
+	refuse("claim grade", (value) => { value.note.claims[0].grade = "stale"; }, "didrun note claim 1");
+	refuse("coverage", (value) => { value.note.coverage.total_events -= 1; }, "didrun note exact event coverage");
+	refuse("secrets disclosure type", (value) => { value.note.secrets_override = "false"; }, "didrun note root, identity, or claim roster");
+	if (rejected !== 30) throw new Error(`P07B-C sealed-C4V authority self-test cardinality ${rejected}`);
+	return rejected;
+}
+
+function syntheticSealedC4Authority() {
+	const commit = "4".repeat(40);
+	const tree = "5".repeat(40);
+	const parent = "6".repeat(40);
+	const prefixPaths = [
+		"internal/contractexec/runner/runner.go",
+		"internal/processmechanics/process_darwin.go",
+		"testkit/contractexec/cli/cli_darwin_test.go",
+	];
+	const paths = [...requiredC4Paths, ...prefixPaths].sort((left, right) =>
+		Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8")));
+	return {
+		head_commit: commit,
+		commit,
+		tree,
+		parent,
+		parents: [parent],
+		source_diff: paths.map((path) => requiredC4AddedExactPaths.has(path) || prefixPaths.includes(path) ? {
+			old_mode: "000000", new_mode: "100644", old_oid: "0".repeat(40), new_oid: "8".repeat(40), status: "A", path,
+		} : {
+			old_mode: "100644", new_mode: "100644", old_oid: "7".repeat(40), new_oid: "8".repeat(40), status: "M", path,
+		}),
+		subject: c4SourceSubject,
+		ancestor_of_head: true,
+		note: syntheticFutureSealedNote({ commit, tree }, c4ClaimLabels, c4ClaimTypes, c4ExpectedClaimArgv),
+		note_type: "blob",
+		note_blob_oid: "9".repeat(40),
+		note_body_sha256: "a".repeat(64),
+	};
+}
+
+function runSealedC4AuthoritySelfTest() {
+	const baseline = syntheticSealedC4Authority();
+	const baselineErrors = validateSealedC4Authority(baseline, baseline.parent, true);
+	if (baselineErrors.length > 0) {
+		throw new Error(`P07B-C sealed-C4 authority self-test baseline failed: ${baselineErrors.join(", ")}`);
+	}
+	const redacted = structuredClone(baseline);
+	redacted.note.secrets_override = true;
+	for (const record of redacted.note.claims) {
+		for (const position of [...futureNoteDoubleRedactionPositions, ...futureNoteBareRedactionPositions]) {
+			record.claim.argv_preview[position] = futureNoteExpectedRedactionProjection(position);
+		}
+	}
+	const redactedErrors = validateSealedC4Authority(redacted, baseline.parent, true);
+	if (redactedErrors.length > 0) {
+		throw new Error(`P07B-C sealed-C4 redacted authority self-test baseline failed: ${redactedErrors.join(", ")}`);
+	}
+	let rejected = 0;
+	const c4vBaseline = syntheticSealedC4VAuthority();
+	c4vBaseline.commit = baseline.parent;
+	c4vBaseline.head_commit = baseline.commit;
+	c4vBaseline.note.commit = baseline.parent;
+	const chainBaselineErrors = validateSealedC4Chain(baseline, c4vBaseline, true);
+	if (chainBaselineErrors.length > 0) {
+		throw new Error(`P07B-C sealed-C4 chain self-test baseline failed: ${chainBaselineErrors.join(", ")}`);
+	}
+	const asymmetricC4V = structuredClone(c4vBaseline);
+	asymmetricC4V.head_commit = "c".repeat(40);
+	const asymmetricErrors = validateSealedC4Chain(baseline, asymmetricC4V, true);
+	if (!asymmetricErrors.includes("C4V ancestry outer HEAD does not equal sealed C4")) {
+		throw new Error(`P07B-C sealed-C4 chain self-test accepted outer/historical HEAD asymmetry (${asymmetricErrors.join(", ") || "accepted"})`);
+	}
+	rejected += 1;
+	const refuse = (name, mutate, expected, expectedParent = baseline.parent) => {
+		const hostile = structuredClone(baseline);
+		mutate(hostile);
+		const errors = validateSealedC4Authority(hostile, expectedParent, true);
+		if (!errors.some((error) => error.includes(expected))) {
+			throw new Error(`P07B-C sealed-C4 authority self-test false negative: ${name} (${errors.join(", ") || "accepted"})`);
+		}
+		rejected += 1;
+	};
+	refuse("wrong parent", (value) => { value.parent = "b".repeat(40); }, "sealed C4V parent");
+	refuse("merge parent", (value) => { value.parents.push("b".repeat(40)); }, "sealed C4V parent");
+	refuse("wrong subject", (value) => { value.subject += " altered"; }, "subject");
+	refuse("non-current HEAD", (value) => { value.head_commit = "b".repeat(40); }, "sealed C4 is not current HEAD");
+	refuse("not ancestor", (value) => { value.ancestor_of_head = false; }, "ancestor of HEAD");
+	refuse("note type", (value) => { value.note_type = "tree"; }, "note type");
+	refuse("note blob", (value) => { value.note_blob_oid = "wrong"; }, "note blob");
+	refuse("note digest", (value) => { value.note_body_sha256 = "wrong"; }, "note body digest");
+	refuse("commit shape", (value) => { value.commit = "wrong"; }, "commit");
+	refuse("tree shape", (value) => { value.tree = "wrong"; }, "tree");
+	refuse("zero commit", (value) => { value.commit = "0".repeat(40); }, "commit");
+	refuse("zero tree", (value) => { value.tree = "0".repeat(40); }, "tree");
+	refuse("zero note blob", (value) => { value.note_blob_oid = "0".repeat(40); }, "note blob");
+	refuse("zero note digest", (value) => { value.note_body_sha256 = "0".repeat(64); }, "note body digest");
+	refuse("zero expected parent", (value) => {
+		value.parent = "0".repeat(40); value.parents = ["0".repeat(40)];
+	}, "sealed C4V parent", "0".repeat(40));
+	refuse("path order", (value) => { [value.source_diff[0], value.source_diff[1]] = [value.source_diff[1], value.source_diff[0]]; }, "source diff unique sorted path roster");
+	refuse("missing exact path", (value) => {
+		value.source_diff = value.source_diff.filter(({ path }) => path !== requiredC4Paths[0]);
+	}, `source diff missing exact path ${requiredC4Paths[0]}`);
+	refuse("outside prefix", (value) => {
+		value.source_diff.find(({ path }) => path.startsWith(requiredC4Prefixes[0])).path = "internal/contractexec_evil/runner.go";
+	}, "source diff path outside declared prefixes");
+	for (const prefix of requiredC4Prefixes) {
+		refuse(`unrealized prefix ${prefix}`, (value) => {
+			value.source_diff = value.source_diff.filter(({ path }) => !path.startsWith(prefix));
+		}, `source diff unrealized prefix ${prefix}`);
+	}
+	refuse("frozen exact addition rewritten as modification", (value) => {
+		const row = value.source_diff.find(({ path }) => path === "internal/store/contract_run_bridge.go");
+		Object.assign(row, { status: "M", old_mode: "100644", old_oid: "7".repeat(40) });
+	}, "C4 source diff frozen status internal/store/contract_run_bridge.go");
+	refuse("runtime authority addition rewritten as modification", (value) => {
+		const row = value.source_diff.find(({ path }) => path === "tools/verify-runtime-authority.mjs");
+		Object.assign(row, { status: "M", old_mode: "100644", old_oid: "7".repeat(40) });
+	}, "C4 source diff frozen status tools/verify-runtime-authority.mjs");
+	refuse("future-surface manifest addition rewritten as modification", (value) => {
+		const row = value.source_diff.find(({ path }) => path === bFutureSurfaceAuthorityPath);
+		Object.assign(row, { status: "M", old_mode: "100644", old_oid: "7".repeat(40) });
+	}, `C4 source diff frozen status ${bFutureSurfaceAuthorityPath}`);
+	refuse("frozen exact modification rewritten as addition", (value) => {
+		const row = value.source_diff.find(({ path }) => path === "docs/ARCHITECTURE.md");
+		Object.assign(row, { status: "A", old_mode: "000000", old_oid: "0".repeat(40) });
+	}, "C4 source diff frozen status docs/ARCHITECTURE.md");
+	refuse("frozen prefix addition rewritten as modification", (value) => {
+		const row = value.source_diff.find(({ path }) => path.startsWith(requiredC4Prefixes[0]));
+		Object.assign(row, { status: "M", old_mode: "100644", old_oid: "7".repeat(40) });
+	}, "C4 source diff frozen status internal/contractexec/runner/runner.go");
+	refuse("executable added row", (value) => {
+		value.source_diff.find(({ status }) => status === "A").new_mode = "100755";
+	}, "source diff added row");
+	refuse("zero added new object", (value) => {
+		value.source_diff.find(({ status }) => status === "A").new_oid = "0".repeat(40);
+	}, "source diff added row");
+	refuse("zero modified old object", (value) => {
+		value.source_diff.find(({ status }) => status === "M").old_oid = "0".repeat(40);
+	}, "source diff modified row");
+	refuse("unchanged modified row", (value) => {
+		const row = value.source_diff.find(({ status }) => status === "M"); row.new_oid = row.old_oid;
+	}, "source diff modified row");
+	refuse("forbidden status", (value) => { value.source_diff[0].status = "D"; }, "source diff status");
+	refuse("note commit", (value) => { value.note.commit = "b".repeat(40); }, "didrun note root, identity, or claim roster");
+	refuse("note tree", (value) => { value.note.tree = "b".repeat(40); }, "didrun note root, identity, or claim roster");
+	refuse("claim label", (value) => { value.note.claims[0].claim.label += " altered"; }, "didrun note claim 1");
+	refuse("claim type", (value) => { value.note.claims[0].claim.ctype = "command-succeeded"; }, "didrun note claim 1");
+	refuse("extra argv prefix", (value) => { value.note.claims[0].claim.argv_preview.unshift("/bin/true"); }, "didrun note claim 1");
+	refuse("missing argv prefix", (value) => { value.note.claims[0].claim.argv_preview.shift(); }, "didrun note claim 1");
+	refuse("substituted argv prefix", (value) => { value.note.claims[0].claim.argv_preview[0] = "/bin/true"; }, "didrun note claim 1");
+	refuse("appended argv token", (value) => { value.note.claims[0].claim.argv_preview.push("--extra"); }, "didrun note claim 1");
+	refuse("forbidden redaction position", (value) => { value.note.claims[0].claim.argv_preview[1] = futureNotePreviewRedaction; }, "didrun note claim 1");
+	refuse("wrong redaction form", (value) => { value.note.claims[0].claim.argv_preview[2] = futureNotePreviewRedaction; }, "didrun note claim 1");
+	refuse("command tail drift", (value) => {
+		const argv = value.note.claims[0].claim.argv_preview; argv[argv.length - 1] += "-altered";
+	}, "didrun note claim 1");
+	refuse("control-character argv", (value) => { value.note.claims[0].claim.argv_preview[1] = "bad\nargv"; }, "didrun note claim 1");
+	refuse("claim grade", (value) => { value.note.claims[0].grade = "stale"; }, "didrun note claim 1");
+	refuse("coverage", (value) => { value.note.coverage.total_events -= 1; }, "didrun note exact event coverage");
+	refuse("secrets disclosure type", (value) => { value.note.secrets_override = "false"; }, "didrun note root, identity, or claim roster");
+	if (rejected !== 47) throw new Error(`P07B-C sealed-C4 authority self-test cardinality ${rejected}`);
+	return rejected;
+}
+
 function validateC1ReceiptDeclaration(receipt) {
 	const errors = [];
 	const keys = [
@@ -7860,7 +12349,7 @@ function receiptPhaseFixtureDocument(row) {
 	return `# Receipt phase fixture\n\n## Current state\n\n${renderReceiptPhaseCapsule(row)}\n\n## Tail\n\nStable.\n`;
 }
 
-const forwardCandidateReceiptPhaseBoundaries = Object.freeze(["C3D", "C4", "C5", "C6A", "C6M", "C6B"]);
+const forwardCandidateReceiptPhaseBoundaries = Object.freeze(["C3D", "C4V", "C4", "C5", "C6A", "C6M", "C6B"]);
 const forwardCandidateReceiptPhaseBoundarySet = new Set(forwardCandidateReceiptPhaseBoundaries);
 const receiptPhaseHandoffPath = "docs/HANDOFF_MODE_C.md";
 const receiptPhaseSpecificationPath = "spec/verification/p07b-c-unit-paths.json";
@@ -7909,6 +12398,9 @@ function requireCandidateReceiptPhaseTransition(candidateBoundary, parentBoundar
 	if (candidate.parent !== parentBoundary) {
 		throw new Error(`receipt phase candidate ${candidate.boundary} requires parent ${candidate.parent}, found ${parentBoundary}`);
 	}
+	if (candidate.boundary === "C4V" && (parentCommit !== sealedC3DIdentity.commit || parentTree !== sealedC3DIdentity.tree)) {
+		throw new Error(`receipt phase C4V requires exact sealed C3D parent ${parentCommit}/${parentTree}`);
+	}
 	return candidate;
 }
 
@@ -7921,7 +12413,8 @@ function requireCandidateReceiptPhaseSnapshot(snapshot) {
 	if (!unit.exact.includes(receiptPhaseHandoffPath)) {
 		throw new Error(`receipt phase candidate ${candidateBoundary} does not own ${receiptPhaseHandoffPath}`);
 	}
-	if ((candidateBoundary === "C3D") !== unit.exact.includes(receiptPhaseSpecificationPath)) {
+	const specificationOwners = new Set(["C3D", "C4V"]);
+	if (specificationOwners.has(candidateBoundary) !== unit.exact.includes(receiptPhaseSpecificationPath)) {
 		throw new Error(`receipt phase candidate ${candidateBoundary} specification ownership mismatch`);
 	}
 	validateExactIndexModes(
@@ -7944,8 +12437,11 @@ function requireCandidateReceiptPhaseSnapshot(snapshot) {
 	if (!snapshot.stagedSpecificationBytes.equals(snapshot.workingSpecificationBytes)) {
 		throw new Error("receipt phase candidate specification staged/worktree byte mismatch");
 	}
-	if (candidateBoundary !== "C3D" && !snapshot.stagedSpecificationBytes.equals(snapshot.parentSpecificationBytes)) {
+	if (!specificationOwners.has(candidateBoundary) && !snapshot.stagedSpecificationBytes.equals(snapshot.parentSpecificationBytes)) {
 		throw new Error(`receipt phase candidate ${candidateBoundary} changed the C3D-sealed topology table`);
+	}
+	if (candidateBoundary === "C4V" && snapshot.stagedSpecificationBytes.equals(snapshot.parentSpecificationBytes)) {
+		throw new Error("receipt phase C4V candidate did not replace the sealed v16 topology table");
 	}
 	let stagedSpecification;
 	try {
@@ -7982,6 +12478,7 @@ function runCandidateReceiptPhaseTransitionSelfTest() {
 	const fixture = (candidateBoundary, parentBoundary) => {
 		const candidateBytes = Buffer.from(receiptPhaseFixtureDocument(p07bCReceiptPhaseRowsByBoundary[candidateBoundary]), "utf8");
 		const bootstrap = parentBoundary === undefined;
+		const c4vRepair = candidateBoundary === "C4V" && parentBoundary === "C3D";
 		return {
 			candidateBoundary,
 			indexEntries,
@@ -7995,12 +12492,13 @@ function runCandidateReceiptPhaseTransitionSelfTest() {
 				: receiptPhaseFixtureDocument(p07bCReceiptPhaseRowsByBoundary[parentBoundary]), "utf8"),
 			stagedSpecificationBytes: specificationBytes,
 			workingSpecificationBytes: specificationBytes,
-			parentSpecificationBytes: bootstrap ? Buffer.from("{\"schema_version\":\"historical-v15\"}\n") : specificationBytes,
-			parentCommit: bootstrap ? sealedC3BIdentity.commit : "f".repeat(40),
-			parentTree: bootstrap ? sealedC3BIdentity.tree : "e".repeat(40),
+			parentSpecificationBytes: bootstrap ? Buffer.from("{\"schema_version\":\"historical-v15\"}\n") :
+				c4vRepair ? Buffer.from("{\"schema_version\":\"countershape/p07b-c-unit-paths/v16\"}\n") : specificationBytes,
+			parentCommit: bootstrap ? sealedC3BIdentity.commit : c4vRepair ? sealedC3DIdentity.commit : "f".repeat(40),
+			parentTree: bootstrap ? sealedC3BIdentity.tree : c4vRepair ? sealedC3DIdentity.tree : "e".repeat(40),
 		};
 	};
-	const accepted = [["C3D", undefined], ["C4", "C3D"], ["C5", "C4"], ["C6A", "C5"], ["C6M", "C6A"], ["C6B", "C6M"]];
+	const accepted = [["C3D", undefined], ["C4V", "C3D"], ["C4", "C4V"], ["C5", "C4"], ["C6A", "C5"], ["C6M", "C6A"], ["C6B", "C6M"]];
 	for (const [candidate, parent] of accepted) requireCandidateReceiptPhaseSnapshot(fixture(candidate, parent));
 	let rejected = 0;
 	const refuse = (name, baseline, mutate) => {
@@ -8015,13 +12513,13 @@ function runCandidateReceiptPhaseTransitionSelfTest() {
 		value.stagedHandoffBytes = value.workingHandoffBytes = Buffer.from(
 			receiptPhaseFixtureDocument(p07bCReceiptPhaseRowsByBoundary.C4), "utf8");
 	});
-	refuse("staged/worktree HANDOFF mismatch", fixture("C4", "C3D"), (value) => {
+	refuse("staged/worktree HANDOFF mismatch", fixture("C4", "C4V"), (value) => {
 		value.workingHandoffBytes = Buffer.from("different\n");
 	});
-	refuse("staged/worktree specification mismatch", fixture("C4", "C3D"), (value) => {
+	refuse("staged/worktree specification mismatch", fixture("C4", "C4V"), (value) => {
 		value.workingSpecificationBytes = Buffer.from("different\n");
 	});
-	refuse("sealed-parent specification drift", fixture("C4", "C3D"), (value) => {
+	refuse("sealed-parent specification drift", fixture("C4", "C4V"), (value) => {
 		value.parentSpecificationBytes = Buffer.from("different\n");
 	});
 	refuse("bootstrap wrong commit", fixture("C3D", undefined), (value) => { value.parentCommit = "0".repeat(40); });
@@ -8029,19 +12527,25 @@ function runCandidateReceiptPhaseTransitionSelfTest() {
 	refuse("bootstrap prior capsule", fixture("C3D", undefined), (value) => {
 		value.parentHandoffBytes = Buffer.from(receiptPhaseFixtureDocument(p07bCReceiptPhaseRowsByBoundary.C3B), "utf8");
 	});
+	refuse("C4V wrong sealed C3D commit", fixture("C4V", "C3D"), (value) => { value.parentCommit = "f".repeat(40); });
+	refuse("C4V wrong sealed C3D tree", fixture("C4V", "C3D"), (value) => { value.parentTree = "e".repeat(40); });
+	refuse("C4V unchanged v16 specification", fixture("C4V", "C3D"), (value) => {
+		value.parentSpecificationBytes = value.stagedSpecificationBytes;
+	});
 	refuse("coherent downgrade", fixture("C4", "C5"), () => {});
-	refuse("source phase skip", fixture("C5", "C3D"), () => {});
+	refuse("C4V skipped by C4", fixture("C4", "C3D"), () => {});
+	refuse("source phase skip", fixture("C5", "C4V"), () => {});
 	refuse("receipt phase skip", fixture("C6B", "C5"), () => {});
 	refuse("adapter phase skipped by C6B", fixture("C6B", "C6A"), () => {});
 	refuse("adapter phase source skip", fixture("C6M", "C5"), () => {});
 	refuse("adapter phase replay", fixture("C6M", "C6M"), () => {});
 	refuse("same phase replay", fixture("C6B", "C6B"), () => {});
-	refuse("unknown boundary", fixture("C4", "C3D"), (value) => { value.candidateBoundary = "UNKNOWN"; });
-	refuse("candidate non-UTF8", fixture("C4", "C3D"), (value) => {
+	refuse("unknown boundary", fixture("C4", "C4V"), (value) => { value.candidateBoundary = "UNKNOWN"; });
+	refuse("candidate non-UTF8", fixture("C4", "C4V"), (value) => {
 		value.stagedHandoffBytes = value.workingHandoffBytes = Buffer.from([0xff]);
 	});
-	refuse("parent non-UTF8", fixture("C4", "C3D"), (value) => { value.parentHandoffBytes = Buffer.from([0xff]); });
-	refuse("specification non-UTF8", fixture("C4", "C3D"), (value) => {
+	refuse("parent non-UTF8", fixture("C4", "C4V"), (value) => { value.parentHandoffBytes = Buffer.from([0xff]); });
+	refuse("specification non-UTF8", fixture("C4", "C4V"), (value) => {
 		value.stagedSpecificationBytes = value.workingSpecificationBytes = value.parentSpecificationBytes = Buffer.from([0xff]);
 	});
 	for (const [pathLabel, entryIndex] of [["HANDOFF", 0], ["specification", 1]]) {
@@ -8051,21 +12555,21 @@ function runCandidateReceiptPhaseTransitionSelfTest() {
 			["unmerged", (entry) => { entry.stage = 2; }],
 			["intent-to-add", (entry) => { entry.object = "0".repeat(40); }],
 		]) {
-			refuse(`candidate ${pathLabel} index ${name}`, fixture("C4", "C3D"), (value) => {
+			refuse(`candidate ${pathLabel} index ${name}`, fixture("C4", "C4V"), (value) => {
 				mutate(value.indexEntries[entryIndex]);
 			});
 		}
-		refuse(`candidate ${pathLabel} index duplicate`, fixture("C4", "C3D"), (value) => {
+		refuse(`candidate ${pathLabel} index duplicate`, fixture("C4", "C4V"), (value) => {
 			value.indexEntries.push({ ...value.indexEntries[entryIndex] });
 		});
-		refuse(`candidate ${pathLabel} index missing`, fixture("C4", "C3D"), (value) => {
+		refuse(`candidate ${pathLabel} index missing`, fixture("C4", "C4V"), (value) => {
 			value.indexEntries.splice(entryIndex, 1);
 		});
-		refuse(`candidate ${pathLabel} index/tree OID mismatch`, fixture("C4", "C3D"), (value) => {
+		refuse(`candidate ${pathLabel} index/tree OID mismatch`, fixture("C4", "C4V"), (value) => {
 			value.indexEntries[entryIndex].object = "9".repeat(40);
 		});
 	}
-	refuse("candidate specification semantic drift", fixture("C3D", undefined), (value) => {
+	refuse("candidate specification semantic drift", fixture("C4V", "C3D"), (value) => {
 		const hostile = structuredClone(receiptPhaseSpecification);
 		hostile.units.C4.exact = hostile.units.C4.exact.slice(1);
 		value.stagedSpecificationBytes = value.workingSpecificationBytes = Buffer.from(
@@ -8185,7 +12689,7 @@ async function candidateIndexTreeSnapshot(indexTree, liveIndexEntries) {
 	if (!isDeepStrictEqual(treeEntries, normalizedLiveEntries)) {
 		throw new Error("receipt phase candidate live index differs from pinned index tree");
 	}
-	const overrides = new Map([[STRICT_INDEX_SNAPSHOT, true]]);
+	const overrides = new Map([[STRICT_INDEX_SNAPSHOT, treeEntries]]);
 	const working = new Map();
 	let totalBytes = 0;
 	for (const entry of treeEntries) {
@@ -8254,6 +12758,14 @@ export async function verifyCandidateReceiptPhasePlan(boundary) {
 		const stagedBytes = overrides.get(path);
 		if (!Buffer.isBuffer(stagedBytes)) throw new Error(`receipt phase candidate corpus absent from pinned index tree: ${path}`);
 		decodeCandidateUTF8(stagedBytes, `receipt phase staged corpus ${path}`);
+	}
+	if (candidate.boundary === "C5") {
+		const stagedManifest = overrides.get(bFutureSurfaceAuthorityPath);
+		const parentManifest = Buffer.isBuffer(stagedManifest)
+			? await gitOutput(["show", `${parentCommit}:${bFutureSurfaceAuthorityPath}`])
+			: undefined;
+		const preservationErrors = validateC5PreservedBFutureSurfaceManifest(stagedManifest, parentManifest);
+		if (preservationErrors.length > 0) throw new Error(`receipt phase ${preservationErrors[0]}`);
 	}
 	const errors = await checkPlan(
 		repositoryRoot, overrides, ...Array(9).fill(undefined), candidate.boundary, candidate.boundary,
@@ -9172,19 +13684,20 @@ async function runFixedReceiptPhaseRegression(regression) {
 	case "C3Q_EXTERNAL_SELF_RECEIPT": {
 		const path = "docs/VERIFICATION.md";
 		const liveVerification = await readText(repositoryRoot, path, new Map());
+		const currentBoundary = p07bCActiveReceiptPhaseBoundary;
 		const currentHostile = new Map([[
 			path,
-			`${liveVerification.trimEnd()}\n\nC3D strict exit: 0\n`,
+			`${liveVerification.trimEnd()}\n\n${currentBoundary} strict exit: 0\n`,
 		]]);
 		const currentErrors = await checkPlan(repositoryRoot, currentHostile);
 		if (!isDeepStrictEqual(currentErrors, [
-			`${path}: C3D self-receipt forbidden (strict-zero); remove or reframe the positive C3D result`,
+			`${path}: ${currentBoundary} self-receipt forbidden (strict-zero); remove or reframe the positive ${currentBoundary} result`,
 		])) {
 			throw new Error(`fixed C3Q normal external-body wiring regression escaped: ${currentErrors.join("; ")}`);
 		}
 		const currentControl = new Map([[
 			path,
-			`${liveVerification.trimEnd()}\n\nC3D strict exit 0 is forbidden before its own sealed boundary.\n`,
+			`${liveVerification.trimEnd()}\n\n${currentBoundary} strict exit 0 is forbidden before its own sealed boundary.\n`,
 		]]);
 		const currentControlErrors = await checkPlan(repositoryRoot, currentControl);
 		if (currentControlErrors.length !== 0) {
@@ -9323,7 +13836,7 @@ async function verifyFixedReceiptPhaseRegressions() {
 
 export async function runReceiptPhaseTableSelfTest() {
 	const candidateTransitions = runCandidateReceiptPhaseTransitionSelfTest();
-	if (candidateTransitions.accepted !== 6 || candidateTransitions.rejected !== 37) {
+	if (candidateTransitions.accepted !== 7 || candidateTransitions.rejected !== 41) {
 		throw new Error(`receipt phase candidate-transition catalog cardinality ${candidateTransitions.accepted}/${candidateTransitions.rejected}`);
 	}
 	const caseIDs = new Set();
@@ -9362,8 +13875,8 @@ export async function runReceiptPhaseTableSelfTest() {
 	}
 	const catalog = receiptPhaseFixtureCatalog();
 	const digest = createHash("sha256").update(`${catalog.map((record) => JSON.stringify(record)).join("\n")}\n`, "utf8").digest("hex");
-	if (catalog.length !== 666 || caseIDs.size !== 666) throw new Error(`receipt phase catalog cardinality ${catalog.length}/${caseIDs.size}`);
-	if (digest !== "479f21a8a86a8a6eb34056dabb471e8ceebf08c725008d5f204fa2294af9f83a") throw new Error(`receipt phase catalog digest ${digest}`);
+	if (catalog.length !== 722 || caseIDs.size !== 722) throw new Error(`receipt phase catalog cardinality ${catalog.length}/${caseIDs.size}`);
+	if (digest !== "c31ebebeac2fdc5d522b466ab082bcd60c5da5b488b7c5be96b7c6cfe1d15aac") throw new Error(`receipt phase catalog digest ${digest}`);
 	if (fixedReceiptPhaseRegressions.length !== 4 || new Set(fixedReceiptPhaseRegressions.map(({ id }) => id)).size !== 4) {
 		throw new Error("fixed receipt phase regression manifest");
 	}
@@ -9377,10 +13890,10 @@ export async function runReceiptPhaseTableSelfTest() {
 	const executableCatalog = Object.freeze([...catalog, ...fixedCatalog]);
 	const executableDigest = createHash("sha256")
 		.update(`${executableCatalog.map((record) => JSON.stringify(record)).join("\n")}\n`, "utf8").digest("hex");
-	if (executableCatalog.length !== 670 || caseIDs.size !== 670) {
+	if (executableCatalog.length !== 726 || caseIDs.size !== 726) {
 		throw new Error(`receipt phase executable catalog cardinality ${executableCatalog.length}/${caseIDs.size}`);
 	}
-	if (executableDigest !== "a56fc2d71b79a06ba151ec454e7ed9280b20140e41c7006e027091eeddcf13e7") {
+	if (executableDigest !== "bb433b824bc306bb02138122e1e563f2584c4862766d9721b4881d5f1aa23132") {
 		throw new Error(`receipt phase executable catalog digest ${executableDigest}`);
 	}
 	return Object.freeze({ rejected, accepted, cases: caseIDs.size, genericCases: catalog.length, fixedCases: fixedCatalog.length, candidateTransitions, digest, executableDigest });
@@ -9526,21 +14039,31 @@ async function liveForwardPlanCorpus(boundary) {
 		if (typeof prompt !== "string") throw new Error("forward C6B prompt absent");
 		overrides.set("docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md", projectC6BPrompt(prompt, "POSITIVE"));
 	}
+	if (p07bCReceiptPhaseRows.findIndex(({ boundary: candidate }) => candidate === boundary) >=
+		p07bCReceiptPhaseRows.findIndex(({ boundary: candidate }) => candidate === "C4")) {
+		const fixture = bFutureSurfaceSelfTestFixture();
+		overrides.set(bFutureSurfaceAuthorityPath, bFutureSurfaceManifestBytes(fixture.manifest));
+		overrides.set(B_FUTURE_SURFACE_ROWS_FIXTURE, {
+			observedRows: boundary === "C4" ? fixture.c4Observed : fixture.c5Observed,
+			productionPaths: boundary === "C4" ? fixture.c4Production : fixture.c5Production,
+		});
+	}
 	return overrides;
 }
 
 function runForwardFixtureIsolationSelfTest() {
-	const targets = ["C4", "C5", "C6A", "C6M", "C6B"];
+	const targets = ["C4V", "C4", "C5", "C6A", "C6M", "C6B"];
 	for (const [active, expected] of [
-		["C5", ["HISTORY", "LIVE", "FUTURE", "FUTURE", "FUTURE"]],
-		["C6M", ["HISTORY", "HISTORY", "HISTORY", "LIVE", "FUTURE"]],
-		["C6B", ["HISTORY", "HISTORY", "HISTORY", "HISTORY", "LIVE"]],
+		["C5", ["HISTORY", "HISTORY", "LIVE", "FUTURE", "FUTURE", "FUTURE"]],
+		["C6M", ["HISTORY", "HISTORY", "HISTORY", "HISTORY", "LIVE", "FUTURE"]],
+		["C6B", ["HISTORY", "HISTORY", "HISTORY", "HISTORY", "HISTORY", "LIVE"]],
 	]) {
 		const observed = targets.map((target) => forwardFixtureKind(active, target));
 		if (!isDeepStrictEqual(observed, expected)) throw new Error(`forward fixture kind matrix ${active}`);
 	}
 	const cumulativeSurfaceCases = [
-		["C4", "docs/status/P07B-C-C4-CLI-PROFILE.md", "docs/status/P07B-C-C5-HTTP-SCOPE.md", false],
+		["C4V", c3dStatusPath, c4vStatusPath, true],
+		["C4", c4vStatusPath, "docs/status/P07B-C-C4-CLI-PROFILE.md", true],
 		["C5", "docs/status/P07B-C-C4-CLI-PROFILE.md", "docs/status/P07B-C-C5-HTTP-SCOPE.md", true],
 		["C6A", "docs/status/P07B-C-C5-HTTP-SCOPE.md", c6EvidencePath, true],
 		["C6M", c6EvidencePath, "docs/status/P07B-C-C6M-RECEIPT-ADAPTER-MAINTENANCE.md", true],
@@ -9570,7 +14093,7 @@ function runForwardFixtureIsolationSelfTest() {
 		try { projectC6BPrompt(hostile, "NEUTRAL"); } catch { refused = true; }
 		if (!refused) throw new Error("C6B prompt projection hostile survived");
 	}
-	return 8;
+	return 10;
 }
 
 export async function runDeclaredForwardReceiptPhasePlanSelfTest() {
@@ -9608,10 +14131,11 @@ export async function runDeclaredForwardReceiptPhasePlanSelfTest() {
 	const fixtureIsolationHostiles = runForwardFixtureIsolationSelfTest();
 	let fullPlanControls = 0;
 	let adapterBlocks = 0;
+	let bFutureSurfaceBlocks = 0;
 	let postTransitionControls = 0;
 	let selfReceiptRejected = 0;
 	let selfReceiptControls = 0;
-	for (const boundary of ["C4", "C5", "C6A", "C6M", "C6B"]) {
+	for (const boundary of ["C4V", "C4", "C5", "C6A", "C6M", "C6B"]) {
 		const fixture = await baseOverrides(boundary);
 		const { overrides } = fixture;
 		if (boundary === "C6B") {
@@ -9682,6 +14206,30 @@ export async function runDeclaredForwardReceiptPhasePlanSelfTest() {
 				throw new Error(`P07B-C ${boundary} forward full-plan phase self-test failed:\n${errors.join("\n")}`);
 			}
 			fullPlanControls += 1;
+			if (boundary === "C4" || boundary === "C5") {
+				const hostileManifest = new Map(overrides);
+				const manifest = JSON.parse(hostileManifest.get(bFutureSurfaceAuthorityPath).toString("utf8"));
+				manifest.schema_sha256 = "0".repeat(64);
+				hostileManifest.set(bFutureSurfaceAuthorityPath, bFutureSurfaceManifestBytes(manifest));
+				const manifestErrors = await callForwardPlan(withOverrides(activeFixture, hostileManifest));
+				if (!manifestErrors.some((error) => error.includes("internal B future-surface authority mismatch"))) {
+					throw new Error(`P07B-C ${boundary} outer-plan manifest hostile survived: ${manifestErrors.join("; ")}`);
+				}
+				bFutureSurfaceBlocks += 1;
+
+				const hostileRows = new Map(overrides);
+				const fixtureInput = structuredClone(hostileRows.get(B_FUTURE_SURFACE_ROWS_FIXTURE));
+				fixtureInput.observedRows.push({
+					path: "internal/contractexec/runner/runner.go", symbol: "ContractExecutionUnexpected",
+				});
+				fixtureInput.observedRows.sort(bFutureSurfaceObservedRowCompare);
+				hostileRows.set(B_FUTURE_SURFACE_ROWS_FIXTURE, fixtureInput);
+				const rowErrors = await callForwardPlan(withOverrides(activeFixture, hostileRows));
+				if (!rowErrors.some((error) => error.includes("internal B future-surface authority mismatch"))) {
+					throw new Error(`P07B-C ${boundary} outer-plan source-row hostile survived: ${rowErrors.join("; ")}`);
+				}
+				bFutureSurfaceBlocks += 1;
+			}
 			if (boundary === "C6A") {
 				const premature = new Map(overrides);
 				premature.set(c6aSourceAuthorityPath, manifestText);
@@ -9712,11 +14260,11 @@ export async function runDeclaredForwardReceiptPhasePlanSelfTest() {
 	if (planC6GitLine(repositoryRoot, ["rev-parse", "--verify", "HEAD^{commit}"], "stable forward fixture HEAD") !== historyHead) {
 		throw new Error("forward fixture HEAD changed during self-test");
 	}
-	if (fullPlanControls !== 5 || adapterBlocks !== 10 || postTransitionControls !== 1) {
-		throw new Error(`forward receipt-phase control cardinality ${fullPlanControls}/${adapterBlocks}/${postTransitionControls}`);
+	if (fullPlanControls !== 6 || adapterBlocks !== 10 || bFutureSurfaceBlocks !== 4 || postTransitionControls !== 1) {
+		throw new Error(`forward receipt-phase control cardinality ${fullPlanControls}/${adapterBlocks}/${bFutureSurfaceBlocks}/${postTransitionControls}`);
 	}
 	return Object.freeze({
-		fullPlanControls, adapterBlocks, postTransitionControls, selfReceiptRejected, selfReceiptControls,
+		fullPlanControls, adapterBlocks, bFutureSurfaceBlocks, postTransitionControls, selfReceiptRejected, selfReceiptControls,
 		fixtureIsolationHostiles,
 	});
 }
@@ -10432,6 +14980,9 @@ export async function runC3PReceiptSelfTest() {
 	rejected += runHermeticPresealSelfTest("C3U", c3uExpectedClaimArgv, c3uHermeticArgvPrefix);
 	rejected += runHermeticPresealSelfTest("C3B", c3bExpectedClaimArgv, c3bHermeticArgvPrefix);
 	rejected += runHermeticPresealSelfTest("C3D", c3dExpectedClaimArgv, c3dHermeticArgvPrefix);
+	rejected += runHermeticPresealSelfTest("C4V", c4vExpectedClaimArgv, c4vHermeticArgvPrefix);
+	rejected += runHermeticPresealSelfTest("C4", c4ExpectedClaimArgv, c4HermeticArgvPrefix);
+	rejected += runHermeticPresealSelfTest("C5", c5ExpectedClaimArgv, c5HermeticArgvPrefix);
 	rejected += runHermeticPresealSelfTest("C6A", c6aExpectedClaimArgv, c6aHermeticArgvPrefix);
 	rejected += runHermeticPresealSelfTest("C6M", c6mExpectedClaimArgv, c6mHermeticArgvPrefix);
 	rejected += runHermeticPresealSelfTest("C6B", c6bExpectedClaimArgv, c6bHermeticArgvPrefix);
@@ -12963,6 +17514,24 @@ export async function checkPlan(
 			}
 		}
 	}
+	for (const [path, snippets] of Object.entries(requiredC4VText)) {
+		let body;
+		try {
+			body = bodies.get(path) ?? await readText(root, path, overrides);
+			bodies.set(path, body);
+		} catch (error) {
+			errors.push(`${path}: unreadable (${error.message})`);
+			continue;
+		}
+		for (const snippet of snippets) {
+			if (!body.includes(snippet)) errors.push(`${path}: missing required C4V ruling: ${JSON.stringify(snippet)}`);
+		}
+		if (c4vNarrativePathSet.has(path)) {
+			for (const snippet of forbiddenC4VNarrativeSnippets) {
+				if (body.includes(snippet)) errors.push(`${path}: forbidden superseded C4V ruling: ${JSON.stringify(snippet)}`);
+			}
+		}
+	}
 	try {
 		const manifestBytes = await readBytes(root, c3PredecessorManifestPath, overrides);
 		const manifest = JSON.parse(decodeGitUTF8(manifestBytes, "C3 predecessor declaration"));
@@ -13014,25 +17583,130 @@ export async function checkPlan(
 		["C3U", requiredC3UPaths, requiredC3UDigest],
 		["C3B", requiredC3BPaths, requiredC3BDigest],
 		["C3D", requiredC3DPaths, requiredC3DDigest],
+		["C4V", requiredC4VPaths, requiredC4VDigest],
+		["C4", requiredC4Paths, requiredC4Digest],
+		["C5", requiredC5Paths, requiredC5Digest],
 	]) {
 		const computed = `sha256:${createHash("sha256").update(`${paths.join("\n")}\n`, "utf8").digest("hex")}`;
 		if (computed !== digest) errors.push(`internal ${unit} roster digest mismatch: ${computed}`);
+	}
+	for (const [unit, prefixes, digest] of [
+		["C4", requiredC4Prefixes, requiredC4PrefixDigest],
+		["C5", requiredC5Prefixes, requiredC5PrefixDigest],
+	]) {
+		const computed = `sha256:${createHash("sha256").update(`${prefixes.join("\n")}\n`, "utf8").digest("hex")}`;
+		if (computed !== digest) errors.push(`internal ${unit} prefix roster digest mismatch: ${computed}`);
+		const declared = receiptPhaseSpecification.units[unit];
+		if (!declared || declared.verification_profile !== "SOURCE_FULL" ||
+			!isDeepStrictEqual(declared.exact, unit === "C4" ? requiredC4Paths : requiredC5Paths) ||
+			!isDeepStrictEqual(declared.prefixes, prefixes)) {
+			errors.push(`internal ${unit} declared source contract mismatch`);
+		}
+	}
+	const computedBFutureSurfaceSchemaDigest = createHash("sha256")
+		.update(JSON.stringify(bFutureSurfaceSchemaDescriptor), "utf8").digest("hex");
+	if (computedBFutureSurfaceSchemaDigest !== bFutureSurfaceSchemaDigest) {
+		errors.push(`internal B future-surface schema digest mismatch: ${computedBFutureSurfaceSchemaDigest}`);
+	}
+	const computedBFutureSurfaceBaselinePolicyDigest = createHash("sha256")
+		.update(JSON.stringify(bFutureSurfaceBaselinePolicy), "utf8").digest("hex");
+	if (computedBFutureSurfaceBaselinePolicyDigest !== bFutureSurfaceBaselinePolicyDigest) {
+		errors.push(`internal B future-surface baseline policy digest mismatch: ${computedBFutureSurfaceBaselinePolicyDigest}`);
+	}
+	const computedBFutureHistoricalDigest = createHash("sha256")
+		.update(JSON.stringify(bFutureSurfaceHistoricalInventory), "utf8").digest("hex");
+	if (bFutureSurfaceHistoricalInventory.length !== 27 ||
+		computedBFutureHistoricalDigest !== bFutureSurfaceHistoricalInventoryDigest) {
+		errors.push(`internal B future-surface historical inventory mismatch: ${bFutureSurfaceHistoricalInventory.length}/${computedBFutureHistoricalDigest}`);
+	}
+	const expectedPhaseIndex = p07bCReceiptPhaseRows.findIndex(({ boundary }) =>
+		boundary === expectedReceiptPhaseBoundary);
+	const c4vExpectedPhaseIndex = p07bCReceiptPhaseRows.findIndex(({ boundary }) => boundary === "C4V");
+	const c4ExpectedPhaseIndex = p07bCReceiptPhaseRows.findIndex(({ boundary }) => boundary === "C4");
+	if (expectedPhaseIndex === c4vExpectedPhaseIndex) {
+		for (const error of await validateLiveBFutureSurfaceBaseline(root, overrides)) {
+			errors.push(`internal B future-surface baseline mismatch: ${error}`);
+		}
+	} else if (expectedPhaseIndex >= c4ExpectedPhaseIndex) {
+		const bBoundary = expectedReceiptPhaseBoundary === "C4" ? "C4" : "C5";
+		for (const error of await validateLiveBFutureSurfaceAuthority(root, overrides, bBoundary)) {
+			errors.push(`internal B future-surface authority mismatch: ${error}`);
+		}
 	}
 	if (requiredC3AddedPaths.size !== 20 ||
 		![...requiredC3AddedPaths].every((path) => requiredC3Paths.includes(path)) ||
 		requiredC3Paths.length - requiredC3AddedPaths.size !== 20) {
 		errors.push("internal C3 exact 20-added/20-modified source partition mismatch");
 	}
+	if (requiredC4AddedExactPaths.size !== 5 ||
+		![...requiredC4AddedExactPaths].every((path) => requiredC4Paths.includes(path)) ||
+		requiredC4Paths.length - requiredC4AddedExactPaths.size !== 33) {
+		errors.push("internal C4 exact 5-added/33-modified source partition mismatch");
+	}
 	if (!isDeepStrictEqual(requiredC3BReceiptClaims,
 		c3bClaimLabels.map((label, index) => ({ label, type: c3bClaimTypes[index] })))) {
 		errors.push("internal C3B receipt claim roster mismatch");
 	}
-	if (!isDeepStrictEqual(qualificationCaseIDs, requiredQualificationCaseIDs)) {
-		errors.push("internal C1V Go repetition qualification case roster mismatch");
-	}
-	const computedQualificationMatrixDigest = `sha256:${qualificationMatrixDigest()}`;
-	if (computedQualificationMatrixDigest !== requiredQualificationMatrixDigest) {
-		errors.push(`internal C1V Go repetition qualification matrix digest mismatch: ${computedQualificationMatrixDigest}`);
+	const livePhaseIndex = p07bCReceiptPhaseRows.findIndex(({ boundary }) => boundary === p07bCActiveReceiptPhaseBoundary);
+	const c4PhaseIndex = p07bCReceiptPhaseRows.findIndex(({ boundary }) => boundary === "C4");
+	const requiresC4Qualification = livePhaseIndex >= c4PhaseIndex;
+	const expectedQualificationCaseIDs = requiresC4Qualification ? requiredC4QualificationCaseIDs : requiredQualificationCaseIDs;
+	const expectedQualificationDigest = requiresC4Qualification
+		? requiredC4QualificationMatrixDigest
+		: requiredQualificationMatrixDigest;
+	try {
+		const repetitionAuthority = await loadQualificationAuthority(root, overrides, requiresC4Qualification);
+		const { qualificationCaseIDs, qualificationCases, qualificationMatrixDigest } = repetitionAuthority;
+		if (!isDeepStrictEqual(qualificationCaseIDs, expectedQualificationCaseIDs)) {
+			errors.push(`internal ${requiresC4Qualification ? "C4" : "C1V"} Go repetition qualification case roster mismatch`);
+		}
+		if (typeof qualificationMatrixDigest !== "function") {
+			errors.push("internal Go repetition qualification digest export missing");
+		} else {
+			const computedQualificationMatrixDigest = `sha256:${qualificationMatrixDigest()}`;
+			if (computedQualificationMatrixDigest !== expectedQualificationDigest) {
+				errors.push(`internal ${requiresC4Qualification ? "C4" : "C1V"} Go repetition qualification matrix digest mismatch: ${computedQualificationMatrixDigest}`);
+			}
+		}
+		if (requiresC4Qualification) {
+			for (const [caseID, expected] of Object.entries(requiredC4QualificationDelta)) {
+				const observed = qualificationCases?.[caseID];
+				if (!observed || observed.packagePath !== expected.packagePath || observed.profile !== expected.profile ||
+					observed.count !== expected.count || !isDeepStrictEqual(observed.expected, expected.expected)) {
+					errors.push(`internal C4 Go repetition qualification delta mismatch: ${caseID}`);
+				}
+			}
+		}
+		const projectedC4 = projectedC4QualificationCases(repetitionAuthority);
+		if (!isDeepStrictEqual(Object.keys(projectedC4), requiredC4QualificationCaseIDs)) {
+			errors.push("internal projected C4 Go repetition qualification case roster mismatch");
+		}
+		const projectedC4Digest = `sha256:${createHash("sha256").update(JSON.stringify(projectedC4)).digest("hex")}`;
+		if (projectedC4Digest !== requiredC4QualificationMatrixDigest) {
+			errors.push(`internal projected C4 Go repetition qualification matrix digest mismatch: ${projectedC4Digest}`);
+		}
+		const projectedC5 = projectedC5QualificationCases(repetitionAuthority);
+		if (!isDeepStrictEqual(Object.keys(projectedC5), requiredC5QualificationCaseIDs)) {
+			errors.push("internal projected C5 Go repetition qualification case roster mismatch");
+		}
+		const projectedC5Digest = `sha256:${createHash("sha256").update(JSON.stringify(projectedC5)).digest("hex")}`;
+		if (projectedC5Digest !== requiredC5QualificationMatrixDigest) {
+			errors.push(`internal projected C5 Go repetition qualification matrix digest mismatch: ${projectedC5Digest}`);
+		}
+		for (const [caseID, expected] of Object.entries(requiredC5QualificationDelta)) {
+			const observed = projectedC5[caseID];
+			if (!observed || observed.packagePath !== expected.packagePath || observed.profile !== expected.profile ||
+				observed.count !== expected.count || !isDeepStrictEqual(observed.expected, expected.expected)) {
+				errors.push(`internal projected C5 Go repetition qualification delta mismatch: ${caseID}`);
+			}
+		}
+		if (requiresC4Qualification) {
+			for (const error of await validateFutureQualificationAuthority(repetitionAuthority, projectedC4, projectedC5)) {
+				errors.push(`internal future C4/C5 Go repetition qualification authority mismatch: ${error}`);
+			}
+		}
+	} catch (error) {
+		errors.push(`internal projected C4/C5 Go repetition qualification contract invalid: ${error.message}`);
 	}
 	const verificationBody = bodies.get("docs/VERIFICATION.md");
 	if (verificationBody !== undefined) {
@@ -13139,6 +17813,13 @@ export async function checkPlan(
 			requiredC3DDeclaration,
 			"docs/VERIFICATION.md",
 			"C3D data-driven receipt-phase maintenance scope declaration",
+			errors,
+		);
+		requireExactlyOnce(
+			verificationBody,
+			requiredC4VDeclaration,
+			"docs/VERIFICATION.md",
+			"C4V execution-contract maintenance scope declaration",
 			errors,
 		);
 	}
@@ -13466,6 +18147,28 @@ export async function checkPlan(
 			requireClaimLabelExactlyOnce(c3dStatusBody, c3dClaimLabels[index], c3dStatusPath, "C3D intended claim map", errors);
 		}
 		rejectReceiptSelfClaims(c3dStatusBody, c3dStatusPath, "C3D", errors);
+	}
+	const c4vStatusBody = bodies.get(c4vStatusPath);
+	if (c4vStatusBody !== undefined) {
+		requireExactlyOnce(c4vStatusBody, requiredC4VDeclaration, c4vStatusPath, "C4V source scope", errors);
+		requireExactlyOnce(c4vStatusBody, c4vStatusBoundaryLine, c4vStatusPath, "C4V active boundary", errors);
+		requireExactlyOnce(c4vStatusBody, c4vStatusParentLine, c4vStatusPath, "C4V sealed parent identity", errors);
+		requireExactlyOnce(c4vStatusBody, c4vStatusUnreceiptedLine, c4vStatusPath, "C4V unreceipted state", errors);
+		requireExactlyOnce(c4vStatusBody, `- **Commit subject:** \`${c4vSourceSubject}\``, c4vStatusPath, "C4V commit subject", errors);
+		requireExactlyOnce(c4vStatusBody, c4vFinalCommandOrderMarkdown, c4vStatusPath, "C4V final command order", errors);
+		requireExactlyOnce(c4vStatusBody, c4FinalCommandOrderMarkdown, c4vStatusPath, "C4 final command order", errors);
+		requireExactlyOnce(c4vStatusBody, c5FinalCommandOrderMarkdown, c4vStatusPath, "C5 final command order", errors);
+		for (let index = 0; index < c4vClaimLabels.length; index += 1) {
+			requireExactlyOnce(
+				c4vStatusBody,
+				`| \`${c4vClaimLabels[index]}\` | \`${c4vClaimTypes[index]}\` | \`UNRECEIPTED\` |`,
+				c4vStatusPath,
+				"C4V intended claim map",
+				errors,
+			);
+			requireClaimLabelExactlyOnce(c4vStatusBody, c4vClaimLabels[index], c4vStatusPath, "C4V intended claim map", errors);
+		}
+		rejectReceiptSelfClaims(c4vStatusBody, c4vStatusPath, "C4V", errors);
 	}
 
 	try {
@@ -14273,7 +18976,7 @@ async function runSelfTest() {
 	const corpusReport = planAuthorityMarkdownCorpusReport();
 	const corpusReportLines = corpusReport.split("\n");
 	const renderedCorpusPaths = corpusReportLines.slice(1, -2).map((line) => line.startsWith("- ") ? line.slice(2) : undefined);
-	if (corpusReportLines[0] !== `P07B-C plan-authority Markdown corpus: paths=44 digest=${planAuthorityMarkdownDigest}` ||
+	if (corpusReportLines[0] !== `P07B-C plan-authority Markdown corpus: paths=46 digest=${planAuthorityMarkdownDigest}` ||
 		corpusReportLines.length !== planAuthorityMarkdownPaths.length + 3 ||
 		!isDeepStrictEqual(renderedCorpusPaths, planAuthorityMarkdownPaths) ||
 		corpusReportLines.at(-2) !== "scope: positive-receipt-form refusal only; not a general Markdown or security audit" ||
@@ -14334,7 +19037,15 @@ async function runSelfTest() {
 	const c3ReceiptResult = await runC3ReceiptSelfTest();
 	const c3ReceiptMutations = c3ReceiptResult.rejected;
 	const c3dPredecessorMutations = await runC3DSealedC3BCompatibilitySelfTest();
-	const finalRunbookControls = runFinalRunbookRendererSelfTest();
+	const c4vPredecessorMutations = await runC4VSealedC3DCompatibilitySelfTest();
+	const sealedC4VAuthorityMutations = runSealedC4VAuthoritySelfTest();
+	const sealedC4AuthorityMutations = runSealedC4AuthoritySelfTest();
+	const bFutureSurfaceAuthorityControls = await runBFutureSurfaceAuthoritySelfTest();
+	if (bFutureSurfaceAuthorityControls !== 42) {
+		throw new Error(`B future-surface authority control cardinality ${bFutureSurfaceAuthorityControls}`);
+	}
+	const futureQualificationAuthorityControls = await runFutureQualificationAuthoritySelfTest();
+	const finalRunbookControls = await runFinalRunbookRendererSelfTest();
 	const historicalSelfReceiptMatrix = runFrozenHistoricalSelfReceiptMatrixSelfTest();
 	const currentSelfReceiptExtension = runCurrentReceiptPhaseSelfReceiptExtension();
 	const forwardPhaseResult = await runDeclaredForwardReceiptPhasePlanSelfTest();
@@ -15072,7 +19783,7 @@ async function runSelfTest() {
 		c1PhaseReceiptCase,
 		{
 			name: "current prompt-pack prerequisite-gate removal", path: "docs/PROMPT_PACK.md",
-			value: currentPromptPack.replace("C3 exact-target publication active", "C3 exact-target publication omitted"),
+			value: currentPromptPack.replace("phase-independent execution contract", "phase cursor omitted"),
 			expect: "missing required C0 ruling",
 		},
 		{
@@ -16545,7 +21256,7 @@ async function runSelfTest() {
 		}
 	}
 
-	console.log(`P07B-C evolved plan checker self-test passed: ${cases.length + localEvidenceMutations + receiptModePhaseMutations + c2ReceiptMutations + c2SealedSourcePhaseMutations + c2LocalEvidenceMutations + c3pReceiptMutations + c3ReceiptMutations + c3dPredecessorMutations + finalRunbookControls + historicalSelfReceiptMatrix.rejected + currentSelfReceiptExtension.rejected + forwardPhaseResult.adapterBlocks + forwardPhaseResult.selfReceiptRejected} authority, structure, C1/C2/C3P/C3 local-evidence, phase-isolation, semantic-projection, receipt, runbook, and allowlist mutations rejected; final-runbook-controls=${finalRunbookControls}; frozen-historical matrix phases=${historicalSelfReceiptMatrix.phases} historical-phases=C3U,C3B paths=${historicalSelfReceiptMatrix.paths} forms=${historicalSelfReceiptMatrix.forms} rejected=${historicalSelfReceiptMatrix.rejected} positive-controls=${historicalSelfReceiptMatrix.controls} supplemental-aliases=${historicalSelfReceiptMatrix.supplementalAliases} supplemental-controls=${historicalSelfReceiptMatrix.supplementalControls}; current-extension phase=${p07bCActiveReceiptPhaseBoundary} paths=${currentSelfReceiptExtension.paths} rejected=${currentSelfReceiptExtension.rejected} positive-controls=${currentSelfReceiptExtension.controls}; forward-declared full-plan-controls=${forwardPhaseResult.fullPlanControls} C6B-adapter-blocks=${forwardPhaseResult.adapterBlocks} self-receipt-rejected=${forwardPhaseResult.selfReceiptRejected} self-receipt-controls=${forwardPhaseResult.selfReceiptControls}; result=positive-form refusal only, not a general Markdown or security audit`);
+	console.log(`P07B-C evolved plan checker self-test passed: ${cases.length + localEvidenceMutations + receiptModePhaseMutations + c2ReceiptMutations + c2SealedSourcePhaseMutations + c2LocalEvidenceMutations + c3pReceiptMutations + c3ReceiptMutations + c3dPredecessorMutations + c4vPredecessorMutations + sealedC4VAuthorityMutations + sealedC4AuthorityMutations + bFutureSurfaceAuthorityControls + futureQualificationAuthorityControls + finalRunbookControls + historicalSelfReceiptMatrix.rejected + currentSelfReceiptExtension.rejected + forwardPhaseResult.adapterBlocks + forwardPhaseResult.bFutureSurfaceBlocks + forwardPhaseResult.selfReceiptRejected} authority, structure, C1/C2/C3P/C3 local-evidence, phase-isolation, semantic-projection, receipt, runbook, and allowlist mutations rejected; sealed-C4V-authority-hostiles=${sealedC4VAuthorityMutations}; sealed-C4-authority-hostiles=${sealedC4AuthorityMutations}; B-future-surface-controls=${bFutureSurfaceAuthorityControls}; future-qualification-controls=${futureQualificationAuthorityControls}; final-runbook-controls=${finalRunbookControls}; frozen-historical matrix phases=${historicalSelfReceiptMatrix.phases} historical-phases=C3U,C3B paths=${historicalSelfReceiptMatrix.paths} forms=${historicalSelfReceiptMatrix.forms} rejected=${historicalSelfReceiptMatrix.rejected} positive-controls=${historicalSelfReceiptMatrix.controls} supplemental-aliases=${historicalSelfReceiptMatrix.supplementalAliases} supplemental-controls=${historicalSelfReceiptMatrix.supplementalControls}; current-extension phase=${p07bCActiveReceiptPhaseBoundary} paths=${currentSelfReceiptExtension.paths} rejected=${currentSelfReceiptExtension.rejected} positive-controls=${currentSelfReceiptExtension.controls}; forward-declared full-plan-controls=${forwardPhaseResult.fullPlanControls} B-surface-plan-blocks=${forwardPhaseResult.bFutureSurfaceBlocks} C6B-adapter-blocks=${forwardPhaseResult.adapterBlocks} self-receipt-rejected=${forwardPhaseResult.selfReceiptRejected} self-receipt-controls=${forwardPhaseResult.selfReceiptControls}; result=positive-form refusal only, not a general Markdown or security audit`);
 }
 
 async function verifyC2MaintenancePresealLedger() {
@@ -16692,7 +21403,52 @@ print(f"P07B-C C2 preceding chain exact: events=13 claims=13 green=13 tree={tree
 	process.stdout.write(result.stdout);
 }
 
-async function verifyLivePresealLedger({ phase, expectedArgv, claims, receiptPresent, receiptStates, hermeticArgvPrefix }) {
+async function currentQualificationLedgerProjection(boundary) {
+	const authority = await loadQualificationAuthority(repositoryRoot, new Map(), true);
+	const expectedC4 = projectedC4QualificationCases(authority);
+	const expectedC5 = projectedC5QualificationCases(authority);
+	const errors = validateFutureQualificationAuthority(authority, expectedC4, expectedC5);
+	if (errors.length > 0) throw new Error(`P07B-C ${boundary} qualification projection mismatch: ${errors.join(", ")}`);
+	return authority.qualificationMatrices[boundary];
+}
+
+async function verifyQualificationLedgerEvidence(phase, entries, { boundary, eventOffset }, hermeticArgvPrefix) {
+	const matrix = await currentQualificationLedgerProjection(boundary);
+	if (!matrix || !isDeepStrictEqual(matrix.caseIDs, boundary === "C4" ? requiredC4QualificationCaseIDs : requiredC5QualificationCaseIDs)) {
+		throw new Error(`P07B-C ${phase} qualification ledger matrix mismatch`);
+	}
+	const expectedAuthorities = await qualificationExpectedReceiptAuthorities(phase, hermeticArgvPrefix);
+	for (const [caseIndex, caseID] of matrix.caseIDs.entries()) {
+		const eventIndex = eventOffset + caseIndex;
+		const event = entries[eventIndex]?.event;
+		if (!event || event.stderr_blob !== createHash("sha256").update("").digest("hex") ||
+			!/^[0-9a-f]{64}$/u.test(event.stdout_blob ?? "")) {
+			throw new Error(`P07B-C ${phase} qualification event ${eventIndex} blob authority mismatch`);
+		}
+		const stdout = await readRegularNoFollow(
+			resolve(repositoryRoot, ".didrun/objects", event.stdout_blob), 4 * 1024 * 1024,
+		);
+		if (createHash("sha256").update(stdout).digest("hex") !== event.stdout_blob) {
+			throw new Error(`P07B-C ${phase} qualification event ${eventIndex} stdout digest mismatch`);
+		}
+		let text;
+		try { text = new TextDecoder("utf-8", { fatal: true }).decode(stdout); } catch (error) {
+			throw new Error(`P07B-C ${phase} qualification event ${eventIndex} stdout is not UTF-8: ${error.message}`);
+		}
+		const errors = qualificationReceiptOutputErrors(text, matrix.cases[caseID], expectedAuthorities);
+		if (errors.length > 0) {
+			throw new Error(`P07B-C ${phase} qualification event ${eventIndex} terminal evidence mismatch: ${errors.join(", ")}`);
+		}
+	}
+	const finalAuthorities = await qualificationExpectedReceiptAuthorities(phase, hermeticArgvPrefix);
+	if (!isDeepStrictEqual(finalAuthorities, expectedAuthorities)) {
+		throw new Error(`P07B-C ${phase} qualification executable authority changed during receipt reconciliation`);
+	}
+}
+
+async function verifyLivePresealLedger({
+	phase, expectedArgv, claims, receiptPresent, receiptStates, hermeticArgvPrefix, qualificationEvidence,
+}) {
 	if (hermeticArgvPrefix !== undefined) {
 		requireHermeticCommandPlan(phase, expectedArgv, hermeticArgvPrefix);
 		requireEffectiveHermeticContext(phase, hermeticArgvPrefix, process.cwd(), process.env);
@@ -16769,6 +21525,12 @@ async function verifyLivePresealLedger({ phase, expectedArgv, claims, receiptPre
 			!isDeepStrictEqual(claim.pathspecs, [])) {
 			throw new Error(`P07B-C ${phase} live claim ${index} mismatch`);
 		}
+	}
+	if (qualificationEvidence !== undefined) {
+		if (hermeticArgvPrefix === undefined) {
+			throw new Error(`P07B-C ${phase} qualification evidence requires a hermetic authority prefix`);
+		}
+		await verifyQualificationLedgerEvidence(phase, entries, qualificationEvidence, hermeticArgvPrefix);
 	}
 	let sealsPresent = true;
 	try {
@@ -17158,6 +21920,65 @@ export async function verifyC3DPresealLedger() {
 	});
 }
 
+export async function verifyC4VPresealLedger() {
+	if (p07bCActiveReceiptPhaseBoundary !== "C4V") {
+		throw new Error(`P07B-C C4V preseal gate requires visible capsule boundary C4V, found ${p07bCActiveReceiptPhaseBoundary}`);
+	}
+	await requirePrivateFinalRunDirectories("C4V", c4vFinalRunDirectories);
+	await verifyC4VSealedC3DNote();
+	await verifyLivePresealLedger({
+		phase: "C4V",
+		expectedArgv: c4vExpectedClaimArgv,
+		claims: c4vClaimLabels.map((label, index) => ({ label, type: c4vClaimTypes[index] })),
+		receiptStates: [
+			{ path: c3pReceiptDeclarationPath, present: true },
+			{ path: c3ReceiptDeclarationPath, present: true },
+			{ path: c6aSourceAuthorityPath, present: false },
+		],
+		hermeticArgvPrefix: c4vHermeticArgvPrefix,
+	});
+}
+
+export async function verifyC4PresealLedger() {
+	if (p07bCActiveReceiptPhaseBoundary !== "C4") {
+		throw new Error(`P07B-C C4 preseal gate requires visible capsule boundary C4, found ${p07bCActiveReceiptPhaseBoundary}`);
+	}
+	await requirePrivateFinalRunDirectories("C4", c4FinalRunDirectories);
+	await verifyC4SealedC4VNote();
+	await verifyLivePresealLedger({
+		phase: "C4",
+		expectedArgv: c4ExpectedClaimArgv,
+		claims: c4ClaimLabels.map((label, index) => ({ label, type: c4ClaimTypes[index] })),
+		receiptStates: [
+			{ path: c3pReceiptDeclarationPath, present: true },
+			{ path: c3ReceiptDeclarationPath, present: true },
+			{ path: c6aSourceAuthorityPath, present: false },
+		],
+		hermeticArgvPrefix: c4HermeticArgvPrefix,
+		qualificationEvidence: { boundary: "C4", eventOffset: c4QualificationEventOffset },
+	});
+}
+
+export async function verifyC5PresealLedger() {
+	if (p07bCActiveReceiptPhaseBoundary !== "C5") {
+		throw new Error(`P07B-C C5 preseal gate requires visible capsule boundary C5, found ${p07bCActiveReceiptPhaseBoundary}`);
+	}
+	await requirePrivateFinalRunDirectories("C5", c5FinalRunDirectories);
+	await verifyC5SealedC4Note();
+	await verifyLivePresealLedger({
+		phase: "C5",
+		expectedArgv: c5ExpectedClaimArgv,
+		claims: c5ClaimLabels.map((label, index) => ({ label, type: c5ClaimTypes[index] })),
+		receiptStates: [
+			{ path: c3pReceiptDeclarationPath, present: true },
+			{ path: c3ReceiptDeclarationPath, present: true },
+			{ path: c6aSourceAuthorityPath, present: false },
+		],
+		hermeticArgvPrefix: c5HermeticArgvPrefix,
+		qualificationEvidence: { boundary: "C5", eventOffset: c5QualificationEventOffset },
+	});
+}
+
 async function requireCurrentC6PhaseAuthority(boundary) {
 	if (p07bCActiveReceiptPhaseBoundary !== boundary) {
 		throw new Error(`P07B-C ${boundary} preseal gate requires visible capsule boundary ${boundary}, found ${p07bCActiveReceiptPhaseBoundary}`);
@@ -17344,7 +22165,7 @@ export async function verifyC3BCredentialScan() {
 
 async function main() {
 	const mode = process.argv[2];
-	const usage = "usage: check-p07b-c-plan.mjs [--check-candidate-phase <C3D|C4|C5|C6A|C6M|C6B>|--self-test|--print-plan-authority-corpus|--print-final-runbook <C3D|C6A|C6M|C6B>|--print-c6a-source-authority|--print-c6a-source-receipt-block|--self-test-c6a-source-receipt|--verify-c6a-source-receipt|--verify-c6a-local-evidence|--verify-sealed-c1-local-evidence|--verify-c1-local-evidence|--verify-c2-local-evidence|--verify-c2m-preseal-ledger|--verify-c2-preseal-ledger|--verify-c3v-preseal-ledger|--verify-c3m-preseal-ledger|--verify-c3a-preseal-ledger|--verify-c3l-preseal-ledger|--verify-c3f-preseal-ledger|--verify-c3s-preseal-ledger|--verify-c3-preseal-ledger|--verify-c3r-sealed-c3-note|--verify-c3r-preseal-ledger|--verify-c3q-sealed-c3r-note|--verify-c3q-preseal-ledger|--verify-c3t-sealed-c3q-note|--verify-c3t-preseal-ledger|--verify-c3u-sealed-c3t-note|--verify-c3u-preseal-ledger|--verify-c3-local-evidence|--verify-c3b-staged|--verify-c3b-credential-scan|--verify-c3b-preseal-ledger|--verify-c3d-sealed-c3b-note|--verify-c3d-preseal-ledger|--verify-c6a-preseal-ledger|--verify-c6m-preseal-ledger|--verify-c6b-preseal-ledger]";
+	const usage = "usage: check-p07b-c-plan.mjs [--check-candidate-phase <C3D|C4V|C4|C5|C6A|C6M|C6B>|--self-test|--print-plan-authority-corpus|--print-final-runbook <C3D|C4V|C4|C5|C6A|C6M|C6B>|--verify-final-runbook-parent-authority|--print-c6a-source-authority|--print-c6a-source-receipt-block|--self-test-c6a-source-receipt|--verify-c6a-source-receipt|--verify-c6a-local-evidence|--verify-sealed-c1-local-evidence|--verify-c1-local-evidence|--verify-c2-local-evidence|--verify-c2m-preseal-ledger|--verify-c2-preseal-ledger|--verify-c3v-preseal-ledger|--verify-c3m-preseal-ledger|--verify-c3a-preseal-ledger|--verify-c3l-preseal-ledger|--verify-c3f-preseal-ledger|--verify-c3s-preseal-ledger|--verify-c3-preseal-ledger|--verify-c3r-sealed-c3-note|--verify-c3r-preseal-ledger|--verify-c3q-sealed-c3r-note|--verify-c3q-preseal-ledger|--verify-c3t-sealed-c3q-note|--verify-c3t-preseal-ledger|--verify-c3u-sealed-c3t-note|--verify-c3u-preseal-ledger|--verify-c3-local-evidence|--verify-c3b-staged|--verify-c3b-credential-scan|--verify-c3b-preseal-ledger|--verify-c3d-sealed-c3b-note|--verify-c3d-preseal-ledger|--verify-c4v-sealed-c3d-note|--verify-c4v-preseal-ledger|--verify-c4-sealed-c4v-note|--verify-c4-preseal-ledger|--verify-c5-sealed-c4-note|--verify-c5-preseal-ledger|--verify-c6a-preseal-ledger|--verify-c6m-preseal-ledger|--verify-c6b-preseal-ledger]";
 	if (mode === "--check-candidate-phase") {
 		if (process.argv.length !== 4) throw new Error(usage);
 		await verifyCandidateReceiptPhasePlan(process.argv[3]);
@@ -17363,6 +22184,12 @@ async function main() {
 	if (mode === "--print-final-runbook") {
 		if (process.argv.length !== 4) throw new Error(usage);
 		process.stdout.write(renderFinalRunbook(process.argv[3]));
+		return;
+	}
+	if (mode === "--verify-final-runbook-parent-authority") {
+		if (process.argv.length !== 3) throw new Error(usage);
+		await verifyFinalRunbookParentAuthority();
+		console.log("P07B-C final runbook parent authority passed: canonical owned non-group/other-writable repository, .countershape, .didrun-history, and optional private evidence leaf");
 		return;
 	}
 	if (mode === "--print-c6a-source-authority") {
@@ -17553,6 +22380,36 @@ async function main() {
 		await verifyC3DPresealLedger();
 		return;
 	}
+	if (mode === "--verify-c4v-sealed-c3d-note") {
+		if (process.argv.length !== 3) throw new Error(usage);
+		await verifyC4VSealedC3DNote();
+		return;
+	}
+	if (mode === "--verify-c4v-preseal-ledger") {
+		if (process.argv.length !== 3) throw new Error(usage);
+		await verifyC4VPresealLedger();
+		return;
+	}
+	if (mode === "--verify-c4-sealed-c4v-note") {
+		if (process.argv.length !== 3) throw new Error(usage);
+		await verifyC4SealedC4VNote();
+		return;
+	}
+	if (mode === "--verify-c4-preseal-ledger") {
+		if (process.argv.length !== 3) throw new Error(usage);
+		await verifyC4PresealLedger();
+		return;
+	}
+	if (mode === "--verify-c5-sealed-c4-note") {
+		if (process.argv.length !== 3) throw new Error(usage);
+		await verifyC5SealedC4Note();
+		return;
+	}
+	if (mode === "--verify-c5-preseal-ledger") {
+		if (process.argv.length !== 3) throw new Error(usage);
+		await verifyC5PresealLedger();
+		return;
+	}
 	if (mode === "--verify-c6a-preseal-ledger") {
 		if (process.argv.length !== 3) throw new Error(usage);
 		await verifyC6APresealLedger();
@@ -17578,7 +22435,7 @@ async function main() {
 		return;
 	}
 
-	console.log(`P07B-C ${p07bCActiveReceiptPhaseBoundary} plan check passed: the visible-capsule-selected v16 row, observed receipt states, sealed predecessor evidence, generated phase fixtures, and frozen historical regression oracles are coherent; this gate confers no product, process-start, C4, or current-unit receipt authority`);
+	console.log(`P07B-C ${p07bCActiveReceiptPhaseBoundary} plan check passed: the visible-capsule-selected v17 row, observed receipt states, sealed predecessor evidence, generated phase fixtures, and frozen historical regression oracles are coherent; this gate confers no product, process-start, execution, or current-unit receipt authority`);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

@@ -36,7 +36,7 @@ import {
 
 const selftestPath = fileURLToPath(import.meta.url);
 const verifierPath = resolve(dirname(selftestPath), "verify-current.mjs");
-const expectedRosterDigest = "3a94612bcf5a5a616c9bd4914d8554edc96f211d049fa49738019682ce0e5801";
+const expectedRosterDigest = "7cf294fcbe8247e7a4de2d8996fb6b960780a35d018a8d00069af15940f0efb8";
 
 function fail(code, detail) {
 	throw new Error(`${code}: ${detail}`);
@@ -100,18 +100,18 @@ async function inspectRosters() {
 	exactStep("go-build", {
 		tool: "go",
 		tools: ["go", "cc", "cxx"],
-		args: ["build", "-mod=readonly", "-buildvcs=false", "-p=2", "./..."],
+		args: ["build", "-mod=readonly", "-buildvcs=false", "-p=1", "./..."],
 	});
 	exactStep("go-vet", {
 		tool: "go",
 		tools: ["go", "cc", "cxx"],
-		args: ["vet", "-mod=readonly", "-buildvcs=false", "-p=2", "./..."],
+		args: ["vet", "-mod=readonly", "-buildvcs=false", "-p=1", "./..."],
 	});
 	exactStep("go-test-general", {
 		tool: "go",
 		tools: ["go", "node", "git", "sh", "cc", "cxx"],
 		packageClass: "general",
-		args: ["test", "-mod=readonly", "-buildvcs=false", "-p=2", "-parallel=2", "-count=1", "-timeout=20m"],
+		args: ["test", "-mod=readonly", "-buildvcs=false", "-p=1", "-parallel=2", "-count=1", "-timeout=20m"],
 	});
 	exactStep("go-test-sensitive-serial", {
 		tool: "go",

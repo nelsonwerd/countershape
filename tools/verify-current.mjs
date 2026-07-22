@@ -15,7 +15,7 @@ const childTimeoutMS = 20 * 60 * 1000;
 const lockRecordMaxBytes = 4096;
 const lockSchemaVersion = "countershape/verify-current-lock/v1";
 const modulePath = "github.com/nelsonwerd/countershape";
-const generalJobs = 2;
+const generalJobs = 1;
 const goTestParallelism = 2;
 
 export class VerificationError extends Error {

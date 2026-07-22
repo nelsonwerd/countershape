@@ -1,5 +1,5 @@
 {
-  "schema_version": "countershape/p07b-c-unit-paths/v16",
+  "schema_version": "countershape/p07b-c-unit-paths/v17",
   "units": {
     "C0A": {
       "exact": [
@@ -660,27 +660,71 @@
       },
       "verification_profile": "SOURCE_FULL"
     },
+    "C4V": {
+      "exact": [
+        "docs/HANDOFF_MODE_C.md",
+        "docs/PROMPT_PACK.md",
+        "docs/THREAT_MODEL.md",
+        "docs/VERIFICATION.md",
+        "docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md",
+        "docs/status/P07B-C-C4V-EXECUTION-CONTRACT-MAINTENANCE.md",
+        "spec/verification/p07b-c-unit-paths.json",
+        "tools/check-p07b-c-plan.mjs",
+        "tools/check-p07b-c-unit-scope.mjs",
+        "tools/verify-current-selftest.mjs",
+        "tools/verify-current.mjs"
+      ],
+      "parent": "C3D",
+      "prefixes": [],
+      "receipt_states": {
+        "C3P": "PRESENT",
+        "C3": "PRESENT",
+        "C6A": "ABSENT"
+      },
+      "verification_profile": "SOURCE_FULL"
+    },
     "C4": {
       "exact": [
         "docs/ARCHITECTURE.md",
         "docs/CLAIM_VOCABULARY.md",
         "docs/HANDOFF_MODE_C.md",
+        "docs/PROMPT_PACK.md",
         "docs/SEMANTICS.md",
         "docs/STATE_MACHINES.md",
         "docs/THREAT_MODEL.md",
+        "docs/VERIFICATION.md",
         "docs/status/P07B-C-C4-CLI-PROFILE.md",
+        "internal/store/contract_run_bridge.go",
+        "internal/store/contract_run_bridge_test.go",
         "internal/store/execution_interlock.go",
         "internal/store/execution_interlock_test.go",
         "internal/store/nonhead_contract.go",
         "internal/store/nonhead_contract_test.go",
         "internal/store/private_contract_run.go",
         "internal/store/private_contract_run_test.go",
+        "internal/store/public_api_test.go",
+        "internal/world/capture.go",
+        "internal/world/process.go",
+        "internal/world/process_darwin.go",
+        "internal/world/process_darwin_test.go",
+        "internal/world/process_mutation_darwin_test.go",
+        "internal/world/process_unsupported.go",
+        "spec/verification/p07b-b-future-surface-authority.json",
+        "tools/check-p07b-b-architecture-selftest.mjs",
+        "tools/check-p07b-b-architecture.mjs",
         "tools/check-p07b-c-architecture-selftest.mjs",
         "tools/check-p07b-c-architecture.mjs",
+        "tools/check-u6-architecture-selftest.mjs",
+        "tools/check-u6-architecture.mjs",
+        "tools/mutate-u2.mjs",
+        "tools/mutate-u3.mjs",
+        "tools/test-mutate-u2.mjs",
         "tools/verify-current-selftest.mjs",
-        "tools/verify-current.mjs"
+        "tools/verify-current.mjs",
+        "tools/verify-go-test-repetition.mjs",
+        "tools/verify-runtime-authority.mjs"
       ],
-      "parent": "C3D",
+      "parent": "C4V",
       "prefixes": [
         "internal/contractexec/runner/",
         "internal/processmechanics/",
@@ -701,6 +745,7 @@
         "docs/SEMANTICS.md",
         "docs/STATE_MACHINES.md",
         "docs/THREAT_MODEL.md",
+        "docs/VERIFICATION.md",
         "docs/status/P07B-C-C5-HTTP-SCOPE.md",
         "tools/check-p07b-c-architecture-selftest.mjs",
         "tools/check-p07b-c-architecture.mjs",
@@ -729,6 +774,7 @@
         "docs/SEMANTICS.md",
         "docs/STATE_MACHINES.md",
         "docs/THREAT_MODEL.md",
+        "docs/VERIFICATION.md",
         "docs/status/DIDRUN_BUGS.md",
         "docs/status/P07B-C-C6-EVIDENCE.md",
         "tools/check-p07b-c-architecture-selftest.mjs",
