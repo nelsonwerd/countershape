@@ -96,6 +96,7 @@ const c3uStatusPath = "docs/status/P07B-C-C3U-CROSS-PHASE-RECEIPT-FIXTURE-MAINTE
 const c3dStatusPath = "docs/status/P07B-C-C3D-RECEIPT-PHASE-CONSOLIDATION.md";
 const c4vStatusPath = "docs/status/P07B-C-C4V-EXECUTION-CONTRACT-MAINTENANCE.md";
 const c4mStatusPath = "docs/status/P07B-C-C4M-HISTORICAL-RECEIPT-FIXTURE-MAINTENANCE.md";
+const c4nStatusPath = "docs/status/P07B-C-C4N-SELF-RECEIPT-CARDINALITY-MAINTENANCE.md";
 const bFutureSurfaceAuthorityPath = "spec/verification/p07b-b-future-surface-authority.json";
 const bFutureSurfaceInstanceSchema = "countershape/p07b-b-future-surface-authority/v1";
 const bFutureSurfaceSchemaDigest = "91c4ca13a4b30a683b82066fdcdc1a7892de2679a2e5419a57142e36b22f5937";
@@ -377,6 +378,16 @@ const sealedC4VIdentity = Object.freeze({
 	noteBlob: "70c55639f4d0bbe031b3fd18166bde6162f35e3b",
 	noteBodySHA256: "b5f56269be341db27f7a0af32f158607ec306762d82c2529425f24cc1880a061",
 });
+const sealedC4MIdentity = Object.freeze({
+	commit: "d87394799d2229bd6e6d342318f446272685a86f",
+	tree: "afd0157303e9025a490b2b6ac991f5f15734137f",
+	parent: sealedC4VIdentity.commit,
+	subject: "fix: close descendant historical receipt fixtures",
+	noteRef: "refs/notes/didrun",
+	noteType: "blob",
+	noteBlob: "af7eec1ff78c6ceec40e39dffebdfe97ed4da62c",
+	noteBodySHA256: "68fa26fcb59c9cb3c6066d28459b3f4ec4df596812f1d55ae7b23f3f5ea7be48",
+});
 const c0ClaimLabels = Object.freeze([
 	"P07B C0 authority plan coherence",
 	"P07B C0 plan checker self-test",
@@ -655,7 +666,7 @@ const requiredText = Object.freeze({
 		"`RECEIPT_RECONCILIATION` is admitted only for an exact empty-prefix roster",
 	],
 	"spec/verification/p07b-c-unit-paths.json": [
-		"countershape/p07b-c-unit-paths/v18",
+		"countershape/p07b-c-unit-paths/v19",
 		"\"C0A\"",
 		"\"C1M\"",
 		"\"C1V\"",
@@ -3726,7 +3737,7 @@ const requiredC1EvidenceMaintenanceText = Object.freeze({
 			"later independently sealed, delimited handoff/receipt descendant",
 	],
 		"spec/verification/p07b-c-unit-paths.json": [
-			"countershape/p07b-c-unit-paths/v18",
+			"countershape/p07b-c-unit-paths/v19",
 		"\"C1E\"",
 	],
 		"tools/check-p07b-c-plan.mjs": [
@@ -5370,6 +5381,45 @@ const c4mFinalRunDirectories = Object.freeze([
 	c4mFinalRunRoot,
 	...["home", "tmp", "gotmp", "gocache", "gopath", "gomodcache"].map((name) => resolve(c4mFinalRunRoot, name)),
 ]);
+const c4nClaimLabels = Object.freeze([
+	"P07B-C C4N candidate phase plan coherence",
+	"P07B-C C4N independent candidate transition authority",
+	"P07B-C C4N generated phase cardinality and frozen-history defensive self-test",
+	"P07B-C C4N sealed-C4M Git-note and C4V C3D ancestry compatibility",
+	"P07B-C C4N unit-scope defensive self-test",
+	"P07B-C C4N cumulative verifier self-test",
+	"P07B-C C4N cumulative verification",
+	"P07B-C C4N exact seven-path staged scope and diff integrity",
+	"P07B-C C4N scoped staged credential-pattern scan",
+	"P07B-C C4N sealed-C4M predecessor and preceding didrun chain integrity",
+]);
+const c4nClaimTypes = Object.freeze([
+	...Array(7).fill("tests-pass"),
+	...Array(3).fill("command-succeeded"),
+]);
+const c4nFinalRunRoot = resolve(repositoryRoot, ".countershape/p07bc-c4n-final");
+const c4nHermeticArgvPrefix = Object.freeze(c4mHermeticArgvPrefix.map((argument) =>
+	argument.replaceAll(c4mFinalRunRoot, c4nFinalRunRoot)));
+const c4nHermeticArgv = (...tail) => Object.freeze([...c4nHermeticArgvPrefix, ...tail]);
+const c4nFinalCommandTails = Object.freeze([
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--check-candidate-phase", "C4N"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--candidate-phase", "C4N"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--self-test"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--verify-c4n-sealed-c4m-note"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--self-test"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current-selftest.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C4N", "--source-final-gate"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C4N", "--credential-scan"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--verify-c4n-preseal-ledger"]),
+]);
+const c4nExpectedClaimArgv = Object.freeze(c4nFinalCommandTails.map((tail) => c4nHermeticArgv(...tail)));
+const c4nFinalCommandOrderMarkdown = c4nFinalCommandTails
+	.map((tail, index) => `${index + 1}. \`${tail.join(" ")}\``).join("\n");
+const c4nFinalRunDirectories = Object.freeze([
+	c4nFinalRunRoot,
+	...["home", "tmp", "gotmp", "gocache", "gopath", "gomodcache"].map((name) => resolve(c4nFinalRunRoot, name)),
+]);
 const c4QualificationClaimLabels = Object.freeze(requiredC4QualificationCaseIDs.map(
 	(caseID) => `P07B-C C4 isolated qualification case ${caseID}`,
 ));
@@ -5395,7 +5445,7 @@ const c4ClaimLabels = Object.freeze([
 	"P07B-C C4 inherited U3 mutation-driver compatibility self-test",
 	"P07B-C C4 repetition-profile relocation defensive self-test",
 	...c4QualificationClaimLabels,
-	"P07B-C C4 sealed-C4M Git-note and C4V C3D ancestry compatibility",
+	"P07B-C C4 sealed-C4N Git-note and C4M C4V C3D ancestry compatibility",
 	"P07B-C C4 unit-scope defensive self-test",
 	"P07B-C C4 cumulative verifier self-test",
 	"P07B-C C4 cumulative verification pass one",
@@ -5403,7 +5453,7 @@ const c4ClaimLabels = Object.freeze([
 	"P07B-C C4 cumulative verification pass three",
 	"P07B-C C4 exact admitted staged scope and diff integrity",
 	"P07B-C C4 scoped staged credential-pattern scan",
-	"P07B-C C4 sealed-C4M predecessor C4V C3D ancestry and preceding didrun chain integrity",
+	"P07B-C C4 sealed-C4N predecessor C4M C4V C3D ancestry and preceding didrun chain integrity",
 ]);
 const c4ClaimTypes = Object.freeze([...Array(77).fill("tests-pass"), ...Array(3).fill("command-succeeded")]);
 const c4FinalRunRoot = resolve(repositoryRoot, ".countershape/p07bc-c4-final");
@@ -5429,7 +5479,7 @@ const c4FinalCommandTails = Object.freeze([
 	Object.freeze(["/opt/homebrew/bin/node", "tools/mutate-u3.mjs", "--self-test"]),
 	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-go-test-repetition.mjs", "--self-test"]),
 	...c4QualificationCommandTails,
-	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--verify-c4-sealed-c4m-note"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--verify-c4-sealed-c4n-note"]),
 	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--self-test"]),
 	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current-selftest.mjs"]),
 	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current.mjs"]),
@@ -5444,7 +5494,7 @@ const c4QualificationEventOffset = c4ClaimLabels.indexOf(c4QualificationClaimLab
 const c4FinalCommandOrderMarkdown = c4FinalCommandTails
 	.map((tail, index) => `${index + 1}. \`${tail.join(" ")}\``).join("\n");
 const c4vDeclaredC4FinalCommandOrderMarkdown = c4FinalCommandOrderMarkdown.replace(
-	"--verify-c4-sealed-c4m-note", "--verify-c4-sealed-c4v-note",
+	"--verify-c4-sealed-c4n-note", "--verify-c4-sealed-c4v-note",
 );
 const c4FinalRunDirectories = Object.freeze([
 	c4FinalRunRoot,
@@ -5472,7 +5522,7 @@ const c5ClaimLabels = Object.freeze([
 	"P07B-C C5 predecessor B defensive self-test",
 	"P07B-C C5 repetition-profile defensive self-test",
 	...c5QualificationClaimLabels,
-	"P07B-C C5 sealed-C4 Git-note and C4M C4V C3D ancestry compatibility",
+	"P07B-C C5 sealed-C4 Git-note and C4N C4M C4V C3D ancestry compatibility",
 	"P07B-C C5 unit-scope defensive self-test",
 	"P07B-C C5 cumulative verifier self-test",
 	"P07B-C C5 cumulative verification pass one",
@@ -5480,7 +5530,7 @@ const c5ClaimLabels = Object.freeze([
 	"P07B-C C5 cumulative verification pass three",
 	"P07B-C C5 exact admitted staged scope and diff integrity",
 	"P07B-C C5 scoped staged credential-pattern scan",
-	"P07B-C C5 sealed-C4 predecessor C4M C4V C3D ancestry and preceding didrun chain integrity",
+	"P07B-C C5 sealed-C4 predecessor C4N C4M C4V C3D ancestry and preceding didrun chain integrity",
 ]);
 const c5ClaimTypes = Object.freeze([...Array(76).fill("tests-pass"), ...Array(3).fill("command-succeeded")]);
 const c5FinalRunRoot = resolve(repositoryRoot, ".countershape/p07bc-c5-final");
@@ -5822,6 +5872,13 @@ function validateSealedC4MNote(note, identity) {
 	return validateFutureSealedNote(
 		note, identity, c4mClaimLabels, c4mClaimTypes, c4mExpectedClaimArgv, c4mHermeticArgvPrefix,
 		"C4M authority",
+	);
+}
+
+function validateSealedC4NNote(note, identity) {
+	return validateFutureSealedNote(
+		note, identity, c4nClaimLabels, c4nClaimTypes, c4nExpectedClaimArgv, c4nHermeticArgvPrefix,
+		"C4N authority",
 	);
 }
 
@@ -6465,6 +6522,23 @@ const c4mSourceSubject = "fix: close descendant historical receipt fixtures";
 const c4mStatusBoundaryLine = "- **Boundary:** active pre-seal `SOURCE_FULL` checker maintenance after sealed C4V and before C4. Classification: `DEFECT_REPAIR`.";
 const c4mStatusParentLine = `- **Parent:** sealed C4V commit \`${sealedC4VIdentity.commit}\`, tree \`${sealedC4VIdentity.tree}\`, is note-present with note blob \`${sealedC4VIdentity.noteBlob}\`, note-body SHA-256 \`${sealedC4VIdentity.noteBodySHA256}\`, \`68/68 claims recorded-exact\`, strict exit \`0\`, and recorded \`secrets_override: true\`.`;
 const c4mStatusUnreceiptedLine = "Every intended C4M grade remains `UNRECEIPTED` until one exact staged tree runs the declared commands through a fresh didrun ledger, commits, seals, exposes a readable Git note, and passes `NO_COLOR=1 didrun verify --strict`. This status cannot receipt C4M itself.";
+const requiredC4NPaths = Object.freeze([
+	"docs/HANDOFF_MODE_C.md",
+	"docs/PROMPT_PACK.md",
+	"docs/VERIFICATION.md",
+	"docs/status/P07B-C-C4N-SELF-RECEIPT-CARDINALITY-MAINTENANCE.md",
+	"spec/verification/p07b-c-unit-paths.json",
+	"tools/check-p07b-c-plan.mjs",
+	"tools/check-p07b-c-unit-scope.mjs",
+]);
+const requiredC4NDigest = "sha256:95de7e71ca2df4a57d0544c3197bb7d917359bb3d9ecfc51a2130973faf36e6e";
+const requiredC4NRosterText = requiredC4NPaths
+	.map((path, index) => `${index === requiredC4NPaths.length - 1 ? "and " : ""}\`${path}\``).join(", ");
+const requiredC4NDeclaration = `C4N owns exactly these ${requiredC4NPaths.length} paths: ${requiredC4NRosterText}. Their sorted-newline roster digest is \`${requiredC4NDigest}\`.`;
+const c4nSourceSubject = "fix: derive live self-receipt cardinality from phase authority";
+const c4nStatusBoundaryLine = "- **Boundary:** active pre-seal `SOURCE_FULL` receipt-phase machinery maintenance after sealed C4M and before C4. Classification: `DEFECT_REPAIR`.";
+const c4nStatusParentLine = `- **Parent:** sealed C4M commit \`${sealedC4MIdentity.commit}\`, tree \`${sealedC4MIdentity.tree}\`, is note-present with note blob \`${sealedC4MIdentity.noteBlob}\`, note-body SHA-256 \`${sealedC4MIdentity.noteBodySHA256}\`, \`10/10 claims recorded-exact\`, strict exit \`0\`, and recorded \`secrets_override: true\`.`;
+const c4nStatusUnreceiptedLine = "Every intended C4N grade remains `UNRECEIPTED` until one exact staged tree runs the declared commands through a fresh didrun ledger, commits, seals, exposes a readable Git note, and passes `NO_COLOR=1 didrun verify --strict`. This status cannot receipt C4N itself.";
 const c4StatusPath = "docs/status/P07B-C-C4-CLI-PROFILE.md";
 const requiredC4Paths = Object.freeze([
 	"docs/ARCHITECTURE.md", "docs/CLAIM_VOCABULARY.md", "docs/HANDOFF_MODE_C.md", "docs/PROMPT_PACK.md",
@@ -6509,7 +6583,7 @@ const requiredC5Prefixes = Object.freeze([
 const requiredC5Digest = "sha256:d16ba74582e53dc5c791b8c34fbcd6200338dc066ec13230c2908eb6ba257bf5";
 const requiredC5PrefixDigest = "sha256:a9212680066fdbddc8f25eef04a41c264ac9148a506238dd92c39978e3e35f84";
 const c5SourceSubject = "feat: complete standalone contract execution";
-const finalRunbookBoundaryOrder = Object.freeze(["C3D", "C4V", "C4M", "C4", "C5", "C6A", "C6M", "C6B"]);
+const finalRunbookBoundaryOrder = Object.freeze(["C3D", "C4V", "C4M", "C4N", "C4", "C5", "C6A", "C6M", "C6B"]);
 const finalRunbookRegistry = Object.freeze({
 	C3D: Object.freeze({
 		subject: c3dSourceSubject, parent: "sealed C3B", profile: "SOURCE_FULL",
@@ -6526,8 +6600,13 @@ const finalRunbookRegistry = Object.freeze({
 		labels: c4mClaimLabels, types: c4mClaimTypes, argv: c4mExpectedClaimArgv,
 		prefix: c4mHermeticArgvPrefix, directories: c4mFinalRunDirectories,
 	}),
+	C4N: Object.freeze({
+		subject: c4nSourceSubject, parent: "sealed C4M", profile: "SOURCE_FULL",
+		labels: c4nClaimLabels, types: c4nClaimTypes, argv: c4nExpectedClaimArgv,
+		prefix: c4nHermeticArgvPrefix, directories: c4nFinalRunDirectories,
+	}),
 	C4: Object.freeze({
-		subject: c4SourceSubject, parent: "sealed C4M", profile: "SOURCE_FULL",
+		subject: c4SourceSubject, parent: "sealed C4N", profile: "SOURCE_FULL",
 		labels: c4ClaimLabels, types: c4ClaimTypes, argv: c4ExpectedClaimArgv,
 		prefix: c4HermeticArgvPrefix, directories: c4FinalRunDirectories,
 	}),
@@ -6867,8 +6946,8 @@ async function runFinalRunbookRendererSelfTest() {
 	if (!isDeepStrictEqual(Object.keys(finalRunbookRegistry), finalRunbookBoundaryOrder)) {
 		throw new Error("final runbook boundary order");
 	}
-	const expectedCardinality = Object.freeze({ C3D: 10, C4V: 68, C4M: 10, C4: 80, C5: 79, C6A: 11, C6M: 10, C6B: 9 });
-	const expectedTests = Object.freeze({ C3D: 7, C4V: 65, C4M: 7, C4: 77, C5: 76, C6A: 8, C6M: 7, C6B: 5 });
+	const expectedCardinality = Object.freeze({ C3D: 10, C4V: 68, C4M: 10, C4N: 10, C4: 80, C5: 79, C6A: 11, C6M: 10, C6B: 9 });
+	const expectedTests = Object.freeze({ C3D: 7, C4V: 65, C4M: 7, C4N: 7, C4: 77, C5: 76, C6A: 8, C6M: 7, C6B: 5 });
 	let controls = 0;
 	for (const boundary of finalRunbookBoundaryOrder) {
 		const spec = finalRunbookRegistry[boundary];
@@ -7324,7 +7403,7 @@ const requiredC3FText = Object.freeze({
 		c3fStatusUnreceiptedLine,
 		...c3fClaimLabels.map((label) => `\`${label}\``),
 	],
-	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v18", "\"C3F\""],
+	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v19", "\"C3F\""],
 	"tools/check-p07b-b-architecture.mjs": [
 		"c3OfficialTargetSurface", "completeC3Surface", "partitionFutureSymbols",
 		"internal/store/nonhead_contract.go:ParseContractExecutionTarget",
@@ -7384,7 +7463,7 @@ const requiredC3SText = Object.freeze({
 		c3sStatusUnreceiptedLine,
 		...c3sClaimLabels.map((label) => `\`${label}\``),
 	],
-	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v18", "\"C3S\""],
+	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v19", "\"C3S\""],
 	"tools/check-p07b-c-plan.mjs": [
 		"requiredC3SPaths", "C3S_ACTIVE", "--verify-c3s-preseal-ledger", "requirePrivateC3SFinalRunDirectories",
 		"requireSealedC3FPredecessorAuthority", "validateSealedC3FNote",
@@ -7577,7 +7656,7 @@ const requiredC3RText = Object.freeze({
 		"does not prove plain-seal-first sequencing",
 		...c3rClaimLabels.map((label) => `\`${label}\``),
 	],
-	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v18", "\"C3R\""],
+	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v19", "\"C3R\""],
 	"tools/check-p07b-c-plan.mjs": [
 		"requiredC3RPaths", "C3R_ACTIVE", "validateC3RClaimPreview", "validateC3RAuthority",
 		"c3rSealOutcomeDisclosure",
@@ -7658,7 +7737,7 @@ const requiredC3QText = Object.freeze({
 		"C3Q changes no verifier roster",
 		...c3qClaimLabels.map((label) => `\`${label}\``),
 	],
-	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v18", "\"C3Q\""],
+	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v19", "\"C3Q\""],
 	"tools/check-p07b-c-plan.mjs": [
 		"requiredC3QPaths", "C3Q_ACTIVE", "validateC3QClaimPreview", "validateC3QAuthority",
 		"planAuthorityMarkdownPaths", "planAuthorityMarkdownDigest", "computedPlanAuthorityMarkdownDigest",
@@ -7716,7 +7795,7 @@ const requiredC3TText = Object.freeze({
 		"## Final command order", c3tFinalCommandOrderMarkdown,
 		...c3tClaimLabels.map((label) => `\`${label}\``),
 	],
-	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v18", "\"C3T\""],
+	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v19", "\"C3T\""],
 	"tools/check-p07b-c-plan.mjs": [
 		"requiredC3TPaths", "C3T_ACTIVE", "syntheticC3AbsentPlanFixture",
 		"validateC3TClaimPreview", "validateC3TAuthority", "loadC3TAuthorityWithRunner",
@@ -7770,7 +7849,7 @@ const requiredC3UText = Object.freeze({
 		"## Final command order", c3uFinalCommandOrderMarkdown,
 		...c3uClaimLabels.map((label) => `\`${label}\``),
 	],
-	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v18", "\"C3U\""],
+	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v19", "\"C3U\""],
 	"tools/check-p07b-c-plan.mjs": [
 		"requiredC3UPaths", "C3U_ACTIVE", "insertLegacyReceiptBlockBeforeOptionalTerminalC3",
 		"validateC3UClaimPreview", "validateC3UAuthority", "loadC3UAuthorityWithRunner",
@@ -7898,7 +7977,7 @@ const requiredC3DText = Object.freeze({
 		...c3dClaimLabels.map((label) => `\`${label}\``),
 	],
 	"spec/verification/p07b-c-unit-paths.json": [
-		"countershape/p07b-c-unit-paths/v18", "\"C3D\"", "\"C4M\"", "\"C6M\"", "\"parent\"", "\"receipt_states\"",
+		"countershape/p07b-c-unit-paths/v19", "\"C3D\"", "\"C4M\"", "\"C4N\"", "\"C6M\"", "\"parent\"", "\"receipt_states\"",
 		"docs/status/P07B-C-C6M-RECEIPT-ADAPTER-MAINTENANCE.md",
 		"spec/verification/p07b-c-c6a-source-authority.json",
 		"docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md", "P07B-C C6B exact five-path staged scope and diff integrity",
@@ -7931,9 +8010,10 @@ const requiredC3DText = Object.freeze({
 		"--verify-c6a-preseal-ledger", "--verify-c6m-preseal-ledger", "--verify-c6b-preseal-ledger",
 	],
 	"tools/check-p07b-c-unit-scope.mjs": [
-		"\"C3D\"", "\"C4M\"", "p07b-c-unit-paths/v18", "activeReceiptPhaseBoundary",
+		"\"C3D\"", "\"C4M\"", "\"C4N\"", "priorSchema: \"countershape/p07b-c-unit-paths/v18\"", "p07b-c-unit-paths/v19", "activeReceiptPhaseBoundary",
 		"receiptPhaseRows", "receipt_states", "c6mDeclaredAdapterContract", "c6bDeclaredReceiptContract",
-		"receiptPhaseAuthorityDigest", "dd134e870c11ed4e80eb8335680b59a0ed1553c45d04746fd2fdd722f3f975a4",
+		"receiptPhaseAuthorityDigest", "8f237c7d883c212167e5a04e5dd24d6efdacf4a9ce5492215fd06892a8237c4a",
+		"candidateSpecificationOwnerContracts", "candidateSpecificationOwners",
 		"validateIndependentCandidateSnapshot", "runIndependentCandidatePhaseGate",
 		"runIndependentCandidatePhaseSelfTest", "--candidate-phase",
 		"c6aSourceAuthorityPath", "c6aSourceAuthoritySchema", "renderC6ASourceAuthorityManifest",
@@ -8083,7 +8163,7 @@ const requiredC4VText = Object.freeze({
 		...c4vClaimLabels.map((label) => `\`${label}\``),
 	],
 	"spec/verification/p07b-c-unit-paths.json": [
-		"countershape/p07b-c-unit-paths/v18", "\"C4V\"", "\"C4M\"", "\"C4\"", "\"C5\"",
+		"countershape/p07b-c-unit-paths/v19", "\"C4V\"", "\"C4M\"", "\"C4N\"", "\"C4\"", "\"C5\"",
 		"internal/contractexec/runner/", "internal/contractexec/http/", bFutureSurfaceAuthorityPath,
 	],
 	"tools/check-p07b-c-plan.mjs": [
@@ -8110,7 +8190,7 @@ const requiredC4VText = Object.freeze({
 		"--verify-c5-sealed-c4-note", "--verify-c5-preseal-ledger", "--print-final-runbook",
 	],
 	"tools/check-p07b-c-unit-scope.mjs": [
-		"p07b-c-unit-paths/v18", "c4vDeclaredMaintenanceContract", "c4mDeclaredMaintenanceContract", "c4DeclaredSourceContract",
+		"p07b-c-unit-paths/v19", "c4vDeclaredMaintenanceContract", "c4mDeclaredMaintenanceContract", "c4nDeclaredMaintenanceContract", "c4DeclaredSourceContract",
 		"c5DeclaredSourceContract", "tools/verify-runtime-authority.mjs", bFutureSurfaceAuthorityPath,
 		"unrealizedRequiredPrefixes", "--candidate-phase",
 	],
@@ -8170,7 +8250,7 @@ const requiredC4MText = Object.freeze({
 		...c4mClaimLabels.map((label) => `\`${label}\``),
 	],
 	"spec/verification/p07b-c-unit-paths.json": [
-		"countershape/p07b-c-unit-paths/v18", "\"C4M\"", "\"parent\": \"C4V\"", "\"parent\": \"C4M\"",
+		"countershape/p07b-c-unit-paths/v19", "\"C4M\"", "\"C4N\"", "\"parent\": \"C4V\"", "\"parent\": \"C4M\"", "\"parent\": \"C4N\"",
 		"docs/status/P07B-C-C4M-HISTORICAL-RECEIPT-FIXTURE-MAINTENANCE.md",
 	],
 	"tools/check-p07b-c-plan.mjs": [
@@ -8179,13 +8259,78 @@ const requiredC4MText = Object.freeze({
 		"frozenC3USelfReceiptMarkdownPaths", "frozenHistoricalSelfReceiptFormManifestDigest",
 		"c4vCompleteLiveSelfReceiptSubcases", "c4vCompleteLiveSelfReceiptSubcaseDigest",
 		"C4V_COMPLETE_LIVE_SELF_RECEIPT_CORPUS", "validateSealedC4MAuthority",
-		"verifyC4MSealedC4VNote", "verifyC4SealedC4MNote", "verifyC4MPresealLedger",
-		"--verify-c4m-sealed-c4v-note", "--verify-c4-sealed-c4m-note", "--verify-c4m-preseal-ledger",
+		"verifyC4MSealedC4VNote", "validateExactSealedC4MAuthority", "verifyC4MPresealLedger",
+		"--verify-c4m-sealed-c4v-note", "--verify-c4m-preseal-ledger", "validateExactSealedC4MChain",
 	],
 	"tools/check-p07b-c-unit-scope.mjs": [
-		"p07b-c-unit-paths/v18", "c4mDeclaredMaintenanceContract", "C4M",
-		"dd134e870c11ed4e80eb8335680b59a0ed1553c45d04746fd2fdd722f3f975a4",
-		"C4M unchanged v17 topology", "--candidate-phase",
+		"priorSchema: \"countershape/p07b-c-unit-paths/v18\"", "p07b-c-unit-paths/v19", "c4mDeclaredMaintenanceContract", "c4nDeclaredMaintenanceContract", "C4M",
+		"sealedC4MCandidateParent", "candidateSpecificationOwnerContracts", "--candidate-phase",
+	],
+});
+const requiredC4NText = Object.freeze({
+	"docs/HANDOFF_MODE_C.md": [
+		requiredC4NDeclaration, c4nSourceSubject, sealedC4MIdentity.commit, sealedC4MIdentity.tree,
+		sealedC4MIdentity.noteBlob, sealedC4MIdentity.noteBodySHA256,
+		"countershape/p07b-c-unit-paths/v19", "8f237c7d883c212167e5a04e5dd24d6efdacf4a9ce5492215fd06892a8237c4a",
+		"C4N is active", "C4 is safely checkpointed", "c419c38c608dc6bec7e23e0fc379df28d3cb2d47",
+		"3a8cdfd33168751fc38e219881fd874b0495a577", "countershape-c4-pre-c4r-checkpoint-20260722",
+		"C4M source commit", "10/10 claims recorded-exact", "C4 remains blocked until C4N seals",
+		"9 accepted and 232 rejected", "9 accepted and 219 rejected",
+		"a414d55463202a2edea6b132eb1259e83430ad10c0695ecbb729ac3441c3c19c",
+		"0aa97e46bd3a24c9238b6bd46a574234ea9b798d72175a46d4190049a5910595",
+		"447 accepted controls", "399 hostile rejections", "735 positive-form rejections and 245 controls",
+		"c5e5d421e0dab5709ef8356dc8c25421a0effff8f2698efea0da9e9d74d23761",
+	],
+	"docs/PROMPT_PACK.md": [
+		requiredC4NDeclaration, c4nSourceSubject, "C3B → C3D → C4V → C4M → C4N → C4",
+		"countershape/p07b-c-unit-paths/v19", "8f237c7d883c212167e5a04e5dd24d6efdacf4a9ce5492215fd06892a8237c4a",
+		"C4N", "9 accepted and 232 rejected", "9 accepted and 219 rejected", "C4 remains blocked until C4N seals",
+		"a414d55463202a2edea6b132eb1259e83430ad10c0695ecbb729ac3441c3c19c",
+		"0aa97e46bd3a24c9238b6bd46a574234ea9b798d72175a46d4190049a5910595",
+		"447 accepted controls", "399 hostile rejections", "735 rejections and 245 controls",
+		"c5e5d421e0dab5709ef8356dc8c25421a0effff8f2698efea0da9e9d74d23761",
+	],
+	"docs/VERIFICATION.md": [
+		"## C4N data-driven self-receipt cardinality maintenance", requiredC4NDeclaration,
+		"countershape/p07b-c-unit-paths/v19", "8f237c7d883c212167e5a04e5dd24d6efdacf4a9ce5492215fd06892a8237c4a",
+		"21 phase rows", "9 accepted and 232 rejected", "9 accepted and 219 rejected",
+		"840", "846", "447 accepted controls", "399 hostile rejections",
+		"a414d55463202a2edea6b132eb1259e83430ad10c0695ecbb729ac3441c3c19c",
+		"0aa97e46bd3a24c9238b6bd46a574234ea9b798d72175a46d4190049a5910595",
+		"47-path frozen C4M", "48-path active C4N", "735 positive-form rejections and 245 controls", "750", "250", "765", "255",
+		"31-subcase", "d7db6136c8c4bc4672bc6be374c5985ab4c5ad9990f48f4acde69f76d6bacc40",
+		"C4 remains blocked until C4N seals",
+		"c5e5d421e0dab5709ef8356dc8c25421a0effff8f2698efea0da9e9d74d23761",
+	],
+	[c4nStatusPath]: [
+		"# P07B-C C4N — self-receipt cardinality maintenance", "Classification: `DEFECT_REPAIR`",
+		requiredC4NDeclaration, c4nStatusBoundaryLine, c4nStatusParentLine, c4nStatusUnreceiptedLine,
+		`- **Commit subject:** \`${c4nSourceSubject}\``, "countershape/p07b-c-unit-paths/v19",
+		"8f237c7d883c212167e5a04e5dd24d6efdacf4a9ce5492215fd06892a8237c4a",
+		"21 ordered phase rows", "9 accepted and 232 rejected", "9 accepted and 219 rejected",
+		"840", "846", "447 accepted controls", "399 hostile rejections",
+		"a414d55463202a2edea6b132eb1259e83430ad10c0695ecbb729ac3441c3c19c",
+		"0aa97e46bd3a24c9238b6bd46a574234ea9b798d72175a46d4190049a5910595",
+		"47-path frozen C4M", "48-path active C4N", "735 positive-form rejections and 245 controls", "750", "250", "765", "255",
+		"c5e5d421e0dab5709ef8356dc8c25421a0effff8f2698efea0da9e9d74d23761",
+		"## Final command order", c4nFinalCommandOrderMarkdown,
+		...c4nClaimLabels.map((label) => `\`${label}\``),
+	],
+	"spec/verification/p07b-c-unit-paths.json": [
+		"countershape/p07b-c-unit-paths/v19", "\"C4N\"", "\"parent\": \"C4M\"", "\"parent\": \"C4N\"",
+		c4nStatusPath,
+	],
+	"tools/check-p07b-c-plan.mjs": [
+		"requiredC4NText", "candidateReceiptPhaseSpecificationOwnerContracts",
+		"selfReceiptPhaseExtensionCatalog", "C4M_FROZEN_SELF_RECEIPT_CARDINALITY",
+		"validateSealedC4NAuthority", "validateSealedC4NChain", "runSealedC4NAuthoritySelfTest",
+		"verifyC4NSealedC4MNote", "verifyC4NPresealLedger", "verifyC4SealedC4NNote", "validateSealedC4Chain",
+		"--verify-c4n-sealed-c4m-note", "--verify-c4n-preseal-ledger", "--verify-c4-sealed-c4n-note",
+	],
+	"tools/check-p07b-c-unit-scope.mjs": [
+		"p07b-c-unit-paths/v19", "c4nDeclaredMaintenanceContract", "C4N",
+		"8f237c7d883c212167e5a04e5dd24d6efdacf4a9ce5492215fd06892a8237c4a",
+		"candidateSpecificationOwnerContracts", "generated invalid parent", "--candidate-phase",
 	],
 });
 const c4vNarrativePathSet = new Set([
@@ -8250,10 +8395,11 @@ const planAuthorityMarkdownPaths = Object.freeze([...new Set([
 		requiredC3DText,
 		requiredC4VText,
 		requiredC4MText,
+		requiredC4NText,
 	].flatMap((authority) => Object.keys(authority)),
 ].filter(receiptPhaseMarkdownAuthorityPath))].sort((left, right) =>
 	Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8"))));
-const planAuthorityMarkdownDigest = "sha256:3170c03ba6f8cda2910cd3a4f3437b88f6a30d0de991ca62484426d750af376e";
+const planAuthorityMarkdownDigest = "sha256:b48c44457a30b93359e396c543432e897c2639b04c00de0d036f13f971b360af";
 const frozenC3USelfReceiptMarkdownPaths = Object.freeze([
 	"docs/ARCHITECTURE.md",
 	"docs/CLAIM_VOCABULARY.md",
@@ -8301,6 +8447,8 @@ const frozenC3USelfReceiptMarkdownPaths = Object.freeze([
 	"research/deep-dive/p07b-c/11-c3-runtime-epoch-audit.md",
 ]);
 const frozenC3USelfReceiptMarkdownDigest = "sha256:1c5bf120f1ab948586bfa594e6ae634fc6acf7a5544febcccb2c4dc475a59a49";
+const frozenC4MSelfReceiptMarkdownPaths = Object.freeze(planAuthorityMarkdownPaths.filter((path) => path !== c4nStatusPath));
+const frozenC4MSelfReceiptMarkdownDigest = "sha256:3170c03ba6f8cda2910cd3a4f3437b88f6a30d0de991ca62484426d750af376e";
 
 function computedPlanAuthorityMarkdownDigest() {
 	return `sha256:${createHash("sha256")
@@ -8310,6 +8458,10 @@ function computedPlanAuthorityMarkdownDigest() {
 function computedFrozenC3USelfReceiptMarkdownDigest() {
 	return `sha256:${createHash("sha256")
 		.update(`${frozenC3USelfReceiptMarkdownPaths.join("\n")}\n`, "utf8").digest("hex")}`;
+}
+
+function markdownPathRosterDigest(paths) {
+	return `sha256:${createHash("sha256").update(`${paths.join("\n")}\n`, "utf8").digest("hex")}`;
 }
 
 function receiptPhaseMarkdownAuthorityPath(path) {
@@ -8334,9 +8486,15 @@ function currentReceiptPhaseMarkdownPaths(boundary = p07bCActiveReceiptPhaseBoun
 	if (unit === undefined || p07bCReceiptPhaseRowsByBoundary[boundary] === undefined) {
 		throw new Error(`unknown receipt-phase Markdown boundary ${boundary}`);
 	}
+	const targetIndex = p07bCReceiptPhaseRows.findIndex((row) => row.boundary === boundary);
+	const c4mIndex = p07bCReceiptPhaseRows.findIndex((row) => row.boundary === "C4M");
+	const descendantPaths = targetIndex > c4mIndex
+		? p07bCReceiptPhaseRows.slice(c4mIndex + 1, targetIndex + 1).flatMap((row) =>
+			receiptPhaseSpecification.units[row.boundary].exact.filter(receiptPhaseMarkdownAuthorityPath))
+		: [];
 	return Object.freeze([...new Set([
-		...planAuthorityMarkdownPaths,
-		...forwardDeclaredReceiptPhaseMarkdownPaths(boundary),
+		...frozenC4MSelfReceiptMarkdownPaths,
+		...descendantPaths,
 	])].sort((left, right) => Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8"))));
 }
 
@@ -9213,6 +9371,60 @@ const activeUnitSelfReceiptPositiveControls = Object.freeze([
 	(unit) => `${unit} development strict exit: \`1\`; zero claims were declared.`,
 	() => "Sealed C3R is predecessor evidence; the active descendant remains unreceipted.",
 ]);
+const selfReceiptSuffixFixturePaths = Object.freeze([
+	"docs/receipt-phase-suffix-fixture.MD",
+	"docs/receipt-phase-suffix-fixture.markdown",
+]);
+const selfReceiptPhaseExtensionCatalogDigest = "c5e5d421e0dab5709ef8356dc8c25421a0effff8f2698efea0da9e9d74d23761";
+
+function selfReceiptPhaseExtensionCatalog() {
+	const firstBoundary = forwardCandidateReceiptPhaseBoundaries.indexOf("C4V");
+	return Object.freeze(forwardCandidateReceiptPhaseBoundaries.slice(firstBoundary).map((boundary) => {
+		const paths = currentReceiptPhaseMarkdownPaths(boundary);
+		const exercised = paths.length + selfReceiptSuffixFixturePaths.length;
+		return Object.freeze({
+			boundary,
+			paths: paths.length,
+			paths_sha256: markdownPathRosterDigest(paths),
+			suffix_variants: selfReceiptSuffixFixturePaths.length,
+			positive_forms: activeUnitSelfReceiptPositiveForms.length,
+			positive_controls: activeUnitSelfReceiptPositiveControls.length,
+			rejected: exercised * activeUnitSelfReceiptPositiveForms.length,
+			controls: exercised * activeUnitSelfReceiptPositiveControls.length,
+		});
+	}));
+}
+
+function computedSelfReceiptPhaseExtensionCatalogDigest(catalog = selfReceiptPhaseExtensionCatalog()) {
+	return createHash("sha256")
+		.update(`${catalog.map((row) => JSON.stringify(row)).join("\n")}\n`, "utf8")
+		.digest("hex");
+}
+
+function runSelfReceiptPhaseExtensionCatalogSelfTest() {
+	const catalog = selfReceiptPhaseExtensionCatalog();
+	const boundaries = catalog.map(({ boundary }) => boundary);
+	const expectedBoundaries = forwardCandidateReceiptPhaseBoundaries.slice(
+		forwardCandidateReceiptPhaseBoundaries.indexOf("C4V"),
+	);
+	if (!isDeepStrictEqual(boundaries, expectedBoundaries) || new Set(boundaries).size !== boundaries.length) {
+		throw new Error("self-receipt phase extension catalog boundary roster");
+	}
+	const digest = computedSelfReceiptPhaseExtensionCatalogDigest(catalog);
+	if (digest !== selfReceiptPhaseExtensionCatalogDigest) {
+		throw new Error(`self-receipt phase extension catalog digest ${digest}`);
+	}
+	const c4m = catalog.find(({ boundary }) => boundary === "C4M");
+	const c4n = catalog.find(({ boundary }) => boundary === "C4N");
+	const c4 = catalog.find(({ boundary }) => boundary === "C4");
+	if (c4m?.paths !== 47 || c4m.paths_sha256 !== frozenC4MSelfReceiptMarkdownDigest ||
+		c4m.rejected !== 735 || c4m.controls !== 245 ||
+		c4n?.paths !== 48 || c4n.rejected !== 750 || c4n.controls !== 250 ||
+		c4?.paths !== 49 || c4.rejected !== 765 || c4.controls !== 255) {
+		throw new Error("self-receipt phase extension frozen/current/reentry oracle");
+	}
+	return Object.freeze({ catalog, digest });
+}
 const frozenHistoricalSelfReceiptSupplementalAliases = Object.freeze([
 	Object.freeze({ name: "source commit", label: "commit-identity", render: (unit) => `${unit} source commit \`${"c".repeat(40)}\`` }),
 	Object.freeze({ name: "source tree", label: "tree-identity", render: (unit) => `${unit} source tree \`${"d".repeat(40)}\`` }),
@@ -9250,11 +9462,22 @@ function runFrozenHistoricalSelfReceiptMatrixSelfTest() {
 	if (frozenC3USelfReceiptMarkdownPaths.length !== 44 || computedDigest !== frozenC3USelfReceiptMarkdownDigest) {
 		throw new Error(`frozen C3U/C3B self-receipt corpus authority ${frozenC3USelfReceiptMarkdownPaths.length}/${computedDigest}`);
 	}
-	const expectedLiveExtension = [...frozenC3USelfReceiptMarkdownPaths, c3dStatusPath, c4vStatusPath, c4mStatusPath].sort(
+	const c3dIndex = p07bCReceiptPhaseRows.findIndex(({ boundary }) => boundary === "C3D");
+	const latestSpecificationOwner = Object.keys(candidateReceiptPhaseSpecificationOwnerContracts).at(-1);
+	const ownerIndex = p07bCReceiptPhaseRows.findIndex(({ boundary }) => boundary === latestSpecificationOwner);
+	const expectedLiveExtension = [...new Set([
+		...frozenC3USelfReceiptMarkdownPaths,
+		...p07bCReceiptPhaseRows.slice(c3dIndex, ownerIndex + 1).flatMap(({ boundary }) =>
+			receiptPhaseSpecification.units[boundary].exact.filter(receiptPhaseMarkdownAuthorityPath)),
+	])].sort(
 		(left, right) => Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8")),
 	);
 	if (!isDeepStrictEqual(planAuthorityMarkdownPaths, expectedLiveExtension)) {
 		throw new Error("live plan-authority Markdown corpus does not exactly extend frozen C3U/C3B authority");
+	}
+	if (frozenC4MSelfReceiptMarkdownPaths.length !== 47 ||
+		markdownPathRosterDigest(frozenC4MSelfReceiptMarkdownPaths) !== frozenC4MSelfReceiptMarkdownDigest) {
+		throw new Error("frozen C4M self-receipt Markdown corpus authority");
 	}
 	const formManifestDigest = computedFrozenHistoricalSelfReceiptFormManifestDigest(units);
 	if (activeUnitSelfReceiptPositiveForms.length !== 15 || activeUnitSelfReceiptPositiveControls.length !== 5 ||
@@ -9325,12 +9548,10 @@ function runFrozenHistoricalSelfReceiptMatrixSelfTest() {
 	});
 }
 
-function runCurrentReceiptPhaseSelfReceiptExtension(unit = p07bCActiveReceiptPhaseBoundary) {
-	const paths = currentReceiptPhaseMarkdownPaths(unit);
+function exerciseReceiptPhaseSelfReceiptExtension(unit, paths) {
 	const exercisedPaths = Object.freeze([
 		...paths,
-		"docs/receipt-phase-suffix-fixture.MD",
-		"docs/receipt-phase-suffix-fixture.markdown",
+		...selfReceiptSuffixFixturePaths,
 	]);
 	let rejected = 0;
 	let controls = 0;
@@ -9353,9 +9574,18 @@ function runCurrentReceiptPhaseSelfReceiptExtension(unit = p07bCActiveReceiptPha
 			controls += 1;
 		}
 	}
-	const result = Object.freeze({ paths: paths.length, suffixVariants: exercisedPaths.length - paths.length, rejected, controls });
-	if (unit === p07bCActiveReceiptPhaseBoundary && !isDeepStrictEqual(result, {
-		paths: 47, suffixVariants: 2, rejected: 735, controls: 245,
+	return Object.freeze({ paths: paths.length, suffixVariants: exercisedPaths.length - paths.length, rejected, controls });
+}
+
+function runCurrentReceiptPhaseSelfReceiptExtension(unit = p07bCActiveReceiptPhaseBoundary) {
+	const paths = currentReceiptPhaseMarkdownPaths(unit);
+	const result = exerciseReceiptPhaseSelfReceiptExtension(unit, paths);
+	const expected = selfReceiptPhaseExtensionCatalog().find(({ boundary }) => boundary === unit);
+	if (expected === undefined || !isDeepStrictEqual(result, {
+		paths: expected.paths,
+		suffixVariants: expected.suffix_variants,
+		rejected: expected.rejected,
+		controls: expected.controls,
 	})) {
 		throw new Error(`current ${unit} self-receipt extension cardinality ${JSON.stringify(result)}`);
 	}
@@ -10860,6 +11090,37 @@ function validateSealedC4MAuthority(authority, requireCurrentHead = false) {
 	return errors;
 }
 
+function validateExactSealedC4MAuthority(authority, requireCurrentHead = false) {
+	const errors = validateSealedC4MAuthority(authority, requireCurrentHead);
+	if (authority?.commit !== sealedC4MIdentity.commit) errors.push("sealed C4M commit identity");
+	if (authority?.tree !== sealedC4MIdentity.tree) errors.push("sealed C4M tree identity");
+	if (authority?.note_type !== sealedC4MIdentity.noteType) errors.push("sealed C4M note type");
+	if (authority?.note_blob_oid !== sealedC4MIdentity.noteBlob) errors.push("sealed C4M note object identity");
+	if (authority?.note_body_sha256 !== sealedC4MIdentity.noteBodySHA256) errors.push("sealed C4M note body digest");
+	if (authority?.note?.secrets_override !== true) errors.push("sealed C4M secrets override disclosure");
+	return errors;
+}
+
+function validateSealedC4NAuthority(authority, requireCurrentHead = false) {
+	const errors = [];
+	if (!authority || typeof authority !== "object" || Array.isArray(authority)) return ["missing Git/didrun authority"];
+	const identity = { commit: authority.commit, tree: authority.tree };
+	if (!/^[0-9a-f]{40}$/u.test(authority.commit ?? "") || /^0+$/u.test(authority.commit ?? "")) errors.push("commit");
+	if (!/^[0-9a-f]{40}$/u.test(authority.tree ?? "") || /^0+$/u.test(authority.tree ?? "")) errors.push("tree");
+	if (authority.parent !== sealedC4MIdentity.commit || !isDeepStrictEqual(authority.parents, [sealedC4MIdentity.commit])) {
+		errors.push("sealed C4M parent");
+	}
+	if (authority.subject !== c4nSourceSubject) errors.push("subject");
+	if (authority.ancestor_of_head !== true) errors.push("ancestor of HEAD");
+	if (requireCurrentHead && authority.head_commit !== authority.commit) errors.push("sealed C4N is not current HEAD");
+	if (authority.note_type !== "blob") errors.push("note type");
+	if (!/^[0-9a-f]{40}$/u.test(authority.note_blob_oid ?? "") || /^0+$/u.test(authority.note_blob_oid ?? "")) errors.push("note blob");
+	if (!/^[0-9a-f]{64}$/u.test(authority.note_body_sha256 ?? "") || /^0+$/u.test(authority.note_body_sha256 ?? "")) errors.push("note body digest");
+	errors.push(...validateFutureSourceDiff(authority, requiredC4NPaths, c4nStatusPath));
+	errors.push(...validateSealedC4NNote(authority.note, identity));
+	return errors;
+}
+
 function validatePrefixedFutureSourceDiff(authority, exactPaths, prefixes) {
 	const errors = [];
 	const entries = authority?.source_diff;
@@ -10921,7 +11182,7 @@ function validateSealedC4Authority(authority, expectedParent, requireCurrentHead
 	if (!/^[0-9a-f]{40}$/u.test(authority.commit ?? "") || /^0+$/u.test(authority.commit ?? "")) errors.push("commit");
 	if (!/^[0-9a-f]{40}$/u.test(authority.tree ?? "") || /^0+$/u.test(authority.tree ?? "")) errors.push("tree");
 	if (!/^[0-9a-f]{40}$/u.test(expectedParent ?? "") || /^0+$/u.test(expectedParent ?? "") || authority.parent !== expectedParent ||
-		!isDeepStrictEqual(authority.parents, [expectedParent])) errors.push("sealed C4M parent");
+		!isDeepStrictEqual(authority.parents, [expectedParent])) errors.push("sealed C4N parent");
 	if (authority.subject !== c4SourceSubject) errors.push("subject");
 	if (authority.ancestor_of_head !== true) errors.push("ancestor of HEAD");
 	if (requireCurrentHead && authority.head_commit !== authority.commit) errors.push("sealed C4 is not current HEAD");
@@ -10959,12 +11220,30 @@ function validateSealedC4MChain(c4mAuthority, c4vAuthority, c3dAuthority, outerH
 	return errors;
 }
 
-function validateSealedC4Chain(c4Authority, c4mAuthority, c4vAuthority, c3dAuthority, requireCurrentHead = false) {
+function validateExactSealedC4MChain(c4mAuthority, c4vAuthority, c3dAuthority, outerHead, requireCurrentHead = false) {
 	const errors = [
-		...validateSealedC4Authority(c4Authority, c4mAuthority?.commit, requireCurrentHead),
-		...validateSealedC4MChain(c4mAuthority, c4vAuthority, c3dAuthority, c4Authority?.commit, false)
-			.map((error) => error.startsWith("C4M ancestry ") || error.startsWith("C4V ancestry ") || error.startsWith("C3D ancestry ")
-				? error : `C4M ancestry ${error}`),
+		...validateExactSealedC4MAuthority(c4mAuthority, requireCurrentHead).map((error) => `C4M ancestry ${error}`),
+		...validateExactSealedC4VChain(c4vAuthority, c3dAuthority, outerHead),
+	];
+	if (c4mAuthority?.head_commit !== outerHead) errors.push("C4M ancestry outer HEAD mismatch");
+	return errors;
+}
+
+function validateSealedC4NChain(c4nAuthority, c4mAuthority, c4vAuthority, c3dAuthority, outerHead, requireCurrentHead = false) {
+	const errors = [
+		...validateSealedC4NAuthority(c4nAuthority, requireCurrentHead),
+		...validateExactSealedC4MChain(c4mAuthority, c4vAuthority, c3dAuthority, outerHead, false),
+	];
+	if (c4nAuthority?.head_commit !== outerHead) errors.push("C4N ancestry outer HEAD mismatch");
+	return errors;
+}
+
+function validateSealedC4Chain(c4Authority, c4nAuthority, c4mAuthority, c4vAuthority, c3dAuthority, requireCurrentHead = false) {
+	const errors = [
+		...validateSealedC4Authority(c4Authority, c4nAuthority?.commit, requireCurrentHead),
+		...validateSealedC4NChain(c4nAuthority, c4mAuthority, c4vAuthority, c3dAuthority, c4Authority?.commit, false)
+			.map((error) => error.startsWith("C4N ancestry ") || error.startsWith("C4M ancestry ") ||
+				error.startsWith("C4V ancestry ") || error.startsWith("C3D ancestry ") ? error : `C4N ancestry ${error}`),
 	];
 	return errors;
 }
@@ -10977,18 +11256,28 @@ export async function verifyC4MSealedC4VNote() {
 	console.log(`P07B-C C4M sealed-C4V note exact: commit=${authority.commit} tree=${authority.tree} note=${authority.note_blob_oid} claims=${c4vClaimLabels.length}; C3D=${c3dAuthority.commit}`);
 }
 
-export async function verifyC4SealedC4MNote() {
+export async function verifyC4NSealedC4MNote() {
+	const authority = await loadReceiptAuthorityFromGit(repositoryRoot, { source_commit: sealedC4MIdentity.commit });
+	const c4vAuthority = await loadReceiptAuthorityFromGit(repositoryRoot, { source_commit: authority.parent });
+	const c3dAuthority = await loadReceiptAuthorityFromGit(repositoryRoot, { source_commit: c4vAuthority.parent });
+	const errors = validateExactSealedC4MChain(authority, c4vAuthority, c3dAuthority, authority.commit, true);
+	if (errors.length > 0) throw new Error(`P07B-C C4N sealed-C4M authority mismatch: ${errors.join(", ")}`);
+	console.log(`P07B-C C4N sealed-C4M note exact: commit=${authority.commit} tree=${authority.tree} note=${authority.note_blob_oid} claims=${c4mClaimLabels.length}; C4V=${c4vAuthority.commit}; C3D=${c3dAuthority.commit}`);
+}
+
+export async function verifyC4SealedC4NNote() {
 	const head = decodeCandidateGitOID(
-		await gitOutput(["rev-parse", "--verify", "HEAD^{commit}"]), "C4 sealed-C4M HEAD",
+		await gitOutput(["rev-parse", "--verify", "HEAD^{commit}"]), "C4 sealed-C4N HEAD",
 	);
-	const c4mAuthority = await loadReceiptAuthorityFromGit(repositoryRoot, { source_commit: head });
+	const c4nAuthority = await loadReceiptAuthorityFromGit(repositoryRoot, { source_commit: head });
+	const c4mAuthority = await loadReceiptAuthorityFromGit(repositoryRoot, { source_commit: c4nAuthority.parent });
 	const c4vAuthority = await loadReceiptAuthorityFromGit(repositoryRoot, { source_commit: c4mAuthority.parent });
 	const c3dAuthority = await loadReceiptAuthorityFromGit(repositoryRoot, { source_commit: c4vAuthority.parent });
-	const errors = validateSealedC4MChain(
-		c4mAuthority, c4vAuthority, c3dAuthority, c4mAuthority.commit, true,
+	const errors = validateSealedC4NChain(
+		c4nAuthority, c4mAuthority, c4vAuthority, c3dAuthority, c4nAuthority.commit, true,
 	);
-	if (errors.length > 0) throw new Error(`P07B-C C4 sealed-C4M authority mismatch: ${errors.join(", ")}`);
-	console.log(`P07B-C C4 sealed-C4M note exact: commit=${c4mAuthority.commit} tree=${c4mAuthority.tree} note=${c4mAuthority.note_blob_oid} claims=${c4mClaimLabels.length}; C4V=${c4vAuthority.commit}; C3D=${c3dAuthority.commit}`);
+	if (errors.length > 0) throw new Error(`P07B-C C4 sealed-C4N authority mismatch: ${errors.join(", ")}`);
+	console.log(`P07B-C C4 sealed-C4N note exact: commit=${c4nAuthority.commit} tree=${c4nAuthority.tree} note=${c4nAuthority.note_blob_oid} claims=${c4nClaimLabels.length}; C4M=${c4mAuthority.commit}; C4V=${c4vAuthority.commit}; C3D=${c3dAuthority.commit}`);
 }
 
 export async function verifyC5SealedC4Note() {
@@ -10996,12 +11285,13 @@ export async function verifyC5SealedC4Note() {
 		await gitOutput(["rev-parse", "--verify", "HEAD^{commit}"]), "C5 sealed-C4 HEAD",
 	);
 	const c4Authority = await loadReceiptAuthorityFromGit(repositoryRoot, { source_commit: head });
-	const c4mAuthority = await loadReceiptAuthorityFromGit(repositoryRoot, { source_commit: c4Authority.parent });
+	const c4nAuthority = await loadReceiptAuthorityFromGit(repositoryRoot, { source_commit: c4Authority.parent });
+	const c4mAuthority = await loadReceiptAuthorityFromGit(repositoryRoot, { source_commit: c4nAuthority.parent });
 	const c4vAuthority = await loadReceiptAuthorityFromGit(repositoryRoot, { source_commit: c4mAuthority.parent });
 	const c3dAuthority = await loadReceiptAuthorityFromGit(repositoryRoot, { source_commit: c4vAuthority.parent });
-	const errors = validateSealedC4Chain(c4Authority, c4mAuthority, c4vAuthority, c3dAuthority, true);
+	const errors = validateSealedC4Chain(c4Authority, c4nAuthority, c4mAuthority, c4vAuthority, c3dAuthority, true);
 	if (errors.length > 0) throw new Error(`P07B-C C5 sealed-C4 authority mismatch: ${errors.join(", ")}`);
-	console.log(`P07B-C C5 sealed-C4 note exact: commit=${c4Authority.commit} tree=${c4Authority.tree} note=${c4Authority.note_blob_oid} claims=${c4ClaimLabels.length}; C4M=${c4mAuthority.commit}; C4V=${c4vAuthority.commit}; C3D=${c3dAuthority.commit}`);
+	console.log(`P07B-C C5 sealed-C4 note exact: commit=${c4Authority.commit} tree=${c4Authority.tree} note=${c4Authority.note_blob_oid} claims=${c4ClaimLabels.length}; C4N=${c4nAuthority.commit}; C4M=${c4mAuthority.commit}; C4V=${c4vAuthority.commit}; C3D=${c3dAuthority.commit}`);
 }
 
 async function runC4VSealedC3DCompatibilitySelfTest() {
@@ -11194,6 +11484,23 @@ function syntheticSealedC4MAuthority() {
 	};
 }
 
+function syntheticExactSealedC4MAuthority(headCommit = sealedC4MIdentity.commit) {
+	const authority = syntheticSealedC4MAuthority();
+	authority.head_commit = headCommit;
+	authority.commit = sealedC4MIdentity.commit;
+	authority.tree = sealedC4MIdentity.tree;
+	authority.parent = sealedC4MIdentity.parent;
+	authority.parents = [sealedC4MIdentity.parent];
+	authority.subject = sealedC4MIdentity.subject;
+	authority.note.commit = sealedC4MIdentity.commit;
+	authority.note.tree = sealedC4MIdentity.tree;
+	authority.note.secrets_override = true;
+	authority.note_type = sealedC4MIdentity.noteType;
+	authority.note_blob_oid = sealedC4MIdentity.noteBlob;
+	authority.note_body_sha256 = sealedC4MIdentity.noteBodySHA256;
+	return authority;
+}
+
 function runSealedC4MAuthoritySelfTest() {
 	const baseline = syntheticSealedC4MAuthority();
 	const baselineErrors = validateSealedC4MAuthority(baseline, true);
@@ -11270,6 +11577,105 @@ function runSealedC4MAuthoritySelfTest() {
 	return rejected;
 }
 
+function syntheticSealedC4NAuthority() {
+	const commit = "a".repeat(40);
+	const tree = "b".repeat(40);
+	return {
+		head_commit: commit,
+		commit,
+		tree,
+		parent: sealedC4MIdentity.commit,
+		parents: [sealedC4MIdentity.commit],
+		source_diff: requiredC4NPaths.map((path) => path === c4nStatusPath ? {
+			old_mode: "000000", new_mode: "100644", old_oid: "0".repeat(40), new_oid: "5".repeat(40), status: "A", path,
+		} : {
+			old_mode: "100644", new_mode: "100644", old_oid: "4".repeat(40), new_oid: "5".repeat(40), status: "M", path,
+		}),
+		subject: c4nSourceSubject,
+		ancestor_of_head: true,
+		note: syntheticFutureSealedNote({ commit, tree }, c4nClaimLabels, c4nClaimTypes, c4nExpectedClaimArgv),
+		note_type: "blob",
+		note_blob_oid: "c".repeat(40),
+		note_body_sha256: "d".repeat(64),
+	};
+}
+
+function runSealedC4NAuthoritySelfTest() {
+	const baseline = syntheticSealedC4NAuthority();
+	const baselineErrors = validateSealedC4NAuthority(baseline, true);
+	if (baselineErrors.length > 0) {
+		throw new Error(`P07B-C sealed-C4N authority self-test baseline failed: ${baselineErrors.join(", ")}`);
+	}
+	const exactC4M = syntheticExactSealedC4MAuthority(baseline.commit);
+	const exactC4V = syntheticExactSealedC4VAuthority(baseline.commit);
+	const exactC3D = syntheticExactSealedC3DAuthority(baseline.commit);
+	const chainErrors = validateSealedC4NChain(baseline, exactC4M, exactC4V, exactC3D, baseline.commit, true);
+	if (chainErrors.length > 0) {
+		throw new Error(`P07B-C sealed-C4N full-chain self-test baseline failed: ${chainErrors.join(", ")}`);
+	}
+	let rejected = 0;
+	const refuseChain = (name, mutate, expected) => {
+		const c4n = structuredClone(baseline);
+		const c4m = structuredClone(exactC4M);
+		const c4v = structuredClone(exactC4V);
+		const c3d = structuredClone(exactC3D);
+		mutate({ c4n, c4m, c4v, c3d });
+		const errors = validateSealedC4NChain(c4n, c4m, c4v, c3d, baseline.commit, true);
+		if (!errors.some((error) => error.includes(expected))) {
+			throw new Error(`P07B-C sealed-C4N full-chain self-test false negative: ${name} (${errors.join(", ") || "accepted"})`);
+		}
+		rejected += 1;
+	};
+	refuseChain("C4M outer HEAD asymmetry", ({ c4m }) => { c4m.head_commit = "e".repeat(40); }, "C4M ancestry outer HEAD mismatch");
+	refuseChain("C4M commit identity drift", ({ c4m }) => { c4m.commit = "e".repeat(40); }, "C4M ancestry sealed C4M commit identity");
+	refuseChain("C4M tree identity drift", ({ c4m }) => { c4m.tree = "e".repeat(40); }, "C4M ancestry sealed C4M tree identity");
+	refuseChain("C4M note object drift", ({ c4m }) => { c4m.note_blob_oid = "e".repeat(40); }, "C4M ancestry sealed C4M note object identity");
+	refuseChain("C4M note digest drift", ({ c4m }) => { c4m.note_body_sha256 = "e".repeat(64); }, "C4M ancestry sealed C4M note body digest");
+	refuseChain("C4M secrets disclosure drift", ({ c4m }) => { c4m.note.secrets_override = false; }, "C4M ancestry sealed C4M secrets override disclosure");
+	refuseChain("C4V outer HEAD asymmetry", ({ c4v }) => { c4v.head_commit = "e".repeat(40); }, "C4V ancestry outer HEAD mismatch");
+	refuseChain("C4V commit identity drift", ({ c4v }) => { c4v.commit = "e".repeat(40); }, "C4V ancestry sealed C4V commit identity");
+	refuseChain("C3D outer HEAD asymmetry", ({ c3d }) => { c3d.head_commit = "e".repeat(40); }, "C3D ancestry outer HEAD mismatch");
+	refuseChain("C3D identity drift", ({ c3d }) => { c3d.commit = "e".repeat(40); }, "C3D ancestry commit");
+	refuseChain("C3D tree identity drift", ({ c3d }) => { c3d.tree = "e".repeat(40); }, "C3D ancestry tree");
+	refuseChain("C3D note drift", ({ c3d }) => { c3d.note_body_sha256 = "e".repeat(64); }, "C3D ancestry note body digest");
+	const refuse = (name, mutate, expected) => {
+		const hostile = structuredClone(baseline);
+		mutate(hostile);
+		const errors = validateSealedC4NAuthority(hostile, true);
+		if (!errors.some((error) => error.includes(expected))) {
+			throw new Error(`P07B-C sealed-C4N authority self-test false negative: ${name} (${errors.join(", ") || "accepted"})`);
+		}
+		rejected += 1;
+	};
+	refuse("wrong parent", (value) => { value.parent = "f".repeat(40); }, "sealed C4M parent");
+	refuse("merge parent", (value) => { value.parents.push("e".repeat(40)); }, "sealed C4M parent");
+	refuse("wrong subject", (value) => { value.subject += " altered"; }, "subject");
+	refuse("non-current HEAD", (value) => { value.head_commit = "e".repeat(40); }, "sealed C4N is not current HEAD");
+	refuse("not ancestor", (value) => { value.ancestor_of_head = false; }, "ancestor of HEAD");
+	refuse("zero commit", (value) => { value.commit = "0".repeat(40); }, "commit");
+	refuse("zero tree", (value) => { value.tree = "0".repeat(40); }, "tree");
+	refuse("zero note blob", (value) => { value.note_blob_oid = "0".repeat(40); }, "note blob");
+	refuse("zero note digest", (value) => { value.note_body_sha256 = "0".repeat(64); }, "note body digest");
+	refuse("path order", (value) => { [value.source_diff[0], value.source_diff[1]] = [value.source_diff[1], value.source_diff[0]]; }, "source diff exact path roster");
+	refuse("path member", (value) => { value.source_diff[0].path = "wrong/path"; }, "source diff exact path roster");
+	refuse("added mode", (value) => { value.source_diff.find((row) => row.status === "A").new_mode = "100755"; }, "source diff added row");
+	refuse("zero added object", (value) => { value.source_diff.find((row) => row.status === "A").new_oid = "0".repeat(40); }, "source diff added row");
+	refuse("zero modified object", (value) => { value.source_diff.find((row) => row.status === "M").old_oid = "0".repeat(40); }, "source diff modified row");
+	refuse("unchanged modification", (value) => {
+		const row = value.source_diff.find((candidate) => candidate.status === "M"); row.new_oid = row.old_oid;
+	}, "source diff modified row");
+	refuse("note commit", (value) => { value.note.commit = "e".repeat(40); }, "didrun note root, identity, or claim roster");
+	refuse("note tree", (value) => { value.note.tree = "e".repeat(40); }, "didrun note root, identity, or claim roster");
+	refuse("claim label", (value) => { value.note.claims[0].claim.label += " altered"; }, "didrun note claim 1");
+	refuse("claim type", (value) => { value.note.claims[0].claim.ctype = "command-succeeded"; }, "didrun note claim 1");
+	refuse("claim argv", (value) => { value.note.claims[0].claim.argv_preview.push("--extra"); }, "didrun note claim 1");
+	refuse("claim grade", (value) => { value.note.claims[0].grade = "stale"; }, "didrun note claim 1");
+	refuse("coverage", (value) => { value.note.coverage.total_events -= 1; }, "didrun note exact event coverage");
+	refuse("secrets disclosure type", (value) => { value.note.secrets_override = "false"; }, "didrun note root, identity, or claim roster");
+	if (rejected !== 35) throw new Error(`P07B-C sealed-C4N authority self-test cardinality ${rejected}`);
+	return rejected;
+}
+
 function syntheticSealedC4Authority() {
 	const commit = "4".repeat(40);
 	const tree = "5".repeat(40);
@@ -11319,40 +11725,48 @@ function runSealedC4AuthoritySelfTest() {
 		throw new Error(`P07B-C sealed-C4 redacted authority self-test baseline failed: ${redactedErrors.join(", ")}`);
 	}
 	let rejected = 0;
-	const c4mBaseline = syntheticSealedC4MAuthority();
-	baseline.parent = c4mBaseline.commit;
-	baseline.parents = [c4mBaseline.commit];
-	c4mBaseline.head_commit = baseline.commit;
+	const c4nBaseline = syntheticSealedC4NAuthority();
+	baseline.parent = c4nBaseline.commit;
+	baseline.parents = [c4nBaseline.commit];
+	c4nBaseline.head_commit = baseline.commit;
+	const c4mBaseline = syntheticExactSealedC4MAuthority(baseline.commit);
 	const c4vBaseline = syntheticExactSealedC4VAuthority(baseline.commit);
 	const c3dBaseline = syntheticExactSealedC3DAuthority(baseline.commit);
-	const chainBaselineErrors = validateSealedC4Chain(baseline, c4mBaseline, c4vBaseline, c3dBaseline, true);
+	const chainBaselineErrors = validateSealedC4Chain(baseline, c4nBaseline, c4mBaseline, c4vBaseline, c3dBaseline, true);
 	if (chainBaselineErrors.length > 0) {
 		throw new Error(`P07B-C sealed-C4 chain self-test baseline failed: ${chainBaselineErrors.join(", ")}`);
 	}
+	const asymmetricC4N = structuredClone(c4nBaseline);
+	asymmetricC4N.head_commit = "c".repeat(40);
+	const asymmetricC4NErrors = validateSealedC4Chain(baseline, asymmetricC4N, c4mBaseline, c4vBaseline, c3dBaseline, true);
+	if (!asymmetricC4NErrors.includes("C4N ancestry outer HEAD mismatch")) {
+		throw new Error(`P07B-C sealed-C4 chain self-test accepted C4N outer/historical HEAD asymmetry (${asymmetricC4NErrors.join(", ") || "accepted"})`);
+	}
+	rejected += 1;
 	const asymmetricC4M = structuredClone(c4mBaseline);
 	asymmetricC4M.head_commit = "c".repeat(40);
-	const asymmetricC4MErrors = validateSealedC4Chain(baseline, asymmetricC4M, c4vBaseline, c3dBaseline, true);
+	const asymmetricC4MErrors = validateSealedC4Chain(baseline, c4nBaseline, asymmetricC4M, c4vBaseline, c3dBaseline, true);
 	if (!asymmetricC4MErrors.includes("C4M ancestry outer HEAD mismatch")) {
 		throw new Error(`P07B-C sealed-C4 chain self-test accepted C4M outer/historical HEAD asymmetry (${asymmetricC4MErrors.join(", ") || "accepted"})`);
 	}
 	rejected += 1;
 	const asymmetricC4V = structuredClone(c4vBaseline);
 	asymmetricC4V.head_commit = "c".repeat(40);
-	const asymmetricErrors = validateSealedC4Chain(baseline, c4mBaseline, asymmetricC4V, c3dBaseline, true);
+	const asymmetricErrors = validateSealedC4Chain(baseline, c4nBaseline, c4mBaseline, asymmetricC4V, c3dBaseline, true);
 	if (!asymmetricErrors.includes("C4V ancestry outer HEAD mismatch")) {
 		throw new Error(`P07B-C sealed-C4 chain self-test accepted outer/historical HEAD asymmetry (${asymmetricErrors.join(", ") || "accepted"})`);
 	}
 	rejected += 1;
 	const asymmetricC3D = structuredClone(c3dBaseline);
 	asymmetricC3D.head_commit = "c".repeat(40);
-	const asymmetricC3DErrors = validateSealedC4Chain(baseline, c4mBaseline, c4vBaseline, asymmetricC3D, true);
+	const asymmetricC3DErrors = validateSealedC4Chain(baseline, c4nBaseline, c4mBaseline, c4vBaseline, asymmetricC3D, true);
 	if (!asymmetricC3DErrors.includes("C3D ancestry outer HEAD mismatch")) {
 		throw new Error(`P07B-C sealed-C4 chain self-test accepted C3D outer/historical HEAD asymmetry (${asymmetricC3DErrors.join(", ") || "accepted"})`);
 	}
 	rejected += 1;
 	const wrongC3D = structuredClone(c3dBaseline);
 	wrongC3D.note_blob_oid = "c".repeat(40);
-	const wrongC3DErrors = validateSealedC4Chain(baseline, c4mBaseline, c4vBaseline, wrongC3D, true);
+	const wrongC3DErrors = validateSealedC4Chain(baseline, c4nBaseline, c4mBaseline, c4vBaseline, wrongC3D, true);
 	if (!wrongC3DErrors.includes("C3D ancestry note blob")) {
 		throw new Error(`P07B-C sealed-C4 chain self-test accepted wrong C3D note identity (${wrongC3DErrors.join(", ") || "accepted"})`);
 	}
@@ -11366,8 +11780,8 @@ function runSealedC4AuthoritySelfTest() {
 		}
 		rejected += 1;
 	};
-	refuse("wrong parent", (value) => { value.parent = "b".repeat(40); }, "sealed C4M parent");
-	refuse("merge parent", (value) => { value.parents.push("b".repeat(40)); }, "sealed C4M parent");
+	refuse("wrong parent", (value) => { value.parent = "b".repeat(40); }, "sealed C4N parent");
+	refuse("merge parent", (value) => { value.parents.push("b".repeat(40)); }, "sealed C4N parent");
 	refuse("wrong subject", (value) => { value.subject += " altered"; }, "subject");
 	refuse("non-current HEAD", (value) => { value.head_commit = "b".repeat(40); }, "sealed C4 is not current HEAD");
 	refuse("not ancestor", (value) => { value.ancestor_of_head = false; }, "ancestor of HEAD");
@@ -11382,7 +11796,7 @@ function runSealedC4AuthoritySelfTest() {
 	refuse("zero note digest", (value) => { value.note_body_sha256 = "0".repeat(64); }, "note body digest");
 	refuse("zero expected parent", (value) => {
 		value.parent = "0".repeat(40); value.parents = ["0".repeat(40)];
-	}, "sealed C4M parent", "0".repeat(40));
+	}, "sealed C4N parent", "0".repeat(40));
 	refuse("path order", (value) => { [value.source_diff[0], value.source_diff[1]] = [value.source_diff[1], value.source_diff[0]]; }, "source diff unique sorted path roster");
 	refuse("missing exact path", (value) => {
 		value.source_diff = value.source_diff.filter(({ path }) => path !== requiredC4Paths[0]);
@@ -11445,7 +11859,7 @@ function runSealedC4AuthoritySelfTest() {
 	refuse("claim grade", (value) => { value.note.claims[0].grade = "stale"; }, "didrun note claim 1");
 	refuse("coverage", (value) => { value.note.coverage.total_events -= 1; }, "didrun note exact event coverage");
 	refuse("secrets disclosure type", (value) => { value.note.secrets_override = "false"; }, "didrun note root, identity, or claim roster");
-	if (rejected !== 50) throw new Error(`P07B-C sealed-C4 authority self-test cardinality ${rejected}`);
+	if (rejected !== 51) throw new Error(`P07B-C sealed-C4 authority self-test cardinality ${rejected}`);
 	return rejected;
 }
 
@@ -12969,8 +13383,18 @@ function receiptPhaseFixtureDocument(row) {
 	return `# Receipt phase fixture\n\n## Current state\n\n${renderReceiptPhaseCapsule(row)}\n\n## Tail\n\nStable.\n`;
 }
 
-const forwardCandidateReceiptPhaseBoundaries = Object.freeze(["C3D", "C4V", "C4M", "C4", "C5", "C6A", "C6M", "C6B"]);
+const forwardCandidateReceiptPhaseBoundaries = Object.freeze(p07bCReceiptPhaseRows
+	.slice(p07bCReceiptPhaseRows.findIndex(({ boundary }) => boundary === "C3D"))
+	.map(({ boundary }) => boundary));
 const forwardCandidateReceiptPhaseBoundarySet = new Set(forwardCandidateReceiptPhaseBoundaries);
+const candidateReceiptPhaseSpecificationOwnerContracts = Object.freeze({
+	C4V: Object.freeze({ parent: "C3D", authority: sealedC3DIdentity, priorSchema: "countershape/p07b-c-unit-paths/v16" }),
+	C4M: Object.freeze({ parent: "C4V", authority: sealedC4VIdentity, priorSchema: "countershape/p07b-c-unit-paths/v17" }),
+	C4N: Object.freeze({ parent: "C4M", authority: sealedC4MIdentity, priorSchema: "countershape/p07b-c-unit-paths/v18" }),
+});
+const candidateReceiptPhaseSpecificationOwners = new Set([
+	"C3D", ...Object.keys(candidateReceiptPhaseSpecificationOwnerContracts),
+]);
 const receiptPhaseHandoffPath = "docs/HANDOFF_MODE_C.md";
 const receiptPhaseSpecificationPath = "spec/verification/p07b-c-unit-paths.json";
 
@@ -13024,6 +13448,9 @@ function requireCandidateReceiptPhaseTransition(candidateBoundary, parentBoundar
 	if (candidate.boundary === "C4M" && (parentCommit !== sealedC4VIdentity.commit || parentTree !== sealedC4VIdentity.tree)) {
 		throw new Error(`receipt phase C4M requires exact sealed C4V parent ${parentCommit}/${parentTree}`);
 	}
+	if (candidate.boundary === "C4N" && (parentCommit !== sealedC4MIdentity.commit || parentTree !== sealedC4MIdentity.tree)) {
+		throw new Error(`receipt phase C4N requires exact sealed C4M parent ${parentCommit}/${parentTree}`);
+	}
 	return candidate;
 }
 
@@ -13036,8 +13463,7 @@ function requireCandidateReceiptPhaseSnapshot(snapshot) {
 	if (!unit.exact.includes(receiptPhaseHandoffPath)) {
 		throw new Error(`receipt phase candidate ${candidateBoundary} does not own ${receiptPhaseHandoffPath}`);
 	}
-	const specificationOwners = new Set(["C3D", "C4V", "C4M"]);
-	if (specificationOwners.has(candidateBoundary) !== unit.exact.includes(receiptPhaseSpecificationPath)) {
+	if (candidateReceiptPhaseSpecificationOwners.has(candidateBoundary) !== unit.exact.includes(receiptPhaseSpecificationPath)) {
 		throw new Error(`receipt phase candidate ${candidateBoundary} specification ownership mismatch`);
 	}
 	validateExactIndexModes(
@@ -13060,14 +13486,12 @@ function requireCandidateReceiptPhaseSnapshot(snapshot) {
 	if (!snapshot.stagedSpecificationBytes.equals(snapshot.workingSpecificationBytes)) {
 		throw new Error("receipt phase candidate specification staged/worktree byte mismatch");
 	}
-	if (!specificationOwners.has(candidateBoundary) && !snapshot.stagedSpecificationBytes.equals(snapshot.parentSpecificationBytes)) {
+	if (!candidateReceiptPhaseSpecificationOwners.has(candidateBoundary) && !snapshot.stagedSpecificationBytes.equals(snapshot.parentSpecificationBytes)) {
 		throw new Error(`receipt phase candidate ${candidateBoundary} changed the C3D-sealed topology table`);
 	}
-	if (candidateBoundary === "C4V" && snapshot.stagedSpecificationBytes.equals(snapshot.parentSpecificationBytes)) {
-		throw new Error("receipt phase C4V candidate did not replace the sealed v16 topology table");
-	}
-	if (candidateBoundary === "C4M" && snapshot.stagedSpecificationBytes.equals(snapshot.parentSpecificationBytes)) {
-		throw new Error("receipt phase C4M candidate did not replace the sealed v17 topology table");
+	const ownerContract = candidateReceiptPhaseSpecificationOwnerContracts[candidateBoundary];
+	if (ownerContract !== undefined && snapshot.stagedSpecificationBytes.equals(snapshot.parentSpecificationBytes)) {
+		throw new Error(`receipt phase ${candidateBoundary} candidate did not replace the sealed ${ownerContract.priorSchema} topology table`);
 	}
 	let stagedSpecification;
 	try {
@@ -13103,9 +13527,8 @@ function runCandidateReceiptPhaseTransitionSelfTest() {
 	]);
 	const fixture = (candidateBoundary, parentBoundary) => {
 		const candidateBytes = Buffer.from(receiptPhaseFixtureDocument(p07bCReceiptPhaseRowsByBoundary[candidateBoundary]), "utf8");
-		const bootstrap = parentBoundary === undefined;
-		const c4vRepair = candidateBoundary === "C4V" && parentBoundary === "C3D";
-		const c4mRepair = candidateBoundary === "C4M" && parentBoundary === "C4V";
+		const bootstrapCandidate = candidateBoundary === "C3D";
+		const ownerContract = candidateReceiptPhaseSpecificationOwnerContracts[candidateBoundary];
 		return {
 			candidateBoundary,
 			indexEntries,
@@ -13114,19 +13537,21 @@ function runCandidateReceiptPhaseTransitionSelfTest() {
 			stagedSpecificationOID: "2".repeat(40),
 			stagedHandoffBytes: candidateBytes,
 			workingHandoffBytes: candidateBytes,
-			parentHandoffBytes: Buffer.from(bootstrap
-				? "# Sealed C3B handoff without a receipt-phase capsule.\n"
+			parentHandoffBytes: Buffer.from(parentBoundary === undefined
+				? "# Parent fixture without a receipt-phase capsule.\n"
 				: receiptPhaseFixtureDocument(p07bCReceiptPhaseRowsByBoundary[parentBoundary]), "utf8"),
 			stagedSpecificationBytes: specificationBytes,
 			workingSpecificationBytes: specificationBytes,
-			parentSpecificationBytes: bootstrap ? Buffer.from("{\"schema_version\":\"historical-v15\"}\n") :
-				c4vRepair ? Buffer.from("{\"schema_version\":\"countershape/p07b-c-unit-paths/v16\"}\n") :
-					c4mRepair ? Buffer.from("{\"schema_version\":\"countershape/p07b-c-unit-paths/v17\"}\n") : specificationBytes,
-			parentCommit: bootstrap ? sealedC3BIdentity.commit : c4vRepair ? sealedC3DIdentity.commit : c4mRepair ? sealedC4VIdentity.commit : "f".repeat(40),
-			parentTree: bootstrap ? sealedC3BIdentity.tree : c4vRepair ? sealedC3DIdentity.tree : c4mRepair ? sealedC4VIdentity.tree : "e".repeat(40),
+			parentSpecificationBytes: bootstrapCandidate ? Buffer.from("{\"schema_version\":\"historical-v15\"}\n") :
+				ownerContract === undefined ? specificationBytes : Buffer.from(`{\"schema_version\":\"${ownerContract.priorSchema}\"}\n`),
+			parentCommit: bootstrapCandidate ? sealedC3BIdentity.commit : ownerContract?.authority.commit ?? "f".repeat(40),
+			parentTree: bootstrapCandidate ? sealedC3BIdentity.tree : ownerContract?.authority.tree ?? "e".repeat(40),
 		};
 	};
-	const accepted = [["C3D", undefined], ["C4V", "C3D"], ["C4M", "C4V"], ["C4", "C4M"], ["C5", "C4"], ["C6A", "C5"], ["C6M", "C6A"], ["C6B", "C6M"]];
+	const accepted = forwardCandidateReceiptPhaseBoundaries.map((candidate) => [
+		candidate,
+		candidate === "C3D" ? undefined : p07bCReceiptPhaseRowsByBoundary[candidate].parent,
+	]);
 	for (const [candidate, parent] of accepted) requireCandidateReceiptPhaseSnapshot(fixture(candidate, parent));
 	let rejected = 0;
 	const refuse = (name, baseline, mutate) => {
@@ -13137,49 +13562,53 @@ function runCandidateReceiptPhaseTransitionSelfTest() {
 		if (!refused) throw new Error(`receipt phase candidate-transition self-test false negative: ${name}`);
 		rejected += 1;
 	};
-	refuse("CLI/capsule mismatch", fixture("C5", "C4"), (value) => {
+	const integrityBoundary = forwardCandidateReceiptPhaseBoundaries[
+		forwardCandidateReceiptPhaseBoundaries.indexOf(Object.keys(candidateReceiptPhaseSpecificationOwnerContracts).at(-1)) + 1
+	];
+	const integrityParent = p07bCReceiptPhaseRowsByBoundary[integrityBoundary].parent;
+	const capsuleMismatchBoundary = forwardCandidateReceiptPhaseBoundaries.find((boundary) => boundary !== integrityBoundary);
+	if (capsuleMismatchBoundary === undefined) throw new Error("receipt phase candidate-transition self-test needs two boundaries");
+	refuse("CLI/capsule mismatch", fixture(integrityBoundary, integrityParent), (value) => {
 		value.stagedHandoffBytes = value.workingHandoffBytes = Buffer.from(
-			receiptPhaseFixtureDocument(p07bCReceiptPhaseRowsByBoundary.C4), "utf8");
+			receiptPhaseFixtureDocument(p07bCReceiptPhaseRowsByBoundary[capsuleMismatchBoundary]), "utf8");
 	});
-	refuse("staged/worktree HANDOFF mismatch", fixture("C4", "C4M"), (value) => {
+	refuse("staged/worktree HANDOFF mismatch", fixture(integrityBoundary, integrityParent), (value) => {
 		value.workingHandoffBytes = Buffer.from("different\n");
 	});
-	refuse("staged/worktree specification mismatch", fixture("C4", "C4M"), (value) => {
+	refuse("staged/worktree specification mismatch", fixture(integrityBoundary, integrityParent), (value) => {
 		value.workingSpecificationBytes = Buffer.from("different\n");
 	});
-	refuse("sealed-parent specification drift", fixture("C4", "C4M"), (value) => {
+	refuse("sealed-parent specification drift", fixture(integrityBoundary, integrityParent), (value) => {
 		value.parentSpecificationBytes = Buffer.from("different\n");
 	});
 	refuse("bootstrap wrong commit", fixture("C3D", undefined), (value) => { value.parentCommit = "0".repeat(40); });
 	refuse("bootstrap wrong tree", fixture("C3D", undefined), (value) => { value.parentTree = "0".repeat(40); });
-	refuse("bootstrap prior capsule", fixture("C3D", undefined), (value) => {
-		value.parentHandoffBytes = Buffer.from(receiptPhaseFixtureDocument(p07bCReceiptPhaseRowsByBoundary.C3B), "utf8");
-	});
-	refuse("C4V wrong sealed C3D commit", fixture("C4V", "C3D"), (value) => { value.parentCommit = "f".repeat(40); });
-	refuse("C4V wrong sealed C3D tree", fixture("C4V", "C3D"), (value) => { value.parentTree = "e".repeat(40); });
-	refuse("C4V unchanged v16 specification", fixture("C4V", "C3D"), (value) => {
-		value.parentSpecificationBytes = value.stagedSpecificationBytes;
-	});
-	refuse("C4M wrong sealed C4V commit", fixture("C4M", "C4V"), (value) => { value.parentCommit = "f".repeat(40); });
-	refuse("C4M wrong sealed C4V tree", fixture("C4M", "C4V"), (value) => { value.parentTree = "e".repeat(40); });
-	refuse("C4M unchanged v17 specification", fixture("C4M", "C4V"), (value) => {
-		value.parentSpecificationBytes = value.stagedSpecificationBytes;
-	});
-	refuse("coherent downgrade", fixture("C4", "C5"), () => {});
-	refuse("C4V skipped by C4M", fixture("C4M", "C3D"), () => {});
-	refuse("C4M skipped by C4", fixture("C4", "C4V"), () => {});
-	refuse("source phase skip", fixture("C5", "C4M"), () => {});
-	refuse("receipt phase skip", fixture("C6B", "C5"), () => {});
-	refuse("adapter phase skipped by C6B", fixture("C6B", "C6A"), () => {});
-	refuse("adapter phase source skip", fixture("C6M", "C5"), () => {});
-	refuse("adapter phase replay", fixture("C6M", "C6M"), () => {});
-	refuse("same phase replay", fixture("C6B", "C6B"), () => {});
-	refuse("unknown boundary", fixture("C4", "C4M"), (value) => { value.candidateBoundary = "UNKNOWN"; });
-	refuse("candidate non-UTF8", fixture("C4", "C4M"), (value) => {
+	for (const [candidate, contract] of Object.entries(candidateReceiptPhaseSpecificationOwnerContracts)) {
+		refuse(`${candidate} wrong sealed ${contract.parent} commit`, fixture(candidate, contract.parent), (value) => { value.parentCommit = "0".repeat(40); });
+		refuse(`${candidate} wrong sealed ${contract.parent} tree`, fixture(candidate, contract.parent), (value) => { value.parentTree = "0".repeat(40); });
+		refuse(`${candidate} unchanged ${contract.priorSchema} specification`, fixture(candidate, contract.parent), (value) => {
+			value.parentSpecificationBytes = value.stagedSpecificationBytes;
+		});
+	}
+	for (const candidate of forwardCandidateReceiptPhaseBoundaries.filter((boundary) =>
+		boundary !== "C3D" && candidateReceiptPhaseSpecificationOwnerContracts[boundary] === undefined)) {
+		refuse(`${candidate} unauthorized specification byte change`, fixture(candidate, p07bCReceiptPhaseRowsByBoundary[candidate].parent), (value) => {
+			value.stagedSpecificationBytes = value.workingSpecificationBytes = Buffer.from(`${JSON.stringify(receiptPhaseSpecification)}\n`, "utf8");
+		});
+	}
+	for (const candidate of forwardCandidateReceiptPhaseBoundaries) {
+		const expectedParent = candidate === "C3D" ? undefined : p07bCReceiptPhaseRowsByBoundary[candidate].parent;
+		for (const parent of [undefined, ...p07bCReceiptPhaseRows.map(({ boundary }) => boundary)]) {
+			if (parent === expectedParent) continue;
+			refuse(`generated invalid parent ${candidate}<-${parent ?? "ABSENT"}`, fixture(candidate, parent), () => {});
+		}
+	}
+	refuse("unknown boundary", fixture(integrityBoundary, integrityParent), (value) => { value.candidateBoundary = "UNKNOWN"; });
+	refuse("candidate non-UTF8", fixture(integrityBoundary, integrityParent), (value) => {
 		value.stagedHandoffBytes = value.workingHandoffBytes = Buffer.from([0xff]);
 	});
-	refuse("parent non-UTF8", fixture("C4", "C4M"), (value) => { value.parentHandoffBytes = Buffer.from([0xff]); });
-	refuse("specification non-UTF8", fixture("C4", "C4M"), (value) => {
+	refuse("parent non-UTF8", fixture(integrityBoundary, integrityParent), (value) => { value.parentHandoffBytes = Buffer.from([0xff]); });
+	refuse("specification non-UTF8", fixture(integrityBoundary, integrityParent), (value) => {
 		value.stagedSpecificationBytes = value.workingSpecificationBytes = value.parentSpecificationBytes = Buffer.from([0xff]);
 	});
 	for (const [pathLabel, entryIndex] of [["HANDOFF", 0], ["specification", 1]]) {
@@ -13189,17 +13618,17 @@ function runCandidateReceiptPhaseTransitionSelfTest() {
 			["unmerged", (entry) => { entry.stage = 2; }],
 			["intent-to-add", (entry) => { entry.object = "0".repeat(40); }],
 		]) {
-			refuse(`candidate ${pathLabel} index ${name}`, fixture("C4", "C4M"), (value) => {
+			refuse(`candidate ${pathLabel} index ${name}`, fixture(integrityBoundary, integrityParent), (value) => {
 				mutate(value.indexEntries[entryIndex]);
 			});
 		}
-		refuse(`candidate ${pathLabel} index duplicate`, fixture("C4", "C4M"), (value) => {
+		refuse(`candidate ${pathLabel} index duplicate`, fixture(integrityBoundary, integrityParent), (value) => {
 			value.indexEntries.push({ ...value.indexEntries[entryIndex] });
 		});
-		refuse(`candidate ${pathLabel} index missing`, fixture("C4", "C4M"), (value) => {
+		refuse(`candidate ${pathLabel} index missing`, fixture(integrityBoundary, integrityParent), (value) => {
 			value.indexEntries.splice(entryIndex, 1);
 		});
-		refuse(`candidate ${pathLabel} index/tree OID mismatch`, fixture("C4", "C4M"), (value) => {
+		refuse(`candidate ${pathLabel} index/tree OID mismatch`, fixture(integrityBoundary, integrityParent), (value) => {
 			value.indexEntries[entryIndex].object = "9".repeat(40);
 		});
 	}
@@ -14283,12 +14712,21 @@ function receiptPhaseFixtureCatalog() {
 	return Object.freeze(records);
 }
 
-const fixedReceiptPhaseRegressions = Object.freeze([
+const frozenC4MFixedReceiptPhaseRegressions = Object.freeze([
 	Object.freeze({ id: "C3R_NOTE_PREVIEW", commit: sealedC3RIdentity.commit, checker_blob: "aada405d426df8a6da1679cbf51d7dddec54ab36", checker_sha256: "c7f03c49d2096fd33856a648f330bc00db641ec156f1f680e916267e8896c76c" }),
 	Object.freeze({ id: "C3Q_EXTERNAL_SELF_RECEIPT", commit: sealedC3QIdentity.commit, checker_blob: "442484b99c468f9252d2d2852e06b72efff0ef57", checker_sha256: "59075667df86c9518954caa06217ff5418527cf600ecf24643ff04688fd83a88" }),
 	Object.freeze({ id: "C3T_VALIDATED_ABSENT_BASELINE", commit: sealedC3TIdentity.commit, checker_blob: "7ae0d95e3aa0a5cdd88193c04af72b33da7a8cd6", checker_sha256: "9c91eebc6b608846d853b12e0bf7e7212947f52c9296e50d8f96399812b33977" }),
 	Object.freeze({ id: "C3U_TERMINAL_RECEIPT_LAYERING", commit: sealedC3UIdentity.commit, checker_blob: "4479e0185912bbbb572104f32c03becbae71707b", checker_sha256: "fee5ecbf3ff7c32dcb2ad2fc4d24c6f6a2f30f65dbab81da809064cf5d0fe173" }),
 	Object.freeze({ id: "C4V_COMPLETE_LIVE_SELF_RECEIPT_CORPUS", commit: sealedC4VIdentity.commit, checker_blob: "fe9dca284ee5041f985ca4a3a0036bcb87c95e97", checker_sha256: "172512d321ebb0d040f1c8e63e45d0a67d3d8dfdb6025f8417a17d8a8625bb32" }),
+]);
+const fixedReceiptPhaseRegressions = Object.freeze([
+	...frozenC4MFixedReceiptPhaseRegressions,
+	Object.freeze({
+		id: "C4M_FROZEN_SELF_RECEIPT_CARDINALITY",
+		commit: sealedC4MIdentity.commit,
+		checker_blob: "ea2f8a8e74c886e931af19c0dac0190c9e4d8da3",
+		checker_sha256: "0d5943cfbd48e1d0cf7da00389eab569c08b5bcfa26dad8b90528e0e9a5e822d",
+	}),
 ]);
 
 const fixedReceiptPhaseRegressionOracleNames = Object.freeze({
@@ -14297,6 +14735,7 @@ const fixedReceiptPhaseRegressionOracleNames = Object.freeze({
 	C3T_VALIDATED_ABSENT_BASELINE: "validated-absent-baseline-before-hostile-downgrade",
 	C3U_TERMINAL_RECEIPT_LAYERING: "byte-exact-terminal-receipt-layering",
 	C4V_COMPLETE_LIVE_SELF_RECEIPT_CORPUS: "complete-live-self-receipt-corpus-and-exact-overrides",
+	C4M_FROZEN_SELF_RECEIPT_CARDINALITY: "frozen-c4m-self-receipt-cardinality-and-data-derived-current-extension",
 });
 const c4vCompleteLiveSelfReceiptSubcases = Object.freeze([
 	"c3u-to-c4-complete",
@@ -14683,6 +15122,21 @@ async function runFixedReceiptPhaseRegression(regression) {
 		validateC4VCompleteLiveSelfReceiptSubcases(exercisedSubcases);
 		break;
 	}
+	case "C4M_FROZEN_SELF_RECEIPT_CARDINALITY": {
+		if (frozenC4MSelfReceiptMarkdownPaths.length !== 47 ||
+			markdownPathRosterDigest(frozenC4MSelfReceiptMarkdownPaths) !== frozenC4MSelfReceiptMarkdownDigest) {
+			throw new Error("fixed C4M frozen self-receipt corpus authority");
+		}
+		const frozen = exerciseReceiptPhaseSelfReceiptExtension("C4M", frozenC4MSelfReceiptMarkdownPaths);
+		if (!isDeepStrictEqual(frozen, { paths: 47, suffixVariants: 2, rejected: 735, controls: 245 })) {
+			throw new Error(`fixed C4M self-receipt cardinality ${JSON.stringify(frozen)}`);
+		}
+		const current = runCurrentReceiptPhaseSelfReceiptExtension("C4N");
+		if (isDeepStrictEqual(current, frozen) || current.paths !== 48 || current.rejected !== 750 || current.controls !== 250) {
+			throw new Error(`fixed C4M current-phase reentry cardinality ${JSON.stringify(current)}`);
+		}
+		break;
+	}
 	default:
 		throw new Error(`unknown fixed receipt phase regression ${regression.id}`);
 	}
@@ -14721,18 +15175,24 @@ async function verifyFixedReceiptPhaseRegressions() {
 			throw new Error(`fixed receipt phase regression bytes ${regression.id}`);
 		}
 	}
+	const frozenManifestDigest = createHash("sha256")
+		.update(`${frozenC4MFixedReceiptPhaseRegressions.map((entry) => JSON.stringify(entry)).join("\n")}\n`, "utf8")
+		.digest("hex");
+	if (frozenManifestDigest !== "c2ab6de5fda27074dd1b9492fd10464c76f943c5913d07a037c6fe5fb58cbd78") {
+		throw new Error(`frozen C4M fixed receipt phase regression manifest digest ${frozenManifestDigest}`);
+	}
 	const manifestDigest = createHash("sha256")
 		.update(`${fixedReceiptPhaseRegressions.map((entry) => JSON.stringify(entry)).join("\n")}\n`, "utf8")
 		.digest("hex");
-	if (manifestDigest !== "c2ab6de5fda27074dd1b9492fd10464c76f943c5913d07a037c6fe5fb58cbd78") {
-		throw new Error(`fixed receipt phase regression manifest digest ${manifestDigest}`);
+	if (manifestDigest !== "145421ce5d9b7eedbd852142febd89ecde5786e4224243bdbd7ea2e0e1e55ef5") {
+		throw new Error(`current fixed receipt phase regression manifest digest ${manifestDigest}`);
 	}
 	for (const regression of fixedReceiptPhaseRegressions) await runFixedReceiptPhaseRegression(regression);
 }
 
 export async function runReceiptPhaseTableSelfTest() {
 	const candidateTransitions = runCandidateReceiptPhaseTransitionSelfTest();
-	if (candidateTransitions.accepted !== 8 || candidateTransitions.rejected !== 45) {
+	if (candidateTransitions.accepted !== 9 || candidateTransitions.rejected !== 232) {
 		throw new Error(`receipt phase candidate-transition catalog cardinality ${candidateTransitions.accepted}/${candidateTransitions.rejected}`);
 	}
 	const caseIDs = new Set();
@@ -14771,9 +15231,9 @@ export async function runReceiptPhaseTableSelfTest() {
 	}
 	const catalog = receiptPhaseFixtureCatalog();
 	const digest = createHash("sha256").update(`${catalog.map((record) => JSON.stringify(record)).join("\n")}\n`, "utf8").digest("hex");
-	if (catalog.length !== 780 || caseIDs.size !== 780) throw new Error(`receipt phase catalog cardinality ${catalog.length}/${caseIDs.size}`);
-	if (digest !== "9933fe888704b2a8aaac645e9a362a86b2e662b18efc2d632bf064858763b825") throw new Error(`receipt phase catalog digest ${digest}`);
-	if (fixedReceiptPhaseRegressions.length !== 5 || new Set(fixedReceiptPhaseRegressions.map(({ id }) => id)).size !== 5) {
+	if (catalog.length !== 840 || caseIDs.size !== 840) throw new Error(`receipt phase catalog cardinality ${catalog.length}/${caseIDs.size}`);
+	if (digest !== "a414d55463202a2edea6b132eb1259e83430ad10c0695ecbb729ac3441c3c19c") throw new Error(`receipt phase catalog digest ${digest}`);
+	if (fixedReceiptPhaseRegressions.length !== 6 || new Set(fixedReceiptPhaseRegressions.map(({ id }) => id)).size !== 6) {
 		throw new Error("fixed receipt phase regression manifest");
 	}
 	await verifyFixedReceiptPhaseRegressions();
@@ -14786,10 +15246,10 @@ export async function runReceiptPhaseTableSelfTest() {
 	const executableCatalog = Object.freeze([...catalog, ...fixedCatalog]);
 	const executableDigest = createHash("sha256")
 		.update(`${executableCatalog.map((record) => JSON.stringify(record)).join("\n")}\n`, "utf8").digest("hex");
-	if (executableCatalog.length !== 785 || caseIDs.size !== 785) {
+	if (executableCatalog.length !== 846 || caseIDs.size !== 846) {
 		throw new Error(`receipt phase executable catalog cardinality ${executableCatalog.length}/${caseIDs.size}`);
 	}
-	if (executableDigest !== "1dfd07994201ce139426bd6daad625dc40d4f32b60e4c5022fa8c8cd6fda1496") {
+	if (executableDigest !== "0aa97e46bd3a24c9238b6bd46a574234ea9b798d72175a46d4190049a5910595") {
 		throw new Error(`receipt phase executable catalog digest ${executableDigest}`);
 	}
 	return Object.freeze({ rejected, accepted, cases: caseIDs.size, genericCases: catalog.length, fixedCases: fixedCatalog.length, candidateTransitions, digest, executableDigest });
@@ -14948,31 +15408,28 @@ async function liveForwardPlanCorpus(boundary) {
 }
 
 function runForwardFixtureIsolationSelfTest() {
-	const targets = ["C4V", "C4M", "C4", "C5", "C6A", "C6M", "C6B"];
-	for (const [active, expected] of [
-		["C5", ["HISTORY", "HISTORY", "HISTORY", "LIVE", "FUTURE", "FUTURE", "FUTURE"]],
-		["C6M", ["HISTORY", "HISTORY", "HISTORY", "HISTORY", "HISTORY", "LIVE", "FUTURE"]],
-		["C6B", ["HISTORY", "HISTORY", "HISTORY", "HISTORY", "HISTORY", "HISTORY", "LIVE"]],
-	]) {
-		const observed = targets.map((target) => forwardFixtureKind(active, target));
-		if (!isDeepStrictEqual(observed, expected)) throw new Error(`forward fixture kind matrix ${active}`);
+	const targets = forwardCandidateReceiptPhaseBoundaries.slice(
+		forwardCandidateReceiptPhaseBoundaries.indexOf("C4V"),
+	);
+	let generatedControls = 0;
+	for (const [activeIndex, active] of targets.entries()) {
+		for (const [targetIndex, target] of targets.entries()) {
+			const expected = targetIndex < activeIndex ? "HISTORY" : targetIndex === activeIndex ? "LIVE" : "FUTURE";
+			if (forwardFixtureKind(active, target) !== expected) throw new Error(`forward fixture kind matrix ${active}/${target}`);
+			generatedControls += 1;
+		}
 	}
-	const cumulativeSurfaceCases = [
-		["C4V", c3dStatusPath, c4vStatusPath, true],
-		["C4M", c4vStatusPath, c4mStatusPath, true],
-		["C4", c4mStatusPath, "docs/status/P07B-C-C4-CLI-PROFILE.md", true],
-		["C5", "docs/status/P07B-C-C4-CLI-PROFILE.md", "docs/status/P07B-C-C5-HTTP-SCOPE.md", true],
-		["C6A", "docs/status/P07B-C-C5-HTTP-SCOPE.md", c6EvidencePath, true],
-		["C6M", c6EvidencePath, "docs/status/P07B-C-C6M-RECEIPT-ADAPTER-MAINTENANCE.md", true],
-		["C6B", "docs/status/P07B-C-C6M-RECEIPT-ADAPTER-MAINTENANCE.md", "docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md", true],
-	];
-	for (const [boundary, inherited, own, ownExpected] of cumulativeSurfaceCases) {
+	let previousPaths = [];
+	for (const boundary of targets) {
 		const paths = currentReceiptPhaseMarkdownPaths(boundary);
-		if (!paths.includes(inherited) || paths.includes(own) !== ownExpected ||
+		const declaredMarkdown = receiptPhaseSpecification.units[boundary].exact.filter(receiptPhaseMarkdownAuthorityPath);
+		if (!previousPaths.every((path) => paths.includes(path)) || !declaredMarkdown.every((path) => paths.includes(path)) ||
 			!isDeepStrictEqual(paths, [...new Set(paths)].sort((left, right) =>
 				Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8"))))) {
 			throw new Error(`forward fixture cumulative Markdown surface ${boundary}`);
 		}
+		previousPaths = paths;
+		generatedControls += 1;
 	}
 	const digest = createHash("sha256").update(`${JSON.stringify(c6bPromptProjectionPairs)}\n`, "utf8").digest("hex");
 	if (digest !== c6bPromptProjectionDigest) throw new Error(`C6B prompt projection digest ${digest}`);
@@ -14990,7 +15447,7 @@ function runForwardFixtureIsolationSelfTest() {
 		try { projectC6BPrompt(hostile, "NEUTRAL"); } catch { refused = true; }
 		if (!refused) throw new Error("C6B prompt projection hostile survived");
 	}
-	return 11;
+	return generatedControls + 3;
 }
 
 export async function runDeclaredForwardReceiptPhasePlanSelfTest() {
@@ -15032,7 +15489,10 @@ export async function runDeclaredForwardReceiptPhasePlanSelfTest() {
 	let postTransitionControls = 0;
 	let selfReceiptRejected = 0;
 	let selfReceiptControls = 0;
-	for (const boundary of ["C4V", "C4M", "C4", "C5", "C6A", "C6M", "C6B"]) {
+	const forwardBoundaries = forwardCandidateReceiptPhaseBoundaries.slice(
+		forwardCandidateReceiptPhaseBoundaries.indexOf("C4V"),
+	);
+	for (const boundary of forwardBoundaries) {
 		const fixture = await baseOverrides(boundary);
 		const { overrides } = fixture;
 		if (boundary === "C6B") {
@@ -15157,10 +15617,13 @@ export async function runDeclaredForwardReceiptPhasePlanSelfTest() {
 	if (planC6GitLine(repositoryRoot, ["rev-parse", "--verify", "HEAD^{commit}"], "stable forward fixture HEAD") !== historyHead) {
 		throw new Error("forward fixture HEAD changed during self-test");
 	}
-	if (fullPlanControls !== 7 || adapterBlocks !== 10 || bFutureSurfaceBlocks !== 4 || postTransitionControls !== 1) {
+	if (fullPlanControls !== forwardBoundaries.length || adapterBlocks !== 10 || bFutureSurfaceBlocks !== 4 || postTransitionControls !== 1) {
 		throw new Error(`forward receipt-phase control cardinality ${fullPlanControls}/${adapterBlocks}/${bFutureSurfaceBlocks}/${postTransitionControls}`);
 	}
-	if (selfReceiptRejected !== 5_355 || selfReceiptControls !== 1_785) {
+	const extensionCatalog = selfReceiptPhaseExtensionCatalog();
+	const expectedSelfReceiptRejected = extensionCatalog.reduce((sum, row) => sum + row.rejected, 0);
+	const expectedSelfReceiptControls = extensionCatalog.reduce((sum, row) => sum + row.controls, 0);
+	if (selfReceiptRejected !== expectedSelfReceiptRejected || selfReceiptControls !== expectedSelfReceiptControls) {
 		throw new Error(`forward receipt-phase self-receipt cardinality ${selfReceiptRejected}/${selfReceiptControls}`);
 	}
 	return Object.freeze({
@@ -15882,6 +16345,7 @@ export async function runC3PReceiptSelfTest() {
 	rejected += runHermeticPresealSelfTest("C3D", c3dExpectedClaimArgv, c3dHermeticArgvPrefix);
 	rejected += runHermeticPresealSelfTest("C4V", c4vExpectedClaimArgv, c4vHermeticArgvPrefix);
 	rejected += runHermeticPresealSelfTest("C4M", c4mExpectedClaimArgv, c4mHermeticArgvPrefix);
+	rejected += runHermeticPresealSelfTest("C4N", c4nExpectedClaimArgv, c4nHermeticArgvPrefix);
 	rejected += runHermeticPresealSelfTest("C4", c4ExpectedClaimArgv, c4HermeticArgvPrefix);
 	rejected += runHermeticPresealSelfTest("C5", c5ExpectedClaimArgv, c5HermeticArgvPrefix);
 	rejected += runHermeticPresealSelfTest("C6A", c6aExpectedClaimArgv, c6aHermeticArgvPrefix);
@@ -18463,6 +18927,19 @@ export async function checkPlan(
 			if (!body.includes(snippet)) errors.push(`${path}: missing required C4M ruling: ${JSON.stringify(snippet)}`);
 		}
 	}
+	for (const [path, snippets] of Object.entries(requiredC4NText)) {
+		let body;
+		try {
+			body = bodies.get(path) ?? await readText(root, path, overrides);
+			bodies.set(path, body);
+		} catch (error) {
+			errors.push(`${path}: unreadable (${error.message})`);
+			continue;
+		}
+		for (const snippet of snippets) {
+			if (!body.includes(snippet)) errors.push(`${path}: missing required C4N ruling: ${JSON.stringify(snippet)}`);
+		}
+	}
 	try {
 		const manifestBytes = await readBytes(root, c3PredecessorManifestPath, overrides);
 		const manifest = JSON.parse(decodeGitUTF8(manifestBytes, "C3 predecessor declaration"));
@@ -18516,6 +18993,7 @@ export async function checkPlan(
 		["C3D", requiredC3DPaths, requiredC3DDigest],
 		["C4V", requiredC4VPaths, requiredC4VDigest],
 		["C4M", requiredC4MPaths, requiredC4MDigest],
+		["C4N", requiredC4NPaths, requiredC4NDigest],
 		["C4", requiredC4Paths, requiredC4Digest],
 		["C5", requiredC5Paths, requiredC5Digest],
 	]) {
@@ -18554,9 +19032,9 @@ export async function checkPlan(
 	const expectedPhaseIndex = p07bCReceiptPhaseRows.findIndex(({ boundary }) =>
 		boundary === expectedReceiptPhaseBoundary);
 	const c4vExpectedPhaseIndex = p07bCReceiptPhaseRows.findIndex(({ boundary }) => boundary === "C4V");
-	const c4mExpectedPhaseIndex = p07bCReceiptPhaseRows.findIndex(({ boundary }) => boundary === "C4M");
+	const c4nExpectedPhaseIndex = p07bCReceiptPhaseRows.findIndex(({ boundary }) => boundary === "C4N");
 	const c4ExpectedPhaseIndex = p07bCReceiptPhaseRows.findIndex(({ boundary }) => boundary === "C4");
-	if (expectedPhaseIndex >= c4vExpectedPhaseIndex && expectedPhaseIndex <= c4mExpectedPhaseIndex) {
+	if (expectedPhaseIndex >= c4vExpectedPhaseIndex && expectedPhaseIndex <= c4nExpectedPhaseIndex) {
 		for (const error of await validateLiveBFutureSurfaceBaseline(root, overrides)) {
 			errors.push(`internal B future-surface baseline mismatch: ${error}`);
 		}
@@ -18753,6 +19231,20 @@ export async function checkPlan(
 			requiredC4VDeclaration,
 			"docs/VERIFICATION.md",
 			"C4V execution-contract maintenance scope declaration",
+			errors,
+		);
+		requireExactlyOnce(
+			verificationBody,
+			requiredC4MDeclaration,
+			"docs/VERIFICATION.md",
+			"C4M historical receipt-fixture maintenance scope declaration",
+			errors,
+		);
+		requireExactlyOnce(
+			verificationBody,
+			requiredC4NDeclaration,
+			"docs/VERIFICATION.md",
+			"C4N self-receipt cardinality maintenance scope declaration",
 			errors,
 		);
 	}
@@ -19122,6 +19614,26 @@ export async function checkPlan(
 			requireClaimLabelExactlyOnce(c4mStatusBody, c4mClaimLabels[index], c4mStatusPath, "C4M intended claim map", errors);
 		}
 		rejectReceiptSelfClaims(c4mStatusBody, c4mStatusPath, "C4M", errors);
+	}
+	const c4nStatusBody = bodies.get(c4nStatusPath);
+	if (c4nStatusBody !== undefined) {
+		requireExactlyOnce(c4nStatusBody, requiredC4NDeclaration, c4nStatusPath, "C4N source scope", errors);
+		requireExactlyOnce(c4nStatusBody, c4nStatusBoundaryLine, c4nStatusPath, "C4N active boundary", errors);
+		requireExactlyOnce(c4nStatusBody, c4nStatusParentLine, c4nStatusPath, "C4N sealed parent identity", errors);
+		requireExactlyOnce(c4nStatusBody, c4nStatusUnreceiptedLine, c4nStatusPath, "C4N unreceipted state", errors);
+		requireExactlyOnce(c4nStatusBody, `- **Commit subject:** \`${c4nSourceSubject}\``, c4nStatusPath, "C4N commit subject", errors);
+		requireExactlyOnce(c4nStatusBody, c4nFinalCommandOrderMarkdown, c4nStatusPath, "C4N final command order", errors);
+		for (let index = 0; index < c4nClaimLabels.length; index += 1) {
+			requireExactlyOnce(
+				c4nStatusBody,
+				`| \`${c4nClaimLabels[index]}\` | \`${c4nClaimTypes[index]}\` | \`UNRECEIPTED\` |`,
+				c4nStatusPath,
+				"C4N intended claim map",
+				errors,
+			);
+			requireClaimLabelExactlyOnce(c4nStatusBody, c4nClaimLabels[index], c4nStatusPath, "C4N intended claim map", errors);
+		}
+		rejectReceiptSelfClaims(c4nStatusBody, c4nStatusPath, "C4N", errors);
 	}
 
 	try {
@@ -19968,7 +20480,7 @@ async function runSelfTest() {
 	const corpusReport = planAuthorityMarkdownCorpusReport();
 	const corpusReportLines = corpusReport.split("\n");
 	const renderedCorpusPaths = corpusReportLines.slice(1, -2).map((line) => line.startsWith("- ") ? line.slice(2) : undefined);
-	if (corpusReportLines[0] !== `P07B-C plan-authority Markdown corpus: paths=47 digest=${planAuthorityMarkdownDigest}` ||
+	if (corpusReportLines[0] !== `P07B-C plan-authority Markdown corpus: paths=48 digest=${planAuthorityMarkdownDigest}` ||
 		corpusReportLines.length !== planAuthorityMarkdownPaths.length + 3 ||
 		!isDeepStrictEqual(renderedCorpusPaths, planAuthorityMarkdownPaths) ||
 		corpusReportLines.at(-2) !== "scope: positive-receipt-form refusal only; not a general Markdown or security audit" ||
@@ -20033,6 +20545,7 @@ async function runSelfTest() {
 	const liveSelfReceiptCaptureMutations = await runLiveSelfReceiptCorpusCaptureSelfTest();
 	const sealedC4VAuthorityMutations = runSealedC4VAuthoritySelfTest();
 	const sealedC4MAuthorityMutations = runSealedC4MAuthoritySelfTest();
+	const sealedC4NAuthorityMutations = runSealedC4NAuthoritySelfTest();
 	const sealedC4AuthorityMutations = runSealedC4AuthoritySelfTest();
 	const bFutureSurfaceAuthorityControls = await runBFutureSurfaceAuthoritySelfTest();
 	if (bFutureSurfaceAuthorityControls !== 42) {
@@ -20041,6 +20554,7 @@ async function runSelfTest() {
 	const futureQualificationAuthorityControls = await runFutureQualificationAuthoritySelfTest();
 	const finalRunbookControls = await runFinalRunbookRendererSelfTest();
 	const historicalSelfReceiptMatrix = runFrozenHistoricalSelfReceiptMatrixSelfTest();
+	const selfReceiptExtensionCatalog = runSelfReceiptPhaseExtensionCatalogSelfTest();
 	const currentSelfReceiptExtension = runCurrentReceiptPhaseSelfReceiptExtension();
 	const forwardPhaseResult = await runDeclaredForwardReceiptPhasePlanSelfTest();
 
@@ -22250,7 +22764,7 @@ async function runSelfTest() {
 		}
 	}
 
-	console.log(`P07B-C evolved plan checker self-test passed: ${cases.length + localEvidenceMutations + receiptModePhaseMutations + c2ReceiptMutations + c2SealedSourcePhaseMutations + c2LocalEvidenceMutations + c3pReceiptMutations + c3ReceiptMutations + c3dPredecessorMutations + c4vPredecessorMutations + liveSelfReceiptCaptureMutations + sealedC4VAuthorityMutations + sealedC4MAuthorityMutations + sealedC4AuthorityMutations + bFutureSurfaceAuthorityControls + futureQualificationAuthorityControls + finalRunbookControls + historicalSelfReceiptMatrix.rejected + currentSelfReceiptExtension.rejected + forwardPhaseResult.adapterBlocks + forwardPhaseResult.bFutureSurfaceBlocks + forwardPhaseResult.selfReceiptRejected} aggregate authority, structure, C1/C2/C3P/C3 local-evidence, phase-isolation, semantic-projection, receipt, runbook, and allowlist defensive checks and controls exercised; live-self-receipt-capture-hostiles=${liveSelfReceiptCaptureMutations}; sealed-C4V-authority-hostiles=${sealedC4VAuthorityMutations}; sealed-C4M-authority-hostiles=${sealedC4MAuthorityMutations}; sealed-C4-authority-hostiles=${sealedC4AuthorityMutations}; B-future-surface-controls=${bFutureSurfaceAuthorityControls}; future-qualification-controls=${futureQualificationAuthorityControls}; final-runbook-controls=${finalRunbookControls}; frozen-historical matrix phases=${historicalSelfReceiptMatrix.phases} historical-phases=C3U,C3B paths=${historicalSelfReceiptMatrix.paths} forms=${historicalSelfReceiptMatrix.forms} rejected=${historicalSelfReceiptMatrix.rejected} positive-controls=${historicalSelfReceiptMatrix.controls} supplemental-aliases=${historicalSelfReceiptMatrix.supplementalAliases} supplemental-controls=${historicalSelfReceiptMatrix.supplementalControls}; current-extension phase=${p07bCActiveReceiptPhaseBoundary} paths=${currentSelfReceiptExtension.paths} rejected=${currentSelfReceiptExtension.rejected} positive-controls=${currentSelfReceiptExtension.controls}; forward-declared full-plan-controls=${forwardPhaseResult.fullPlanControls} B-surface-plan-blocks=${forwardPhaseResult.bFutureSurfaceBlocks} C6B-adapter-blocks=${forwardPhaseResult.adapterBlocks} self-receipt-rejected=${forwardPhaseResult.selfReceiptRejected} self-receipt-controls=${forwardPhaseResult.selfReceiptControls}; result=positive-form refusal only, not a general Markdown or security audit`);
+	console.log(`P07B-C evolved plan checker self-test passed: ${cases.length + localEvidenceMutations + receiptModePhaseMutations + c2ReceiptMutations + c2SealedSourcePhaseMutations + c2LocalEvidenceMutations + c3pReceiptMutations + c3ReceiptMutations + c3dPredecessorMutations + c4vPredecessorMutations + liveSelfReceiptCaptureMutations + sealedC4VAuthorityMutations + sealedC4MAuthorityMutations + sealedC4NAuthorityMutations + sealedC4AuthorityMutations + bFutureSurfaceAuthorityControls + futureQualificationAuthorityControls + finalRunbookControls + historicalSelfReceiptMatrix.rejected + currentSelfReceiptExtension.rejected + forwardPhaseResult.adapterBlocks + forwardPhaseResult.bFutureSurfaceBlocks + forwardPhaseResult.selfReceiptRejected} aggregate authority, structure, C1/C2/C3P/C3 local-evidence, phase-isolation, semantic-projection, receipt, runbook, and allowlist defensive checks and controls exercised; live-self-receipt-capture-hostiles=${liveSelfReceiptCaptureMutations}; sealed-C4V-authority-hostiles=${sealedC4VAuthorityMutations}; sealed-C4M-authority-hostiles=${sealedC4MAuthorityMutations}; sealed-C4N-authority-hostiles=${sealedC4NAuthorityMutations}; sealed-C4-authority-hostiles=${sealedC4AuthorityMutations}; B-future-surface-controls=${bFutureSurfaceAuthorityControls}; future-qualification-controls=${futureQualificationAuthorityControls}; final-runbook-controls=${finalRunbookControls}; self-receipt-catalog=${selfReceiptExtensionCatalog.digest}; frozen-historical matrix phases=${historicalSelfReceiptMatrix.phases} historical-phases=C3U,C3B paths=${historicalSelfReceiptMatrix.paths} forms=${historicalSelfReceiptMatrix.forms} rejected=${historicalSelfReceiptMatrix.rejected} positive-controls=${historicalSelfReceiptMatrix.controls} supplemental-aliases=${historicalSelfReceiptMatrix.supplementalAliases} supplemental-controls=${historicalSelfReceiptMatrix.supplementalControls}; current-extension phase=${p07bCActiveReceiptPhaseBoundary} paths=${currentSelfReceiptExtension.paths} rejected=${currentSelfReceiptExtension.rejected} positive-controls=${currentSelfReceiptExtension.controls}; forward-declared full-plan-controls=${forwardPhaseResult.fullPlanControls} B-surface-plan-blocks=${forwardPhaseResult.bFutureSurfaceBlocks} C6B-adapter-blocks=${forwardPhaseResult.adapterBlocks} self-receipt-rejected=${forwardPhaseResult.selfReceiptRejected} self-receipt-controls=${forwardPhaseResult.selfReceiptControls}; result=positive-form refusal only, not a general Markdown or security audit`);
 }
 
 async function verifyC2MaintenancePresealLedger() {
@@ -22952,12 +23466,31 @@ export async function verifyC4MPresealLedger() {
 	});
 }
 
+export async function verifyC4NPresealLedger() {
+	if (p07bCActiveReceiptPhaseBoundary !== "C4N") {
+		throw new Error(`P07B-C C4N preseal gate requires visible capsule boundary C4N, found ${p07bCActiveReceiptPhaseBoundary}`);
+	}
+	await requirePrivateFinalRunDirectories("C4N", c4nFinalRunDirectories);
+	await verifyC4NSealedC4MNote();
+	await verifyLivePresealLedger({
+		phase: "C4N",
+		expectedArgv: c4nExpectedClaimArgv,
+		claims: c4nClaimLabels.map((label, index) => ({ label, type: c4nClaimTypes[index] })),
+		receiptStates: [
+			{ path: c3pReceiptDeclarationPath, present: true },
+			{ path: c3ReceiptDeclarationPath, present: true },
+			{ path: c6aSourceAuthorityPath, present: false },
+		],
+		hermeticArgvPrefix: c4nHermeticArgvPrefix,
+	});
+}
+
 export async function verifyC4PresealLedger() {
 	if (p07bCActiveReceiptPhaseBoundary !== "C4") {
 		throw new Error(`P07B-C C4 preseal gate requires visible capsule boundary C4, found ${p07bCActiveReceiptPhaseBoundary}`);
 	}
 	await requirePrivateFinalRunDirectories("C4", c4FinalRunDirectories);
-	await verifyC4SealedC4MNote();
+	await verifyC4SealedC4NNote();
 	await verifyLivePresealLedger({
 		phase: "C4",
 		expectedArgv: c4ExpectedClaimArgv,
@@ -23178,7 +23711,7 @@ export async function verifyC3BCredentialScan() {
 
 async function main() {
 	const mode = process.argv[2];
-	const usage = "usage: check-p07b-c-plan.mjs [--check-candidate-phase <C3D|C4V|C4M|C4|C5|C6A|C6M|C6B>|--self-test|--print-plan-authority-corpus|--print-final-runbook <C3D|C4V|C4M|C4|C5|C6A|C6M|C6B>|--verify-final-runbook-parent-authority|--print-c6a-source-authority|--print-c6a-source-receipt-block|--self-test-c6a-source-receipt|--verify-c6a-source-receipt|--verify-c6a-local-evidence|--verify-sealed-c1-local-evidence|--verify-c1-local-evidence|--verify-c2-local-evidence|--verify-c2m-preseal-ledger|--verify-c2-preseal-ledger|--verify-c3v-preseal-ledger|--verify-c3m-preseal-ledger|--verify-c3a-preseal-ledger|--verify-c3l-preseal-ledger|--verify-c3f-preseal-ledger|--verify-c3s-preseal-ledger|--verify-c3-preseal-ledger|--verify-c3r-sealed-c3-note|--verify-c3r-preseal-ledger|--verify-c3q-sealed-c3r-note|--verify-c3q-preseal-ledger|--verify-c3t-sealed-c3q-note|--verify-c3t-preseal-ledger|--verify-c3u-sealed-c3t-note|--verify-c3u-preseal-ledger|--verify-c3-local-evidence|--verify-c3b-staged|--verify-c3b-credential-scan|--verify-c3b-preseal-ledger|--verify-c3d-sealed-c3b-note|--verify-c3d-preseal-ledger|--verify-c4v-sealed-c3d-note|--verify-c4v-preseal-ledger|--verify-c4m-sealed-c4v-note|--verify-c4m-preseal-ledger|--verify-c4-sealed-c4m-note|--verify-c4-preseal-ledger|--verify-c5-sealed-c4-note|--verify-c5-preseal-ledger|--verify-c6a-preseal-ledger|--verify-c6m-preseal-ledger|--verify-c6b-preseal-ledger]";
+	const usage = "usage: check-p07b-c-plan.mjs [--check-candidate-phase <C3D|C4V|C4M|C4N|C4|C5|C6A|C6M|C6B>|--self-test|--print-plan-authority-corpus|--print-final-runbook <C3D|C4V|C4M|C4N|C4|C5|C6A|C6M|C6B>|--verify-final-runbook-parent-authority|--print-c6a-source-authority|--print-c6a-source-receipt-block|--self-test-c6a-source-receipt|--verify-c6a-source-receipt|--verify-c6a-local-evidence|--verify-sealed-c1-local-evidence|--verify-c1-local-evidence|--verify-c2-local-evidence|--verify-c2m-preseal-ledger|--verify-c2-preseal-ledger|--verify-c3v-preseal-ledger|--verify-c3m-preseal-ledger|--verify-c3a-preseal-ledger|--verify-c3l-preseal-ledger|--verify-c3f-preseal-ledger|--verify-c3s-preseal-ledger|--verify-c3-preseal-ledger|--verify-c3r-sealed-c3-note|--verify-c3r-preseal-ledger|--verify-c3q-sealed-c3r-note|--verify-c3q-preseal-ledger|--verify-c3t-sealed-c3q-note|--verify-c3t-preseal-ledger|--verify-c3u-sealed-c3t-note|--verify-c3u-preseal-ledger|--verify-c3-local-evidence|--verify-c3b-staged|--verify-c3b-credential-scan|--verify-c3b-preseal-ledger|--verify-c3d-sealed-c3b-note|--verify-c3d-preseal-ledger|--verify-c4v-sealed-c3d-note|--verify-c4v-preseal-ledger|--verify-c4m-sealed-c4v-note|--verify-c4m-preseal-ledger|--verify-c4n-sealed-c4m-note|--verify-c4n-preseal-ledger|--verify-c4-sealed-c4n-note|--verify-c4-preseal-ledger|--verify-c5-sealed-c4-note|--verify-c5-preseal-ledger|--verify-c6a-preseal-ledger|--verify-c6m-preseal-ledger|--verify-c6b-preseal-ledger]";
 	if (mode === "--check-candidate-phase") {
 		if (process.argv.length !== 4) throw new Error(usage);
 		await verifyCandidateReceiptPhasePlan(process.argv[3]);
@@ -23413,9 +23946,19 @@ async function main() {
 		await verifyC4MPresealLedger();
 		return;
 	}
-	if (mode === "--verify-c4-sealed-c4m-note") {
+	if (mode === "--verify-c4n-sealed-c4m-note") {
 		if (process.argv.length !== 3) throw new Error(usage);
-		await verifyC4SealedC4MNote();
+		await verifyC4NSealedC4MNote();
+		return;
+	}
+	if (mode === "--verify-c4n-preseal-ledger") {
+		if (process.argv.length !== 3) throw new Error(usage);
+		await verifyC4NPresealLedger();
+		return;
+	}
+	if (mode === "--verify-c4-sealed-c4n-note") {
+		if (process.argv.length !== 3) throw new Error(usage);
+		await verifyC4SealedC4NNote();
 		return;
 	}
 	if (mode === "--verify-c4-preseal-ledger") {
@@ -23458,7 +24001,7 @@ async function main() {
 		return;
 	}
 
-	console.log(`P07B-C ${p07bCActiveReceiptPhaseBoundary} plan check passed: the visible-capsule-selected v18 row, observed receipt states, sealed predecessor evidence, generated phase fixtures, and frozen historical regression oracles are coherent; this gate confers no product, process-start, execution, or current-unit receipt authority`);
+	console.log(`P07B-C ${p07bCActiveReceiptPhaseBoundary} plan check passed: the visible-capsule-selected v19 row, observed receipt states, sealed predecessor evidence, generated phase fixtures, and frozen historical regression oracles are coherent; this gate confers no product, process-start, execution, or current-unit receipt authority`);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

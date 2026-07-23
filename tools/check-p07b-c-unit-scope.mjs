@@ -10,12 +10,12 @@ import { isDeepStrictEqual } from "node:util";
 
 export const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const specificationPath = resolve(repositoryRoot, "spec/verification/p07b-c-unit-paths.json");
-const unitOrder = Object.freeze(["C0A", "C0B", "C1", "C1M", "C1V", "C1E", "C1B", "C2", "C2M", "C2B", "C3P", "C3V", "C3M", "C3PB", "C3A", "C3L", "C3F", "C3S", "C3", "C3R", "C3Q", "C3T", "C3U", "C3B", "C3D", "C4V", "C4M", "C4", "C5", "C6A", "C6M", "C6B"]);
+const unitOrder = Object.freeze(["C0A", "C0B", "C1", "C1M", "C1V", "C1E", "C1B", "C2", "C2M", "C2B", "C3P", "C3V", "C3M", "C3PB", "C3A", "C3L", "C3F", "C3S", "C3", "C3R", "C3Q", "C3T", "C3U", "C3B", "C3D", "C4V", "C4M", "C4N", "C4", "C5", "C6A", "C6M", "C6B"]);
 const receiptPhaseUnitOrder = Object.freeze(unitOrder.slice(unitOrder.indexOf("C3M")));
 const receiptPhaseUnitSet = new Set(receiptPhaseUnitOrder);
 const receiptPhaseKeys = Object.freeze(["C3P", "C3", "C6A"]);
 const receiptPhaseStates = new Set(["ABSENT", "PRESENT"]);
-const receiptPhaseAuthoritySHA256 = "dd134e870c11ed4e80eb8335680b59a0ed1553c45d04746fd2fdd722f3f975a4";
+const receiptPhaseAuthoritySHA256 = "8f237c7d883c212167e5a04e5dd24d6efdacf4a9ce5492215fd06892a8237c4a";
 const receiptPhaseCapsuleStart = "<!-- P07B-C-RECEIPT-PHASE:START -->";
 const receiptPhaseCapsuleEnd = "<!-- P07B-C-RECEIPT-PHASE:END -->";
 const receiptPhaseHandoffPath = "docs/HANDOFF_MODE_C.md";
@@ -25,7 +25,9 @@ const c6aReceiptDeclarationPath = "spec/verification/p07b-c-c6a-receipt.json";
 const c6EvidencePath = "docs/status/P07B-C-C6-EVIDENCE.md";
 const c6aReceiptBlockStart = "<!-- P07B-C-C6A-SOURCE-RECEIPTS:START -->";
 const c6aReceiptBlockEnd = "<!-- P07B-C-C6A-SOURCE-RECEIPTS:END -->";
-const forwardCandidateReceiptPhaseBoundaries = Object.freeze(["C3D", "C4V", "C4M", "C4", "C5", "C6A", "C6M", "C6B"]);
+const forwardCandidateReceiptPhaseBoundaries = Object.freeze(receiptPhaseUnitOrder.slice(
+	receiptPhaseUnitOrder.indexOf("C3D"),
+));
 const forwardCandidateReceiptPhaseBoundarySet = new Set(forwardCandidateReceiptPhaseBoundaries);
 const sealedC3BCandidateParent = Object.freeze({
 	commit: "3b0b56d2bdd36531caf31e3dbad555aca061616d",
@@ -39,6 +41,16 @@ const sealedC4VCandidateParent = Object.freeze({
 	commit: "861fd49a2b35b46c101dd6f18707f9c3525c6c7f",
 	tree: "c2a560bf4c7bed6f93078af93714f979d06cf997",
 });
+const sealedC4MCandidateParent = Object.freeze({
+	commit: "d87394799d2229bd6e6d342318f446272685a86f",
+	tree: "afd0157303e9025a490b2b6ac991f5f15734137f",
+});
+const candidateSpecificationOwnerContracts = Object.freeze({
+	C4V: Object.freeze({ parent: "C3D", authority: sealedC3DCandidateParent, priorSchema: "countershape/p07b-c-unit-paths/v16" }),
+	C4M: Object.freeze({ parent: "C4V", authority: sealedC4VCandidateParent, priorSchema: "countershape/p07b-c-unit-paths/v17" }),
+	C4N: Object.freeze({ parent: "C4M", authority: sealedC4MCandidateParent, priorSchema: "countershape/p07b-c-unit-paths/v18" }),
+});
+const candidateSpecificationOwners = new Set(["C3D", ...Object.keys(candidateSpecificationOwnerContracts)]);
 const verificationProfiles = new Set(["SOURCE_FULL", "RECEIPT_RECONCILIATION"]);
 const receiptClaimTypes = new Set(["tests-pass", "command-succeeded"]);
 const c3FrozenUnitContracts = Object.freeze({
@@ -118,6 +130,20 @@ const c4mDeclaredMaintenanceContract = Object.freeze({
 		"tools/check-p07b-c-unit-scope.mjs",
 	]),
 	exact_roster_sha256: "ec49dc68ce8fcfe92720fd2e8d6afa6d19d6d1c26aa9d27173dc2df736d06a87",
+});
+const c4nDeclaredMaintenanceContract = Object.freeze({
+	verification_profile: "SOURCE_FULL",
+	prefixes: Object.freeze([]),
+	exact: Object.freeze([
+		"docs/HANDOFF_MODE_C.md",
+		"docs/PROMPT_PACK.md",
+		"docs/VERIFICATION.md",
+		"docs/status/P07B-C-C4N-SELF-RECEIPT-CARDINALITY-MAINTENANCE.md",
+		"spec/verification/p07b-c-unit-paths.json",
+		"tools/check-p07b-c-plan.mjs",
+		"tools/check-p07b-c-unit-scope.mjs",
+	]),
+	exact_roster_sha256: "95de7e71ca2df4a57d0544c3197bb7d917359bb3d9ecfc51a2130973faf36e6e",
 });
 const c4DeclaredSourceContract = Object.freeze({
 	verification_profile: "SOURCE_FULL",
@@ -405,7 +431,7 @@ export function validateSpecification(specification) {
 		JSON.stringify(Object.keys(specification).sort()) !== JSON.stringify(["schema_version", "units"])) {
 		fail("specification root roster");
 	}
-	if (specification.schema_version !== "countershape/p07b-c-unit-paths/v18") fail("specification version");
+	if (specification.schema_version !== "countershape/p07b-c-unit-paths/v19") fail("specification version");
 	if (!specification.units || typeof specification.units !== "object" || Array.isArray(specification.units) ||
 		JSON.stringify(Object.keys(specification.units)) !== JSON.stringify(unitOrder)) fail("unit roster/order");
 
@@ -478,6 +504,12 @@ export function validateSpecification(specification) {
 			JSON.stringify(entry.exact) !== JSON.stringify(c4mDeclaredMaintenanceContract.exact) ||
 			exactRosterDigest(entry.exact) !== c4mDeclaredMaintenanceContract.exact_roster_sha256)) {
 			fail("C4M: declared maintenance contract");
+		}
+		if (unit === "C4N" && (entry.verification_profile !== c4nDeclaredMaintenanceContract.verification_profile ||
+			JSON.stringify(entry.prefixes) !== JSON.stringify(c4nDeclaredMaintenanceContract.prefixes) ||
+			JSON.stringify(entry.exact) !== JSON.stringify(c4nDeclaredMaintenanceContract.exact) ||
+			exactRosterDigest(entry.exact) !== c4nDeclaredMaintenanceContract.exact_roster_sha256)) {
+			fail("C4N: declared maintenance contract");
 		}
 		if (unit === "C4" && (entry.verification_profile !== c4DeclaredSourceContract.verification_profile ||
 			JSON.stringify(entry.prefixes) !== JSON.stringify(c4DeclaredSourceContract.prefixes) ||
@@ -1050,9 +1082,8 @@ function validateIndependentCandidateSnapshot(specification, snapshot) {
 	const boundary = snapshot.candidateBoundary;
 	if (!forwardCandidateReceiptPhaseBoundarySet.has(boundary)) fail(`candidate boundary outside forward horizon: ${boundary}`);
 	const unit = specification.units[boundary];
-	const specificationOwners = new Set(["C3D", "C4V", "C4M"]);
 	if (!unit.exact.includes(receiptPhaseHandoffPath) ||
-		(specificationOwners.has(boundary) !== unit.exact.includes(receiptPhaseSpecificationPath))) {
+		(candidateSpecificationOwners.has(boundary) !== unit.exact.includes(receiptPhaseSpecificationPath))) {
 		fail(`${boundary}: candidate authority ownership`);
 	}
 	validateExactIndexModes(boundary, [receiptPhaseHandoffPath, receiptPhaseSpecificationPath], snapshot.indexEntries);
@@ -1065,14 +1096,12 @@ function validateIndependentCandidateSnapshot(specification, snapshot) {
 	}
 	if (!snapshot.stagedHandoffBytes.equals(snapshot.workingHandoffBytes)) fail(`${boundary}: HANDOFF staged/worktree mismatch`);
 	if (!snapshot.stagedSpecificationBytes.equals(snapshot.workingSpecificationBytes)) fail(`${boundary}: specification staged/worktree mismatch`);
-	if (!specificationOwners.has(boundary) && !snapshot.stagedSpecificationBytes.equals(snapshot.parentSpecificationBytes)) {
+	if (!candidateSpecificationOwners.has(boundary) && !snapshot.stagedSpecificationBytes.equals(snapshot.parentSpecificationBytes)) {
 		fail(`${boundary}: candidate changed sealed topology table`);
 	}
-	if (boundary === "C4V" && snapshot.stagedSpecificationBytes.equals(snapshot.parentSpecificationBytes)) {
-		fail("C4V: maintenance candidate did not replace the sealed v16 topology table");
-	}
-	if (boundary === "C4M" && snapshot.stagedSpecificationBytes.equals(snapshot.parentSpecificationBytes)) {
-		fail("C4M: maintenance candidate did not replace the sealed v17 topology table");
+	const ownerContract = candidateSpecificationOwnerContracts[boundary];
+	if (ownerContract !== undefined && snapshot.stagedSpecificationBytes.equals(snapshot.parentSpecificationBytes)) {
+		fail(`${boundary}: maintenance candidate did not replace the sealed ${ownerContract.priorSchema} topology table`);
 	}
 	let stagedSpecification;
 	try {
@@ -1100,13 +1129,9 @@ function validateIndependentCandidateSnapshot(specification, snapshot) {
 	} else if (boundary === "C3D" || candidate.parent !== parentBoundary) {
 		fail(`${boundary}: candidate requires parent ${candidate.parent}, found ${parentBoundary}`);
 	}
-	if (boundary === "C4V" && (snapshot.parentCommit !== sealedC3DCandidateParent.commit ||
-		snapshot.parentTree !== sealedC3DCandidateParent.tree || parentBoundary !== "C3D")) {
-		fail("C4V: candidate requires the exact sealed C3D parent authority");
-	}
-	if (boundary === "C4M" && (snapshot.parentCommit !== sealedC4VCandidateParent.commit ||
-		snapshot.parentTree !== sealedC4VCandidateParent.tree || parentBoundary !== "C4V")) {
-		fail("C4M: candidate requires the exact sealed C4V parent authority");
+	if (ownerContract !== undefined && (snapshot.parentCommit !== ownerContract.authority.commit ||
+		snapshot.parentTree !== ownerContract.authority.tree || parentBoundary !== ownerContract.parent)) {
+		fail(`${boundary}: candidate requires the exact sealed ${ownerContract.parent} parent authority`);
 	}
 	return candidate;
 }
@@ -1395,14 +1420,13 @@ function runIndependentCandidatePhaseSelfTest(specification) {
 		"utf8",
 	);
 	const fixture = (candidateBoundary, parentBoundary) => {
-		const bootstrap = parentBoundary === undefined;
-		const c4vRepair = candidateBoundary === "C4V" && parentBoundary === "C3D";
-		const c4mRepair = candidateBoundary === "C4M" && parentBoundary === "C4V";
+		const bootstrapCandidate = candidateBoundary === "C3D";
+		const ownerContract = candidateSpecificationOwnerContracts[candidateBoundary];
 		const handoff = document(candidateBoundary);
 		return {
 			candidateBoundary,
-			parentCommit: bootstrap ? sealedC3BCandidateParent.commit : c4vRepair ? sealedC3DCandidateParent.commit : c4mRepair ? sealedC4VCandidateParent.commit : "f".repeat(40),
-			parentTree: bootstrap ? sealedC3BCandidateParent.tree : c4vRepair ? sealedC3DCandidateParent.tree : c4mRepair ? sealedC4VCandidateParent.tree : "e".repeat(40),
+			parentCommit: bootstrapCandidate ? sealedC3BCandidateParent.commit : ownerContract?.authority.commit ?? "f".repeat(40),
+			parentTree: bootstrapCandidate ? sealedC3BCandidateParent.tree : ownerContract?.authority.tree ?? "e".repeat(40),
 			indexTree: "3".repeat(40),
 			indexEntries: [
 				{ mode: "100644", object: "1".repeat(40), stage: 0, path: receiptPhaseHandoffPath },
@@ -1412,15 +1436,17 @@ function runIndependentCandidatePhaseSelfTest(specification) {
 			stagedSpecificationOID: "2".repeat(40),
 			stagedHandoffBytes: handoff,
 			workingHandoffBytes: handoff,
-			parentHandoffBytes: Buffer.from(bootstrap ? "# Sealed C3B without capsule.\n" : document(parentBoundary)),
+			parentHandoffBytes: Buffer.from(parentBoundary === undefined ? "# Parent fixture without capsule.\n" : document(parentBoundary)),
 			stagedSpecificationBytes: specificationBytes,
 			workingSpecificationBytes: specificationBytes,
-			parentSpecificationBytes: bootstrap ? Buffer.from("{\"schema_version\":\"historical-v15\"}\n") :
-				c4vRepair ? Buffer.from("{\"schema_version\":\"countershape/p07b-c-unit-paths/v16\"}\n") :
-					c4mRepair ? Buffer.from("{\"schema_version\":\"countershape/p07b-c-unit-paths/v17\"}\n") : specificationBytes,
+			parentSpecificationBytes: bootstrapCandidate ? Buffer.from("{\"schema_version\":\"historical-v15\"}\n") :
+				ownerContract === undefined ? specificationBytes : Buffer.from(`{\"schema_version\":\"${ownerContract.priorSchema}\"}\n`),
 		};
 	};
-	const accepted = [["C3D", undefined], ["C4V", "C3D"], ["C4M", "C4V"], ["C4", "C4M"], ["C5", "C4"], ["C6A", "C5"], ["C6M", "C6A"], ["C6B", "C6M"]];
+	const accepted = forwardCandidateReceiptPhaseBoundaries.map((candidate) => [
+		candidate,
+		candidate === "C3D" ? undefined : rows[candidate].parent,
+	]);
 	for (const [candidate, parent] of accepted) validateIndependentCandidateSnapshot(specification, fixture(candidate, parent));
 	let rejected = 0;
 	const refuse = (name, baseline, mutate) => {
@@ -1431,35 +1457,46 @@ function runIndependentCandidatePhaseSelfTest(specification) {
 		if (!refused) fail(`independent candidate self-test false negative: ${name}`);
 		rejected += 1;
 	};
-	refuse("CLI capsule mismatch", fixture("C4", "C4M"), (value) => {
+	const integrityBoundary = forwardCandidateReceiptPhaseBoundaries[
+		forwardCandidateReceiptPhaseBoundaries.indexOf(Object.keys(candidateSpecificationOwnerContracts).at(-1)) + 1
+	];
+	const integrityParent = rows[integrityBoundary].parent;
+	refuse("CLI capsule mismatch", fixture(integrityBoundary, integrityParent), (value) => {
 		value.stagedHandoffBytes = value.workingHandoffBytes = document("C5");
 	});
-	refuse("HANDOFF worktree drift", fixture("C4", "C4M"), (value) => { value.workingHandoffBytes = Buffer.from("drift\n"); });
-	refuse("specification worktree drift", fixture("C4", "C4M"), (value) => { value.workingSpecificationBytes = Buffer.from("drift\n"); });
-	refuse("sealed specification drift", fixture("C4", "C4M"), (value) => { value.parentSpecificationBytes = Buffer.from("drift\n"); });
-	refuse("C4V wrong sealed C3D parent", fixture("C4V", "C3D"), (value) => { value.parentCommit = "f".repeat(40); });
-	refuse("C4V wrong sealed C3D tree", fixture("C4V", "C3D"), (value) => { value.parentTree = "e".repeat(40); });
-	refuse("C4V unchanged v16 topology", fixture("C4V", "C3D"), (value) => { value.parentSpecificationBytes = value.stagedSpecificationBytes; });
-	refuse("C4M wrong sealed C4V parent", fixture("C4M", "C4V"), (value) => { value.parentCommit = "f".repeat(40); });
-	refuse("C4M wrong sealed C4V tree", fixture("C4M", "C4V"), (value) => { value.parentTree = "e".repeat(40); });
-	refuse("C4M unchanged v17 topology", fixture("C4M", "C4V"), (value) => { value.parentSpecificationBytes = value.stagedSpecificationBytes; });
+	refuse("HANDOFF worktree drift", fixture(integrityBoundary, integrityParent), (value) => { value.workingHandoffBytes = Buffer.from("drift\n"); });
+	refuse("specification worktree drift", fixture(integrityBoundary, integrityParent), (value) => { value.workingSpecificationBytes = Buffer.from("drift\n"); });
+	refuse("sealed specification drift", fixture(integrityBoundary, integrityParent), (value) => { value.parentSpecificationBytes = Buffer.from("drift\n"); });
+	for (const [candidate, contract] of Object.entries(candidateSpecificationOwnerContracts)) {
+		refuse(`${candidate} wrong sealed ${contract.parent} parent`, fixture(candidate, contract.parent), (value) => { value.parentCommit = "0".repeat(40); });
+		refuse(`${candidate} wrong sealed ${contract.parent} tree`, fixture(candidate, contract.parent), (value) => { value.parentTree = "0".repeat(40); });
+		refuse(`${candidate} unchanged ${contract.priorSchema} topology`, fixture(candidate, contract.parent), (value) => { value.parentSpecificationBytes = value.stagedSpecificationBytes; });
+	}
+	for (const candidate of forwardCandidateReceiptPhaseBoundaries.filter((boundary) =>
+		boundary !== "C3D" && candidateSpecificationOwnerContracts[boundary] === undefined)) {
+		refuse(`${candidate} unauthorized specification byte change`, fixture(candidate, rows[candidate].parent), (value) => {
+			value.stagedSpecificationBytes = value.workingSpecificationBytes = Buffer.from(`${JSON.stringify(specification)}\n`, "utf8");
+		});
+	}
 	refuse("bootstrap commit", fixture("C3D", undefined), (value) => { value.parentCommit = "0".repeat(40); });
 	refuse("bootstrap tree", fixture("C3D", undefined), (value) => { value.parentTree = "0".repeat(40); });
-	refuse("bootstrap prior capsule", fixture("C3D", undefined), (value) => { value.parentHandoffBytes = document("C3B"); });
-	refuse("C4V skip", fixture("C4M", "C3D"), () => {});
-	refuse("C4M skip", fixture("C4", "C4V"), () => {});
-	refuse("source phase skip", fixture("C5", "C4M"), () => {});
-	refuse("C6M skip", fixture("C6B", "C6A"), () => {});
-	refuse("C6M replay", fixture("C6M", "C6M"), () => {});
-	refuse("HANDOFF symlink", fixture("C4", "C4M"), (value) => { value.indexEntries[0].mode = "120000"; });
-	refuse("specification executable", fixture("C4", "C4M"), (value) => { value.indexEntries[1].mode = "100755"; });
-	refuse("HANDOFF index OID", fixture("C4", "C4M"), (value) => { value.indexEntries[0].object = "9".repeat(40); });
-	refuse("specification index OID", fixture("C4", "C4M"), (value) => { value.indexEntries[1].object = "9".repeat(40); });
-	refuse("HANDOFF non-UTF8", fixture("C4", "C4M"), (value) => {
+	const priorStates = [undefined, ...Object.keys(rows)];
+	for (const candidate of forwardCandidateReceiptPhaseBoundaries) {
+		const expectedParent = candidate === "C3D" ? undefined : rows[candidate].parent;
+		for (const parent of priorStates) {
+			if (parent === expectedParent) continue;
+			refuse(`generated invalid parent ${candidate}<-${parent ?? "ABSENT"}`, fixture(candidate, parent), () => {});
+		}
+	}
+	refuse("HANDOFF symlink", fixture(integrityBoundary, integrityParent), (value) => { value.indexEntries[0].mode = "120000"; });
+	refuse("specification executable", fixture(integrityBoundary, integrityParent), (value) => { value.indexEntries[1].mode = "100755"; });
+	refuse("HANDOFF index OID", fixture(integrityBoundary, integrityParent), (value) => { value.indexEntries[0].object = "9".repeat(40); });
+	refuse("specification index OID", fixture(integrityBoundary, integrityParent), (value) => { value.indexEntries[1].object = "9".repeat(40); });
+	refuse("HANDOFF non-UTF8", fixture(integrityBoundary, integrityParent), (value) => {
 		value.stagedHandoffBytes = value.workingHandoffBytes = Buffer.from([0xff]);
 	});
-	refuse("parent non-UTF8", fixture("C4", "C4M"), (value) => { value.parentHandoffBytes = Buffer.from([0xff]); });
-	refuse("hidden capsule", fixture("C4", "C4M"), (value) => {
+	refuse("parent non-UTF8", fixture(integrityBoundary, integrityParent), (value) => { value.parentHandoffBytes = Buffer.from([0xff]); });
+	refuse("hidden capsule", fixture(integrityBoundary, integrityParent), (value) => {
 		const hidden = Buffer.from(`# Candidate fixture\n\n## Current state\n\n<!--\n${renderCandidateReceiptPhaseCapsule(rows.C4)}\n-->\n`, "utf8");
 		value.stagedHandoffBytes = value.workingHandoffBytes = hidden;
 	});
@@ -1482,7 +1519,7 @@ function runIndependentCandidatePhaseSelfTest(specification) {
 		if (!refused) fail(`independent candidate self-test false negative: ${name}`);
 		rejected += 1;
 	}
-	if (accepted.length !== 8 || rejected !== 28) fail(`independent candidate self-test cardinality ${accepted.length}/${rejected}`);
+	if (accepted.length !== 9 || rejected !== 219) fail(`independent candidate self-test cardinality ${accepted.length}/${rejected}`);
 }
 
 function runFutureC6MaterialSelfTest(authority) {
@@ -1780,6 +1817,8 @@ async function runSelfTest() {
 		unexpectedPaths(specification, "C3D", ["internal/contractexec/target.go"])[0] === "internal/contractexec/target.go",
 		unexpectedPaths(specification, "C4M", ["docs/status/P07B-C-C4M-HISTORICAL-RECEIPT-FIXTURE-MAINTENANCE.md"]).length === 0,
 		unexpectedPaths(specification, "C4M", ["internal/contractexec/target.go"])[0] === "internal/contractexec/target.go",
+		unexpectedPaths(specification, "C4N", ["docs/status/P07B-C-C4N-SELF-RECEIPT-CARDINALITY-MAINTENANCE.md"]).length === 0,
+		unexpectedPaths(specification, "C4N", ["internal/contractexec/target.go"])[0] === "internal/contractexec/target.go",
 		unexpectedPaths(specification, "C1M", ["internal/world/process_darwin.go"]).length === 0,
 		unexpectedPaths(specification, "C1M", ["spec/verification/p07b-c-c1-receipt.json"])[0] === "spec/verification/p07b-c-c1-receipt.json",
 		exactPathsMatch(specification, "C1M", specification.units.C1M.exact),
@@ -1830,6 +1869,8 @@ async function runSelfTest() {
 		!exactPathsMatch(specification, "C4V", specification.units.C4V.exact.slice(1)),
 		exactPathsMatch(specification, "C4M", specification.units.C4M.exact),
 		!exactPathsMatch(specification, "C4M", specification.units.C4M.exact.slice(1)),
+		exactPathsMatch(specification, "C4N", specification.units.C4N.exact),
+		!exactPathsMatch(specification, "C4N", specification.units.C4N.exact.slice(1)),
 		isDeepStrictEqual(specification.units.C4.exact, c4DeclaredSourceContract.exact),
 		isDeepStrictEqual(specification.units.C4.prefixes, c4DeclaredSourceContract.prefixes),
 		isDeepStrictEqual(specification.units.C5.exact, c5DeclaredSourceContract.exact),
@@ -1858,6 +1899,7 @@ async function runSelfTest() {
 		exactSourceGateAdmitted(specification, "C3D"),
 		exactSourceGateAdmitted(specification, "C4V"),
 		exactSourceGateAdmitted(specification, "C4M"),
+		exactSourceGateAdmitted(specification, "C4N"),
 		exactSourceGateAdmitted(specification, "C6M"),
 		!exactSourceGateAdmitted(specification, "C2B"),
 		!exactSourceGateAdmitted(specification, "C3B"),
@@ -1869,13 +1911,15 @@ async function runSelfTest() {
 		specification.units.C3B.verification_profile === "RECEIPT_RECONCILIATION" && specification.units.C3B.prefixes.length === 0,
 		specification.units.C3D.verification_profile === "SOURCE_FULL" && specification.units.C3D.prefixes.length === 0,
 		specification.units.C4M.verification_profile === "SOURCE_FULL" && specification.units.C4M.prefixes.length === 0,
-		receiptPhaseRows(specification).length === 20,
+		specification.units.C4N.verification_profile === "SOURCE_FULL" && specification.units.C4N.prefixes.length === 0,
+		receiptPhaseRows(specification).length === 21,
 		receiptPhaseRows(specification).at(-1).boundary === "C6B",
 		receiptPhaseAuthorityDigest(specification) === receiptPhaseAuthoritySHA256,
 		!["C4", "C5", "C6A", "C6M", "C6B"].some((boundary) =>
 			specification.units[boundary].exact.includes("spec/verification/p07b-c-unit-paths.json")),
 		specification.units.C4V.exact.includes("spec/verification/p07b-c-unit-paths.json"),
 		specification.units.C4M.exact.includes("spec/verification/p07b-c-unit-paths.json"),
+		specification.units.C4N.exact.includes("spec/verification/p07b-c-unit-paths.json"),
 		exactPathsMatch(specification, "C6M", c6mDeclaredAdapterContract.exact),
 		!specification.units.C6M.exact.includes("docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md"),
 		!specification.units.C6M.exact.includes("docs/status/P07B-C-C6-EVIDENCE.md"),
@@ -1910,13 +1954,13 @@ async function runSelfTest() {
 		JSON.stringify(receiptManifest(specification, "C6B")) === JSON.stringify(c6bDeclaredReceiptContract.receipt_claims),
 	];
 	if (cases.some((value) => !value)) fail("allow/refuse self-test matrix");
-	for (const boundary of ["C4V", "C4M", "C4", "C5", "C6A", "C6M", "C6B"]) {
+	for (const boundary of forwardCandidateReceiptPhaseBoundaries.slice(1)) {
 		if (activeReceiptPhaseBoundary(specification, boundary) !== boundary) {
 			fail(`${boundary} visible-capsule active-boundary pointer self-test`);
 		}
 	}
-	requireSpecificationMutationRejected(specification, "schema v17 downgrade", (hostile) => {
-		hostile.schema_version = "countershape/p07b-c-unit-paths/v17";
+	requireSpecificationMutationRejected(specification, "schema v18 downgrade", (hostile) => {
+		hostile.schema_version = "countershape/p07b-c-unit-paths/v18";
 	});
 	requireSpecificationMutationRejected(specification, "duplicated specification active boundary", (hostile) => {
 		hostile.active_boundary = "C3D";
@@ -2022,7 +2066,8 @@ async function runSelfTest() {
 	requireSpecificationMutationRejected(specification, "C5 receipt state drift", (hostile) => {
 		hostile.units.C5.receipt_states.C6A = "PRESENT";
 	});
-	for (const boundary of ["C4V", "C4M", "C4", "C5", "C6A", "C6M"]) {
+	for (const boundary of forwardCandidateReceiptPhaseBoundaries.filter((boundary) =>
+		specification.units[boundary].verification_profile === "SOURCE_FULL")) {
 		requireSpecificationMutationRejected(specification, `${boundary} declared exact path removal`, (hostile) => {
 			hostile.units[boundary].exact = hostile.units[boundary].exact.slice(1);
 		});
@@ -2388,7 +2433,7 @@ async function main() {
 	}
 	if (process.argv.length !== 5 || process.argv[2] !== "--unit" ||
 		!(["--staged", "--exact-staged", "--receipt-manifest", "--source-final-gate", "--receipt-final-gate", "--credential-scan", "--source-authority-gate"].includes(process.argv[4]))) {
-		fail("usage: check-p07b-c-unit-scope.mjs --candidate-phase <C3D|C4V|C4M|C4|C5|C6A|C6M|C6B> | --unit <C0A|C0B|C1|C1M|C1V|C1E|C1B|C2|C2M|C2B|C3P|C3V|C3M|C3PB|C3A|C3L|C3F|C3S|C3|C3R|C3Q|C3T|C3U|C3B|C3D|C4V|C4M|C4|C5|C6A|C6M|C6B> <--staged|--exact-staged|--receipt-manifest|--source-final-gate|--receipt-final-gate|--credential-scan|--source-authority-gate> | --self-test");
+		fail("usage: check-p07b-c-unit-scope.mjs --candidate-phase <C3D|C4V|C4M|C4N|C4|C5|C6A|C6M|C6B> | --unit <C0A|C0B|C1|C1M|C1V|C1E|C1B|C2|C2M|C2B|C3P|C3V|C3M|C3PB|C3A|C3L|C3F|C3S|C3|C3R|C3Q|C3T|C3U|C3B|C3D|C4V|C4M|C4N|C4|C5|C6A|C6M|C6B> <--staged|--exact-staged|--receipt-manifest|--source-final-gate|--receipt-final-gate|--credential-scan|--source-authority-gate> | --self-test");
 	}
 	const specification = await loadSpecification();
 	if (process.argv[4] === "--source-authority-gate") {
