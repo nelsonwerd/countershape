@@ -2,41 +2,46 @@
 
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { chmod, lstat, mkdir, mkdtemp, readFile, readdir, realpath, rm, symlink, unlink, writeFile } from "node:fs/promises";
+import { chmod, lstat, mkdir, mkdtemp, open, readFile, readdir, realpath, rm, symlink, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 import {
 	VerificationError,
-	acquireVerificationLock,
-	admitTool,
-	admitTools,
 	assertNoDSStore,
-	buildChildEnvironment,
 	childArguments,
-	childResult,
-	childToolNames,
-	createPrivateBase,
 	currentSteps,
 	executeCurrentPlan,
-	finalizeVerificationResources,
 	historicalOnly,
 	packageArguments,
 	partitionGoPackages,
-	repositoryRoot,
 	revalidatePackagePartition,
-	revalidateStepTools,
-	revalidateTool,
 	rosterDigest,
 	sensitiveGoPackages,
-	toolSpecifications,
 	validateRepositoryPlan,
 } from "./verify-current.mjs";
+import {
+	VerificationRuntimeError,
+	acquireVerificationLock,
+	admitTool,
+	admitTools,
+	buildChildEnvironment,
+	childResult,
+	cleanupVerificationResources,
+	createPrivateBase,
+	createPrivateRoots,
+	finalizeVerificationResources,
+	processLiveness,
+	repositoryRoot,
+} from "./verify-runtime-authority.mjs";
 
 const selftestPath = fileURLToPath(import.meta.url);
 const verifierPath = resolve(dirname(selftestPath), "verify-current.mjs");
-const expectedRosterDigest = "7cf294fcbe8247e7a4de2d8996fb6b960780a35d018a8d00069af15940f0efb8";
+const runtimePath = resolve(dirname(selftestPath), "verify-runtime-authority.mjs");
+const authorityNames = Object.freeze(["go", "node", "git", "sh", "cc", "cxx"]);
+const sealedC4VParentRosterDigest = "7cf294fcbe8247e7a4de2d8996fb6b960780a35d018a8d00069af15940f0efb8";
+const expectedRosterDigest = "0fab61318d55314e3accaeabbaf56cc049aae5755f3c3f41d6a36eba1a6c7af5";
 
 function fail(code, detail) {
 	throw new Error(`${code}: ${detail}`);
@@ -50,22 +55,23 @@ async function expectCode(promise, code) {
 	try {
 		await promise;
 	} catch (error) {
-		if (error instanceof VerificationError && error.code === code) return;
+		if ((error instanceof VerificationError || error instanceof VerificationRuntimeError) && error.code === code) return;
 		fail("VERIFY_SELFTEST_WRONG_ERROR", `${code}: ${error.stack ?? error}`);
 	}
 	fail("VERIFY_SELFTEST_FALSE_NEGATIVE", code);
 }
 
 function fakeAuthorities() {
-	return Object.freeze(Object.fromEntries(toolSpecifications.map((tool) => [
-		tool.name,
-		Object.freeze({ name: tool.name, path: `/authority/${tool.name}`, sha256: tool.name.padEnd(64, "0").slice(0, 64) }),
+	return Object.freeze(Object.fromEntries(authorityNames.map((name) => [
+		name,
+		Object.freeze({ name, path: `/authority/${name}`, sha256: name.padEnd(64, "0").slice(0, 64) }),
 	])));
 }
 
 async function inspectRosters() {
 	const digest = rosterDigest();
 	expect(digest === expectedRosterDigest, "VERIFY_SELFTEST_ROSTER_DRIFT", `${digest} != ${expectedRosterDigest}`);
+	expect(digest !== sealedC4VParentRosterDigest, "VERIFY_SELFTEST_C4_ROSTER_NOT_EVOLVED", digest);
 	const currentIDs = currentSteps.map((step) => step.id);
 	expect(new Set(currentIDs).size === currentIDs.length, "VERIFY_SELFTEST_DUPLICATE_CURRENT", currentIDs.join(","));
 	const finalizationSteps = currentSteps.filter((step) => step.kind === "finalization-guard");
@@ -74,11 +80,18 @@ async function inspectRosters() {
 		"VERIFY_SELFTEST_FINALIZATION_NOT_UNIQUE_LAST",
 		currentIDs.join(","),
 	);
+	const authoritySteps = currentSteps.filter((step) => step.kind === "authority-guard");
+	expect(
+		authoritySteps.length === 1 && currentSteps.at(-2) === authoritySteps[0],
+		"VERIFY_SELFTEST_AUTHORITY_NOT_UNIQUE_PENULTIMATE",
+		currentIDs.join(","),
+	);
 	const historicalIDs = historicalOnly.map((row) => row.id);
 	expect(new Set(historicalIDs).size === historicalIDs.length, "VERIFY_SELFTEST_DUPLICATE_HISTORICAL", historicalIDs.join(","));
-	const knownTools = new Set(toolSpecifications.map((tool) => tool.name));
+	const knownTools = new Set(authorityNames);
 	for (const step of currentSteps.filter((candidate) => candidate.tool)) {
-		const names = childToolNames(step);
+		const names = step.tools;
+		expect(Array.isArray(names) && names.length > 0, "VERIFY_SELFTEST_STEP_TOOL_ROSTER", step.id);
 		expect(names[0] === step.tool, "VERIFY_SELFTEST_PRIMARY_TOOL_MISMATCH", step.id);
 		expect(new Set(names).size === names.length, "VERIFY_SELFTEST_DUPLICATE_STEP_TOOL", `${step.id}: ${names.join(",")}`);
 		expect(names.every((name) => knownTools.has(name)), "VERIFY_SELFTEST_UNKNOWN_STEP_TOOL", `${step.id}: ${names.join(",")}`);
@@ -135,10 +148,13 @@ async function inspectRosters() {
 	});
 	exactStep("verification-resource-finalization", { kind: "finalization-guard" });
 	expect(JSON.stringify(sensitiveGoPackages) === JSON.stringify([
+		"github.com/nelsonwerd/countershape/internal/contractexec/runner",
 		"github.com/nelsonwerd/countershape/internal/emit/node/compiler",
 		"github.com/nelsonwerd/countershape/internal/emit/node/program/v1",
+		"github.com/nelsonwerd/countershape/internal/processmechanics",
 		"github.com/nelsonwerd/countershape/internal/store",
 		"github.com/nelsonwerd/countershape/internal/world",
+		"github.com/nelsonwerd/countershape/testkit/contractexec/cli",
 		"github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
 		"github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
 	]), "VERIFY_SELFTEST_SENSITIVE_PACKAGE_ROSTER", sensitiveGoPackages.join(","));
@@ -205,6 +221,36 @@ async function inspectRosters() {
 			path: "tools/check-p07b-c-architecture.mjs",
 			args: ["--run-go-json", profile],
 			marker: `P07B-C C2 Go JSON target execution OK (${profile}: ${count} passed, 0 skipped)`,
+		});
+	}
+	exactStep("architecture-p07b-c-c4", {
+		tool: "node",
+		tools: ["node", "go", "git", "sh", "cc", "cxx"],
+		path: "tools/check-p07b-c-architecture.mjs",
+		args: ["--c4"],
+		marker: "P07B-C C4 cumulative architecture boundary OK",
+	});
+	exactStep("architecture-p07b-c-c4-selftest", {
+		tool: "node",
+		tools: ["node", "go", "git", "sh", "cc", "cxx"],
+		path: "tools/check-p07b-c-architecture-selftest.mjs",
+		args: ["--c4"],
+		marker: "P07B-C C4 cumulative architecture defensive self-test OK (14 metadata cases; 42 Go JSON parser cases; 7 command cases; 5 owner-reference parser cases)",
+	});
+	for (const [id, profile, count] of [
+		["go-json-p07b-c-c4-processmechanics-parity", "c4-processmechanics-parity", 12],
+		["go-json-p07b-c-c4-admission-permit", "c4-admission-permit", 7],
+		["go-json-p07b-c-c4-cli-closure", "c4-cli-closure", 4],
+		["go-json-p07b-c-c4-finalized-run-release", "c4-finalized-run-release", 5],
+		["go-json-p07b-c-c4-classification-recovery", "c4-classification-recovery", 2],
+		["go-json-p07b-c-c4-authority-race", "c4-authority-race", 4],
+	]) {
+		exactStep(id, {
+			tool: "node",
+			tools: ["node", "go", "git", "sh", "cc", "cxx"],
+			path: "tools/check-p07b-c-architecture.mjs",
+			args: ["--run-go-json", profile],
+			marker: `P07B-C C4 Go JSON target execution OK (${profile}: ${count} passed, 0 skipped)`,
 		});
 	}
 	exactStep("architecture-p07b-c-c3", {
@@ -383,19 +429,10 @@ async function inspectChildArguments() {
 		"VERIFY_SELFTEST_CHILD_ARGUMENT_OVERRIDE",
 		JSON.stringify(overriddenArguments),
 	);
-	expect(
-		JSON.stringify(childToolNames({ id: "nested", tool: "node", tools: ["node", "go"] })) === JSON.stringify(["node", "go"]),
-		"VERIFY_SELFTEST_NESTED_TOOL_ROSTER",
-		"nested admitted tool roster changed",
-	);
 	const authorities = fakeAuthorities();
-	const visited = [];
-	await revalidateStepTools(
-		{ id: "nested", tool: "node", tools: ["node", "go"] },
-		authorities,
-		async (authority) => { visited.push(authority.name); },
-	);
-	expect(JSON.stringify(visited) === JSON.stringify(["node", "go"]), "VERIFY_SELFTEST_NESTED_TOOL_REVALIDATION", visited.join(","));
+	const recordStepTools = async (step, _admitted, events) => {
+		for (const name of step.tools) events.push(name);
+	};
 	for (const scenario of [
 		{
 			name: "nonzero",
@@ -412,11 +449,7 @@ async function inspectChildArguments() {
 			authorities,
 			{},
 			{
-				revalidate: async (step, admitted) => revalidateStepTools(
-					step,
-					admitted,
-					async (authority) => { events.push(authority.name); },
-				),
+				revalidate: async (step, admitted) => recordStepTools(step, admitted, events),
 				spawn: () => { events.push("spawn"); return scenario.spawnResult; },
 			},
 		);
@@ -440,11 +473,7 @@ async function inspectChildArguments() {
 			authorities,
 			{},
 			{
-				revalidate: async (step, admitted) => revalidateStepTools(
-					step,
-					admitted,
-					async (authority) => { thrownEvents.push(authority.name); },
-				),
+				revalidate: async (step, admitted) => recordStepTools(step, admitted, thrownEvents),
 				spawn: () => { thrownEvents.push("spawn"); throw new Error("injected spawn throw"); },
 			},
 		);
@@ -457,20 +486,47 @@ async function inspectChildArguments() {
 		"VERIFY_SELFTEST_CHILD_THROW_REVALIDATION_ORDER",
 		thrownEvents.join(","),
 	);
+	let aggregateRevalidations = 0;
+	try {
+		await childResult(
+			{ id: "spawn-and-revalidation-fail", tool: "node", tools: ["node"] },
+			authorities,
+			{},
+			{
+				revalidate: async () => {
+					aggregateRevalidations += 1;
+					if (aggregateRevalidations === 2) throw new VerificationRuntimeError("VERIFY_TOOL_REVALIDATION_FAILED", "injected");
+				},
+				spawn: () => { throw new Error("injected spawn failure"); },
+			},
+		);
+		fail("VERIFY_SELFTEST_FALSE_NEGATIVE", "spawn and authority revalidation aggregation");
+	} catch (error) {
+		expect(
+			error instanceof AggregateError && error.errors.length === 2 &&
+				error.errors[0].message === "injected spawn failure" && error.errors[1].code === "VERIFY_TOOL_REVALIDATION_FAILED",
+			"VERIFY_SELFTEST_CHILD_FAILURE_NOT_AGGREGATED",
+			error.stack ?? error,
+		);
+	}
 	await expectCode(
-		Promise.resolve().then(() => childToolNames({ id: "missing-roster", tool: "node" })),
+		childResult({ id: "unadmitted", tool: "node", tools: ["node"] }, Object.freeze({}), {}),
+		"VERIFY_TOOL_NOT_ADMITTED",
+	);
+	await expectCode(
+		childResult({ id: "missing-roster", tool: "node" }, authorities, {}),
 		"VERIFY_PLAN_TOOL_ROSTER_REQUIRED",
 	);
 	await expectCode(
-		Promise.resolve().then(() => childToolNames({ id: "wrong-primary", tool: "node", tools: ["go", "node"] })),
+		childResult({ id: "wrong-primary", tool: "node", tools: ["go", "node"] }, authorities, {}),
 		"VERIFY_PLAN_PRIMARY_TOOL_MISMATCH",
 	);
 	await expectCode(
-		Promise.resolve().then(() => childToolNames({ id: "duplicate", tool: "node", tools: ["node", "node"] })),
+		childResult({ id: "duplicate", tool: "node", tools: ["node", "node"] }, authorities, {}),
 		"VERIFY_PLAN_TOOL_DUPLICATE",
 	);
 	await expectCode(
-		Promise.resolve().then(() => childToolNames({ id: "unknown", tool: "node", tools: ["node", "python"] })),
+		childResult({ id: "unknown", tool: "node", tools: ["node", "python"] }, authorities, {}),
 		"VERIFY_PLAN_TOOL_UNKNOWN",
 	);
 }
@@ -548,6 +604,22 @@ async function inspectFilesystemGuards() {
 
 		await mkdir(join(fixture, "tools"), { mode: 0o700 });
 		await writeFile(join(fixture, "tools/verify-current.mjs"), "// fixture verifier\n", { mode: 0o600 });
+		await expectCode(validateRepositoryPlan(fixture, [], []), "VERIFY_PLAN_FILE_MISSING");
+		outside = await realpath(await mkdtemp(join(tmpdir(), "countershape-verify-selftest-outside-")));
+		await writeFile(join(outside, "runtime.mjs"), "// outside runtime\n", { mode: 0o600 });
+		const runtimeFixturePath = join(fixture, "tools/verify-runtime-authority.mjs");
+		await symlink(join(outside, "runtime.mjs"), runtimeFixturePath);
+		await expectCode(validateRepositoryPlan(fixture, [], []), "VERIFY_PLAN_SYMLINK");
+		await unlink(runtimeFixturePath);
+		await writeFile(runtimeFixturePath, "// fixture runtime\n", { mode: 0o600 });
+		for (const [step, code] of [
+			[{ id: "missing-roster", tool: "node" }, "VERIFY_PLAN_TOOL_ROSTER_REQUIRED"],
+			[{ id: "wrong-primary", tool: "node", tools: ["go", "node"] }, "VERIFY_PLAN_PRIMARY_TOOL_MISMATCH"],
+			[{ id: "duplicate", tool: "node", tools: ["node", "node"] }, "VERIFY_PLAN_TOOL_DUPLICATE"],
+			[{ id: "unknown", tool: "node", tools: ["node", "python"] }, "VERIFY_PLAN_TOOL_UNKNOWN"],
+		]) {
+			await expectCode(validateRepositoryPlan(fixture, [step], []), code);
+		}
 		try {
 			await validateRepositoryPlan(fixture, [{ id: "missing", tool: "node", tools: ["node"], path: "tools/missing.mjs" }], []);
 			fail("VERIFY_SELFTEST_FALSE_NEGATIVE", "tools/missing.mjs");
@@ -555,7 +627,6 @@ async function inspectFilesystemGuards() {
 			expect(error instanceof VerificationError && error.code === "VERIFY_PLAN_FILE_MISSING" && error.message.includes("tools/missing.mjs"), "VERIFY_SELFTEST_WRONG_MISSING_PLAN_ERROR", error.stack ?? error);
 		}
 
-		outside = await realpath(await mkdtemp(join(tmpdir(), "countershape-verify-selftest-outside-")));
 		await writeFile(join(outside, "escaped.mjs"), "// outside\n", { mode: 0o600 });
 		await symlink(outside, join(fixture, "tools/link"));
 		await expectCode(
@@ -570,8 +641,24 @@ async function inspectFilesystemGuards() {
 		const admitted = await admitTool("fixture", alias);
 		expect(admitted.path === executable, "VERIFY_SELFTEST_TOOL_NOT_CANONICAL", admitted.path);
 		await expectCode(admitTools({ COUNTERSHAPE_NODE: executable }), "VERIFY_NODE_AUTHORITY_INVOKE_REQUIRED");
+		await expectCode(admitTools({ COUNTERSHAPE_NODE: join(fixture, "missing-node") }), "VERIFY_NODE_AUTHORITY_INVOKE_REQUIRED");
 		await writeFile(executable, "#!/bin/sh\necho changed\n", { mode: 0o700 });
-		await expectCode(revalidateTool(admitted), "VERIFY_TOOL_REVALIDATION_FAILED");
+		await expectCode(childResult(
+			{ id: "changed-tool", tool: "go", tools: ["go"] },
+			Object.freeze({ ...fakeAuthorities(), go: admitted }),
+			{},
+		), "VERIFY_TOOL_REVALIDATION_FAILED");
+		const zero = join(fixture, "zero-tool");
+		await writeFile(zero, "", { mode: 0o700 });
+		await expectCode(admitTool("zero", zero), "VERIFY_TOOL_SIZE_INVALID");
+		const oversized = join(fixture, "oversized-tool");
+		const oversizedHandle = await open(oversized, "w", 0o700);
+		try {
+			await oversizedHandle.truncate(512 * 1024 * 1024 + 1);
+		} finally {
+			await oversizedHandle.close();
+		}
+		await expectCode(admitTool("oversized", oversized), "VERIFY_TOOL_SIZE_INVALID");
 		await expectCode(admitTool("directory", fixture), "VERIFY_TOOL_NOT_EXECUTABLE_REGULAR");
 	} finally {
 		await rm(fixture, { recursive: true, force: true });
@@ -586,6 +673,30 @@ async function inspectVerificationLock() {
 		const base = await createPrivateBase(fixture);
 		const baseMetadata = await lstat(base);
 		expect(baseMetadata.isDirectory() && (baseMetadata.mode & 0o777) === 0o700, "VERIFY_SELFTEST_PRIVATE_BASE_MODE", base);
+		const rootsA = await createPrivateRoots(fixture, fakeAuthorities());
+		const rootsB = await createPrivateRoots(fixture, fakeAuthorities());
+		expect(rootsA.runRoot !== rootsB.runRoot && rootsA.gocache !== rootsB.gocache, "VERIFY_SELFTEST_PRIVATE_ROOT_REUSE", rootsA.runRoot);
+		for (const roots of [rootsA, rootsB]) {
+			for (const name of ["runRoot", "home", "tmp", "gotmp", "gocache", "gopath", "gomodcache", "authorityBin"]) {
+				const metadata = await lstat(roots[name]);
+				expect(metadata.isDirectory() && (metadata.mode & 0o777) === 0o700, "VERIFY_SELFTEST_PRIVATE_ROOT_MODE", `${name}:${roots[name]}`);
+			}
+			await cleanupVerificationResources(null, roots);
+		}
+		const beforeFailedCreation = (await readdir(base)).filter((name) => name.startsWith("run-")).sort();
+		await expectCode(createPrivateRoots(fixture, Object.freeze({
+			...fakeAuthorities(),
+			go: Object.freeze({ ...fakeAuthorities().go, path: "invalid\0target" }),
+		})), "VERIFY_PRIVATE_ROOT_CREATE_FAILED");
+		const afterFailedCreation = (await readdir(base)).filter((name) => name.startsWith("run-")).sort();
+		expect(
+			JSON.stringify(afterFailedCreation) === JSON.stringify(beforeFailedCreation),
+			"VERIFY_SELFTEST_PARTIAL_PRIVATE_ROOT_LEAK",
+			afterFailedCreation.join(","),
+		);
+		expect(processLiveness(101, () => {}) === "live", "VERIFY_SELFTEST_PROCESS_LIVENESS", "live");
+		expect(processLiveness(102, () => { const error = new Error("absent"); error.code = "ESRCH"; throw error; }) === "absent", "VERIFY_SELFTEST_PROCESS_LIVENESS", "absent");
+		expect(processLiveness(103, () => { const error = new Error("denied"); error.code = "EPERM"; throw error; }) === "indeterminate", "VERIFY_SELFTEST_PROCESS_LIVENESS", "indeterminate");
 
 		const first = await acquireVerificationLock(fixture, { nonce: "1".repeat(32), now: () => 1 });
 		await first.assertHeld();
@@ -706,11 +817,46 @@ async function inspectResourceFinalization() {
 		"VERIFY_SELFTEST_FINALIZATION_RELEASED_AFTER_CLEANUP_FAILURE",
 		failedEvents.join(","),
 	);
+
+	const cleanupEvents = [];
+	try {
+		await cleanupVerificationResources({
+			async release() { cleanupEvents.push("release"); throw new Error("injected release failure"); },
+		}, "/private/run-root", {
+			remove: async () => { cleanupEvents.push("remove"); throw new Error("injected remove failure"); },
+		});
+		fail("VERIFY_SELFTEST_FALSE_NEGATIVE", "resource cleanup aggregation");
+	} catch (error) {
+		expect(error instanceof AggregateError && error.errors.length === 2, "VERIFY_SELFTEST_CLEANUP_NOT_AGGREGATED", error.stack ?? error);
+	}
+	expect(JSON.stringify(cleanupEvents) === JSON.stringify(["remove", "release"]), "VERIFY_SELFTEST_CLEANUP_ORDER", cleanupEvents.join(","));
 }
 
 async function inspectSourceAndArguments() {
-	const source = await readFile(verifierPath, "utf8");
-	expect(!source.includes("...process.env"), "VERIFY_SELFTEST_PROCESS_ENV_SPREAD", "verify-current.mjs");
+	const [source, runtimeSource] = await Promise.all([readFile(verifierPath, "utf8"), readFile(runtimePath, "utf8")]);
+	expect(!source.includes("...process.env") && !runtimeSource.includes("...process.env"), "VERIFY_SELFTEST_PROCESS_ENV_SPREAD", "verification runtime modules");
+	let importFixture = await realpath(await mkdtemp(join(tmpdir(), "countershape-verify-import-selftest-")));
+	try {
+		const toolsDirectory = join(importFixture, "tools");
+		await mkdir(toolsDirectory, { mode: 0o700 });
+		const copiedRuntime = join(toolsDirectory, "verify-runtime-authority.mjs");
+		await writeFile(copiedRuntime, runtimeSource, { mode: 0o600 });
+		const inert = spawnSync(process.execPath, [
+			"--input-type=module", "--eval",
+			`await import(${JSON.stringify(pathToFileURL(copiedRuntime).href)}); process.stdout.write("runtime import inert\\n");`,
+		], { encoding: "utf8", timeout: 10_000 });
+		expect(inert.status === 0 && inert.stdout === "runtime import inert\n" && inert.stderr === "", "VERIFY_SELFTEST_RUNTIME_IMPORT_EFFECT", `${inert.stdout ?? ""}${inert.stderr ?? ""}`);
+		let artifactPresent = false;
+		try {
+			await lstat(join(importFixture, ".countershape"));
+			artifactPresent = true;
+		} catch (error) {
+			if (error.code !== "ENOENT") throw error;
+		}
+		expect(!artifactPresent, "VERIFY_SELFTEST_RUNTIME_IMPORT_ARTIFACT", importFixture);
+	} finally {
+		await rm(importFixture, { recursive: true, force: true });
+	}
 	const result = spawnSync(process.execPath, [verifierPath, "--unexpected"], { encoding: "utf8", timeout: 10_000 });
 	const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
 	expect(result.status !== 0 && output.includes("VERIFY_ARGUMENTS"), "VERIFY_SELFTEST_ARGUMENTS_FALSE_GREEN", output);
@@ -720,7 +866,7 @@ async function inspectSourceAndArguments() {
 		await symlink(verifierPath, alias);
 		const linked = spawnSync(process.execPath, [alias, "--unexpected"], { encoding: "utf8", timeout: 10_000 });
 		const linkedOutput = `${linked.stdout ?? ""}${linked.stderr ?? ""}`;
-		expect(linked.status !== 0 && linkedOutput.includes("VERIFY_ARGUMENTS"), "VERIFY_SELFTEST_SYMLINK_MAIN_SKIPPED", linkedOutput);
+		expect(linked.status === 0 && linkedOutput === "", "VERIFY_SELFTEST_FROZEN_SYMLINK_NOOP_CEILING", linkedOutput);
 	} finally {
 		await rm(fixture, { recursive: true, force: true });
 	}
@@ -737,8 +883,11 @@ async function main() {
 	await inspectVerificationLock();
 	await inspectResourceFinalization();
 	await inspectSourceAndArguments();
-	const sourceDigest = createHash("sha256").update(await readFile(verifierPath)).digest("hex");
-	process.stdout.write(`verification runner self-test passed: exact rosters/env/package partition, fail-closed status/signal/error/marker, framed child output, canonical plan/tool paths, exclusive lock integrity, symlink main, historical nonexecution, and artifact refusal (source sha256:${sourceDigest})\n`);
+	const sourceDigest = createHash("sha256")
+		.update(await readFile(verifierPath))
+		.update(await readFile(runtimePath))
+		.digest("hex");
+	process.stdout.write(`verification runner self-test passed: exact C4 rosters/env/package partition, fail-closed status/signal/error/marker, bounded tool admission, framed child output, canonical plan/tool paths, private root isolation, exclusive lock integrity, inert module imports, cleanup aggregation, historical nonexecution, and artifact refusal (sources sha256:${sourceDigest})\n`);
 }
 
 main().catch((error) => {

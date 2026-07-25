@@ -50,7 +50,7 @@ func TestBuildEnvironmentDoesNotInheritAmbientVariables(t *testing.T) {
 	}
 }
 
-func TestStdoutAndStderrLimitsAreIndependentMutationGuard(t *testing.T) {
+func TestWorldAdapterPreservesIndependentLimitsMutationGuard(t *testing.T) {
 	executable := buildProcessFixture(t)
 	result, _ := runFixtureProcess(
 		t,

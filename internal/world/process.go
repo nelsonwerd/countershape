@@ -5,16 +5,17 @@ import (
 
 	"github.com/nelsonwerd/countershape/internal/canon"
 	"github.com/nelsonwerd/countershape/internal/domain"
+	"github.com/nelsonwerd/countershape/internal/processmechanics"
 )
 
-const processEscapeExclusion = "PROCESS_GROUP_OR_SESSION_ESCAPE_EXCLUDED_FROM_CONTAINMENT_CLAIM" // MUTANT_U2_CLAIM_PROCESS_ESCAPE_CONTAINMENT
+const processEscapeExclusion = processmechanics.EscapeExclusion
 
 // A zero-signal probe narrows accidental signaling, but Darwin exposes no
 // atomic "probe this exact group incarnation and signal it" operation. The
 // group can disappear and its numeric PGID can be reused between those calls.
 // Countershape therefore receipts this residual boundary instead of promoting
 // the pre-TERM probe into an identity/containment claim.
-const processGroupReuseExclusion = "PRE_TERM_PROBE_AND_SIGNAL_ARE_NON_ATOMIC_PGID_REUSE_EXCLUDED_FROM_CLEANUP_CLAIM"
+const processGroupReuseExclusion = processmechanics.ProcessGroupReuseExclusion
 
 const (
 	preTermProbeNotApplicable = "NOT_APPLICABLE"

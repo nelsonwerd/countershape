@@ -8,6 +8,9 @@ import (
 	"time"
 )
 
+// cappedCapture remains the world-private compatibility capture for the C4
+// HTTP service path. CLI execution delegates to processmechanics; C5 owns the
+// later HTTP extraction.
 type cappedCapture struct {
 	limit        int64
 	mu           sync.Mutex

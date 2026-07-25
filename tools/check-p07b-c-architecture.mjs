@@ -15,19 +15,26 @@ const contractPackagePath = `${modulePath}/internal/contractexec`;
 const gitPackagePath = `${modulePath}/internal/gitobj`;
 const hostEpochPackagePath = `${modulePath}/internal/hostepoch`;
 const nodeRuntimePackagePath = `${modulePath}/internal/noderuntime`;
+const processMechanicsPackagePath = `${modulePath}/internal/processmechanics`;
+const contractRunnerPackagePath = `${modulePath}/internal/contractexec/runner`;
 const storePackagePath = `${modulePath}/internal/store`;
+const contractCLITestPackagePath = `${modulePath}/testkit/contractexec/cli`;
 const goExecutable = process.env.COUNTERSHAPE_GO ?? "/opt/homebrew/bin/go";
 
 const expectedC2ProductionFiles = Object.freeze([
-	"execution_interlock.go", "head.go", "head_darwin.go", "nonhead_contract.go",
+	"contract_run_bridge.go", "execution_interlock.go", "head.go", "head_darwin.go", "nonhead_contract.go",
 	"object_store.go", "private_contract_run.go", "reduction_sweep.go",
 ]);
 const expectedC2TestFiles = Object.freeze([
-	"execution_interlock_test.go", "head_test.go", "nonhead_contract_test.go",
+	"contract_run_bridge_test.go", "execution_interlock_test.go", "head_test.go", "nonhead_contract_test.go",
 	"object_store_test.go", "private_contract_run_test.go", "reduction_sweep_test.go",
 ]);
 const expectedC2XTestFiles = Object.freeze(["public_api_test.go"]);
 const expectedC2Imports = Object.freeze({
+	"contract_run_bridge.go": Object.freeze([
+		"bytes", "context", "errors", `${modulePath}/internal/canon`, `${modulePath}/internal/contractexec/model`,
+		`${modulePath}/internal/domain`, `${modulePath}/internal/hostepoch`, "path/filepath", "sync",
+	]),
 	"execution_interlock.go": Object.freeze([
 		"bytes", "context", "errors", "fmt", `${modulePath}/internal/canon`,
 		`${modulePath}/internal/domain`, "os", "path/filepath", "sync",
@@ -49,7 +56,7 @@ const expectedC2PackageImports = Object.freeze([
 	"bytes", "context", "crypto/rand", "encoding/hex", "encoding/json", "errors", "fmt", `${modulePath}/internal/canon`,
 	`${modulePath}/internal/choice/promotion/authority`, `${modulePath}/internal/compare`,
 	`${modulePath}/internal/confirmation/authority`, `${modulePath}/internal/contractexec/model`, `${modulePath}/internal/domain`,
-	`${modulePath}/internal/emit/node/authority`, `${modulePath}/internal/reduce`, "io", "os",
+	`${modulePath}/internal/emit/node/authority`, `${modulePath}/internal/hostepoch`, `${modulePath}/internal/reduce`, "io", "os",
 	"path/filepath", "sort", "strconv", "strings", "sync", "syscall", "time", "unicode", "unicode/utf8",
 ]);
 const c2NonheadTests = Object.freeze([
@@ -88,6 +95,52 @@ const c3StoreTests = Object.freeze([
 	"TestC3ConformanceAttemptRejectsCrossStoreAndRootReplacement",
 	"TestC3ContractTargetBridgeConvergesExactAndRejectsReuse",
 	"TestC3StoreBridgeExportsOnlyInertAttemptAndTargetRecords",
+]);
+const c4ProcessMechanicsTests = Object.freeze([
+	"TestStdoutAndStderrHaveIndependentExactCaps",
+	"TestStdoutAndStderrLimitsAreIndependentMutationGuard",
+	"TestSimultaneousChannelOverflowRetainsIndependentFacts",
+	"TestPreTermRetryNeverUsesPostDeadlineProbeAsSignalAuthority",
+	"TestPreTermRetryWaitOvershootDoesNotConsumeAnotherProbe",
+	"TestPreparedProcessStartsOnceAndClosesWithParentObservedFacts",
+	"TestCopiedPreparedHandleCannotMultiplyStartAuthority",
+	"TestCopiedRunningHandleSharesOneTerminalClosure",
+	"TestPresentEmptyStdinRemainsPhysicallyDistinctFromAbsentStdin",
+	"TestExecutionBudgetStartsAtPhysicalStartNotClose",
+	"TestPostPermitCancellationStillProducesAChildObservation",
+	"TestSpawnObservationPersistenceAbortIsClosedAndTerminal",
+]);
+const c4AdmissionTests = Object.freeze([
+	"TestConcurrentAdmissionProducesExactlyOneStart",
+	"TestRunPermitConsumptionIsSingleUseAndAdjacentToStart",
+	"TestStartErrorClosesDurableRunAndClassificationWithoutChild",
+	"TestPreparedCLIEnvironmentUsesFreshAttemptEvidenceRootAndShortCanaries",
+	"TestParentSentinelEnvironmentIsOmittedFromRealChild",
+	"TestSameTargetRetryRefusesAfterTerminalClosure",
+	"TestCallerCancellationAfterAdmissionStillClosesTerminalFacts",
+]);
+const c4CLITests = Object.freeze([
+	"TestCLIContractExecutionClosesStandaloneScope",
+	"TestCLIContractExecutionForbiddenPositiveControls",
+	"TestCLIContractExecutionChildBindingEvidenceStates",
+	"TestCLIContractExecutionTargetMutationBlocksFinalization",
+]);
+const c4FinalizedRunTests = Object.freeze([
+	"TestC4ContractRunBridgePersistsClosesClassifiesAndReopens",
+	"TestC4FinalizedReleaseConvergesReceiptWithoutRewritingClear",
+	"TestC4FinalizedClearReceiptWithoutRunLinkCannotReadmit",
+	"TestC4FinalizedRunRefusesMissingSpawnObservationBeforePublication",
+	"TestC4TerminalClosureRequiresDurableSpawnObservationButClassificationDoesNot",
+]);
+const c4ClassificationTests = Object.freeze([
+	"TestC4ClassificationRecoveryUsesHistoricalRunReleaseLink",
+	"TestC4ClassificationRecoveryDoesNotRequireRetainedPrivatePack",
+]);
+const c4AuthorityRaceTests = Object.freeze([
+	"TestC4ContractRunBridgeRefusesSkippedAndMismatchedEdges",
+	"TestC4SpawnObservationPersistsEveryClosedStartErrorExactly",
+	"TestC4PrivateManifestDerivesRefsGroupsBodiesAndCannotFork",
+	"TestC4StoreRunBridgeExportsOnlyOpaqueTypedAuthority",
 ]);
 const expectedC2TestSymbols = Object.freeze([
 	...c2NonheadTests, ...c2InterlockTests, ...c2PrivateTests, ...c2PublicTests,
@@ -129,10 +182,16 @@ const c2ProductionPaths = Object.freeze([
 	"internal/store/nonhead_contract.go",
 	"internal/store/private_contract_run.go",
 ]);
-const c2ImportPaths = Object.freeze([...c2ProductionPaths, "internal/store/object_store.go"]);
-const c2ReviewedPaths = Object.freeze([
+const c2ImportPaths = Object.freeze([
+	"internal/store/contract_run_bridge.go",
 	...c2ProductionPaths,
 	"internal/store/object_store.go",
+]);
+const c2ReviewedPaths = Object.freeze([
+	"internal/store/contract_run_bridge.go",
+	...c2ProductionPaths,
+	"internal/store/object_store.go",
+	"internal/store/contract_run_bridge_test.go",
 	"internal/store/execution_interlock_test.go",
 	"internal/store/nonhead_contract_test.go",
 	"internal/store/object_store_test.go",
@@ -220,7 +279,8 @@ const c3NodeRuntimeTests = Object.freeze([
 	"TestC3NodeRuntimeRejectsAmbientOrForgedInputs",
 	"TestC3NodeRuntimeRevalidationIsFreshAndExact",
 ]);
-const c3ReviewedPaths = Object.freeze([
+const c3ReviewedPaths = Object.freeze([...new Set([
+	...c2ReviewedPaths,
 	"internal/contractexec/target.go",
 	"internal/contractexec/target_test.go",
 	"internal/gitobj/single_target.go",
@@ -239,11 +299,8 @@ const c3ReviewedPaths = Object.freeze([
 	"internal/noderuntime/runtime_darwin_test.go",
 	"internal/noderuntime/runtime_test.go",
 	"internal/noderuntime/unsupported.go",
-	"internal/store/nonhead_contract.go",
-	"internal/store/nonhead_contract_test.go",
-	"internal/store/public_api_test.go",
 	"spec/verification/p07b-c-c3-predecessors.json",
-]);
+])]);
 const expectedC3BuildTags = Object.freeze({
 	"internal/contractexec/target.go": "",
 	"internal/contractexec/target_test.go": "darwin && arm64 && cgo",
@@ -349,6 +406,168 @@ const expectedC3Packages = Object.freeze({
 			"syscall", "time", "unicode/utf8", "unsafe",
 		].sort(),
 	}),
+});
+const c4ProductionPaths = Object.freeze([
+	"internal/processmechanics/capture.go",
+	"internal/processmechanics/process.go",
+	"internal/processmechanics/process_darwin.go",
+	"internal/processmechanics/process_unsupported.go",
+	"internal/contractexec/runner/cli.go",
+	"internal/contractexec/runner/evidence.go",
+	"internal/contractexec/runner/runner.go",
+	"internal/contractexec/runner/runner_darwin.go",
+	"internal/contractexec/runner/runner_unsupported.go",
+	"internal/contractexec/runner/scope_darwin.go",
+	"internal/store/contract_run_bridge.go",
+	"internal/store/execution_interlock.go",
+	"internal/world/capture.go",
+	"internal/world/process.go",
+	"internal/world/process_darwin.go",
+	"internal/world/process_unsupported.go",
+]);
+const c4TestPaths = Object.freeze([
+	"internal/processmechanics/capture_darwin_test.go",
+	"internal/processmechanics/process_darwin_test.go",
+	"internal/contractexec/runner/runner_darwin_test.go",
+	"internal/store/contract_run_bridge_test.go",
+	"internal/store/execution_interlock_test.go",
+	"internal/store/public_api_test.go",
+	"internal/world/process_darwin_test.go",
+	"internal/world/process_mutation_darwin_test.go",
+	"testkit/contractexec/cli/fixture_darwin.go",
+	"testkit/contractexec/cli/runner_darwin_test.go",
+]);
+const c4ReviewedPaths = Object.freeze([...new Set([...c3ReviewedPaths, ...c4ProductionPaths, ...c4TestPaths])]);
+const c4ClaimStatusPath = "docs/status/P07B-C-C4-CLI-PROFILE.md";
+const c4FinalRunbookPath = "tools/check-p07b-c-plan.mjs";
+const c4BoundarySnapshotPaths = Object.freeze([
+	...new Set([
+		...c4ReviewedPaths,
+		c4ClaimStatusPath,
+		c4FinalRunbookPath,
+		"tools/check-p07b-c-unit-scope.mjs",
+		"spec/verification/p07b-c-unit-paths.json",
+		"docs/HANDOFF_MODE_C.md",
+	]),
+]);
+const expectedC4BuildTags = Object.freeze({
+	"internal/processmechanics/capture.go": "",
+	"internal/processmechanics/process.go": "",
+	"internal/processmechanics/process_darwin.go": "darwin",
+	"internal/processmechanics/process_unsupported.go": "!darwin",
+	"internal/processmechanics/capture_darwin_test.go": "darwin && cgo",
+	"internal/processmechanics/process_darwin_test.go": "darwin && cgo",
+	"internal/contractexec/runner/cli.go": "darwin",
+	"internal/contractexec/runner/evidence.go": "darwin",
+	"internal/contractexec/runner/runner.go": "",
+	"internal/contractexec/runner/runner_darwin.go": "darwin",
+	"internal/contractexec/runner/runner_unsupported.go": "!darwin",
+	"internal/contractexec/runner/scope_darwin.go": "darwin",
+	"internal/contractexec/runner/runner_darwin_test.go": "darwin && arm64 && cgo",
+	"internal/store/contract_run_bridge.go": "",
+	"internal/store/contract_run_bridge_test.go": "darwin && cgo",
+	"internal/store/execution_interlock.go": "",
+	"internal/store/execution_interlock_test.go": "",
+	"internal/store/public_api_test.go": "",
+	"internal/world/capture.go": "",
+	"internal/world/process.go": "",
+	"internal/world/process_darwin.go": "darwin",
+	"internal/world/process_unsupported.go": "!darwin",
+	"internal/world/process_darwin_test.go": "darwin && cgo",
+	"internal/world/process_mutation_darwin_test.go": "darwin && cgo",
+	"testkit/contractexec/cli/fixture_darwin.go": "darwin && arm64 && cgo",
+	"testkit/contractexec/cli/runner_darwin_test.go": "darwin && arm64 && cgo",
+});
+const expectedC4Packages = Object.freeze({
+	[processMechanicsPackagePath]: Object.freeze({
+		name: "processmechanics", go: ["capture.go", "process.go", "process_darwin.go"], cgo: [],
+		test: ["capture_darwin_test.go", "process_darwin_test.go"], xtest: [], ignored: ["process_unsupported.go"],
+		imports: [
+			"bytes", "context", "crypto/sha256", "encoding/binary", "encoding/hex", "errors", "hash", "io", "math",
+			"os", "os/exec", "path/filepath", "sync", "sync/atomic", "syscall", "time",
+		],
+	}),
+	[contractRunnerPackagePath]: Object.freeze({
+		name: "runner", go: ["cli.go", "evidence.go", "runner.go", "runner_darwin.go", "scope_darwin.go"], cgo: [],
+		test: ["runner_darwin_test.go"], xtest: [], ignored: ["runner_unsupported.go"],
+		imports: [
+			"bytes", "context", "crypto/rand", "crypto/sha256", "encoding/binary", "encoding/hex", "errors", "fmt",
+			`${modulePath}/internal/adapters/cli`, `${modulePath}/internal/adapters/cli/model`, `${modulePath}/internal/canon`,
+			contractPackagePath, packagePath, `${modulePath}/internal/contractsource`, `${modulePath}/internal/domain`,
+			`${modulePath}/internal/emit/node/model`, hostEpochPackagePath, processMechanicsPackagePath,
+			`${modulePath}/internal/projectiontranslate`, storePackagePath,
+			"io", "math", "net", "os", "path/filepath", "sort", "strings", "sync", "sync/atomic", "syscall", "time",
+		].sort(),
+	}),
+	[contractCLITestPackagePath]: Object.freeze({
+		name: "cli", go: ["fixture_darwin.go"], cgo: [], test: [], xtest: ["runner_darwin_test.go"], ignored: [],
+		imports: [
+			"context", "encoding/base64", "encoding/json", `${modulePath}/internal/adapters/cli`,
+			`${modulePath}/internal/adapters/cli/model`, `${modulePath}/internal/canon`, `${modulePath}/internal/choice`,
+			`${modulePath}/internal/choice/promotion`, contractPackagePath, packagePath,
+			`${modulePath}/internal/contractsource`, `${modulePath}/internal/domain`, `${modulePath}/internal/emit/node`,
+			gitPackagePath, hostEpochPackagePath, `${modulePath}/internal/projectiontranslate`, storePackagePath,
+			`${modulePath}/testkit/clifixture`, `${modulePath}/testkit/gitrepo`,
+			"os", "path/filepath", "runtime", "strings", "sync", "testing",
+		].sort(),
+	}),
+});
+const expectedC4MechanicsSurface = Object.freeze([
+	"AbsentStdin", "BindingDigest", "BindingDigest.String", "BindingDigest.Valid", "ControlCancelled",
+	"ControlOutputLimit", "ControlProbeTransportError", "ControlStartError", "ControlTimeout", "EscapeExclusion",
+	"Invocation", "Limits", "NewInvocation", "PreTermProbeAbsent", "PreTermProbeNotApplicable", "PreTermProbePresent",
+	"PreTermProbeUncertain", "Prepare", "Prepared", "Prepared.BindingDigest", "Prepared.Start", "PresentStdin",
+	"ProcessGroupReuseExclusion", "Result", "Running", "Running.AbortReadinessTransition",
+	"Running.AbortSpawnObservationPersistence", "Running.Close", "SpawnObservation", "StartError", "StartError.Code",
+	"StartError.Error", "StartError.Result", "StartError.Unwrap", "Stdin",
+].sort());
+const expectedC4RunnerSurface = Object.freeze([
+	"CodeAdmissionRefused", "CodeEvidenceClosureFailed", "CodeFixtureRejected", "CodeInvalidRequest",
+	"CodeRecoveryRefused", "CodeSpawnClosureFailed", "CodeTargetChanged", "CodeUnsupportedProfile", "Error",
+	"Error.Error", "Error.Unwrap", "ExecuteCLI", "IsCode", "ResumeCLIClassification",
+].sort());
+const expectedC4StoreBridgeSurface = Object.freeze([
+	"AcquireContractRunOwner", "ContractExecutionRecord", "ContractExecutionRecord.Digest",
+	"ContractExecutionRecord.Model", "ContractExecutionRecord.Valid", "ContractRunOwner",
+	"ContractRunOwner.ConsumeForStart", "ContractRunOwner.PersistFinalizedRun",
+	"ContractRunOwner.PersistPrivateRunManifest", "ContractRunOwner.PersistSpawnObservation",
+	"ContractRunOwner.StartClaimDigest", "FinalizedRunRecord", "FinalizedRunRecord.Digest", "FinalizedRunRecord.Model",
+	"FinalizedRunRecord.Valid", "OpenFinalizedRunRecord", "OpenTerminalClosure", "PersistContractExecutionRecord",
+	"PrivateRunManifest", "PrivateRunManifest.EvidenceRef", "PrivateRunManifest.Summary", "PrivateRunManifest.Valid",
+	"TerminalClosure", "TerminalClosure.FinalizedRun", "TerminalClosure.Release",
+].sort());
+const expectedC4TestsByFile = Object.freeze({
+	"internal/processmechanics/capture_darwin_test.go": Object.freeze(c4ProcessMechanicsTests.slice(0, 3)),
+	"internal/processmechanics/process_darwin_test.go": Object.freeze(c4ProcessMechanicsTests.slice(3)),
+	"internal/contractexec/runner/runner_darwin_test.go": c4AdmissionTests,
+	"testkit/contractexec/cli/runner_darwin_test.go": c4CLITests,
+	"internal/store/contract_run_bridge_test.go": Object.freeze([
+		"TestC4ContractRunBridgePersistsClosesClassifiesAndReopens",
+		"TestC4ContractRunBridgeRefusesSkippedAndMismatchedEdges",
+		"TestC4SpawnObservationPersistsEveryClosedStartErrorExactly",
+		"TestC4PrivateManifestDerivesRefsGroupsBodiesAndCannotFork",
+		"TestC4FinalizedRunRefusesMissingSpawnObservationBeforePublication",
+		"TestC4TerminalClosureRequiresDurableSpawnObservationButClassificationDoesNot",
+		"TestC4ClassificationRecoveryUsesHistoricalRunReleaseLink",
+		"TestC4ClassificationRecoveryDoesNotRequireRetainedPrivatePack",
+	]),
+	"internal/store/execution_interlock_test.go": Object.freeze([
+		"TestC4FinalizedReleaseConvergesReceiptWithoutRewritingClear",
+		"TestC4FinalizedClearReceiptWithoutRunLinkCannotReadmit",
+	]),
+	"internal/store/public_api_test.go": Object.freeze(["TestC4StoreRunBridgeExportsOnlyOpaqueTypedAuthority"]),
+});
+const c4ProfileNames = Object.freeze([
+	"c4-processmechanics-parity", "c4-admission-permit", "c4-cli-closure",
+	"c4-finalized-run-release", "c4-classification-recovery", "c4-authority-race",
+]);
+const expectedC4ProfileTests = Object.freeze({
+	"c4-processmechanics-parity": c4ProcessMechanicsTests,
+	"c4-admission-permit": c4AdmissionTests,
+	"c4-cli-closure": c4CLITests,
+	"c4-finalized-run-release": c4FinalizedRunTests,
+	"c4-classification-recovery": c4ClassificationTests,
+	"c4-authority-race": c4AuthorityRaceTests,
 });
 function predecessorClaims(rows) {
 	return rows.map(([label, type], index) => ({ index, label, type, grade: "TREE-EXACT" }));
@@ -708,6 +927,30 @@ const goJSONProfiles = Object.freeze({
 		packagePath: storePackagePath, packageArgument: "./internal/store",
 		pass: c3StoreTests, skip: Object.freeze([]),
 	}),
+	"c4-processmechanics-parity": Object.freeze({
+		packagePath: processMechanicsPackagePath, packageArgument: "./internal/processmechanics",
+		pass: c4ProcessMechanicsTests, skip: Object.freeze([]), race: true,
+	}),
+	"c4-admission-permit": Object.freeze({
+		packagePath: contractRunnerPackagePath, packageArgument: "./internal/contractexec/runner",
+		pass: c4AdmissionTests, skip: Object.freeze([]), race: false,
+	}),
+	"c4-cli-closure": Object.freeze({
+		packagePath: contractCLITestPackagePath, packageArgument: "./testkit/contractexec/cli",
+		pass: c4CLITests, skip: Object.freeze([]), race: false,
+	}),
+	"c4-finalized-run-release": Object.freeze({
+		packagePath: storePackagePath, packageArgument: "./internal/store",
+		pass: c4FinalizedRunTests, skip: Object.freeze([]), race: false,
+	}),
+	"c4-classification-recovery": Object.freeze({
+		packagePath: storePackagePath, packageArgument: "./internal/store",
+		pass: c4ClassificationTests, skip: Object.freeze([]), race: false,
+	}),
+	"c4-authority-race": Object.freeze({
+		packagePath: storePackagePath, packageArgument: "./internal/store",
+		pass: c4AuthorityRaceTests, skip: Object.freeze([]), race: true,
+	}),
 });
 const expectedLocalDependencies = Object.freeze([
 	`${modulePath}/internal/adapters/cli/model`,
@@ -889,6 +1132,76 @@ function run(executable, args, code, timeout = 180_000) {
 		throw new ArchitectureError(code, `${result.status ?? result.signal}: ${result.stderr || result.stdout || result.error}`);
 	}
 	return result.stdout;
+}
+
+export function parseC4StatusClaimMap(source) {
+	const startToken = "## Intended C4 claim map\n";
+	const endToken = "\n## Nonclaims and next gate";
+	const start = source.indexOf(startToken);
+	const end = start < 0 ? -1 : source.indexOf(endToken, start + startToken.length);
+	if (start < 0 || end < 0 || source.indexOf(startToken, start + startToken.length) !== -1 ||
+		source.indexOf(endToken, end + endToken.length) !== -1) {
+		throw new ArchitectureError("P07B_C4_PROFILE_COMMAND", "C4 status claim-map section framing");
+	}
+	const lines = source.slice(start + startToken.length, end).trim().split(/\r?\n/u);
+	if (lines.length !== 82 || lines[0] !== "| # | Claim | Type | Intended grade |" ||
+		lines[1] !== "| ---: | --- | --- | --- |") {
+		throw new ArchitectureError("P07B_C4_PROFILE_COMMAND", `C4 status claim-map table shape: ${lines.length}`);
+	}
+	return lines.slice(2).map((line, index) => {
+		const match = /^\| ([1-9][0-9]*) \| `([^`\r\n]+)` \| `(tests-pass|command-succeeded)` \| `UNRECEIPTED` \|$/u.exec(line);
+		if (match === null || Number(match[1]) !== index + 1) {
+			throw new ArchitectureError("P07B_C4_PROFILE_COMMAND", `C4 status claim-map row ${index + 1}`);
+		}
+		return Object.freeze({ number: index + 1, label: match[2], type: match[3], grade: "UNRECEIPTED" });
+	});
+}
+
+function renderC4FinalRunbook() {
+	const result = spawnSync(process.execPath, [resolve(repositoryRoot, c4FinalRunbookPath), "--print-final-runbook", "C4"], {
+		cwd: repositoryRoot,
+		encoding: "utf8",
+		timeout: 30_000,
+		maxBuffer: 32 * 1024 * 1024,
+		env: {
+			...process.env,
+			COUNTERSHAPE_GO: goExecutable,
+			GOMAXPROCS: "2",
+			GOFLAGS: "-mod=readonly -buildvcs=false -p=1",
+		},
+	});
+	if (result.error || result.signal || result.status !== 0 || result.stderr !== "") {
+		throw new ArchitectureError(
+			"P07B_C4_PROFILE_COMMAND",
+			`C4 final runbook render failed: ${result.status ?? result.signal}: ${result.stderr || result.stdout || result.error}`,
+		);
+	}
+	return result.stdout;
+}
+
+export function parseC4FinalRunbookClaimMap(source) {
+	const headings = [...source.matchAll(/^# ([1-9][0-9]*)\. ([^\r\n]+)$/gmu)];
+	const claims = [...source.matchAll(/^\/opt\/homebrew\/bin\/didrun claim '(tests-pass|command-succeeded)' --label '([^'\r\n]+)'$/gmu)];
+	if (headings.length !== 80 || claims.length !== 80) {
+		throw new ArchitectureError("P07B_C4_PROFILE_COMMAND", `C4 final runbook claim-map shape: ${headings.length}/${claims.length}`);
+	}
+	return headings.map((heading, index) => {
+		const number = Number(heading[1]);
+		const label = heading[2];
+		const claim = claims[index];
+		if (number !== index + 1 || claim[2] !== label) {
+			throw new ArchitectureError("P07B_C4_PROFILE_COMMAND", `C4 final runbook claim-map row ${index + 1}`);
+		}
+		return Object.freeze({ number, label, type: claim[1], grade: "UNRECEIPTED" });
+	});
+}
+
+async function collectC4ClaimMapFacts() {
+	const statusSource = await readFile(resolve(repositoryRoot, c4ClaimStatusPath), "utf8");
+	return Object.freeze({
+		status: parseC4StatusClaimMap(statusSource),
+		runbook: parseC4FinalRunbookClaimMap(renderC4FinalRunbook()),
+	});
 }
 
 const c3GitEnvironment = Object.freeze({
@@ -1134,6 +1447,30 @@ function goList(args) {
 	return parseJSONStream(run(goExecutable, ["list", "-json", ...args], "P07B_C1_GO_LIST"));
 }
 
+export function productionStoreOwnerReferenceCount(source) {
+	return count(goCodeOnly(source), /\bAcquireContractRunOwner\b/gu);
+}
+
+async function productionStoreOwnerReferenceSites(packages) {
+	const paths = [];
+	for (const packageValue of packages) {
+		const filenames = [...new Set([
+			...(packageValue.GoFiles ?? []), ...(packageValue.CgoFiles ?? []), ...(packageValue.IgnoredGoFiles ?? []),
+		])].filter((name) => name.endsWith(".go") && !name.endsWith("_test.go"));
+		for (const filename of filenames) {
+			const absolute = resolve(packageValue.Dir, filename);
+			const relativeFile = relative(repositoryRoot, absolute).split(sep).join("/");
+			if (relativeFile === ".." || relativeFile.startsWith("../") || isAbsolute(relativeFile)) {
+				throw new ArchitectureError("P07B_C4_PRODUCTION_CALL_SITE", `${absolute} escapes the repository root`);
+			}
+			const source = await readFile(absolute, "utf8");
+			const occurrences = productionStoreOwnerReferenceCount(source);
+			if (occurrences > 0) paths.push(`${relativeFile}:${occurrences}`);
+		}
+	}
+	return sorted(paths);
+}
+
 function goTestSymbols() {
 	const output = run(goExecutable, [
 		"test", "-mod=readonly", "-buildvcs=false", "-p=1", "-count=1", "-list", ".", "./internal/contractexec/model",
@@ -1218,17 +1555,28 @@ export function validateGoJSONTranscript(profileName, bytes) {
 	return Object.freeze({ profile: profileName, passed: profile.pass.length, skipped: profile.skip.length });
 }
 
-export function runGoJSONProfile(profileName) {
+export function goJSONArguments(profileName) {
 	const profile = goJSONProfiles[profileName];
 	if (!profile?.packageArgument || profile.skip.length !== 0 || profile.pass.length === 0 ||
-		profile.pass.some((name) => !/^(?:Test|Fuzz)[A-Za-z0-9_]+$/u.test(name))) {
+		profile.pass.some((name) => !/^(?:Test|Fuzz)[A-Za-z0-9_]+$/u.test(name)) ||
+		(profileName.startsWith("c4-") && typeof profile.race !== "boolean")) {
 		throw new ArchitectureError("P07B_C2_GO_JSON_RUN_PROFILE", profileName);
 	}
 	const pattern = `^(?:${profile.pass.join("|")})$`;
-	const output = run(goExecutable, [
-		"test", "-mod=readonly", "-buildvcs=false", "-p=1", "-count=1", "-json", "-run", pattern, profile.packageArgument,
-	], profileName.startsWith("c3-") ? "P07B_C3_GO_JSON_RUN" : "P07B_C2_GO_JSON_RUN",
-	profileName.startsWith("c3-") ? 900_000 : 180_000);
+	return Object.freeze([
+		"test", ...(profile.race === true ? ["-race"] : []),
+		"-mod=readonly", "-buildvcs=false", "-p=1", "-count=1", "-json", "-run", pattern, profile.packageArgument,
+	]);
+}
+
+export function runGoJSONProfile(profileName) {
+	const output = run(
+		goExecutable,
+		goJSONArguments(profileName),
+		profileName.startsWith("c4-") ? "P07B_C4_GO_JSON_RUN" :
+			profileName.startsWith("c3-") ? "P07B_C3_GO_JSON_RUN" : "P07B_C2_GO_JSON_RUN",
+		(profileName.startsWith("c3-") || profileName.startsWith("c4-")) ? 900_000 : 180_000,
+	);
 	return validateGoJSONTranscript(profileName, Buffer.from(output, "utf8"));
 }
 
@@ -1886,8 +2234,8 @@ export async function collectC3Facts() {
 			targetJoin: ordered(functionBody(storeBridge, "PersistContractTargetRecord"), [
 				"attemptJoinsTarget", "NewSemanticObject", "persistTargetRecord", "openTargetByAttempt",
 			]) && ordered(functionBody(storeBridge, "OpenContractTargetRecord"), [
-				"openTargetByAttempt", "ParseContractExecutionTarget", "attemptJoinsTarget",
-			]),
+				"openTargetByAttempt", "parseContractTargetStorageRecord", "attemptJoinsTarget",
+			]) && functionBody(storeBridge, "parseContractTargetStorageRecord").includes("contractmodel.ParseContractExecutionTarget"),
 			noIssuerOrProcessEdge: !/\b(?:exec\.Command(?:Context)?|os\.StartProcess|RunPermit|StartClaimWinner)\s*\(/u.test(storeBridge),
 		},
 		gitTarget: {
@@ -1977,6 +2325,574 @@ export async function collectC3Facts() {
 	});
 }
 
+export async function collectC4Facts() {
+	const packageValues = goList([
+		"./internal/processmechanics", "./internal/contractexec/runner", "./testkit/contractexec/cli",
+	]);
+	const repositoryPackages = goList(["./..."]);
+	const entries = await Promise.all(c4ReviewedPaths.map(readC2Source));
+	const sources = Object.fromEntries(entries.map((entry) => [entry.path, entry.source]));
+	const c3Facts = await collectC3Facts();
+	const claimMap = await collectC4ClaimMapFacts();
+	const mechanics = [
+		"internal/processmechanics/capture.go", "internal/processmechanics/process.go",
+		"internal/processmechanics/process_darwin.go", "internal/processmechanics/process_unsupported.go",
+	].map((path) => sources[path]).join("\n");
+	const mechanicsCommon = sources["internal/processmechanics/process.go"];
+	const mechanicsDarwin = sources["internal/processmechanics/process_darwin.go"];
+	const mechanicsUnsupported = sources["internal/processmechanics/process_unsupported.go"];
+	const runnerCLI = sources["internal/contractexec/runner/cli.go"];
+	const runnerCommon = sources["internal/contractexec/runner/runner.go"];
+	const runnerDarwin = sources["internal/contractexec/runner/runner_darwin.go"];
+	const runnerEvidence = sources["internal/contractexec/runner/evidence.go"];
+	const runnerScope = sources["internal/contractexec/runner/scope_darwin.go"];
+	const runnerDarwinTests = sources["internal/contractexec/runner/runner_darwin_test.go"];
+	const cliFixture = sources["testkit/contractexec/cli/fixture_darwin.go"];
+	const cliPhysicalTests = sources["testkit/contractexec/cli/runner_darwin_test.go"];
+	const cliClosureTestBody = functionBody(cliPhysicalTests, "TestCLIContractExecutionClosesStandaloneScope");
+	const cliChildBindingTestBody = functionBody(cliPhysicalTests, "TestCLIContractExecutionChildBindingEvidenceStates");
+	const cliTargetMutationTestBody = functionBody(cliPhysicalTests, "TestCLIContractExecutionTargetMutationBlocksFinalization");
+	const cliReferenceExecutionBody = functionBody(cliPhysicalTests, "assertReferenceContractExecution");
+	const cliConformingExecutionBody = functionBody(cliPhysicalTests, "assertConformingContractExecution");
+	const cliForbiddenTestBody = functionBody(cliPhysicalTests, "TestCLIContractExecutionForbiddenPositiveControls");
+	const cliPhysicalSchedulerBody = functionBody(cliPhysicalTests, "runC4PhysicalTest");
+	const storeNonhead = sources["internal/store/nonhead_contract.go"];
+	const storeNonheadTests = sources["internal/store/nonhead_contract_test.go"];
+	const runnerSources = [
+		"internal/contractexec/runner/cli.go", "internal/contractexec/runner/evidence.go",
+		"internal/contractexec/runner/runner.go", "internal/contractexec/runner/runner_darwin.go",
+		"internal/contractexec/runner/runner_unsupported.go", "internal/contractexec/runner/scope_darwin.go",
+	].map((path) => sources[path]).join("\n");
+	const storeBridge = sources["internal/store/contract_run_bridge.go"];
+	const interlock = sources["internal/store/execution_interlock.go"];
+	const worldDarwin = sources["internal/world/process_darwin.go"];
+	const worldAdapter = functionBody(worldDarwin, "runPlatformProcess");
+	const packageFacts = Object.fromEntries(packageValues.map((value) => [value.ImportPath, packageBuildFacts(value)]));
+	const testFiles = {};
+	for (const path of Object.keys(expectedC4TestsByFile)) {
+		const pattern = path.startsWith("internal/store/") ? /^func\s+(TestC4[A-Za-z0-9_]+)\s*\(/gmu :
+			/^func\s+(Test[A-Za-z0-9_]+)\s*\(/gmu;
+		testFiles[path] = sorted([...sources[path].matchAll(pattern)]
+			.map((match) => match[1]).filter((name) => name !== "TestMain"));
+	}
+	const aggregateSurface = (paths) => sorted([...new Set(paths.flatMap((path) => exportedSurface(sources[path]))) ]);
+	const consumeBody = functionBody(runnerDarwin, "consumeAndStart");
+	const executeBody = functionBody(runnerDarwin, "executeCLI");
+	const preparedTargetBody = functionBody(runnerDarwin, "samePreparedTarget");
+	const preparedTargetIdentityFields = structFields(runnerEvidence, "preparedTargetIdentity");
+	const preparedTargetIdentityGuardBody = functionBody(runnerDarwinTests, "assertPreparedTargetIdentityGuards");
+	const prepareCLIBody = functionBody(runnerCLI, "prepareCLIExecution");
+	const closeStartErrorBody = functionBody(runnerDarwin, "closeStartError");
+	const persistBody = functionBody(runnerDarwin, "persistRunAndClassification");
+	const resumeBody = functionBody(runnerDarwin, "resumeCLIClassification");
+	const releaseBody = functionBody(interlock, "releaseInterlockAfterFinalizedRun");
+	const scopeBody = functionBody(runnerEvidence, "buildScopeDrafts");
+	const invocationInspectBody = functionBody(runnerEvidence, "inspectAndRetireCLIInvocationEvidence");
+	const invocationReadBody = functionBody(runnerEvidence, "readCLIInvocationEvidence");
+	const invocationRetireBody = functionBody(runnerEvidence, "retireCLIInvocationEvidence");
+	const evidenceCapacityBody = functionBody(runnerEvidence, "preflightPrivateEvidenceCapacity");
+	const evidenceCapacityValidateBody = methodBody(runnerEvidence, "cliEvidenceCapacity", "validate");
+	const evidenceFrameBody = functionBody(runnerEvidence, "framePrivateEvidence");
+	const childEvidenceBody = functionBody(runnerEvidence, "buildChildEvidenceDraft");
+	const canonicalEvidenceBody = functionBody(runnerEvidence, "canonicalEvidence");
+	const capacityTestBody = functionBody(runnerDarwinTests, "assertPrivateEvidenceCapacityAndFrame");
+	const boundedResidueTestBody = functionBody(runnerDarwinTests, "assertBoundedForeignEvidenceAndScopeResidue");
+	const assembleBody = methodBody(runnerEvidence, "evidenceDraft", "persistAndAssemble");
+	const candidateInventoryEntryBody = goCodeOnly(functionBody(runnerScope, "snapshotCandidate"));
+	const candidateInventoryBody = goCodeOnly(functionBody(runnerScope, "snapshotCandidateWithLimits"));
+	const candidateDirectoryBody = goCodeOnly(functionBody(runnerScope, "readCandidateInventoryDirectory"));
+	const candidateFileBody = goCodeOnly(functionBody(runnerScope, "digestCandidateInventoryFile"));
+	const candidateInventorySource = goCodeOnly(runnerScope);
+	const fixtureMaterializeBody = functionBody(runnerCLI, "materializeCLIFixtures");
+	const fixtureValidateBody = functionBody(runnerCLI, "validateExistingCLIFixture");
+	const fixtureWriteBody = functionBody(runnerCLI, "writeExactCLIFixture");
+	const sharedSourceRepositoryBody = functionBody(cliFixture, "sharedSourceRepository");
+	const newTargetBody = functionBody(cliFixture, "newTarget");
+	const newReferenceTargetBody = functionBody(cliFixture, "NewReferenceTarget");
+	const newControlTargetBody = functionBody(cliFixture, "NewTarget");
+	const newMutationTargetBody = functionBody(cliFixture, "NewMutationTarget");
+	const sharedControlResidueBody = functionBody(cliFixture, "sharedControlResidue");
+	const newForbiddenTargetBody = functionBody(cliFixture, "NewForbiddenTarget");
+	const sharedForbiddenResidueBody = functionBody(cliFixture, "sharedForbiddenResidue");
+	const fixtureRunMainBody = functionBody(cliFixture, "RunMain");
+	const scopeProbeBody = functionBody(runnerScope, "newScopeProbe");
+	const shortSocketBody = functionBody(runnerScope, "newShortSocketRoot");
+	const canaryCreateBody = functionBody(runnerScope, "newUnixCanary");
+	const canaryCloseBody = methodBody(runnerScope, "unixCanary", "close");
+	const canaryClassifyBody = functionBody(runnerScope, "classifyCanaryAcceptError");
+	const boundedRosterBody = functionBody(runnerScope, "boundedDirectRoster");
+	const removeRetainedLeafBody = functionBody(runnerScope, "removeRetainedLeaf");
+	const removeRetainedDirectoryBody = functionBody(runnerScope, "removeRetainedEmptyDirectory");
+	const scopeFinishBody = methodBody(runnerScope, "scopeProbe", "finish");
+	const storeBoundedRosterBody = functionBody(storeNonhead, "boundedExactDirectoryNames");
+	const inspectAttemptRootsBody = functionBody(storeNonhead, "inspectAttemptRoots");
+	const boundedStoreTestBody = functionBody(storeNonheadTests, "TestC3ConformanceAttemptIsFreshDurableAndRestartReopenable");
+	const acquireCallSites = await productionStoreOwnerReferenceSites(repositoryPackages);
+	return structuredClone({
+		packages: packageFacts,
+		buildTags: Object.fromEntries(Object.keys(expectedC4BuildTags).map((path) => [path, goBuildTag(sources[path])])),
+		testFiles,
+		c3Problems: validateC3Facts(c3Facts),
+		mechanics: {
+			surface: aggregateSurface([
+				"internal/processmechanics/capture.go", "internal/processmechanics/process.go",
+				"internal/processmechanics/process_darwin.go",
+			]),
+			invocationFields: structFields(mechanicsCommon, "Invocation"),
+			preparedFields: structFields(mechanicsCommon, "Prepared"),
+			preparedStateFields: structFields(mechanicsCommon, "preparedState"),
+			runningFields: structFields(mechanicsDarwin, "Running"),
+			runningStateFields: structFields(mechanicsDarwin, "runningState"),
+			unsupportedRunningFields: structFields(mechanicsUnsupported, "Running"),
+			stdinFields: structFields(mechanicsCommon, "Stdin"),
+			defensiveInputCopy: [
+				"argv:        append([]string(nil), argv...)",
+				"environment: append([]string(nil), environment...)",
+				"stdin:       Stdin{presence: stdin.presence, bytes: append([]byte(nil), stdin.bytes...)}",
+			].every((anchor) => functionBody(mechanicsCommon, "NewInvocation").includes(anchor)) &&
+				ordered(functionBody(mechanicsCommon, "Prepare"), ["NewInvocation", "invocation.binding", "copyInvocation.binding"]),
+			oneShot: functionBody(mechanicsCommon, "begin").includes("prepared.state.started.CompareAndSwap(false, true)") &&
+				count(functionBody(mechanicsDarwin, "startPlatform"), /prepared\.begin\s*\(/gu) === 1 &&
+				count(functionBody(mechanicsUnsupported, "startPlatform"), /prepared\.begin\s*\(/gu) === 1,
+			copySafeState: methodBody(mechanicsDarwin, "Running", "Close").includes("state.closeOnce.Do") &&
+				methodBody(mechanicsDarwin, "Running", "Close").includes("state.closePhysical()") &&
+				methodBody(mechanicsDarwin, "Running", "abortBeforeClose").includes("state.mu.Lock()") &&
+				functionBody(mechanicsDarwin, "startPlatform").includes("&Running{state: &runningState{") &&
+				functionBody(mechanicsCommon, "Prepare").includes("&Prepared{state: &preparedState{") &&
+				/type\s+Prepared\s+struct\s*\{\s*state\s+\*preparedState\s*\}/u.test(goCodeOnly(mechanicsCommon)) &&
+				/type\s+Running\s+struct\s*\{\s*state\s+\*runningState\s*\}/u.test(goCodeOnly(mechanicsDarwin)),
+			directSpawn: ordered(functionBody(mechanicsDarwin, "startPlatform"), [
+				"command := &exec.Cmd{", "Path:        invocation.executable", "Args:        append([]string(nil), invocation.argv...)",
+				"Env:         append([]string(nil), invocation.environment...)", "SysProcAttr: &syscall.SysProcAttr{Setpgid: true}",
+				"command.Start()", "time.NewTimer(invocation.limits.Execution)",
+			]) && !/(?:exec\.Command|LookPath|\/bin\/sh)/u.test(goCodeOnly(functionBody(mechanicsDarwin, "startPlatform"))),
+			resultCopies: functionBody(mechanicsCommon, "cloneResult").includes("append([]byte(nil), result.Stdout...)") &&
+				functionBody(mechanicsCommon, "cloneResult").includes("append([]byte(nil), result.Stderr...)") &&
+				methodBody(mechanicsCommon, "StartError", "Result").includes("cloneResult") &&
+				methodBody(mechanicsDarwin, "Running", "Close").includes("cloneResult"),
+			noSemanticAuthority: ![
+				contractPackagePath, packagePath, `${modulePath}/internal/domain`, storePackagePath,
+			].some((path) => mechanics.includes(`\"${path}\"`)) &&
+				!/(?:OfficialTarget|RunPermit|ContractExecution|StartClaim)/u.test(goCodeOnly(mechanics)),
+			importers: sorted(repositoryPackages
+				.filter((entry) => (entry.Imports ?? []).includes(processMechanicsPackagePath))
+				.map((entry) => entry.ImportPath)),
+		},
+		worldAdapter: {
+			chronology: ordered(worldAdapter, [
+				"request.tool.revalidate", "processmechanics.NewInvocation", "processmechanics.Prepare",
+				"prepared.Start(ctx)", "running.Close()",
+			]),
+			noDuplicateSpawn: !/(?:newDirectCommand|directExecOnly|exec\.Command|&exec\.Cmd)/u.test(goCodeOnly(worldAdapter)) &&
+				!/(?:newDirectCommand|directExecOnly)/u.test(goCodeOnly(worldDarwin)),
+			httpMechanicsRetained: ["teardownOwnedProcessGroup", "performFinalGroupProbe", "classifyWait"]
+				.every((name) => functionBody(worldDarwin, name).length > 0),
+		},
+			runner: {
+			surface: aggregateSurface([
+				"internal/contractexec/runner/cli.go", "internal/contractexec/runner/evidence.go",
+				"internal/contractexec/runner/runner.go", "internal/contractexec/runner/runner_darwin.go",
+				"internal/contractexec/runner/scope_darwin.go",
+			]),
+			closedEntrypoints: /func\s+ExecuteCLI\s*\(\s*ctx\s+context\.Context,\s*retained\s+contractexec\.OfficialTarget,?\s*\)\s*\(store\.ContractExecutionRecord,\s*error\)/mu.test(runnerCommon) &&
+				/func\s+ResumeCLIClassification\s*\(\s*ctx\s+context\.Context,\s*retained\s+contractexec\.OfficialTarget,?\s*\)\s*\(store\.ContractExecutionRecord,\s*error\)/mu.test(runnerCommon),
+			permitAdjacent: count(runnerSources, /\.ConsumeForStart\s*\(/gu) === 1 &&
+				count(runnerSources, /prepared\.Start\s*\(/gu) === 1 &&
+				ordered(consumeBody, ["owner.ConsumeForStart(closureContext, binding)", "return prepared.Start(processContext)"]) &&
+				/\}\s*return prepared\.Start\(processContext\)\s*$/u.test(goCodeOnly(consumeBody).trim()),
+			spawnAdjacentRevalidation: count(executeBody, /contractexec\.ReopenOfficialTarget\s*\(/gu) === 4 &&
+				count(executeBody, /samePreparedTarget\s*\(/gu) === 3 &&
+				count(closeStartErrorBody, /samePreparedTarget\s*\(/gu) === 1 &&
+				!runnerSources.includes("sameFreshTarget") &&
+				exact(preparedTargetIdentityFields, ["model", "bundle", "roots", "candidateRoot", "markerPath"]) &&
+				ordered(executeBody, [
+					"store.AcquireContractRunOwner", "terminalClosureContext",
+					"contractexec.ReopenOfficialTarget(closureContext, input.target)",
+					"samePreparedTarget(input.cliExecutionPreparation, spawnTarget)", "input.target = spawnTarget", "consumeAndStart",
+				]) && ordered(prepareCLIBody, [
+					"model := target.Model()", "bundle := target.ContractBundle()", "roots := target.Roots()",
+					"newPreparedTargetIdentity(model, bundle, roots)", "targetIdentity: identity",
+				]) && ordered(preparedTargetBody, [
+					"preparation.targetIdentity.valid()",
+					"freshModel := fresh.Model()", "bytes.Equal(preparation.targetIdentity.model.CanonicalBytes(), freshModel.CanonicalBytes())",
+					"freshRoots := fresh.Roots()", "preparation.targetIdentity.roots.AttemptRoot() == freshRoots.AttemptRoot()",
+					"preparation.targetIdentity.roots.CandidateParent() == freshRoots.CandidateParent()",
+					"preparation.targetIdentity.roots.FixtureRoot() == freshRoots.FixtureRoot()",
+					"preparation.targetIdentity.roots.HomeRoot() == freshRoots.HomeRoot()",
+					"preparation.targetIdentity.roots.TemporaryRoot() == freshRoots.TemporaryRoot()",
+					"preparation.targetIdentity.roots.StateRoot() == freshRoots.StateRoot()",
+					"preparation.targetIdentity.roots.EvidenceRoot() == freshRoots.EvidenceRoot()",
+				]) && [
+					"samePreparedTarget(cliExecutionPreparation{}, primary.target)",
+					"contractexec.ReopenOfficialTarget(context.Background(), primary.target)",
+					"!samePreparedTarget(primary.cliExecutionPreparation, reopened)",
+					"reopened.Close()", "samePreparedTarget(primary.cliExecutionPreparation, reopened)",
+					"primaryModel.Input().Tree != independentModel.Input().Tree",
+					"primaryModel.Input().Attempt == independentModel.Input().Attempt",
+					"primary.targetIdentity.roots.AttemptRoot() == independent.targetIdentity.roots.AttemptRoot()",
+					"samePreparedTarget(primary.cliExecutionPreparation, independent.target)",
+					"primaryModel, primary.targetIdentity.bundle, independent.targetIdentity.roots",
+					"crossRootPreparation.targetIdentity = crossRootIdentity",
+					"samePreparedTarget(crossRootPreparation, primary.target)",
+				].every((anchor) => preparedTargetIdentityGuardBody.includes(anchor)) && ordered(functionBody(runnerDarwinTests, "assertBoundedForeignEvidenceAndScopeResidue"), [
+					"evidenceInput := cliExecutionInput{", "assertPreparedTargetIdentityGuards(t, primary, evidenceInput)",
+					"foreignEvidence := filepath.Join",
+				]) && ordered(functionBody(runnerDarwinTests, "assertTargetReopenImmediatelyPrecedesPermitPath"), [
+					'exactCallAssignment(window[0], token.DEFINE, []string{"spawnTarget", "err"}',
+					'"contractexec.ReopenOfficialTarget", "closureContext", "input.target")',
+					"!errGuard(window[1])", "!freshnessGuard(window[2])", "!targetReplacement(window[3])",
+					"!targetCleanup(window[4])",
+					'exactCallAssignment(window[5], token.DEFINE, []string{"physicalObservation", "running", "startErr"}',
+					'"consumeAndStart", "ctx", "closureContext", "owner", "input.prepared", "input.binding")',
+				]),
+			soleOwnerAcquirer: acquireCallSites,
+			physicalConforms: ordered(functionBody(cliFixture, "NewConformingTarget"), [
+				"newTarget", "sharedConformingResidue", "ReferenceFiles",
+			]) && ordered(functionBody(cliFixture, "sharedConformingResidue"), [
+				"reference := sharedResidue(t)", "newResidue", "countercli.CLIFieldStdoutJSONMode", '"argv"',
+				"countercli.CLIFieldStdoutJSONSource", '"argv"',
+				"sharedCompilation.conforming.store == reference.store", "sharedCompilation.conforming.root == reference.root",
+				"sharedCompilation.conforming.residue.BundleDigest() == reference.residue.BundleDigest()",
+			]) && ordered(functionBody(cliFixture, "decisionForChoicepoint"), [
+				"desiredFields", "card.Fields", "field.FieldID", "field.Text", "selectedAlias = card.Alias",
+				"AllowedAliases: []string{selectedAlias}", "session.Finalize",
+			]) && ordered(functionBody(cliFixture, "newResidue"), [
+				"portableChoicepoint", "decisionForChoicepoint", "promotion.OpenRuling",
+				"promotion.PreparePortableRuling", "node.PrepareCompilation", "node.CompilePrepared", "node.PublishPrepared",
+			]) && ordered(cliReferenceExecutionBody, [
+				"clitest.NewReferenceTarget", "runner.ExecuteCLI", "contractmodel.ResultContradicts",
+				"contractmodel.ProcessClean", "contractmodel.CaptureProjected", "contractmodel.ScopeComplete",
+				"contractmodel.DispositionEligibleClean", "runner.ResumeCLIClassification",
+			]) && ordered(cliConformingExecutionBody, [
+				"clitest.NewConformingTarget", "runner.ExecuteCLI", "contractmodel.ResultConforms", "contractmodel.ProcessClean",
+				"contractmodel.CaptureProjected", "contractmodel.ScopeComplete", "contractmodel.DispositionEligibleClean",
+				"conformingWitness.Observation().Tuple()", "len(conformingFields) != 2",
+				"countercli.CLIFieldStdoutJSONMode", "countercli.CLIFieldStdoutJSONSource", 'text != "argv"',
+			]),
+			boundedPhysicalTestConcurrency: /const\s+c4PhysicalTestParallelism\s*=\s*2\b/u.test(cliPhysicalTests) &&
+				/var\s+c4PhysicalTestSlots\s*=\s*make\(chan\s+struct\{\},\s*c4PhysicalTestParallelism\)/u.test(cliPhysicalTests) &&
+				count(cliPhysicalTests, /\.Parallel\s*\(\s*\)/gu) === 4 &&
+				count(cliClosureTestBody, /\.Parallel\s*\(\s*\)/gu) === 3 &&
+				count(cliClosureTestBody, /runC4PhysicalTest\s*\(/gu) === 2 &&
+				count(cliForbiddenTestBody, /runC4PhysicalTest\s*\(/gu) === 1 &&
+				ordered(cliPhysicalSchedulerBody, [
+					"c4PhysicalTestSlots <- struct{}{}", "defer func() { <-c4PhysicalTestSlots }()", "exercise()",
+				]) && ordered(cliClosureTestBody, [
+					"t.Parallel()", 't.Run("reference-contradicts"', "t.Parallel()",
+					"runC4PhysicalTest(t, func() { assertReferenceContractExecution(t) })",
+					't.Run("physical-conforms"', "t.Parallel()",
+					"runC4PhysicalTest(t, func() { assertConformingContractExecution(t) })",
+				]) && ordered(cliForbiddenTestBody, [
+					"t.Parallel()", "runC4PhysicalTest(t, func() { assertForbiddenPositiveControls(t) })",
+				]) && ordered(newReferenceTargetBody, [
+					"newTarget", "sharedResidue", "ReferenceFiles",
+				]) && ordered(newControlTargetBody, [
+					"newTarget", "sharedControlResidue", "files", "label",
+				]) && ordered(newMutationTargetBody, [
+					"filepath.EvalSymlinks(t.TempDir())", "newResidue", "reference := sharedResidue(t)",
+					"mutation.store == reference.store", "mutation.root == reference.root",
+					"mutation.residue.BundleDigest() != reference.residue.BundleDigest()", "return newTarget(t, mutation, files, label)",
+				]) && ordered(sharedControlResidueBody, [
+					"reference := sharedResidue(t)", "sharedCompilation.controlOnce.Do", 'filepath.Join(sharedCompilation.root, "controls")',
+					'newResidue(t, parent, "shared C4 hostile-control CLI contract", nil)', "control := sharedCompilation.control",
+					"control.store == reference.store", "control.root == reference.root",
+					"control.residue.BundleDigest() != reference.residue.BundleDigest()",
+					"return control",
+				]) && ordered(newForbiddenTargetBody, [
+					"newTarget", "sharedForbiddenResidue", "ForbiddenCanaryFiles",
+				]) && ordered(sharedForbiddenResidueBody, [
+					"reference := sharedResidue(t)", "sharedCompilation.forbiddenOnce.Do", 'filepath.Join(sharedCompilation.root, "forbidden")',
+					'newResidue(t, parent, "shared C4 forbidden CLI contract", nil)', "forbidden := sharedCompilation.forbidden",
+					"forbidden.store == reference.store", "forbidden.root == reference.root",
+					"forbidden.residue.BundleDigest() != reference.residue.BundleDigest()",
+					"return forbidden",
+				]) && cliForbiddenTestBody.includes("assertForbiddenPositiveControls") &&
+				cliForbiddenTestBody.includes("runC4PhysicalTest") &&
+				count(cliPhysicalTests, /clitest\.NewTarget\s*\(/gu) === 1 &&
+				count(cliChildBindingTestBody, /clitest\.NewTarget\s*\(/gu) === 1 &&
+				count(cliPhysicalTests, /clitest\.NewMutationTarget\s*\(/gu) === 1 &&
+				count(cliTargetMutationTestBody, /clitest\.NewMutationTarget\s*\(/gu) === 1 &&
+				cliPhysicalTests.includes("fixture := clitest.NewForbiddenTarget(t)"),
+			immutableSourceCacheIsolation: exact(structFields(cliFixture, "sourceRepositoryFixture"), ["root", "ref"]) &&
+				/func\s+sharedSourceRepository\s*\(\s*t\s+testing\.TB,\s*files\s+\[\]gitrepo\.File\s*\)\s+sourceRepositoryFixture/u.test(cliFixture) &&
+				ordered(sharedSourceRepositoryBody, [
+					"json.Marshal(files)", 'canon.DigestBytes("C4SourceRepositoryFixture", exact)', "key := digest.String()",
+					"sharedCompilation.sourceMu.Lock()", "defer sharedCompilation.sourceMu.Unlock()",
+					"if source, ok := sharedCompilation.sources[key]; ok", 'if sharedCompilation.root == ""',
+					"gitrepo.Init", 'gitFixture.CommitFiles(context.Background(), files, "", "C4 cached source "+key)',
+					"source := sourceRepositoryFixture{root: gitFixture.Root, ref: ref}",
+					"sharedCompilation.sources[key] = source", "return source",
+				]) && !/\blabel\b/u.test(sharedSourceRepositoryBody) && ordered(newTargetBody, [
+					"source := sharedSourceRepository(t, files)", "gitobj.OpenRepository", "ScratchRoot:   t.TempDir()",
+					"t.Cleanup(func() { _ = repository.Close() })", "contractexec.PublishOfficialTarget",
+				]) && ordered(fixtureRunMainBody, [
+					"code := m.Run()", 'if sharedCompilation.root != ""', "os.RemoveAll(sharedCompilation.root)", "return code",
+				]),
+			preOwnerEvidenceCapacity: /evidenceCapacity\s+cliEvidenceCapacity/u.test(runnerCLI) && [
+				/privateEvidenceSummaryMaxBytes\s*=\s*int64\(1\s*<<\s*20\)/u,
+				/privateEvidenceCaptureOverheadMaxBytes\s*=\s*int64\(1\s*<<\s*20\)/u,
+				/privateEvidenceProjectionFrameMaxBytes\s*=\s*int64\(3\s*<<\s*20\)/u,
+				/privateEvidenceCanonicalBodyCount\s*=\s*int64\(12\)/u,
+				/privateEvidenceStoreAggregateMaxBytes\s*=\s*int64\(64\s*<<\s*20\)/u,
+				/privateEvidenceMaximumUniqueBlobCount\s*=\s*14\b/u,
+				/privateEvidenceMaximumChannelBytes\s*=\s*int64\(16\s*<<\s*20\)/u,
+			].every((pattern) => pattern.test(runnerEvidence)) && ordered(evidenceCapacityBody, [
+				"target.Valid()", "pre.valid()", "stdoutBytes > privateEvidenceMaximumChannelBytes",
+				"privateEvidenceCaptureOverheadMaxBytes", "stdoutBytes", "stderrBytes",
+				"privateEvidenceProjectionFrameMaxBytes",
+				"privateEvidenceCanonicalBodyCount * privateEvidenceSummaryMaxBytes",
+				"math.MaxInt64-next", "maximum > privateEvidenceStoreAggregateMaxBytes",
+			]) && ordered(functionBody(runnerCLI, "prepareCLIExecution"), [
+				"snapshotCandidate", "preflightPrivateEvidenceCapacity", "processmechanics.NewInvocation",
+				"processmechanics.Prepare",
+			]) && ordered(executeBody, [
+				"prepareCLIExecution", "hostepoch.Measure", "store.AcquireContractRunOwner",
+			]) && [
+				"capacity.maximumUniqueBytes != 48<<20", "privateEvidenceMaximumChannelBytes + 1", "math.MaxInt64",
+			].every((anchor) => capacityTestBody.includes(anchor)),
+			actualDraftCapacityGate: ordered(persistBody, [
+				"input.evidenceCapacity.validate(draft.bodies)",
+				"owner.PersistPrivateRunManifest(ctx, draft.bodies)", "draft.persistAndAssemble",
+			]) && count(executeBody, /persistRunAndClassification\s*\(/gu) === 1 &&
+				count(closeStartErrorBody, /persistRunAndClassification\s*\(/gu) === 1 &&
+				["hasDrain != hasCaptured", "bytes.Equal(drain, captured)", "sha256.Sum256(body)",
+					"aggregate > capacity.maximumUniqueBytes-count", "len(unique) > privateEvidenceMaximumUniqueBlobCount",
+				].every((anchor) => evidenceCapacityValidateBody.includes(anchor)),
+			executionChronology: ordered(executeBody, [
+				"contractexec.ReopenOfficialTarget", "prepareCLIExecution", "contractexec.ReopenOfficialTarget",
+				"hostepoch.Measure", "store.AcquireContractRunOwner", "terminalClosureContext",
+				"contractexec.ReopenOfficialTarget", "consumeAndStart",
+				"owner.PersistSpawnObservation", "running.Close()", "input.scope.finish(closureContext)",
+				"inspectAndRetireCLIInvocationEvidence", "snapshotCandidate", "contractexec.ReopenOfficialTarget",
+				"buildChildEvidenceDraft", "persistRunAndClassification",
+			]),
+			startErrorChronology: ordered(closeStartErrorBody, [
+				"owner.PersistSpawnObservation", "input.scope.finish(ctx)", "inspectAndRetireCLIInvocationEvidence",
+				"snapshotCandidate", "contractexec.ReopenOfficialTarget", "buildStartErrorEvidenceDraft",
+				"persistRunAndClassification",
+			]),
+			candidateEnvironment: ordered(functionBody(runnerCLI, "prepareCLIExecution"), [
+				"evidenceRoot := roots.EvidenceRoot()", "preflightCLIInvocationEvidence(evidenceRoot, roots.MarkerPath())",
+				"newCLIRuntimeAttemptID(model.Input().Attempt.ArtifactDigest)", "newScopeProbe", "buildCLIEnvironment",
+			]) && ordered(functionBody(runnerCLI, "newCLIRuntimeAttemptID"), [
+				"rand.Read(random[:])", "hex.EncodeToString(random[:])", "candidate != forbiddenID",
+			]) && count(functionBody(runnerCLI, "newCLIRuntimeAttemptID"), /rand\.Read\s*\(/gu) === 1 &&
+				functionBody(runnerCLI, "buildCLIEnvironment").includes("evidenceRoot != roots.EvidenceRoot()") &&
+				functionBody(runnerCLI, "buildCLIEnvironment").includes("{evidenceRootEnvironment, evidenceRoot}") &&
+				functionBody(runnerCLI, "buildCLIEnvironment").includes("{attemptIDEnvironment, attemptID}") &&
+				!functionBody(runnerCLI, "buildCLIEnvironment").includes("filepath.Base(roots.AttemptRoot())") &&
+				["sha256.Size*2", 'strings.HasPrefix(value, "attempt:")', "hex.DecodeString(hexText)",
+					"len(decoded) == sha256.Size", "strings.ToLower(hexText) == hexText",
+				].every((anchor) => functionBody(runnerEvidence, "validCLIRuntimeAttemptID").includes(anchor)) &&
+				!goCodeOnly(fixtureMaterializeBody).includes("os.ReadFile(destination)") &&
+				ordered(goCodeOnly(fixtureMaterializeBody), [
+					"os.OpenFile(destination, os.O_WRONLY|os.O_CREATE|os.O_EXCL, permissions)",
+					"validateExistingCLIFixture(destination, permissions, fixture.Contents())",
+					"file.Chmod(permissions)", "writeExactCLIFixture(file, body)", "file.Sync()", "file.Close()",
+					"validateExistingCLIFixture(destination, permissions, body)",
+				]) && ordered(goCodeOnly(fixtureWriteBody), [
+					"file.Write(body[offset:])", "offset += count", "if err != nil", "if count == 0", "io.ErrNoProgress",
+				]) && ordered(goCodeOnly(fixtureValidateBody), [
+					"os.Lstat(path)", "before.Mode().IsRegular()", "before.Size() != int64(len(expected))",
+					"syscall.Open(path, syscall.O_RDONLY|syscall.O_CLOEXEC|syscall.O_NOFOLLOW|syscall.O_NONBLOCK, 0)",
+					"handle.Stat()", "os.SameFile(before, opened)",
+					"io.ReadAll(io.LimitReader(handle, int64(len(expected))+1))",
+					"afterDescriptor, afterErr := handle.Stat()", "afterPath, pathErr := os.Lstat(path)",
+					"os.SameFile(opened, afterDescriptor)", "os.SameFile(opened, afterPath)",
+				]),
+			detachedBoundedClosure: ordered(functionBody(runnerDarwin, "terminalClosureContext"), [
+				"context.WithoutCancel(parent)", "context.WithTimeout",
+			]) || functionBody(runnerDarwin, "terminalClosureContext").includes("context.WithTimeout(context.WithoutCancel(parent), budget)"),
+			persistenceChronology: ordered(persistBody, [
+				"owner.PersistPrivateRunManifest", "draft.persistAndAssemble", "contractmodel.NewFinalizedContractRun",
+				"owner.PersistFinalizedRun", "closure.Release", "closure.FinalizedRun", "contractmodel.DeriveContractExecution",
+				"store.PersistContractExecutionRecord",
+			]),
+			classificationOnlyRecovery: ordered(resumeBody, [
+				"contractexec.ReopenOfficialTarget", "store.OpenFinalizedRunRecord", "store.OpenTerminalClosure",
+				"closure.Release", "store.OpenFinalizedRunRecord", "contractmodel.DeriveContractExecution",
+				"store.PersistContractExecutionRecord",
+			]) && !/(?:processmechanics|prepareCLIExecution|AcquireContractRunOwner|consumeAndStart|\.Start\s*\()/u.test(goCodeOnly(resumeBody)),
+		},
+		terminalGraph: {
+			storeSurface: exportedSurface(storeBridge),
+			ownerPhases: ordered(storeBridge, [
+				"contractRunOwnerAcquired", "contractRunOwnerStartConsumed", "contractRunOwnerSpawnObserved",
+				"contractRunOwnerManifestPersisted", "contractRunOwnerFinalized",
+			]),
+			spawnBeforeManifest: methodBody(storeBridge, "ContractRunOwner", "PersistPrivateRunManifest")
+				.includes("state.phase < contractRunOwnerSpawnObserved"),
+			spawnBeforeFinalized: methodBody(storeBridge, "ContractRunOwner", "PersistFinalizedRun")
+				.includes("durable spawn observation changed before finalized publication"),
+			releaseOrder: ordered(releaseBody, [
+				"replaceExecutionInterlock", "persistFinalizedRunReleaseLocked", "persistClearReceiptLocked",
+			]) && count(releaseBody, /persistFinalizedRunReleaseLocked\s*\(/gu) === 2 &&
+				count(releaseBody, /persistClearReceiptLocked\s*\(/gu) === 2,
+			classificationGate: functionBody(storeBridge, "OpenFinalizedRunRecord").includes("validateFinalizedRunRelease") &&
+				ordered(functionBody(storeBridge, "PersistContractExecutionRecord"), [
+					"run.classificationReady()", "openStartClaim", "validateFinalizedRunRelease", "persistExecutionRecord",
+				]),
+		},
+			evidence: {
+			exactScopeOrder: ordered(scopeBody, [
+				"contractmodel.ScopeTargetInventory", "contractmodel.ScopeChildBindings",
+				"contractmodel.ScopeImportResolution", "contractmodel.ScopeServiceBindings",
+				"contractmodel.ScopeSentinelInheritance",
+			]) && scopeBody.includes("make([]scopeDraft, 0, 5)"),
+			exactScopeCount: assembleBody.includes("len(draft.scope) != 5") &&
+				assembleBody.includes("contractmodel.NewStandaloneScope(checks)"),
+			manifestDerivedRefs: assembleBody.includes("manifest.EvidenceRef") &&
+				!/(?:NewEvidenceRef|ParseDigest)/u.test(goCodeOnly(assembleBody)),
+			boundedCandidateInventory: ordered(candidateInventoryEntryBody, [
+				"snapshotCandidateWithLimits(root, inventoryLimits{",
+				"entries: maxCandidateInventoryEntries", "pathBytes: maxCandidateInventoryPathBytes",
+				"depth: maxCandidateInventoryDepth", "fileBytes: maxCandidateInventoryFileBytes",
+				"aggregateBytes: maxCandidateInventoryAggregateBytes", "readBatch: candidateInventoryReadBatch",
+			]) && [
+				/\bcandidateInventoryReadBatch\s*=\s*128\b/u,
+				/\bmaxCandidateInventoryEntries\s*=\s*20_000\b/u,
+				/\bmaxCandidateInventoryPathBytes\s*=\s*32\s*\*\s*1024\s*\*\s*1024\b/u,
+				/\bmaxCandidateInventoryDepth\s*=\s*128\b/u,
+				/\bmaxCandidateInventoryFileBytes\s*=\s*64\s*\*\s*1024\s*\*\s*1024\b/u,
+				/\bmaxCandidateInventoryAggregateBytes\s*=\s*64\s*\*\s*1024\s*\*\s*1024\b/u,
+				/\bdarwinOpenNoFollowAny\s*=\s*0x20000000\b/u,
+			].every((pattern) => pattern.test(candidateInventorySource)) &&
+			!/\bvar\s+candidateInventoryLimits\b/u.test(candidateInventorySource) &&
+			ordered(candidateInventoryBody, [
+				"candidateInventoryState", "readCandidateInventoryDirectory", "os.Lstat(root)", "os.SameFile(rootInfo, afterRoot)",
+			]) && ordered(candidateDirectoryBody, [
+				"syscall.O_DIRECTORY", "darwinOpenNoFollowAny", "handle.ReadDir(limits.readBatch)",
+				"limits.depth", "limits.entries", "limits.pathBytes", "limits.fileBytes", "limits.aggregateBytes",
+				"digestCandidateInventoryFile", "handle.Stat()", "os.Lstat(directory.path)",
+			]) && ordered(candidateFileBody, [
+				"darwinOpenNoFollowAny", "syscall.O_NONBLOCK", "handle.Stat()",
+				"io.Copy(digest, io.LimitReader(handle, opened.Size()))", "handle.Stat()", "os.Lstat(path)",
+				"os.SameFile(opened, afterDescriptor)", "os.SameFile(opened, afterPath)",
+			]) && !/(?:filepath\.WalkDir|os\.ReadDir|os\.ReadFile)/u.test(
+				candidateInventoryEntryBody + candidateInventoryBody + candidateDirectoryBody + candidateFileBody,
+			),
+			rawFramedSingleCopy: !/(?:encoding\/base64|base64\.)/u.test(runnerEvidence) &&
+				ordered(evidenceFrameBody, [
+					"digest := sha256.Sum256(segment.body)", "canon.CanonicalizeTyped", "framingBytes :=",
+					"binary.BigEndian.AppendUint64(body, uint64(len(metadata)))", "body = append(body, metadata...)",
+					"binary.BigEndian.AppendUint64(body, uint64(len(segment.body)))", "body = append(body, segment.body...)",
+				]) && count(childEvidenceBody, /framePrivateEvidence\s*\(/gu) === 2 && ordered(childEvidenceBody, [
+					"captureFrame, err := framePrivateEvidence", "privateEvidenceSegment{name: \"stdout\"",
+					"privateEvidenceSegment{name: \"stderr\"", "EvidenceDrainResult] = captureFrame",
+					"EvidenceCapturedObservation] = captureFrame", "projectionFrame, frameErr := framePrivateEvidence",
+				]) && canonicalEvidenceBody.includes("int64(len(body)) > privateEvidenceSummaryMaxBytes") &&
+				["[]byte{0x00, 0xff, 'o'}", "binary.BigEndian.Uint64", "len(fullRoster) != 15",
+					"maximumUniqueBytes: aggregate - 1",
+				].every((anchor) => capacityTestBody.includes(anchor)) &&
+				["reference.Kind() == contractmodel.EvidenceDrainResult", "witness.Observation().CapturedRef()",
+					"drainRef.Digest() != capturedRef.Digest()",
+				].every((anchor) => cliPhysicalTests.includes(anchor)),
+			boundedStoreRosters: ordered(storeBoundedRosterBody, [
+				"filepath.IsAbs(path)", "os.Lstat(path)", "os.Open(path)", "handle.Stat()",
+				"handle.ReadDir(remaining)", "len(entries) > maximum", "len(batch) == 0",
+				"afterDescriptor", "os.Lstat(path)", "os.SameFile(opened, afterPath)",
+			]) && count(inspectAttemptRootsBody, /boundedExactDirectoryNames\s*\(/gu) === 2 &&
+				ordered(inspectAttemptRootsBody, [
+					"roots.attempt", "len(conformanceAttemptRootNames)", "roots.evidence", "contractAttemptMarker",
+				]) && !/(?:os\.ReadDir|filepath\.WalkDir)/u.test(storeBoundedRosterBody + inspectAttemptRootsBody) &&
+				["attempt-root-extra", "evidence-root-extra", 'filepath.Join(foreignParent, "foreign", "deep", "sentinel")',
+					"foreign direct roster entry retained live attempt authority",
+					"bounded roster validation traversed or removed foreign residue",
+				].every((anchor) => boundedStoreTestBody.includes(anchor)),
+			invocationClosure: [
+				"cli-invocation.json", "64 << 10", "CANDIDATE_WRITTEN_EVIDENCE_IS_NOT_MALICIOUS_PROCESS_ATTESTATION",
+				"ATTEMPT_ID_MISMATCH", "LOGICAL_ARGV_MISMATCH",
+			].every((anchor) => runnerEvidence.includes(anchor)) &&
+				exact(structFields(runnerEvidence, "invocationEvidenceAuthority"), ["root", "marker"]) &&
+				ordered(functionBody(runnerEvidence, "preflightCLIInvocationEvidence"), [
+					"filepath.IsAbs(root)", "os.Lstat(root)", "rootInfo.Mode().Perm() != 0o700",
+					"boundedDirectRoster(context.Background()", "os.Lstat(markerPath)",
+					"os.Lstat(filepath.Join(root, cliInvocationFilename))",
+				]) && ordered(invocationInspectBody, [
+					"os.Lstat(path)", "boundedDirectRoster(ctx, root, authority.root, expectedRoster)",
+					"os.Lstat(markerPath)", "readCLIInvocationEvidence", "retireCLIInvocationEvidence",
+				]) && ordered(invocationReadBody, ["syscall.Open", "syscall.O_NOFOLLOW", "io.LimitReader", "canon.Parse", "CanonicalChecked"]) &&
+				["actualAttempt == attemptID", "text != logicalArgv[index]"].every((anchor) => invocationReadBody.includes(anchor)) &&
+				ordered(invocationRetireBody, [
+					"removeRetainedLeaf(ctx, path, observed)", "boundedDirectRoster(ctx, root, authority.root",
+					"os.Lstat(markerPath)", "os.Lstat(path)",
+				]) && !/(?:os\.ReadDir|os\.RemoveAll|filepath\.WalkDir)/u.test(
+					functionBody(runnerEvidence, "preflightCLIInvocationEvidence") + invocationInspectBody + invocationRetireBody,
+				) && scopeBody.includes("input.invocationEvidence.validated()") &&
+				scopeBody.includes("input.invocationEvidence.contradictsBinding()") &&
+				scopeBody.includes("enrolled && unchanged, false, contractmodel.ViolationTargetSourcePresent") &&
+				methodBody(runnerEvidence, "invocationEvidence", "facts").includes("cliInvocationNonclaim") &&
+				["invocationEvidenceValidated", 'evidence.Presence == "PRESENT"', "sha256.Size*2",
+					"evidence.AttemptIDValidated", "evidence.LogicalArgvValidated",
+				].every((anchor) => methodBody(runnerEvidence, "invocationEvidence", "validated").includes(anchor)) &&
+				ordered(closeStartErrorBody, [
+					"input.scope.finish(ctx)", "inspectAndRetireCLIInvocationEvidence", "snapshotCandidate",
+					"contractexec.ReopenOfficialTarget", "buildStartErrorEvidenceDraft",
+				]) && functionBody(runnerEvidence, "buildStartErrorEvidenceDraft").includes('"cli_invocation": input.invocationEvidence.facts()'),
+		},
+		scopeProbe: {
+			attemptPrivateRoot: ordered(scopeProbeBody, [
+				"roots.TemporaryRoot()", "os.Lstat(parent)", "parentInfo.Mode().Perm()&0o077", "os.MkdirTemp(parent, \"scope-\")",
+				"os.Chmod(root, 0o700)", "newShortSocketRoot(root)",
+				"newUnixCanary(filepath.Join(socketAlias, \"i\"))", "newUnixCanary(filepath.Join(socketAlias, \"s\"))",
+			]) && scopeProbeBody.includes("probe.importModule = filepath.Join(root, \"outside-candidate.mjs\")"),
+			shortPrivateAlias: runnerScope.includes('shortSocketParent            = "/private/tmp"') &&
+				runnerScope.includes("maxDarwinUnixSocketPathBytes = 103") &&
+				ordered(shortSocketBody, [
+					"os.Lstat(shortSocketParent)", "parentInfo.Mode()&os.ModeSymlink", "parentInfo.Mode().Perm() != 0o777",
+					"parentInfo.Mode()&os.ModeSticky", "parentStat.Uid != 0",
+					"os.MkdirTemp(shortSocketParent, \"cs4-\")", "os.Chmod(root, 0o700)",
+					"stat.Uid != uint32(os.Getuid())", "os.Symlink(attemptPrivateRoot, alias)", "os.Readlink(alias)",
+					"filepath.EvalSymlinks(alias)",
+					"maxDarwinUnixSocketPathBytes",
+				]) && ordered(goCodeOnly(canaryCreateBody), [
+					"net.ListenUnix", "listener.SetUnlinkOnClose(false)", "os.Lstat(path)",
+					"identity.Mode()&os.ModeSocket", "identity: identity", "done: make(chan error, 1)",
+					"AcceptUnix()", "canary.done <- err",
+				]) &&
+				ordered(goCodeOnly(canaryCloseBody), [
+					"os.Lstat(canary.path)", "os.SameFile(canary.identity, currentIdentity)", "SetDeadline",
+					"terminalErr := <-canary.done",
+					"classifyCanaryAcceptError(terminalErr, true, false)", "canary.listener.Close()",
+					"terminalErr := <-canary.done", "classifyCanaryAcceptError(terminalErr, false, true)",
+					"errors.Join(integrityErr, deadlineErr, closeErr, acceptErr)",
+				]) && !canaryCloseBody.includes("errors.Is(closeErr, net.ErrClosed)") &&
+				["networkError.Timeout()", "errors.Is(err, net.ErrClosed)"].every((anchor) =>
+					canaryClassifyBody.includes(anchor)) &&
+				!/(?:closing\.Load|closing\.Store|canary\.acceptErr\s*=)/u.test(goCodeOnly(canaryCreateBody + canaryCloseBody)),
+			boundedDescriptorRoster: ordered(boundedRosterBody, [
+				"os.Lstat(root)", "syscall.Open", "syscall.O_DIRECTORY", "darwinOpenNoFollowAny", "syscall.O_NONBLOCK",
+				"handle.Stat()", "os.SameFile(retained, opened)", "handle.ReadDir(remaining)",
+				"if _, present := allowed[name]; !present", "len(observed) > len(want)", "len(batch) == 0",
+				"handle.Sync()", "handle.Stat()", "handle.Close()", "os.Lstat(root)",
+				"os.SameFile(opened, afterPath)",
+			]) && !/(?:os\.ReadDir|os\.RemoveAll|filepath\.WalkDir)/u.test(boundedRosterBody),
+			identityBoundTerminalCleanup: [
+				"rootIdentity", "socketRootIdentity", "socketAliasIdentity", "importModuleIdentity",
+			].every((field) => structFields(runnerScope, "scopeProbe").includes(field)) && ordered(scopeFinishBody, [
+				"probe.root", "probe.rootIdentity", "probe.socketRoot", "probe.socketRootIdentity",
+				"digestCandidateInventoryFile", "os.Readlink(probe.socketAlias)", "os.Lstat(probe.socketAlias)",
+				"probe.importCanary.close()", "probe.serviceCanary.close()",
+				"removeRetainedLeaf(ctx, probe.importCanary.path", "removeRetainedLeaf(ctx, probe.serviceCanary.path",
+				"removeRetainedLeaf(ctx, probe.importModule", "removeRetainedEmptyDirectory(ctx, probe.root",
+				"removeRetainedLeaf(ctx, probe.socketAlias", "removeRetainedEmptyDirectory(ctx, probe.socketRoot",
+			]) && ordered(removeRetainedLeafBody, [
+				"os.Lstat(path)", "os.SameFile(retained, current)", "os.Remove(path)", "os.Lstat(path)",
+			]) && ordered(removeRetainedDirectoryBody, [
+				"boundedDirectRoster(ctx, path, retained, nil)", "os.Remove(path)", "os.Lstat(path)",
+			]) && !runnerScope.includes("os.RemoveAll"),
+			residueHostiles: [
+				'filepath.Join(evidenceInput.evidenceRoot, "foreign"',
+				"foreign evidence residue did not fail closed", "foreign evidence residue was traversed or removed",
+				'filepath.Join(probe.root, "foreign"', "foreign scope residue became a clean observation",
+				"foreign scope residue was traversed or removed", "same-size scope module rewrite became clean",
+			].every((anchor) => boundedResidueTestBody.includes(anchor)),
+		},
+		profiles: Object.fromEntries(c4ProfileNames.map((profile) => [profile, goJSONArguments(profile)])),
+		claimMap,
+	});
+}
+
 function violation(code, detail) { return Object.freeze({ code, detail }); }
 
 export function validateC2Facts(facts) {
@@ -2021,7 +2937,9 @@ export function validateC2Facts(facts) {
 		const combined = [...expected, ...(expectedC3StoreFilesByProfile[path] ?? [])];
 		if (!exact(facts.testFiles?.[path], sorted(combined))) add("P07B_C2_TEST_FILE_ROSTER", `${path}:${JSON.stringify(facts.testFiles?.[path])}`);
 	}
-	if (!exact(facts.modelImporters, ["internal/store/nonhead_contract.go"])) {
+	if (!exact(facts.modelImporters, [
+		"internal/store/contract_run_bridge.go", "internal/store/nonhead_contract.go",
+	])) {
 		add("P07B_C2_MODEL_IMPORTER_ROSTER", JSON.stringify(facts.modelImporters));
 	}
 	if ((facts.forbiddenSurface ?? []).length !== 0) add("P07B_C2_FORBIDDEN_PRODUCTION_SURFACE", facts.forbiddenSurface.join(","));
@@ -2108,7 +3026,9 @@ export function validateC3Facts(facts) {
 		}
 	}
 	if ((facts.c2Problems ?? []).length !== 0) add("P07B_C3_INHERITED_C2", JSON.stringify(facts.c2Problems));
-	if (!exact(facts.storeBridge?.modelImporters, ["internal/store/nonhead_contract.go"]) ||
+	if (!exact(facts.storeBridge?.modelImporters, [
+		"internal/store/contract_run_bridge.go", "internal/store/nonhead_contract.go",
+	]) ||
 		!exact(facts.storeBridge?.exports, expectedC3StoreSurface) || !facts.storeBridge?.rootRoster ||
 		!facts.storeBridge?.markerContract || !facts.storeBridge?.freshNonce || !facts.storeBridge?.exactReopen ||
 		!facts.storeBridge?.targetJoin || !facts.storeBridge?.noIssuerOrProcessEdge) {
@@ -2146,6 +3066,111 @@ export function validateC3Facts(facts) {
 	return problems;
 }
 
+export function validateC4Facts(facts) {
+	const problems = [];
+	const add = (code, detail) => problems.push(violation(code, detail));
+	if ((facts.c3Problems ?? []).length !== 0) {
+		add("P07B_C4_INHERITED_C3", JSON.stringify(facts.c3Problems));
+	}
+	for (const [importPath, expected] of Object.entries(expectedC4Packages)) {
+		const actual = facts.packages?.[importPath];
+		if (actual?.name !== expected.name || actual?.modulePath !== modulePath || actual?.moduleMain !== true ||
+			!exact(actual?.go, expected.go) || !exact(actual?.cgo, expected.cgo) || !exact(actual?.test, expected.test) ||
+			!exact(actual?.xtest, expected.xtest) || !exact(actual?.ignored, expected.ignored) ||
+			(actual?.invalid ?? []).length !== 0 || !exact(actual?.imports, expected.imports)) {
+			add("P07B_C4_PACKAGE_TOPOLOGY", `${importPath}:${JSON.stringify(actual)}`);
+		}
+	}
+	if (!exact(facts.buildTags, expectedC4BuildTags)) {
+		add("P07B_C4_BUILD_TAG_ROSTER", JSON.stringify(facts.buildTags));
+	}
+	for (const [path, expected] of Object.entries(expectedC4TestsByFile)) {
+		if (!exact(facts.testFiles?.[path], sorted(expected))) {
+			add("P07B_C4_TEST_FILE_ROSTER", `${path}:${JSON.stringify(facts.testFiles?.[path])}`);
+		}
+	}
+	if (!exact(facts.mechanics?.surface, expectedC4MechanicsSurface) ||
+		!exact(facts.mechanics?.invocationFields, ["executable", "argv", "environment", "stdin", "cwd", "limits", "binding"]) ||
+		!exact(facts.mechanics?.preparedFields, ["state"]) ||
+		!exact(facts.mechanics?.preparedStateFields, ["invocation", "started"]) ||
+		!exact(facts.mechanics?.runningFields, ["state"]) ||
+		!exact(facts.mechanics?.unsupportedRunningFields, ["state"]) ||
+		!exact(facts.mechanics?.runningStateFields, [
+			"prepared", "ctx", "command", "stdoutPipe", "stderrPipe", "stdinWriter", "stdinResultC", "waitC",
+			"stdoutDone", "stderrDone", "overflowC", "captures", "executionTimer", "mu", "result", "closing",
+			"closeOnce", "final",
+		]) ||
+		!exact(facts.mechanics?.stdinFields, ["presence", "bytes"]) ||
+		!facts.mechanics?.defensiveInputCopy || !facts.mechanics?.oneShot || !facts.mechanics?.directSpawn ||
+		!facts.mechanics?.copySafeState || !facts.mechanics?.resultCopies || !facts.mechanics?.noSemanticAuthority) {
+		add("P07B_C4_MECHANICS_AUTHORITY", JSON.stringify(facts.mechanics));
+	}
+	if (!exact(facts.mechanics?.importers, [contractRunnerPackagePath, `${modulePath}/internal/world`])) {
+		add("P07B_C4_MECHANICS_IMPORTERS", JSON.stringify(facts.mechanics?.importers));
+	}
+	if (!facts.worldAdapter?.chronology || !facts.worldAdapter?.noDuplicateSpawn ||
+		!facts.worldAdapter?.httpMechanicsRetained) {
+		add("P07B_C4_WORLD_ADAPTER", JSON.stringify(facts.worldAdapter));
+	}
+	if (!exact(facts.runner?.surface, expectedC4RunnerSurface) || !facts.runner?.closedEntrypoints) {
+		add("P07B_C4_RUNNER_SURFACE", JSON.stringify(facts.runner));
+	}
+	if (!facts.runner?.permitAdjacent || !facts.runner?.spawnAdjacentRevalidation ||
+		!exact(facts.runner?.soleOwnerAcquirer, [
+			"internal/contractexec/runner/runner_darwin.go:1", "internal/store/contract_run_bridge.go:1",
+		]) ||
+		!facts.runner?.detachedBoundedClosure) {
+		add("P07B_C4_ADMISSION_ADJACENCY", JSON.stringify(facts.runner));
+	}
+	if (!facts.runner?.executionChronology || !facts.runner?.startErrorChronology ||
+		!facts.runner?.immutableSourceCacheIsolation || !facts.runner?.boundedPhysicalTestConcurrency ||
+		!facts.runner?.preOwnerEvidenceCapacity || !facts.runner?.actualDraftCapacityGate ||
+		!facts.runner?.candidateEnvironment || !facts.runner?.physicalConforms || !facts.runner?.persistenceChronology ||
+		!facts.runner?.classificationOnlyRecovery) {
+		add("P07B_C4_EXECUTION_CHRONOLOGY", JSON.stringify(facts.runner));
+	}
+	if (!exact(facts.terminalGraph?.storeSurface, expectedC4StoreBridgeSurface) ||
+		!facts.terminalGraph?.ownerPhases || !facts.terminalGraph?.spawnBeforeManifest ||
+		!facts.terminalGraph?.spawnBeforeFinalized || !facts.terminalGraph?.releaseOrder ||
+		!facts.terminalGraph?.classificationGate) {
+		add("P07B_C4_TERMINAL_GRAPH", JSON.stringify(facts.terminalGraph));
+	}
+	if (!facts.evidence?.exactScopeOrder || !facts.evidence?.exactScopeCount || !facts.evidence?.manifestDerivedRefs ||
+		!facts.evidence?.boundedCandidateInventory || !facts.evidence?.rawFramedSingleCopy ||
+		!facts.evidence?.boundedStoreRosters ||
+		!facts.evidence?.invocationClosure) {
+		add("P07B_C4_EVIDENCE_SCOPE", JSON.stringify(facts.evidence));
+	}
+	if (!facts.scopeProbe?.attemptPrivateRoot || !facts.scopeProbe?.shortPrivateAlias ||
+		!facts.scopeProbe?.boundedDescriptorRoster || !facts.scopeProbe?.identityBoundTerminalCleanup ||
+		!facts.scopeProbe?.residueHostiles) {
+		add("P07B_C4_SCOPE_ROOT", JSON.stringify(facts.scopeProbe));
+	}
+	if (!exact(Object.keys(facts.profiles ?? {}).sort(), [...c4ProfileNames].sort())) {
+		add("P07B_C4_PROFILE_COMMAND", JSON.stringify(Object.keys(facts.profiles ?? {})));
+	} else {
+		for (const profileName of c4ProfileNames) {
+			const args = facts.profiles[profileName];
+			const expectedTests = expectedC4ProfileTests[profileName];
+			const expectedPackage = goJSONProfiles[profileName].packageArgument;
+			const expectedPattern = `^(?:${expectedTests.join("|")})$`;
+			const raceCount = Array.isArray(args) ? args.filter((value) => value === "-race").length : -1;
+			const expectedRace = profileName === "c4-processmechanics-parity" || profileName === "c4-authority-race";
+			if (!Array.isArray(args) || args[0] !== "test" || args.at(-1) !== expectedPackage ||
+				args.at(-2) !== expectedPattern || !args.includes("-json") || !args.includes("-count=1") ||
+				raceCount !== (expectedRace ? 1 : 0)) {
+				add("P07B_C4_PROFILE_COMMAND", `${profileName}:${JSON.stringify(args)}`);
+			}
+		}
+	}
+	if (!Array.isArray(facts.claimMap?.status) || !Array.isArray(facts.claimMap?.runbook) ||
+		facts.claimMap.status.length !== 80 || facts.claimMap.runbook.length !== 80 ||
+		!exact(facts.claimMap.status, facts.claimMap.runbook)) {
+		add("P07B_C4_PROFILE_COMMAND", JSON.stringify(facts.claimMap));
+	}
+	return problems;
+}
+
 export function validateFacts(facts) {
 	const problems = [];
 	const add = (code, detail) => problems.push(violation(code, detail));
@@ -2161,7 +3186,9 @@ export function validateFacts(facts) {
 	if (!exact(facts.package?.testFiles, expectedTestFiles) || !exact(facts.package?.xTestFiles, [])) {
 		add("P07B_C1_TEST_TOPOLOGY", JSON.stringify({ test: facts.package?.testFiles, xTest: facts.package?.xTestFiles }));
 	}
-	if (!exact(facts.topology?.contractexecEntries, ["model:directory", "target.go:file", "target_test.go:file"])) {
+	if (!exact(facts.topology?.contractexecEntries, [
+		"model:directory", "runner:directory", "target.go:file", "target_test.go:file",
+	])) {
 		add("P07B_C1_PRODUCTION_TOPOLOGY", JSON.stringify(facts.topology?.contractexecEntries));
 	}
 	if (!exact(facts.topology?.modelEntries, expectedModelEntries)) {
@@ -2184,7 +3211,9 @@ export function validateFacts(facts) {
 	if (!exact(facts.localDependencies, expectedLocalDependencies) || (facts.externalDependencies ?? []).length > 0) {
 		add("P07B_C1_DEPENDENCY_CLOSURE", JSON.stringify({ local: facts.localDependencies, external: facts.externalDependencies }));
 	}
-	if (!exact(facts.productionImporters, [contractPackagePath, storePackagePath])) {
+	if (!exact(facts.productionImporters, [
+		contractPackagePath, contractRunnerPackagePath, storePackagePath, contractCLITestPackagePath,
+	])) {
 		add("P07B_C1_IMPORTER_ROSTER", JSON.stringify(facts.productionImporters));
 	}
 	if ((facts.schema?.unclosedObjects ?? []).length > 0) add("P07B_C1_SCHEMA_CLOSURE", facts.schema.unclosedObjects.join(","));
@@ -2330,22 +3359,41 @@ async function runC3Boundary() {
 	process.stdout.write("P07B-C C3 cumulative architecture boundary OK\n");
 }
 
+async function runC4Boundary() {
+	const before = await snapshot(c4BoundarySnapshotPaths);
+	runInheritedB();
+	const facts = await collectC4Facts();
+	const problems = validateC4Facts(facts);
+	if (problems.length > 0) {
+		for (const problem of problems) process.stderr.write(`${problem.code}: ${problem.detail}\n`);
+		process.exitCode = 1;
+		return;
+	}
+	for (const profile of c4ProfileNames) runGoJSONProfile(profile);
+	const after = await snapshot(c4BoundarySnapshotPaths);
+	if (!exact(before, after)) {
+		throw new ArchitectureError("P07B_C4_SNAPSHOT_CHANGED", "C4 reviewed inputs changed during cumulative checks");
+	}
+	process.stdout.write("P07B-C C4 cumulative architecture boundary OK\n");
+}
+
 async function main() {
 	if (process.argv[2] === "--assert-go-json") {
 		if (process.argv.length !== 4) {
 			throw new ArchitectureError("P07B_C1_ARGUMENTS", "--assert-go-json requires one exact profile");
 		}
 		const result = validateGoJSONTranscript(process.argv[3], await readStandardInput());
-		const phase = result.profile.startsWith("c3-") ? "C3" : result.profile.startsWith("c2-") ? "C2" : "C1";
+		const phase = result.profile.startsWith("c4-") ? "C4" :
+			result.profile.startsWith("c3-") ? "C3" : result.profile.startsWith("c2-") ? "C2" : "C1";
 		process.stdout.write(`P07B-C ${phase} Go JSON target execution OK (${result.profile}: ${result.passed} passed, ${result.skipped} skipped)\n`);
 		return;
 	}
 	if (process.argv[2] === "--run-go-json") {
-		if (process.argv.length !== 4 || !/^c[23]-/u.test(process.argv[3])) {
-			throw new ArchitectureError("P07B_C_GO_JSON_ARGUMENTS", "--run-go-json requires one exact C2 or C3 profile");
+		if (process.argv.length !== 4 || !/^c[234]-/u.test(process.argv[3])) {
+			throw new ArchitectureError("P07B_C_GO_JSON_ARGUMENTS", "--run-go-json requires one exact C2, C3, or C4 profile");
 		}
 		const result = runGoJSONProfile(process.argv[3]);
-		const phase = result.profile.startsWith("c3-") ? "C3" : "C2";
+		const phase = result.profile.startsWith("c4-") ? "C4" : result.profile.startsWith("c3-") ? "C3" : "C2";
 		process.stdout.write(`P07B-C ${phase} Go JSON target execution OK (${result.profile}: ${result.passed} passed, ${result.skipped} skipped)\n`);
 		return;
 	}
@@ -2357,6 +3405,11 @@ async function main() {
 	if (process.argv[2] === "--c3") {
 		if (process.argv.length !== 3) throw new ArchitectureError("P07B_C3_ARGUMENTS", "--c3 accepts no other arguments");
 		await runC3Boundary();
+		return;
+	}
+	if (process.argv[2] === "--c4") {
+		if (process.argv.length !== 3) throw new ArchitectureError("P07B_C4_ARGUMENTS", "--c4 accepts no other arguments");
+		await runC4Boundary();
 		return;
 	}
 	if (process.argv.length !== 2) throw new ArchitectureError("P07B_C1_ARGUMENTS", "no arguments accepted");

@@ -139,6 +139,35 @@ test("the U2 allowlist is positive, secret-free, and exact over all admitted sou
   });
 });
 
+test("relocated process mechanics remain inside the positive U2 execution manifest", () => {
+  const mechanicsFiles = [
+    "internal/processmechanics/capture.go",
+    "internal/processmechanics/capture_darwin_test.go",
+    "internal/processmechanics/process.go",
+    "internal/processmechanics/process_darwin.go",
+    "internal/processmechanics/process_darwin_test.go",
+    "internal/processmechanics/process_unsupported.go",
+  ];
+  for (const file of mechanicsFiles) {
+    assert.equal(U2_SANDBOX_FILE_ALLOWLIST.includes(file), true, `${file} is missing from the positive U2 manifest`);
+  }
+  const relocated = new Set([
+    "spawn-through-shell",
+    "share-stdout-limit-with-stderr",
+    "map-overflow-to-success",
+    "signal-direct-pid",
+    "remove-kill-escalation",
+    "report-drain-timeout-complete",
+    "skip-final-group-probe",
+    "late-control-overwrites-earlier-terminal",
+    "claim-process-escape-containment",
+  ]);
+  for (const tuple of REVIEWED_U2_MUTANT_CONTRACT.filter(({ id }) => relocated.has(id))) {
+    assert.match(tuple.file, /^internal\/processmechanics\//u, `${tuple.id} still targets the former world owner`);
+  }
+  assert.equal(U2_SANDBOX_FILE_ALLOWLIST.filter((file) => file.startsWith("internal/processmechanics/")).length, mechanicsFiles.length);
+});
+
 test("U2 copies contain only regular allowlisted files with private modes", async () => {
   await withTemporaryRoot("countershape-u2-copy-", async (root) => {
     const source = join(root, "source");

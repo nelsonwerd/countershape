@@ -11,6 +11,13 @@ const modulePath = fileURLToPath(import.meta.url);
 const root = resolve(dirname(modulePath), "..");
 const modulePrefix = "github.com/nelsonwerd/countershape/";
 const c3StoreModelImport = "internal/contractexec/model";
+const c4StoreOwnerPath = "internal/store/contract_run_bridge.go";
+const c4StoreHostEpochImport = "internal/hostepoch";
+const c4ProcessMechanicsImport = "internal/processmechanics";
+const c4WorldMechanicsPaths = Object.freeze([
+	"internal/world/process.go",
+	"internal/world/process_darwin.go",
+]);
 
 // Every member below these roots participates. Subdirectories are an exact
 // package map rather than permissive prefixes: a newly invented authority path
@@ -538,7 +545,41 @@ function topLevelStructBodies(code, typeName) {
 }
 
 function exportedStructFields(body) {
-  return [...body.matchAll(/^\s*([A-Z][A-Za-z0-9_]*)\s+/gmu)].map((match) => match[1]);
+	const declarations = [];
+	let start = 0;
+	let roundDepth = 0;
+	let squareDepth = 0;
+	let braceDepth = 0;
+	for (let index = 0; index <= body.length; index += 1) {
+		const character = body[index] ?? "\n";
+		if (character === "(") roundDepth += 1;
+		else if (character === ")") roundDepth -= 1;
+		else if (character === "[") squareDepth += 1;
+		else if (character === "]") squareDepth -= 1;
+		else if (character === "{") braceDepth += 1;
+		else if (character === "}") braceDepth -= 1;
+		if ((character === "\n" || character === ";") && roundDepth === 0 && squareDepth === 0 && braceDepth === 0) {
+			const declaration = body.slice(start, index).trim();
+			if (declaration !== "") declarations.push(declaration);
+			start = index + 1;
+		}
+	}
+	const identifier = String.raw`[_\p{ID_Start}][_\p{ID_Continue}]*`;
+	const namedField = new RegExp(`^(${identifier}(?:\\s*,\\s*${identifier})*)\\s+`, "u");
+	const embeddedField = new RegExp(`^\\*?\\s*(?:${identifier}\\s*\\.\\s*)?(${identifier})(?:\\s*\\[|\\s*$)`, "u");
+	const exported = [];
+	for (const declaration of declarations) {
+		const named = namedField.exec(declaration);
+		if (named) {
+			for (const name of named[1].split(",").map((value) => value.trim())) {
+				if (/^\p{Lu}/u.test(name)) exported.push(name);
+			}
+			continue;
+		}
+		const embedded = embeddedField.exec(declaration);
+		if (embedded && /^\p{Lu}/u.test(embedded[1])) exported.push(embedded[1]);
+	}
+	return exported;
 }
 
 function embedsAuthorityInterface(code) {
@@ -621,9 +662,110 @@ function admitsC3StoreBridge(manifest, entry, imports) {
   return exactMethods.every((expression) => topLevelMatches(code, expression).length === 1);
 }
 
+function admitsC4StoreBridge(manifest, entry, imports, diagnostics = []) {
+	const reject = (reason) => {
+		diagnostics.push(reason);
+		return false;
+	};
+	if (entry.path !== c4StoreOwnerPath) return reject("owner-path");
+	const modelImports = imports.filter((candidate) => candidate.path === `${modulePrefix}${c3StoreModelImport}`);
+	const epochImports = imports.filter((candidate) => candidate.path === `${modulePrefix}${c4StoreHostEpochImport}`);
+	if (modelImports.length !== 1 || modelImports[0].alias !== "contractmodel" ||
+		epochImports.length !== 1 || epochImports[0].alias !== "") return reject("imports");
+  const storeEntries = productionEntries(manifest).filter((candidate) =>
+    candidate.path.startsWith("internal/store/") && candidate.path.slice(0, candidate.path.lastIndexOf("/")) === "internal/store");
+  const typeNames = [
+    "ContractRunOwner", "PrivateRunManifest", "FinalizedRunRecord", "TerminalClosure", "ContractExecutionRecord",
+  ];
+  for (const typeName of typeNames) {
+    const escaped = typeName.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+    const found = storeEntries.flatMap((candidate) =>
+      topLevelMatches(candidate.lexical.code, new RegExp(`\\btype\\s+${escaped}\\b`, "gu"))
+        .map(() => ({ path: candidate.path, entry: candidate })));
+		if (found.length !== 1 || found[0].path !== c4StoreOwnerPath) return reject(`type-owner:${typeName}`);
+		const bodies = topLevelStructBodies(found[0].entry.lexical.code, typeName);
+		if (bodies.length !== 1 || exportedStructFields(bodies[0]).length !== 0) return reject(`type-opacity:${typeName}`);
+  }
+  const code = entry.lexical.code;
+  const types = topLevelMatches(code, /\btype\s+([A-Z][A-Za-z0-9_]*)\b/gu).map((match) => match[1]);
+  const functions = topLevelMatches(code, /\bfunc\s+([A-Z][A-Za-z0-9_]*)\s*\(/gu).map((match) => match[1]);
+	const c4ReceiverPattern = typeNames.join("|");
+	const exportedMethodExpression = new RegExp(
+		`\\bfunc\\s*\\(\\s*(?:[_\\p{ID_Start}][\\p{ID_Continue}_]*\\s+)?(\\*)?(${c4ReceiverPattern})\\s*\\)\\s+([A-Z][A-Za-z0-9_]*)\\s*\\(`,
+		"gu",
+	);
+	const methodDeclarations = storeEntries.flatMap((candidate) =>
+		topLevelMatches(candidate.lexical.code, exportedMethodExpression).map((match) => ({
+			name: `${match[2]}.${match[3]}`,
+			path: candidate.path,
+			pointer: match[1] === "*",
+		})),
+	);
+	const foreignMethod = methodDeclarations.find((method) => method.path !== c4StoreOwnerPath);
+	if (foreignMethod) return reject(`method-owner:${foreignMethod.name}`);
+	const methods = methodDeclarations.map((method) => method.name);
+  const expectedSurface = [
+    "AcquireContractRunOwner", "ContractExecutionRecord", "ContractExecutionRecord.Digest",
+    "ContractExecutionRecord.Model", "ContractExecutionRecord.Valid", "ContractRunOwner",
+    "ContractRunOwner.ConsumeForStart", "ContractRunOwner.PersistFinalizedRun",
+    "ContractRunOwner.PersistPrivateRunManifest", "ContractRunOwner.PersistSpawnObservation",
+    "ContractRunOwner.StartClaimDigest", "FinalizedRunRecord", "FinalizedRunRecord.Digest",
+    "FinalizedRunRecord.Model", "FinalizedRunRecord.Valid", "OpenFinalizedRunRecord", "OpenTerminalClosure",
+    "PersistContractExecutionRecord", "PrivateRunManifest", "PrivateRunManifest.EvidenceRef",
+    "PrivateRunManifest.Summary", "PrivateRunManifest.Valid", "TerminalClosure",
+    "TerminalClosure.FinalizedRun", "TerminalClosure.Release",
+  ];
+	if (!exactSet([...types, ...functions, ...methods], expectedSurface)) return reject("exported-surface");
+
+  const escapedType = (value) => value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+  const named = "(?:[_\\p{ID_Start}][\\p{ID_Continue}_]*\\s+)?";
+	const callable = (receiver, name, parameters, results) => {
+		const owner = receiver === null ? "" : `\\(\\s*${named}${escapedType(receiver)}\\s*\\)\\s+`;
+		const params = parameters.map((type) => `${named}${escapedType(type)}`).join("\\s*,\\s*");
+		const trailingParameterComma = parameters.length === 0 ? "" : "\\s*,?";
+		const returns = results.length === 1 ? `\\s+${escapedType(results[0])}` :
+			`\\s*\\(\\s*${results.map(escapedType).join("\\s*,\\s*")}\\s*\\)`;
+		const expression = new RegExp(
+			`\\bfunc\\s+${owner}${name}\\s*\\(\\s*${params}${trailingParameterComma}\\s*\\)${returns}\\s*\\{`,
+			"gu",
+		);
+    return topLevelMatches(code, expression).length === 1;
+  };
+	const callables = [
+    [null, "AcquireContractRunOwner", ["context.Context", "ContractTargetRecord", "hostepoch.Epoch"], ["ContractRunOwner", "error"]],
+    ["ContractRunOwner", "ConsumeForStart", ["context.Context", "domain.Digest"], ["error"]],
+    ["ContractRunOwner", "StartClaimDigest", [], ["domain.Digest"]],
+    ["ContractRunOwner", "PersistSpawnObservation", ["context.Context", "contractmodel.SpawnObservation"], ["error"]],
+    ["ContractRunOwner", "PersistPrivateRunManifest", ["context.Context", "map[contractmodel.EvidenceKind][]byte"], ["PrivateRunManifest", "error"]],
+    ["ContractRunOwner", "PersistFinalizedRun", ["context.Context", "PrivateRunManifest", "contractmodel.FinalizedContractRun"], ["TerminalClosure", "error"]],
+    ["PrivateRunManifest", "Valid", [], ["bool"]],
+    ["PrivateRunManifest", "Summary", [], ["contractmodel.PrivateManifestSummary", "error"]],
+    ["PrivateRunManifest", "EvidenceRef", ["contractmodel.EvidenceKind"], ["contractmodel.EvidenceRef", "error"]],
+    ["FinalizedRunRecord", "Valid", [], ["bool"]],
+    ["FinalizedRunRecord", "Digest", [], ["domain.Digest"]],
+    ["FinalizedRunRecord", "Model", [], ["contractmodel.FinalizedContractRun"]],
+    [null, "OpenFinalizedRunRecord", ["context.Context", "ContractTargetRecord", "contractmodel.ContractExecutionTarget"], ["FinalizedRunRecord", "error"]],
+    [null, "OpenTerminalClosure", ["context.Context", "ContractTargetRecord", "contractmodel.ContractExecutionTarget"], ["TerminalClosure", "error"]],
+    ["TerminalClosure", "FinalizedRun", [], ["FinalizedRunRecord"]],
+    ["TerminalClosure", "Release", ["context.Context"], ["error"]],
+    [null, "PersistContractExecutionRecord", ["context.Context", "FinalizedRunRecord", "contractmodel.ContractExecution"], ["ContractExecutionRecord", "error"]],
+    ["ContractExecutionRecord", "Valid", [], ["bool"]],
+    ["ContractExecutionRecord", "Digest", [], ["domain.Digest"]],
+    ["ContractExecutionRecord", "Model", [], ["contractmodel.ContractExecution"]],
+	];
+	for (const [receiver, name, parameters, results] of callables) {
+		if (!callable(receiver, name, parameters, results)) {
+			return reject(`callable:${receiver === null ? "function" : receiver}.${name}`);
+		}
+	}
+	return true;
+}
+
 function inspectPackageBoundaries(manifest, violations) {
   const aggregate = new Map([...exactInternalImports.keys()].map((key) => [key, new Set()]));
   let c3StoreBridge = false;
+  let c4StoreBridge = false;
+	const c4WorldMechanicsObserved = new Set();
   for (const entry of productionEntries(manifest)) {
     const imports = importedPackages(entry.lexical.commentless);
     const paths = imports.map((candidate) => candidate.path);
@@ -638,11 +780,33 @@ function inspectPackageBoundaries(manifest, violations) {
     const packageDirectory = entry.path.slice(0, entry.path.lastIndexOf("/"));
     if (!aggregate.has(packageDirectory)) violations.push(["U6_INTERNAL_PACKAGE_UNMAPPED", entry.path]);
     for (const imported of internalImports) aggregate.get(packageDirectory)?.add(imported);
-		if (internalImports.includes(c3StoreModelImport)) {
-			if (!admitsC3StoreBridge(manifest, entry, imports) || c3StoreBridge) {
-				violations.push(["U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED", entry.path]);
+		const hasStoreModel = internalImports.includes(c3StoreModelImport);
+		const hasHostEpoch = internalImports.includes(c4StoreHostEpochImport);
+		if (entry.path === c4StoreOwnerPath && (hasStoreModel || hasHostEpoch)) {
+			const bridgeDiagnostics = [];
+			if (!hasStoreModel || !hasHostEpoch || !admitsC4StoreBridge(manifest, entry, imports, bridgeDiagnostics) || c4StoreBridge) {
+				violations.push(["U6_STORE_C4_BRIDGE_NOT_ADMITTED", `${entry.path}: ${bridgeDiagnostics[0] ?? "imports-or-duplicate"}`]);
 			} else {
-				c3StoreBridge = true;
+				c4StoreBridge = true;
+			}
+		} else {
+			if (hasStoreModel) {
+				if (!admitsC3StoreBridge(manifest, entry, imports) || c3StoreBridge) {
+					violations.push(["U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED", entry.path]);
+				} else {
+					c3StoreBridge = true;
+				}
+			}
+			if (hasHostEpoch) violations.push(["U6_STORE_C4_BRIDGE_NOT_ADMITTED", entry.path]);
+		}
+		if (internalImports.includes(c4ProcessMechanicsImport)) {
+			const mechanicsImports = imports.filter((candidate) =>
+				candidate.path === `${modulePrefix}${c4ProcessMechanicsImport}`);
+			if (!c4WorldMechanicsPaths.includes(entry.path) || mechanicsImports.length !== 1 ||
+				mechanicsImports[0].alias !== "" || c4WorldMechanicsObserved.has(entry.path)) {
+				violations.push(["U6_WORLD_C4_MECHANICS_IMPORT_NOT_ADMITTED", entry.path]);
+			} else {
+				c4WorldMechanicsObserved.add(entry.path);
 			}
 		}
 		for (const imported of internalImports.filter((candidate) => candidate.startsWith("internal/adapters/"))) {
@@ -672,11 +836,13 @@ function inspectPackageBoundaries(manifest, violations) {
       violations.push(["U6_STORE_FORBIDDEN_SEMANTIC_IMPORT", entry.path]);
     }
   }
-  for (const [packageDirectory, expected] of exactInternalImports) {
-    const actual = [...(aggregate.get(packageDirectory) ?? [])];
-		const phaseExpected = packageDirectory === "internal/store" && c3StoreBridge
-			? [...expected, c3StoreModelImport]
-			: expected;
+	for (const [packageDirectory, expected] of exactInternalImports) {
+		const actual = [...(aggregate.get(packageDirectory) ?? [])];
+		const phaseExpected = [...expected];
+		const c4WorldMechanics = exactSet([...c4WorldMechanicsObserved], [...c4WorldMechanicsPaths]);
+		if (packageDirectory === "internal/store" && (c3StoreBridge || c4StoreBridge)) phaseExpected.push(c3StoreModelImport);
+		if (packageDirectory === "internal/store" && c4StoreBridge) phaseExpected.push(c4StoreHostEpochImport);
+		if (packageDirectory === "internal/world" && c4WorldMechanics) phaseExpected.push(c4ProcessMechanicsImport);
     if (!exactSet(actual, phaseExpected)) {
       violations.push(["U6_INTERNAL_IMPORT_LATTICE", `${packageDirectory}: ${actual.sort().join(",")}`]);
     }

@@ -204,6 +204,42 @@ func TestC3ConformanceAttemptIsFreshDurableAndRestartReopenable(t *testing.T) {
 		reopened.InstanceNonce() != first.InstanceNonce() || reopened.Roots().CandidateParent() != roots.CandidateParent() {
 		t.Fatalf("attempt restart reopen failed: %v", err)
 	}
+	for _, hostile := range []struct {
+		name         string
+		evidenceRoot bool
+	}{
+		{name: "attempt-root-extra", evidenceRoot: false},
+		{name: "evidence-root-extra", evidenceRoot: true},
+	} {
+		t.Run(hostile.name, func(t *testing.T) {
+			hostileStore, hostileStoreRoot := newObjectStoreForTest(t)
+			hostileAttempt, _ := c3AttemptAndTarget(t, hostileStore)
+			foreignParent := hostileAttempt.Roots().AttemptRoot()
+			if hostile.evidenceRoot {
+				foreignParent = hostileAttempt.Roots().EvidenceRoot()
+			}
+			sentinel := filepath.Join(foreignParent, "foreign", "deep", "sentinel")
+			if err := os.MkdirAll(filepath.Dir(sentinel), 0o700); err != nil {
+				t.Fatal(err)
+			}
+			if err := os.WriteFile(sentinel, []byte("retain"), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			if hostileAttempt.Valid() {
+				t.Fatal("foreign direct roster entry retained live attempt authority")
+			}
+			restartedStore, err := OpenObjectStore(hostileStoreRoot)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if opened, err := restartedStore.OpenConformanceAttempt(context.Background(), hostileAttempt.Digest()); err == nil || opened.Valid() {
+				t.Fatalf("foreign direct roster entry reopened attempt authority: valid=%t err=%v", opened.Valid(), err)
+			}
+			if body, err := os.ReadFile(sentinel); err != nil || string(body) != "retain" {
+				t.Fatalf("bounded roster validation traversed or removed foreign residue: body=%q err=%v", body, err)
+			}
+		})
+	}
 	restore := c2CaseAliasPath(t, roots.AttemptRoot())
 	if first.Valid() || reopened.Valid() {
 		t.Fatal("case-aliased attempt root retained live authority")
@@ -864,6 +900,24 @@ func TestC2ExactKeyMappingsConvergeOnlyForTypedParents(t *testing.T) {
 	alternateObject := c2SemanticObject(t, contractmodel.TargetKind, alternate.Digest(), alternate.CanonicalBytes())
 	if _, _, err := persistTargetRecord(context.Background(), store, targetStorageInput{attempt: attempt, object: alternateObject}, nil); err == nil {
 		t.Fatal("alternate child occupied an exact attempt relationship key")
+	}
+	complete := c2CompleteFixture(t)
+	executionObject := c2SemanticObject(
+		t, contractmodel.ExecutionKind, complete.execution.Digest(), complete.execution.CanonicalBytes(),
+	)
+	retried, effect, err := persistExecutionRecord(
+		context.Background(), complete.store,
+		executionStorageInput{run: complete.runRec, object: executionObject}, nil,
+	)
+	relation := retried.record.relation
+	if err != nil || effect != contractExactConverged || !retried.validFor(complete.store) ||
+		retried.record.relationPath != complete.execRec.record.relationPath ||
+		relation.relation != relationRunExecution || relation.parentKind != contractRunKind ||
+		relation.parentDigest != complete.runRec.record.object.Digest() ||
+		relation.secondaryParentKind != contractProfileKind ||
+		relation.secondaryParentDigest != contractClassifierProfileDigest() ||
+		relation.childKind != contractExecutionKind || relation.childDigest != complete.execution.Digest() {
+		t.Fatalf("exact run/profile execution convergence failed: effect=%s relation=%+v err=%v", effect, relation, err)
 	}
 }
 

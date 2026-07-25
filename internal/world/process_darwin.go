@@ -8,21 +8,20 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"strings"
 	"syscall"
 	"time"
 
 	"github.com/nelsonwerd/countershape/internal/domain"
+	"github.com/nelsonwerd/countershape/internal/processmechanics"
 )
 
 const (
-	directExecOnly                 = true // MUTANT_U2_SPAWN_THROUGH_SHELL
-	signalOwnedProcessGroup        = true // MUTANT_U2_SIGNAL_DIRECT_PID
-	killEscalationRequired         = true // MUTANT_U2_REMOVE_KILL_ESCALATION
-	finalGroupProbeRequired        = true // MUTANT_U2_REMOVE_FINAL_GROUP_PROBE
-	outputOverflowIsPrimaryControl = true // MUTANT_U2_MAP_OUTPUT_LIMIT_TO_SUCCESS
-	drainDeadlineIsFailure         = true // MUTANT_U2_REPORT_DRAIN_TIMEOUT_COMPLETE
-	ownerPriorityOutputFirst       = true // MUTANT_U2_LATE_CONTROL_OVERRIDES_OUTPUT
+	signalOwnedProcessGroup        = true
+	killEscalationRequired         = true
+	finalGroupProbeRequired        = true
+	outputOverflowIsPrimaryControl = true
+	drainDeadlineIsFailure         = true
+	ownerPriorityOutputFirst       = true
 	ownerDrainCloseBudget          = 100 * time.Millisecond
 )
 
@@ -58,7 +57,7 @@ type physicalCapturePair struct {
 
 func newPhysicalCapturePair(stdoutLimit, stderrLimit int64, overflowC chan<- struct{}) physicalCapturePair {
 	stdout := newCappedCapture(stdoutLimit, overflowC)
-	stderr := newCappedCapture(stderrLimit, overflowC) // MUTANT_U2_SHARE_OUTPUT_CAP
+	stderr := newCappedCapture(stderrLimit, overflowC)
 	return physicalCapturePair{
 		stdout: stdout, stderr: stderr,
 		stdoutReceiptLimit: stdout.configuredLimit(), stderrReceiptLimit: stderr.configuredLimit(),
@@ -108,277 +107,137 @@ func (systemDarwinGroups) probe(processGroupID int) (bool, error) {
 	return false, err
 }
 
-func newDirectCommand(request processRequest) *exec.Cmd {
-	args := append([]string(nil), request.logicalArgv...)
-	var command *exec.Cmd
-	if !directExecOnly {
-		command = &exec.Cmd{
-			Path: "/bin/sh", Args: []string{"sh", "-c", strings.Join(args, " ")},
-			Env: append([]string(nil), request.environment...), Dir: request.cwd,
-			SysProcAttr: &syscall.SysProcAttr{Setpgid: true},
-		}
-	} else {
-		command = &exec.Cmd{
-			Path: request.tool.absolutePath, Args: args,
-			Env: append([]string(nil), request.environment...), Dir: request.cwd,
-			SysProcAttr: &syscall.SysProcAttr{Setpgid: true},
-		}
-	}
-	return command
-}
-
 func runPlatformProcess(ctx context.Context, request processRequest) physicalProcessResult {
-	overflowC := make(chan struct{}, 2)
-	captures := newPhysicalCapturePair(request.stdoutLimit, request.stderrLimit, overflowC)
-	stdoutCapture := captures.stdout
-	stderrCapture := captures.stderr
 	stdinDigest, stdinDigestErr := digestProcessStdin(request.stdin)
-	result := physicalProcessResult{
-		// MUTATION_ANCHOR: physical-entry-requires-spawn-attempt
-		physicalExecutionEntered: false,
-		exitCode:                 -1,
-		markerBeforeSpawn:        request.markerBeforeSpawn,
-		preTermProbe:             preTermProbeNotApplicable,
-		stdinPresence:            request.stdin.presence,
-		stdinDeclared:            int64(len(request.stdin.bytes)),
-		stdinDigest:              stdinDigest,
-		stdinComplete:            request.stdin.presence != processStdinPresent,
+	base := physicalProcessResult{
+		exitCode: -1, markerBeforeSpawn: request.markerBeforeSpawn,
+		preTermProbe:  preTermProbeNotApplicable,
+		stdinPresence: request.stdin.presence, stdinDeclared: int64(len(request.stdin.bytes)),
+		stdinDigest: stdinDigest, stdinComplete: request.stdin.presence != processStdinPresent,
 	}
 	if stdinDigestErr != nil {
-		result.primary = domain.ControlStartError
-		result.diagnosticCode = "STDIN_IDENTITY_FAILED_BEFORE_SPAWN"
-		return result
+		base.primary = domain.ControlStartError
+		base.diagnosticCode = "STDIN_IDENTITY_FAILED_BEFORE_SPAWN"
+		return base
 	}
 	if ctx.Err() != nil {
-		result.primary = domain.ControlCancelled
-		result.diagnosticCode = "CONTEXT_CANCELLED_BEFORE_SPAWN"
-		return result
+		base.primary = domain.ControlCancelled
+		base.diagnosticCode = "CONTEXT_CANCELLED_BEFORE_SPAWN"
+		return base
 	}
 	if !request.stdin.valid() {
-		result.primary = domain.ControlStartError
-		result.diagnosticCode = "INVALID_TYPED_STDIN_BEFORE_SPAWN"
-		return result
+		base.primary = domain.ControlStartError
+		base.diagnosticCode = "INVALID_TYPED_STDIN_BEFORE_SPAWN"
+		return base
 	}
 	if err := request.tool.revalidate(); err != nil {
-		result.primary = domain.ControlStartError
-		result.waitError = err.Error()
-		result.diagnosticCode = "TOOL_CHANGED_BEFORE_SPAWN"
-		return result
+		base.primary = domain.ControlStartError
+		base.waitError = err.Error()
+		base.diagnosticCode = "TOOL_CHANGED_BEFORE_SPAWN"
+		return base
 	}
-	command := newDirectCommand(request)
-	var stdinWriter io.WriteCloser
-	var stdinResultC chan stdinWriteResult
-	stdinWriterOwnedByRunner := false
-	defer func() {
-		if stdinWriterOwnedByRunner && stdinWriter != nil {
-			_ = stdinWriter.Close()
-		}
-	}()
-	stdoutPipe, stdoutWriter, err := os.Pipe()
-	if err != nil {
-		result.primary = domain.ControlStartError
-		result.diagnosticCode = "STDOUT_PIPE_ALLOCATION_FAILED"
-		return result
-	}
-	defer stdoutPipe.Close()
-	stderrPipe, stderrWriter, err := os.Pipe()
-	if err != nil {
-		_ = stdoutWriter.Close()
-		result.primary = domain.ControlStartError
-		result.diagnosticCode = "STDERR_PIPE_ALLOCATION_FAILED"
-		return result
-	}
-	defer stderrPipe.Close()
+	stdin := processmechanics.AbsentStdin()
 	if request.stdin.presence == processStdinPresent {
-		writer, pipeErr := command.StdinPipe()
-		if pipeErr != nil {
-			_ = stdoutWriter.Close()
-			_ = stderrWriter.Close()
-			result.primary = domain.ControlStartError
-			result.diagnosticCode = "STDIN_PIPE_ALLOCATION_FAILED"
-			return result
+		stdin = processmechanics.PresentStdin(request.stdin.bytes)
+	}
+	invocation, err := processmechanics.NewInvocation(
+		request.tool.absolutePath,
+		request.logicalArgv,
+		request.environment,
+		stdin,
+		request.cwd,
+		processmechanics.Limits{
+			StdoutBytes: request.stdoutLimit,
+			StderrBytes: request.stderrLimit,
+			Execution:   time.Duration(request.executionBudgetMS) * time.Millisecond,
+			Teardown:    time.Duration(request.teardownBudgetMS) * time.Millisecond,
+		},
+	)
+	if err != nil {
+		base.primary = domain.ControlStartError
+		base.waitError = err.Error()
+		base.diagnosticCode = "MECHANICS_INVOCATION_REJECTED"
+		return base
+	}
+	prepared, err := processmechanics.Prepare(invocation)
+	if err != nil {
+		base.primary = domain.ControlStartError
+		base.waitError = err.Error()
+		base.diagnosticCode = "MECHANICS_PREPARE_FAILED"
+		return base
+	}
+	observation, running, err := prepared.Start(ctx)
+	if err != nil {
+		var failure *processmechanics.StartError
+		if errors.As(err, &failure) {
+			return bindMechanicsResult(base, failure.Result())
 		}
-		stdinWriter = writer
-		stdinWriterOwnedByRunner = true
-		result.stdinPipeAllocated = true
-		results := make(chan stdinWriteResult, 1)
-		stdinResultC = results
+		base.primary = domain.ControlStartError
+		base.waitError = err.Error()
+		base.diagnosticCode = "MECHANICS_START_FAILED"
+		return base
 	}
-	command.Stdout = stdoutWriter
-	command.Stderr = stderrWriter
-	result.physicalExecutionEntered = true
-	result.spawnAttempted = true
-	result.stdoutCaptureLimit = captures.stdoutReceiptLimit
-	result.stderrCaptureLimit = captures.stderrReceiptLimit
-	if err := command.Start(); err != nil {
-		_ = stdoutWriter.Close()
-		_ = stderrWriter.Close()
-		result.primary = domain.ControlStartError
-		result.diagnosticCode = "SPAWN_FAILED"
-		return result
-	}
-	if stdinWriter != nil {
-		stdinWriterOwnedByRunner = false
-		// MUTATION_ANCHOR: stdin-absence-must-not-collapse-to-present-empty
-		stdinStart := startExactStdinWriter(stdinWriter, request.stdin.bytes, stdinResultC)
-		result.stdinWriterStarted = true
-		result.stdinHandoffAttempted = true
-		result.stdinDeclared = stdinStart.declared
-		result.stdinDigest = stdinStart.digest
-		if stdinStart.errorCode != "" {
-			result.primary = domain.ControlProbeTransportError
-			result.diagnosticCode = "STDIN_DELIVERY_" + stdinStart.errorCode
-		}
-	}
-	_ = stdoutWriter.Close()
-	_ = stderrWriter.Close()
-	result.started = true
-	result.pid = command.Process.Pid
-	processGroupID, groupErr := syscall.Getpgid(command.Process.Pid)
-	result.processGroupID = processGroupID
-	if groupErr == nil && processGroupID == command.Process.Pid {
-		result.processGroupOwned = true
-		if request.onGroupOwned != nil {
-			if err := request.onGroupOwned(); err != nil {
-				result.primary = domain.ControlStartError
-				result.teardownError = true
-				result.diagnosticCode = "READY_TRANSITION_FAILED"
-				_ = command.Process.Kill()
-			}
-		}
-	} else {
-		// Setpgid is only a request. Without the exact PGID==PID measurement,
-		// negative-PGID signaling is forbidden and orphan uncertainty survives.
-		result.primary = domain.ControlStartError
-		result.teardownError = true
-		result.orphanRisk = true
-		result.finalProbeError = "new process group was not established"
-		result.diagnosticCode = "PROCESS_GROUP_NOT_OWNED"
-		_ = command.Process.Kill()
-	}
-
-	stdoutDone := make(chan time.Time, 1)
-	stderrDone := make(chan time.Time, 1)
-	go stdoutCapture.drain(stdoutPipe, stdoutDone)
-	go stderrCapture.drain(stderrPipe, stderrDone)
-	waitC := make(chan waitResult, 1)
-	go func() {
-		waitErr := command.Wait()
-		waitC <- waitResult{state: command.ProcessState, err: waitErr}
-	}()
-
-	var waited *waitResult
-	var stdinObserved *stdinWriteResult
-	if result.primary == "" {
-		executionTimer := time.NewTimer(time.Duration(request.executionBudgetMS) * time.Millisecond)
-		decision := arbitrateTerminalWithStdin(ctx, executionTimer.C, overflowC, stdoutCapture, stderrCapture, waitC, stdinResultC)
-		if !executionTimer.Stop() {
-			select {
-			case <-executionTimer.C:
-			default:
-			}
-		}
-		result.primary = decision.primary
-		waited = decision.waited
-		stdinObserved = decision.stdin
-	}
-
-	teardownDeadline := time.Now().Add(time.Duration(request.teardownBudgetMS) * time.Millisecond)
-	controller := systemDarwinGroups{}
-	if result.processGroupOwned {
-		teardownOwnedProcessGroup(
-			&result, controller, teardownDeadline,
-			time.Duration(request.teardownBudgetMS)*time.Millisecond,
-		)
-	}
-
-	if waited == nil {
-		waited = waitForDirectChild(waitC, teardownDeadline)
-	}
-	if waited != nil {
-		classifyWait(&result, *waited)
-	} else {
-		result.teardownError = true
-		result.orphanRisk = true
-		result.diagnosticCode = firstDiagnostic(result.diagnosticCode, "DIRECT_CHILD_WAIT_DEADLINE")
-		_ = command.Process.Kill()
-	}
-	stdinDelivery := collectStdinDelivery(stdinObserved, stdinResultC, stdinWriter, teardownDeadline)
-	result.stdinWritten = stdinDelivery.written
-	result.stdinComplete = stdinDelivery.complete
-	result.stdinErrorCode = stdinDelivery.errorCode
-	if request.stdin.presence == processStdinPresent && !stdinDelivery.complete {
-		if result.primary == "" {
-			result.primary = domain.ControlProbeTransportError
-		}
-		result.diagnosticCode = firstDiagnostic(result.diagnosticCode, "STDIN_DELIVERY_"+stdinDelivery.errorCode)
-		if stdinDelivery.errorCode == "WRITER_DRAIN_DEADLINE" {
-			result.teardownError = true
-			result.orphanRisk = true
+	if observation.ProcessGroupOwned && observation.ProcessGroupID == observation.PID && request.onGroupOwned != nil {
+		if err := request.onGroupOwned(); err != nil {
+			running.AbortReadinessTransition()
 		}
 	}
-
-	stdoutDrain, stderrDrain := collectDrainCompletions(stdoutDone, stderrDone, teardownDeadline)
-	result.stdoutDrained = stdoutDrain.beforeDeadline
-	result.stderrDrained = stderrDrain.beforeDeadline
-	if !stdoutDrain.observed {
-		_ = stdoutPipe.Close()
-	}
-	if !stderrDrain.observed {
-		_ = stderrPipe.Close()
-	}
-	if !stdoutDrain.observed && !awaitOwnerDrain(stdoutDone, ownerDrainCloseBudget) {
-		stdoutCapture.freeze()
-	}
-	if !stderrDrain.observed && !awaitOwnerDrain(stderrDone, ownerDrainCloseBudget) {
-		stderrCapture.freeze()
-	}
-	if !result.stdoutDrained || !result.stderrDrained {
-		result.teardownError = true
-		result.orphanRisk = true
-		result.diagnosticCode = firstDiagnostic(result.diagnosticCode, "PIPE_DRAIN_DEADLINE")
-	}
-	result.stdout, result.stdoutObserved, result.stdoutOverflow, err = stdoutCapture.snapshot()
-	if err != nil && !errors.Is(err, io.ErrClosedPipe) {
-		result.teardownError = true
-		result.orphanRisk = true
-		result.diagnosticCode = firstDiagnostic(result.diagnosticCode, "STDOUT_DRAIN_FAILED")
-	}
-	result.stderr, result.stderrObserved, result.stderrOverflow, err = stderrCapture.snapshot()
-	if err != nil && !errors.Is(err, io.ErrClosedPipe) {
-		result.teardownError = true
-		result.orphanRisk = true
-		result.diagnosticCode = firstDiagnostic(result.diagnosticCode, "STDERR_DRAIN_FAILED")
-	}
-	applyCompletedOutputControl(&result)
-
-	if result.processGroupOwned {
-		clean, probeErr := performFinalGroupProbe(controller, result.processGroupID, teardownDeadline)
-		result.finalProbeClean = clean
-		if probeErr != nil {
-			result.finalProbeError = probeErr.Error()
-			result.teardownError = true
-			result.diagnosticCode = firstDiagnostic(result.diagnosticCode, "FINAL_GROUP_PROBE_FAILED")
-		}
-		if !clean {
-			result.orphanRisk = true
-		}
-	}
+	result := bindMechanicsResult(base, running.Close())
 	if err := request.tool.revalidate(); err != nil {
 		result.teardownError = true
 		result.waitError = err.Error()
 		result.diagnosticCode = firstDiagnostic(result.diagnosticCode, "TOOL_CHANGED_AFTER_EXECUTION")
 	}
-	if result.started && (!result.processGroupOwned || !result.directChildWaited ||
-		!result.stdoutDrained || !result.stderrDrained || !result.finalProbeClean) {
-		// A clean receipt requires every independently observed cleanup edge.
-		// Missing pipe completion is especially important: an escaped descendant
-		// can keep inherited descriptors open after the original PGID is absent.
-		result.orphanRisk = true
-	}
 	return result
 }
 
+func bindMechanicsResult(base physicalProcessResult, result processmechanics.Result) physicalProcessResult {
+	base.physicalExecutionEntered = result.PhysicalExecutionEntered
+	base.spawnAttempted = result.SpawnAttempted
+	base.started = result.Started
+	base.pid = result.PID
+	base.processGroupID = result.ProcessGroupID
+	base.processGroupOwned = result.ProcessGroupOwned
+	base.exitCode = result.ExitCode
+	base.exitSignal = result.ExitSignal
+	base.waitError = result.WaitError
+	base.stdout = append([]byte(nil), result.Stdout...)
+	base.stderr = append([]byte(nil), result.Stderr...)
+	base.stdoutObserved = result.StdoutObserved
+	base.stderrObserved = result.StderrObserved
+	base.stdoutOverflow = result.StdoutOverflow
+	base.stderrOverflow = result.StderrOverflow
+	base.stdoutCaptureLimit = result.StdoutCaptureLimit
+	base.stderrCaptureLimit = result.StderrCaptureLimit
+	base.primary = domain.ControlReason(result.Primary)
+	base.preTermProbe = result.PreTermProbe
+	base.termSent = result.TermSent
+	base.killSent = result.KillSent
+	base.directChildWaited = result.ChildWaited
+	base.stdoutDrained = result.StdoutDrained
+	base.stderrDrained = result.StderrDrained
+	base.finalProbeClean = result.FinalProbeClean
+	base.finalProbeError = result.FinalProbeError
+	base.teardownError = result.TeardownError
+	base.orphanRisk = result.OrphanRisk
+	base.diagnosticCode = result.DiagnosticCode
+	if base.diagnosticCode == "EXECUTABLE_CHANGED_BEFORE_SPAWN" {
+		base.diagnosticCode = "TOOL_CHANGED_BEFORE_SPAWN"
+	}
+	if base.diagnosticCode == "EXECUTABLE_CHANGED_AFTER_EXECUTION" {
+		base.diagnosticCode = "TOOL_CHANGED_AFTER_EXECUTION"
+	}
+	base.stdinPipeAllocated = result.StdinPipeAllocated
+	base.stdinWriterStarted = result.StdinWriterStarted
+	base.stdinHandoffAttempted = result.StdinHandoffAttempted
+	base.stdinWritten = result.StdinWritten
+	base.stdinComplete = result.StdinComplete
+	base.stdinErrorCode = result.StdinErrorCode
+	return base
+}
+
+// The remaining world-owned helpers stay here for HTTP lifecycle parity in C5;
+// C4 moves only the shared CLI process mechanics behind processmechanics.
 func startExactStdinWriter(writer io.WriteCloser, input []byte, resultC chan<- stdinWriteResult) stdinWriterStart {
 	started := make(chan stdinWriterStart, 1)
 	go writeExactStdinObserved(writer, input, started, resultC)

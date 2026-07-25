@@ -8,8 +8,9 @@ import (
 	"github.com/nelsonwerd/countershape/internal/domain"
 )
 
-// The shared output-control helper remains compilable on unsupported hosts;
-// runPlatformProcess still returns only the explicit platform refusal below.
+// The world compatibility surface and neutral processmechanics package both
+// remain buildable on unsupported hosts; this adapter preserves the existing
+// world-specific refusal code without fabricating a physical attempt.
 const outputOverflowIsPrimaryControl = true
 
 func runPlatformProcess(_ context.Context, request processRequest) physicalProcessResult {

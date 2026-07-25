@@ -703,15 +703,11 @@ func validatePrivateManifestRoster(run SemanticObject, manifest privateManifestR
 	for _, reference := range references {
 		expected = append(expected, reference.key())
 	}
-	actualSet := make(map[string]struct{}, len(expected))
+	actual := make([]string, 0, len(expected))
 	for _, entry := range manifest.entries {
 		for _, reference := range entry.references {
-			actualSet[reference.key()] = struct{}{}
+			actual = append(actual, reference.key())
 		}
-	}
-	actual := make([]string, 0, len(actualSet))
-	for key := range actualSet {
-		actual = append(actual, key)
 	}
 	sort.Strings(expected)
 	sort.Strings(actual)

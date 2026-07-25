@@ -519,6 +519,122 @@ func TestC2InterlockReleaseRequiresTestOnlyDurableTerminalClosure(t *testing.T) 
 	}
 }
 
+func TestC4FinalizedReleaseConvergesReceiptWithoutRewritingClear(t *testing.T) {
+	for _, phase := range []contractFaultPhase{
+		faultAfterInterlockSync,
+		faultBeforeFinalizedReleaseTemp,
+		faultAfterFinalizedReleaseTemp,
+		faultBeforeFinalizedReleaseLink,
+		faultAfterFinalizedReleaseLink,
+		faultAfterFinalizedReleaseSync,
+		faultBeforeFinalizedReleaseOpen,
+		faultBeforeClearReceipt,
+		faultAfterClearReceiptTemp,
+		faultBeforeClearReceiptLink,
+		faultAfterClearReceiptLink,
+		faultAfterClearReceiptSync,
+		faultBeforeClearReceiptOpen,
+	} {
+		t.Run(string(phase), func(t *testing.T) {
+			fixture := c2CompleteFixture(t)
+			closure := issueC2TerminalClosureFixture(t, fixture)
+			fault := func(actual contractFaultPhase) error {
+				if actual == phase {
+					return errors.New("injected finalized-release interruption")
+				}
+				return nil
+			}
+			if err := releaseInterlockAfterFinalizedRun(
+				context.Background(), fixture.store, closure, fixture.claim, fault,
+			); err == nil {
+				t.Fatal("faulted finalized release reported success")
+			}
+			statePath := filepath.Join(fixture.store.contractOps, interlockFilename)
+			before, present, err := readExecutionInterlockState(statePath)
+			if err != nil || !present || before.state != interlockStateClear {
+				t.Fatalf("fault did not leave a durable CLEAR successor: state=%#v err=%v", before, err)
+			}
+			if isFinalizedReleaseFault(phase) {
+				if clearReceiptExact(fixture.store, before) {
+					t.Fatal("release-link interruption exposed an admission-enabling finalized receipt")
+				}
+				next, boot := c2TargetInStore(t, fixture.store, c2Digest('8'), '9')
+				if _, _, winner, err := acquireInterlockAndStartClaim(
+					context.Background(), fixture.store, next, boot, nil,
+				); err == nil || winner.validFor(fixture.store) {
+					t.Fatal("CLEAR without an exact run link admitted another target")
+				}
+			}
+			if err := releaseInterlockAfterFinalizedRun(
+				context.Background(), fixture.store, closure, fixture.claim, nil,
+			); err != nil {
+				t.Fatalf("exact finalized-release retry did not converge: %v", err)
+			}
+			after, present, err := readExecutionInterlockState(statePath)
+			if err != nil || !present || !sameInterlockState(before, after) {
+				t.Fatalf("receipt recovery rewrote CLEAR: before=%#v after=%#v err=%v", before, after, err)
+			}
+			if !clearReceiptExact(fixture.store, after) {
+				t.Fatal("finalized-release retry did not establish the exact receipt")
+			}
+			if err := releaseInterlockAfterFinalizedRun(
+				context.Background(), fixture.store, closure, fixture.claim, nil,
+			); err != nil {
+				t.Fatalf("exact receipt did not converge idempotently: %v", err)
+			}
+		})
+	}
+}
+
+func isFinalizedReleaseFault(phase contractFaultPhase) bool {
+	switch phase {
+	case faultBeforeFinalizedReleaseTemp,
+		faultAfterFinalizedReleaseTemp,
+		faultBeforeFinalizedReleaseLink,
+		faultAfterFinalizedReleaseLink,
+		faultAfterFinalizedReleaseSync,
+		faultBeforeFinalizedReleaseOpen:
+		return true
+	default:
+		return false
+	}
+}
+
+func TestC4FinalizedClearReceiptWithoutRunLinkCannotReadmit(t *testing.T) {
+	fixture := c2CompleteFixture(t)
+	closure := issueC2TerminalClosureFixture(t, fixture)
+	if err := releaseInterlockAfterFinalizedRun(
+		context.Background(), fixture.store, closure, fixture.claim, nil,
+	); err != nil {
+		t.Fatal(err)
+	}
+	statePath := filepath.Join(fixture.store.contractOps, interlockFilename)
+	clear, present, err := readExecutionInterlockState(statePath)
+	if err != nil || !present || !clearReceiptExact(fixture.store, clear) {
+		t.Fatalf("fixture did not establish an exact finalized clear: present=%t err=%v", present, err)
+	}
+	runHex, err := strictDigestHex(closure.run.record.object.Digest())
+	if err != nil {
+		t.Fatal(err)
+	}
+	releasePath := filepath.Join(fixture.store.contractOps, finalizedReleaseDirectory, runHex)
+	if err := os.Remove(releasePath); err != nil {
+		t.Fatal(err)
+	}
+	if err := syncDirectory(filepath.Dir(releasePath)); err != nil {
+		t.Fatal(err)
+	}
+	if clearReceiptExact(fixture.store, clear) {
+		t.Fatal("finalized CLEAR stayed admissible after its historical run link disappeared")
+	}
+	next, boot := c2TargetInStore(t, fixture.store, c2Digest('8'), '9')
+	if _, _, winner, err := acquireInterlockAndStartClaim(
+		context.Background(), fixture.store, next, boot, nil,
+	); err == nil || winner.validFor(fixture.store) {
+		t.Fatal("receipt-only finalized CLEAR admitted another target")
+	}
+}
+
 func TestC2InterlockRejectsCorruptCrossStoreAndAlternateOwnerState(t *testing.T) {
 	fixture := c2CompleteFixture(t)
 	closure := issueC2TerminalClosureFixture(t, fixture)

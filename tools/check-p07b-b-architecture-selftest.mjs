@@ -7,14 +7,24 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { collectFacts, futureSymbolsInSource, partitionFutureSymbols, validateFacts } from "./check-p07b-b-architecture.mjs";
+import {
+	collectFacts,
+	futureSurfaceHistoricalInventory,
+	futureSurfaceManifest,
+	futureSurfaceManifestBytes,
+	futureSymbolsInSource,
+	partitionFutureSymbols,
+	validateFacts,
+	validateFutureSurfaceManifest,
+	validateFutureSurfaceState,
+} from "./check-p07b-b-architecture.mjs";
 
 const selftestPath = fileURLToPath(import.meta.url);
 const root = resolve(dirname(selftestPath), "..");
 const checker = resolve(root, "tools/check-p07b-b-architecture.mjs");
 const cleanMarker = "P07B B architecture boundary OK\n";
 
-const cases = Object.freeze([
+const historicalCases = Object.freeze([
 	Object.freeze({ id: "issuer-owner", code: "P07B_B_ISSUER_OWNERSHIP" }),
 	Object.freeze({ id: "raw-output-api", code: "P07B_B_RAW_OUTPUT_API" }),
 	Object.freeze({ id: "transition-cardinality", code: "P07B_B_RAW_TRANSITION_CARDINALITY" }),
@@ -28,11 +38,17 @@ const cases = Object.freeze([
 	Object.freeze({ id: "c3-surface-bundle", code: "P07B_B_SELFTEST_C3_SURFACE_BUNDLE" }),
 	Object.freeze({ id: "future-surface", code: "P07B_B_PREMATURE_C_SURFACE" }),
 ]);
-const expectedRosterDigest = "d5745ef69f205bbe4ce445448e6189ba244adacc36fe3e44fdf56f9485100ef2";
+const cases = Object.freeze([
+	...historicalCases,
+	Object.freeze({ id: "future-manifest-authority", code: "P07B_B_SELFTEST_FUTURE_MANIFEST_AUTHORITY" }),
+	Object.freeze({ id: "future-state-machine", code: "P07B_B_SELFTEST_FUTURE_STATE_MACHINE" }),
+]);
+const expectedHistoricalRosterDigest = "d5745ef69f205bbe4ce445448e6189ba244adacc36fe3e44fdf56f9485100ef2";
+const expectedRosterDigest = "0b4443b82326816dc6ecbb809cab95e0a0dab8161bf906f718bfb5b67e2f44bf";
 
-function rosterDigest() {
+function rosterDigest(roster = cases) {
 	const hash = createHash("sha256");
-	for (const entry of cases) hash.update(entry.id).update("\0").update(entry.code).update("\0");
+	for (const entry of roster) hash.update(entry.id).update("\0").update(entry.code).update("\0");
 	return hash.digest("hex");
 }
 
@@ -225,8 +241,123 @@ function requireExactC3SurfaceBundle() {
 	}
 }
 
+function requireFutureSurfaceStateMachine() {
+	const c4Rows = [
+		{ boundary: "C4", path: "internal/contractexec/runner/runner.go", symbol: "ContractExecutionRunner" },
+		{ boundary: "C4", path: "internal/store/contract_run_bridge.go", symbol: "ContractExecutionRecord" },
+	];
+	const c5Rows = [
+		{ boundary: "C5", path: "internal/contractexec/http/evidence.go", symbol: "ContractExecutionTarget" },
+		{ boundary: "C5", path: "internal/contractexec/http/runner.go", symbol: "ContractExecutionRecord" },
+		{ boundary: "C5", path: "internal/contractexec/http/runner_darwin.go", symbol: "ContractExecutionRecord" },
+		{ boundary: "C5", path: "internal/contractexec/http/runner_darwin.go", symbol: "DeriveContractExecution" },
+		{ boundary: "C5", path: "internal/contractexec/http/runner_darwin.go", symbol: "NewFinalizedContractRun" },
+		{ boundary: "C5", path: "internal/contractexec/http/runner_darwin.go", symbol: "PersistContractExecutionRecord" },
+		{ boundary: "C5", path: "internal/contractexec/http/runner_unsupported.go", symbol: "ContractExecutionRecord" },
+	];
+	const rows = [...c4Rows, ...c5Rows];
+	const manifest = futureSurfaceManifest(rows);
+	const compareObserved = (left, right) => Buffer.compare(
+		Buffer.from(`${left.path}\0${left.symbol}`, "utf8"),
+		Buffer.from(`${right.path}\0${right.symbol}`, "utf8"),
+	);
+	const observed = (future) => [...structuredClone(futureSurfaceHistoricalInventory), ...future]
+		.sort(compareObserved);
+	const production = (future) => [...new Set([
+		...futureSurfaceHistoricalInventory.map(({ path }) => path), ...future.map(({ path }) => path),
+	])].sort((left, right) => Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8")));
+	const c4Future = rows.filter(({ boundary }) => boundary === "C4").map(({ path, symbol }) => ({ path, symbol }));
+	const c5Future = rows.map(({ path, symbol }) => ({ path, symbol }));
+	const c4Observed = observed(c4Future);
+	const c5Observed = observed(c5Future);
+	const c4Production = production(c4Future);
+	const c5Production = [...production(c5Future), "internal/contractexec/scope/scope.go"]
+		.sort((left, right) => Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8")));
+	if (validateFutureSurfaceManifest(manifest).length !== 0 ||
+		validateFutureSurfaceState(manifest, c4Observed, c4Production, "C4").length !== 0 ||
+		validateFutureSurfaceState(manifest, c5Observed, c5Production, "C5").length !== 0 ||
+		!futureSurfaceManifestBytes(manifest).equals(Buffer.from(`${JSON.stringify(manifest)}\n`, "utf8"))) {
+		fail("P07B_B_SELFTEST_FUTURE_SURFACE_STATE", "positive states");
+	}
+	let rejected = 0;
+	const refuseManifest = (name, mutate, expected) => {
+		const hostile = structuredClone(manifest);
+		const candidate = mutate(hostile) ?? hostile;
+		const errors = validateFutureSurfaceManifest(candidate);
+		if (!errors.some((error) => error.includes(expected))) {
+			fail("P07B_B_SELFTEST_FUTURE_SURFACE_STATE", `${name}:${errors.join(",")}`);
+		}
+		rejected += 1;
+	};
+	refuseManifest("root order", (value) => ({ rows: value.rows, schema: value.schema, schema_sha256: value.schema_sha256 }), "root keys/order");
+	refuseManifest("schema digest", (value) => { value.schema_sha256 = "0".repeat(64); }, "schema digest");
+	refuseManifest("row order", (value) => { [value.rows[0], value.rows[1]] = [value.rows[1], value.rows[0]]; }, "row order");
+	refuseManifest("duplicate", (value) => { value.rows.splice(1, 0, structuredClone(value.rows[0])); }, "duplicate row");
+	refuseManifest("boundary", (value) => { value.rows[0].boundary = "C6"; }, "boundary");
+	refuseManifest("prefix lookalike", (value) => { value.rows[0].path = "internal/contractexec/runner-copy/runner.go"; }, "location");
+	refuseManifest("symbol", (value) => { value.rows[0].symbol = "ExecutionRunner"; }, "symbol");
+	refuseManifest("missing bridge", (value) => {
+		value.rows = value.rows.filter(({ path }) => path !== "internal/store/contract_run_bridge.go");
+	}, "missing required row");
+	const refuseState = (name, boundary, observedRows, productionPaths, expected) => {
+		const errors = validateFutureSurfaceState(manifest, observedRows, productionPaths, boundary);
+		if (!errors.some((error) => error.includes(expected))) {
+			fail("P07B_B_SELFTEST_FUTURE_SURFACE_STATE", `${name}:${errors.join(",")}`);
+		}
+		rejected += 1;
+	};
+	const refuseC5Instance = (name, mutateManifest, observedRows) => {
+		const candidate = structuredClone(manifest);
+		mutateManifest(candidate);
+		candidate.rows.sort((left, right) => {
+			const boundary = ["C4", "C5"].indexOf(left.boundary) - ["C4", "C5"].indexOf(right.boundary);
+			return boundary || compareObserved(left, right);
+		});
+		const manifestErrors = validateFutureSurfaceManifest(candidate);
+		if (!manifestErrors.includes("C5 reserved rows")) {
+			fail("P07B_B_SELFTEST_FUTURE_SURFACE_STATE", `${name}-manifest:${manifestErrors.join(",")}`);
+		}
+		const stateErrors = validateFutureSurfaceState(manifest, observedRows, c5Production, "C5");
+		if (!stateErrors.includes("C5 observed future rows")) {
+			fail("P07B_B_SELFTEST_FUTURE_SURFACE_STATE", `${name}-state:${stateErrors.join(",")}`);
+		}
+		rejected += 1;
+	};
+	refuseState("historical deletion", "C4", c4Observed.slice(1), c4Production, "historical 27-row inventory");
+	refuseState("missing C4 row", "C4", c4Observed.filter(({ symbol }) => symbol !== "ContractExecutionRunner"), c4Production, "observed future rows");
+	refuseState("extra C4 row", "C4", [...c4Observed, { path: "internal/contractexec/runner/runner.go", symbol: "ContractExecutionExtra" }].sort(compareObserved), c4Production, "observed future rows");
+	refuseState("relocated C4 row", "C4", c4Observed.map((row) => row.symbol === "ContractExecutionRunner" ? { ...row, path: "internal/contractexec/runner/copy.go" } : row).sort(compareObserved), c4Production, "observed future rows");
+	refuseState("premature C5 rows", "C4", c5Observed, c4Production, "observed future rows");
+	refuseC5Instance("missing C5 row", (value) => {
+		value.rows = value.rows.filter(({ path, symbol }) =>
+			path !== "internal/contractexec/http/runner_darwin.go" || symbol !== "DeriveContractExecution");
+	}, c5Observed.filter(({ path, symbol }) =>
+		path !== "internal/contractexec/http/runner_darwin.go" || symbol !== "DeriveContractExecution"));
+	refuseC5Instance("extra C5 row", (value) => {
+		value.rows.push({ boundary: "C5", path: "internal/contractexec/http/runner_darwin.go", symbol: "ContractExecutionExtra" });
+	}, [...c5Observed, { path: "internal/contractexec/http/runner_darwin.go", symbol: "ContractExecutionExtra" }].sort(compareObserved));
+	refuseC5Instance("relocated C5 row", (value) => {
+		value.rows = value.rows.map((row) => row.path === "internal/contractexec/http/evidence.go"
+			? { ...row, path: "internal/contractexec/http/evidence_copy.go" }
+			: row);
+	}, c5Observed.map((row) => row.path === "internal/contractexec/http/evidence.go"
+		? { ...row, path: "internal/contractexec/http/evidence_copy.go" }
+		: row).sort(compareObserved));
+	refuseState("runner absent", "C4", c4Observed, c4Production.filter((path) => !path.startsWith("internal/contractexec/runner/")), "C4 topology missing");
+	refuseState("HTTP premature", "C4", c4Observed, [...c4Production, "internal/contractexec/http/empty.go"].sort(), "C4 topology premature");
+	refuseState("scope premature", "C4", c4Observed, [...c4Production, "internal/contractexec/scope/empty.go"].sort(), "C4 topology premature");
+	refuseState("C5 without C4", "C5", c5Observed, c5Production.filter((path) => !path.startsWith("internal/contractexec/runner/")), "C4 topology missing");
+	refuseState("C5 HTTP absent", "C5", c5Observed, c5Production.filter((path) => !path.startsWith("internal/contractexec/http/")), "C5 topology missing");
+	refuseState("C5 scope absent", "C5", c5Observed, c5Production.filter((path) => !path.startsWith("internal/contractexec/scope/")), "C5 topology missing");
+	if (rejected !== 22) fail("P07B_B_SELFTEST_FUTURE_SURFACE_STATE", `control cardinality ${rejected}`);
+}
+
 async function main() {
 	if (process.argv.length !== 2) fail("P07B_B_SELFTEST_ARGUMENTS", "no arguments accepted");
+	const historicalDigest = rosterDigest(historicalCases);
+	if (historicalDigest !== expectedHistoricalRosterDigest) {
+		fail("P07B_B_SELFTEST_HISTORICAL_ROSTER_DRIFT", `${historicalDigest} != ${expectedHistoricalRosterDigest}`);
+	}
 	const digest = rosterDigest();
 	if (digest !== expectedRosterDigest) fail("P07B_B_SELFTEST_ROSTER_DRIFT", `${digest} != ${expectedRosterDigest}`);
 	runCleanChecker();
@@ -243,6 +374,17 @@ async function main() {
 		}
 		if (test.id === "c3-surface-bundle") {
 			requireExactC3SurfaceBundle();
+			continue;
+		}
+		if (test.id === "future-manifest-authority") {
+			requireFutureSurfaceStateMachine();
+			const facts = structuredClone(clean);
+			facts.futureSurfaceErrors.push("synthetic manifest/state drift");
+			requireViolation(facts, "P07B_B_FUTURE_SURFACE_AUTHORITY", test.id);
+			continue;
+		}
+		if (test.id === "future-state-machine") {
+			requireFutureSurfaceStateMachine();
 			continue;
 		}
 		const facts = structuredClone(clean);

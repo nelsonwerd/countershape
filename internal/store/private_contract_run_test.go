@@ -126,6 +126,21 @@ func TestC2PrivateManifestEnforcesCountSizeAndRosterBounds(t *testing.T) {
 	if _, _, err := createPrivateManifest(context.Background(), store, target, claim, []privateBlobInput{c2Blob(0, invalidReference)}, nil); err == nil {
 		t.Fatal("manifest self-reference entered the private blob roster")
 	}
+	rosterFixture := c2CompleteFixture(t)
+	duplicatedRoster := rosterFixture.manifest
+	duplicatedRoster.entries = append([]privateManifestEntry(nil), rosterFixture.manifest.entries...)
+	for index := range duplicatedRoster.entries {
+		duplicatedRoster.entries[index].references = append(
+			[]privateEvidenceReference(nil), rosterFixture.manifest.entries[index].references...,
+		)
+	}
+	duplicatedRoster.entries[1].references = append(
+		duplicatedRoster.entries[1].references,
+		duplicatedRoster.entries[0].references[0],
+	)
+	if err := validatePrivateManifestRoster(rosterFixture.runRec.record.object, duplicatedRoster); err == nil {
+		t.Fatal("repeated logical evidence reference disappeared through roster deduplication")
+	}
 
 	largeStore, _, largeTarget, largeClaim := c2TargetAndClaim(t)
 	maximumBytes := bytes.Repeat([]byte{'x'}, maxPrivateEvidenceBytes)

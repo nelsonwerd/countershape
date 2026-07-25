@@ -59,6 +59,18 @@ const requiredCaseIDs = Object.freeze([
 	"c3-store-bridge-type-alias-foreign-owner",
 	"c3-store-bridge-duplicate-top-level-type",
 	"c3-store-bridge-duplicate-method",
+	"c4-store-bridge",
+	"c4-store-bridge-renamed-identifiers",
+	"c4-store-bridge-wrong-model-alias",
+	"c4-store-bridge-wrong-hostepoch-alias",
+	"c4-store-bridge-exported-embedded-field",
+	"c4-store-bridge-foreign-type-owner",
+	"c4-store-bridge-receiver-kind-drift",
+	"c4-store-bridge-foreign-method-owner",
+	"c4-store-hostepoch-import-foreign-file",
+	"c4-world-mechanics-wrong-alias",
+	"c4-world-mechanics-foreign-file",
+	"c4-world-mechanics-missing-authorized-file",
 	"eligibility-core-capability-import",
 	"eligibility-core-api-opening",
 	"eligibility-owner-bypass",
@@ -182,7 +194,7 @@ const requiredCaseIDs = Object.freeze([
   "manifest-barrier-tamper",
   "manifest-tool-failure",
 ]);
-const requiredRosterDigest = "f557e90eea75e1e101581a74d08c82bde7fa822ee34875bed60ac19447c9abfd";
+const requiredRosterDigest = "4f89f1624e683f1c84ed692658d0c1669d55de1cc05f77c579e60d07319661b9";
 
 async function copyFixture() {
   const fixture = await mkdtemp(join(tmpdir(), "countershape-u6-architecture-"));
@@ -294,6 +306,33 @@ ${c3StoreMethodSignatures[3]} { return ContractTargetRecord{}, nil }
 		);
 	}
 	await requireC3StoreBridge(fixture);
+}
+
+const c4StoreOwnerPath = "internal/store/contract_run_bridge.go";
+const c4StoreModelImport = 'contractmodel "github.com/nelsonwerd/countershape/internal/contractexec/model"';
+const c4StoreHostEpochImport = '"github.com/nelsonwerd/countershape/internal/hostepoch"';
+const c4ProcessMechanicsImport = '"github.com/nelsonwerd/countershape/internal/processmechanics"';
+const c4ConsumeForStartSignature =
+	"func (owner ContractRunOwner) ConsumeForStart(ctx context.Context, bindingDigest domain.Digest) error";
+
+async function requireC4Boundaries(fixture) {
+	for (const needle of [
+		c4StoreModelImport,
+		c4StoreHostEpochImport,
+		"type ContractRunOwner struct {",
+		"type PrivateRunManifest struct {",
+		"type FinalizedRunRecord struct {",
+		"type TerminalClosure struct {",
+		"type ContractExecutionRecord struct {",
+		"func AcquireContractRunOwner(",
+		c4ConsumeForStartSignature,
+		"func PersistContractExecutionRecord(",
+	]) {
+		await requireExact(fixture, c4StoreOwnerPath, needle);
+	}
+	for (const path of ["internal/world/process.go", "internal/world/process_darwin.go"]) {
+		await requireExact(fixture, path, c4ProcessMechanicsImport);
+	}
 }
 
 function runChecker(fixture, args = [], environment = {}) {
@@ -564,6 +603,116 @@ async function exercise(name) {
 				"\nfunc (repository *ObjectStore) OpenContractTargetRecord(callContext context.Context, attemptRecord ConformanceAttemptRecord) (ContractTargetRecord, error) { return ContractTargetRecord{}, nil }\n",
 			);
 			expected = "U6_STORE_C3_MODEL_IMPORT_NOT_ADMITTED";
+			break;
+		case "c4-store-bridge":
+			await requireC4Boundaries(fixture);
+			break;
+		case "c4-store-bridge-renamed-identifiers":
+			await requireC4Boundaries(fixture);
+			await replaceExact(
+				fixture,
+				c4StoreOwnerPath,
+				c4ConsumeForStartSignature,
+				"func (permit ContractRunOwner) ConsumeForStart(callContext context.Context, preparedBinding domain.Digest) error",
+			);
+			break;
+		case "c4-store-bridge-wrong-model-alias":
+			await requireC4Boundaries(fixture);
+			await replaceExact(
+				fixture,
+				c4StoreOwnerPath,
+				c4StoreModelImport,
+				'modelalias "github.com/nelsonwerd/countershape/internal/contractexec/model"',
+			);
+			expected = "U6_STORE_C4_BRIDGE_NOT_ADMITTED";
+			break;
+		case "c4-store-bridge-wrong-hostepoch-alias":
+			await requireC4Boundaries(fixture);
+			await replaceExact(
+				fixture,
+				c4StoreOwnerPath,
+				c4StoreHostEpochImport,
+				'epochalias "github.com/nelsonwerd/countershape/internal/hostepoch"',
+			);
+			expected = "U6_STORE_C4_BRIDGE_NOT_ADMITTED";
+			break;
+		case "c4-store-bridge-exported-embedded-field":
+			await requireC4Boundaries(fixture);
+			await replaceExact(
+				fixture,
+				c4StoreOwnerPath,
+				"type ContractExecutionRecord struct {\n\tstore  *ObjectStore",
+				"type ContractExecutionRecord struct {\n\tstore  *ObjectStore\n\t*ObjectStore",
+			);
+			expected = "U6_STORE_C4_BRIDGE_NOT_ADMITTED";
+			break;
+		case "c4-store-bridge-foreign-type-owner":
+			await requireC4Boundaries(fixture);
+			await appendSource(
+				fixture,
+				"internal/store/object_store.go",
+				"\ntype ContractExecutionRecord struct { hidden byte }\n",
+			);
+			expected = "U6_STORE_C4_BRIDGE_NOT_ADMITTED";
+			break;
+		case "c4-store-bridge-receiver-kind-drift":
+			await requireC4Boundaries(fixture);
+			await replaceExact(
+				fixture,
+				c4StoreOwnerPath,
+				"func (record ContractExecutionRecord) Model() contractmodel.ContractExecution {",
+				"func (record *ContractExecutionRecord) Model() contractmodel.ContractExecution {",
+			);
+			expected = "U6_STORE_C4_BRIDGE_NOT_ADMITTED";
+			break;
+		case "c4-store-bridge-foreign-method-owner":
+			await requireC4Boundaries(fixture);
+			await appendSource(
+				fixture,
+				"internal/store/object_store.go",
+				"\nfunc (record ContractExecutionRecord) ReopenAuthority() ContractExecutionRecord { return record }\n",
+			);
+			expected = "U6_STORE_C4_BRIDGE_NOT_ADMITTED";
+			break;
+		case "c4-store-hostepoch-import-foreign-file":
+			await requireC4Boundaries(fixture);
+			await replaceExact(
+				fixture,
+				"internal/store/object_store.go",
+				'\t"github.com/nelsonwerd/countershape/internal/domain"',
+				'\t"github.com/nelsonwerd/countershape/internal/domain"\n\t_ "github.com/nelsonwerd/countershape/internal/hostepoch"',
+			);
+			expected = "U6_STORE_C4_BRIDGE_NOT_ADMITTED";
+			break;
+		case "c4-world-mechanics-wrong-alias":
+			await requireC4Boundaries(fixture);
+			await replaceExact(
+				fixture,
+				"internal/world/process.go",
+				c4ProcessMechanicsImport,
+				'mechanics "github.com/nelsonwerd/countershape/internal/processmechanics"',
+			);
+			expected = "U6_WORLD_C4_MECHANICS_IMPORT_NOT_ADMITTED";
+			break;
+		case "c4-world-mechanics-foreign-file":
+			await requireC4Boundaries(fixture);
+			await replaceExact(
+				fixture,
+				"internal/world/capture.go",
+				'\t"math"',
+				'\t"math"\n\n\t_ "github.com/nelsonwerd/countershape/internal/processmechanics"',
+			);
+			expected = "U6_WORLD_C4_MECHANICS_IMPORT_NOT_ADMITTED";
+			break;
+		case "c4-world-mechanics-missing-authorized-file":
+			await requireC4Boundaries(fixture);
+			await replaceExact(
+				fixture,
+				"internal/world/process.go",
+				`\n\t${c4ProcessMechanicsImport}`,
+				"",
+			);
+			expected = "U6_INTERNAL_IMPORT_LATTICE";
 			break;
 		case "eligibility-core-capability-import":
 			await replaceExact(
@@ -1610,6 +1759,8 @@ async function main() {
 		"c3-store-bridge-raw-import",
 		"c3-store-bridge-renamed-identifiers",
 		"c3-store-import-camouflage-raw-string",
+		"c4-store-bridge",
+		"c4-store-bridge-renamed-identifiers",
 	]);
 	const hostile = observed.filter((name) => !cleanControls.has(name)).length;
 	process.stdout.write(`U6 architecture checker self-test OK (${cleanControls.size} clean/comment controls; ${hostile}/${hostile} hostile cases)\n`);

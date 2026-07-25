@@ -2,20 +2,18 @@
 
 import { createHash } from "node:crypto";
 import { arch, platform } from "node:os";
-import { realpath, rm } from "node:fs/promises";
-import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
+import { pathToFileURL } from "node:url";
 
 import {
 	acquireVerificationLock,
 	admitTools,
 	buildChildEnvironment,
 	childResult,
+	cleanupVerificationResources,
 	createPrivateRoots,
 	finalizeVerificationResources,
 	repositoryRoot,
-	sensitiveGoPackages,
-} from "./verify-current.mjs";
+} from "./verify-runtime-authority.mjs";
 
 const modulePath = "github.com/nelsonwerd/countershape";
 const allowedActions = new Set(["bench", "cont", "fail", "output", "pass", "pause", "run", "skip", "start"]);
@@ -23,6 +21,21 @@ const packageActions = new Set(["fail", "output", "pass", "start"]);
 const testActions = new Set(["cont", "fail", "output", "pass", "pause", "run", "skip"]);
 const expectedEntrypointPattern = /^(?:(?:Test|Fuzz)[A-Za-z0-9_]+|Example[A-Za-z0-9_]*)$/u;
 const authorityNames = Object.freeze(["go", "node", "git", "sh", "cc", "cxx"]);
+const sensitiveGoPackages = Object.freeze([
+	`${modulePath}/internal/contractexec/runner`,
+	`${modulePath}/internal/emit/node/compiler`,
+	`${modulePath}/internal/emit/node/program/v1`,
+	`${modulePath}/internal/processmechanics`,
+	`${modulePath}/internal/store`,
+	`${modulePath}/internal/world`,
+	`${modulePath}/testkit/contractexec/cli`,
+	`${modulePath}/testkit/contractexec/http`,
+	`${modulePath}/testkit/studies/cli_precedence`,
+	`${modulePath}/testkit/studies/http_invoices`,
+]);
+
+// GO_REPETITION_PROFILE_CLASS was the sealed ad-hoc parser refusal. C4 replaces
+// caller-supplied profiles with identity-selected, recursively frozen cases.
 
 export class GoRepetitionError extends Error {
 	constructor(code, detail) {
@@ -35,251 +48,1492 @@ function fail(code, detail) {
 	throw new GoRepetitionError(code, detail);
 }
 
-function exactAlternation(names) {
-	return names.length === 1 ? `^${names[0]}$` : `^(?:${names.join("|")})$`;
-}
-
-function qualificationCase({ id, packagePath, profile, count, expected, fullPackage = false }) {
-	const sortedExpected = [...expected].sort();
-	if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/u.test(id) || new Set(sortedExpected).size !== sortedExpected.length ||
-		sortedExpected.length === 0 || sortedExpected.some((name) => !expectedEntrypointPattern.test(name))) {
-		throw new Error(`invalid Go repetition qualification case: ${id}`);
-	}
-	const requiredProfile = sensitiveGoPackages.includes(packagePath) ? "sensitive" : "general";
-	if (profile !== requiredProfile || !packagePath.startsWith(`${modulePath}/`) || !Number.isInteger(count) || count < 1 || count > 50) {
-		throw new Error(`invalid Go repetition qualification case authority: ${id}`);
-	}
-	return Object.freeze({
-		caseID: id,
-		count,
-		expected: Object.freeze(sortedExpected),
-		packagePath,
-		profile,
-		qualification: true,
-		run: fullPackage ? "^(?:Test|Fuzz|Example).*$" : exactAlternation(sortedExpected),
-	});
-}
-
-const qualificationDefinitions = Object.freeze([
-	{
-		id: "world-output-caps-50", packagePath: `${modulePath}/internal/world`, profile: "sensitive", count: 50,
-		expected: ["TestStdoutAndStderrHaveIndependentExactCaps"],
-	},
-	{
-		id: "world-output-independence-20", packagePath: `${modulePath}/internal/world`, profile: "sensitive", count: 20,
-		expected: ["TestStdoutAndStderrLimitsAreIndependentMutationGuard"],
-	},
-	{
-		id: "world-simultaneous-overflow-20", packagePath: `${modulePath}/internal/world`, profile: "sensitive", count: 20,
-		expected: ["TestSimultaneousChannelOverflowRetainsIndependentFacts"],
-	},
-	{
-		id: "world-lifecycle-readiness-20", packagePath: `${modulePath}/internal/world`, profile: "sensitive", count: 20,
-		expected: [
-			"TestExecuteBuildsFreshWorldsAndPublishesMarkerBeforeSpawn",
-			"TestFinalGroupProbeRequiresObservedAbsence",
-			"TestHTTPPortableEarlyExitRetainsCausallyLaterReadinessEOF",
-			"TestHTTPPortableReadinessFailuresRemainFinalizedReceipts",
-			"TestPreTermProbeControlsWhetherTheOriginalGroupIsSignaled",
-			"TestProcessGroupAndSessionEscapesRemainExplicitExclusions",
-			"TestProcessLifecycleControlsAndCleansDescendants",
-			"TestToolVersionProbeCleansDescendantHeldPipesWithinItsBound",
-			"TestUnexpectedWaitFailureIsNotACompletedCleanupEdge",
-		],
-	},
-	{
-		id: "compiler-generated-runtime-20", packagePath: `${modulePath}/internal/emit/node/compiler`, profile: "sensitive", count: 20,
-		expected: [
-			"TestGeneratedCLIContractDistinguishesAbsentAndPresentEmptyStdin",
-			"TestGeneratedCLIContractRunsFromPrivateTargetInventory",
-			"TestGeneratedContractReportsHarnessFailureForVerifiedLoaderFailure",
-			"TestGeneratedHTTPContractClassifiesProbeTimeout",
-			"TestGeneratedHTTPContractClassifiesSocketReset",
-			"TestGeneratedHTTPContractRunsFromPrivateTargetInventory",
-		],
-	},
-	{
-		id: "program-lifecycle-20", packagePath: `${modulePath}/internal/emit/node/program/v1`, profile: "sensitive", count: 20,
-		expected: ["TestCopiedHarnessLifecycleStateMachines"],
-	},
-	{
-		id: "store-cross-process-cas-20", packagePath: `${modulePath}/internal/store`, profile: "sensitive", count: 20,
-		expected: ["TestStudyHeadCrossProcessCASHasExactlyOneWinner"],
-	},
-	...Array.from({ length: 20 }, (_, index) => ({
-		id: `cli-physical-reducer-${String(index + 1).padStart(2, "0")}-of-20`,
-		packagePath: `${modulePath}/testkit/studies/cli_precedence`,
-		profile: "sensitive",
-		count: 1,
-		expected: ["TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence"],
-	})),
-	...Array.from({ length: 20 }, (_, index) => ({
-		id: `http-physical-reducer-${String(index + 1).padStart(2, "0")}-of-20`,
-		packagePath: `${modulePath}/testkit/studies/http_invoices`,
-		profile: "sensitive",
-		count: 1,
-		expected: ["TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence"],
-	})),
-	{
-		id: "parity-evaluator-20", packagePath: `${modulePath}/internal/emit/node/parity`, profile: "general", count: 20,
-		expected: ["TestGoAndNodeParityEvaluatorsMatchLiteralOracle"],
-	},
-	{
-		id: "parity-framing-20", packagePath: `${modulePath}/internal/emit/node/parity`, profile: "general", count: 20,
-		expected: [
-			"TestNodeParityRunnerAcceptsExactWholeWireCap",
-			"TestNodeParityRunnerRejectsInvalidFramesAtomically",
-			"TestNodeParityRunnerRejectsMissingFinalLFWithoutStderr",
-			"TestParityFramingRejectsExpandedSemanticResultAtomically",
-			"TestParityResponseFramingExactBodyBoundary",
-		],
-	},
-	{
-		id: "parity-full-package-3", packagePath: `${modulePath}/internal/emit/node/parity`, profile: "general", count: 3, fullPackage: true,
-		expected: [
-			"FuzzParseContractParityCorpusLine",
-			"TestContractParityCorpus",
-			"TestContractParityCorpusExactSizeBoundaries",
-			"TestContractParityCorpusIsOrderAndOracleIndependent",
-			"TestContractParityCorpusParserRejectsEnvelopeAliases",
-			"TestContractParityCorpusRejectsClosedSchemaDrift",
-			"TestContractParityManifestMatchesCopiedEntrypointParser",
-			"TestContractParityOracleLeakMutantsAreKilledByRequestRoster",
-			"TestDirectResultSelectorExhaustiveGoNodeMatrix",
-			"TestGoAndNodeParityEvaluatorsMatchLiteralOracle",
-			"TestNodeParityRunnerAcceptsExactWholeWireCap",
-			"TestNodeParityRunnerRejectsInvalidFramesAtomically",
-			"TestNodeParityRunnerRejectsMissingFinalLFWithoutStderr",
-			"TestOwnerEligibilitySelectorExhaustiveGoNodeMatrix",
-			"TestParityFramingRejectsExpandedSemanticResultAtomically",
-			"TestParityResponseFramingExactBodyBoundary",
-			"TestResultFrameBytesExactBoundaries",
-		],
-	},
-	{
-		id: "cli-physical-full-package-3", packagePath: `${modulePath}/testkit/studies/cli_precedence`, profile: "sensitive", count: 3, fullPackage: true,
-		expected: [
-			"TestCLICompilationFreshProcessRestartHelper",
-			"TestCLIMaterializationControlCrossesAdapterAndExcludedMap",
-			"TestCLIPhysicalReducerBudgetFenceRetainsOnlyBestKnown",
-			"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
-			"TestCLIP07BBPublicationHelper",
-			"TestCLIPresentBytesStdinCrossesWorldAndAdapter",
-			"TestCLIPresentEmptyStdinCrossesWorldAndAdapter",
-			"TestCLIReferenceControlClassificationMatrix",
-			"TestCLIReferenceDisplayPermutationPreservesMapWithFreshAttempts",
-			"TestCLIReferencePrecedenceStudy",
-			"TestCLIStudyUsesStrictSourceCompilerAndPlanBoundSchedule",
-			"TestOptionalReceiptMeasurementKeepsAbsenceExplicit",
-		],
-	},
-	{
-		id: "http-physical-full-package-3", packagePath: `${modulePath}/testkit/studies/http_invoices`, profile: "sensitive", count: 3, fullPackage: true,
-		expected: [
-			"TestHTTPCompilationFreshProcessRestartHelper",
-			"TestHTTPInvoiceAlternatingCandidateUsesAllTrialsNeverMajority",
-			"TestHTTPInvoiceOutcomeMapUsesExactCandidateLabelsNotGroupShape",
-			"TestHTTPInvoicePermutationPreservesExactMapWithFreshEvidence",
-			"TestHTTPInvoicePortableChildBindPhysicalLineage",
-			"TestHTTPInvoiceReferenceStudy",
-			"TestHTTPInvoiceRequestFactsDrivePhysicalPolicy",
-			"TestHTTPInvoiceStudyRecordsTimingAndTrialMultiplication",
-			"TestHTTPInvoiceStudyUsesStrictSourceCompilerAndPlanBoundSchedule",
-			"TestHTTPInvoiceTenantSeedShapeTrapIsPhysicalAndLabelSensitive",
-			"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
-			"TestHTTPPhysicalTenantSeedNeighborChangesExactLabeledMapWithStableRoster",
-			"TestNegativeSharedRootContaminationCreatesFalseEquality",
-		],
-	},
-]);
-
-export const qualificationCases = Object.freeze(Object.fromEntries(
-	qualificationDefinitions.map((definition) => {
-		const specification = qualificationCase(definition);
-		return [specification.caseID, specification];
+export const qualificationMatrices = Object.freeze({
+	"C4": Object.freeze({
+		"caseIDs": Object.freeze([
+			"processmechanics-output-caps-50",
+			"processmechanics-output-independence-20",
+			"processmechanics-simultaneous-overflow-20",
+			"world-lifecycle-readiness-20",
+			"contract-runner-admission-50",
+			"contract-cli-standalone-closure-20",
+			"compiler-generated-runtime-20",
+			"program-lifecycle-20",
+			"store-cross-process-cas-20",
+			"cli-physical-reducer-01-of-20",
+			"cli-physical-reducer-02-of-20",
+			"cli-physical-reducer-03-of-20",
+			"cli-physical-reducer-04-of-20",
+			"cli-physical-reducer-05-of-20",
+			"cli-physical-reducer-06-of-20",
+			"cli-physical-reducer-07-of-20",
+			"cli-physical-reducer-08-of-20",
+			"cli-physical-reducer-09-of-20",
+			"cli-physical-reducer-10-of-20",
+			"cli-physical-reducer-11-of-20",
+			"cli-physical-reducer-12-of-20",
+			"cli-physical-reducer-13-of-20",
+			"cli-physical-reducer-14-of-20",
+			"cli-physical-reducer-15-of-20",
+			"cli-physical-reducer-16-of-20",
+			"cli-physical-reducer-17-of-20",
+			"cli-physical-reducer-18-of-20",
+			"cli-physical-reducer-19-of-20",
+			"cli-physical-reducer-20-of-20",
+			"http-physical-reducer-01-of-20",
+			"http-physical-reducer-02-of-20",
+			"http-physical-reducer-03-of-20",
+			"http-physical-reducer-04-of-20",
+			"http-physical-reducer-05-of-20",
+			"http-physical-reducer-06-of-20",
+			"http-physical-reducer-07-of-20",
+			"http-physical-reducer-08-of-20",
+			"http-physical-reducer-09-of-20",
+			"http-physical-reducer-10-of-20",
+			"http-physical-reducer-11-of-20",
+			"http-physical-reducer-12-of-20",
+			"http-physical-reducer-13-of-20",
+			"http-physical-reducer-14-of-20",
+			"http-physical-reducer-15-of-20",
+			"http-physical-reducer-16-of-20",
+			"http-physical-reducer-17-of-20",
+			"http-physical-reducer-18-of-20",
+			"http-physical-reducer-19-of-20",
+			"http-physical-reducer-20-of-20",
+			"parity-evaluator-20",
+			"parity-framing-20",
+			"parity-full-package-3",
+			"cli-physical-full-package-3",
+			"http-physical-full-package-3",
+		]),
+		"cases": Object.freeze({
+			"processmechanics-output-caps-50": Object.freeze({
+				"caseID": "processmechanics-output-caps-50",
+				"count": 50,
+				"expected": Object.freeze([
+					"TestStdoutAndStderrHaveIndependentExactCaps",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/internal/processmechanics",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestStdoutAndStderrHaveIndependentExactCaps$",
+			}),
+			"processmechanics-output-independence-20": Object.freeze({
+				"caseID": "processmechanics-output-independence-20",
+				"count": 20,
+				"expected": Object.freeze([
+					"TestStdoutAndStderrLimitsAreIndependentMutationGuard",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/internal/processmechanics",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestStdoutAndStderrLimitsAreIndependentMutationGuard$",
+			}),
+			"processmechanics-simultaneous-overflow-20": Object.freeze({
+				"caseID": "processmechanics-simultaneous-overflow-20",
+				"count": 20,
+				"expected": Object.freeze([
+					"TestSimultaneousChannelOverflowRetainsIndependentFacts",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/internal/processmechanics",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestSimultaneousChannelOverflowRetainsIndependentFacts$",
+			}),
+			"world-lifecycle-readiness-20": Object.freeze({
+				"caseID": "world-lifecycle-readiness-20",
+				"count": 20,
+				"expected": Object.freeze([
+					"TestExecuteBuildsFreshWorldsAndPublishesMarkerBeforeSpawn",
+					"TestFinalGroupProbeRequiresObservedAbsence",
+					"TestHTTPPortableEarlyExitRetainsCausallyLaterReadinessEOF",
+					"TestHTTPPortableReadinessFailuresRemainFinalizedReceipts",
+					"TestPreTermProbeControlsWhetherTheOriginalGroupIsSignaled",
+					"TestProcessGroupAndSessionEscapesRemainExplicitExclusions",
+					"TestProcessLifecycleControlsAndCleansDescendants",
+					"TestToolVersionProbeCleansDescendantHeldPipesWithinItsBound",
+					"TestUnexpectedWaitFailureIsNotACompletedCleanupEdge",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/internal/world",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^(?:TestExecuteBuildsFreshWorldsAndPublishesMarkerBeforeSpawn|TestFinalGroupProbeRequiresObservedAbsence|TestHTTPPortableEarlyExitRetainsCausallyLaterReadinessEOF|TestHTTPPortableReadinessFailuresRemainFinalizedReceipts|TestPreTermProbeControlsWhetherTheOriginalGroupIsSignaled|TestProcessGroupAndSessionEscapesRemainExplicitExclusions|TestProcessLifecycleControlsAndCleansDescendants|TestToolVersionProbeCleansDescendantHeldPipesWithinItsBound|TestUnexpectedWaitFailureIsNotACompletedCleanupEdge)$",
+			}),
+			"contract-runner-admission-50": Object.freeze({
+				"caseID": "contract-runner-admission-50",
+				"count": 50,
+				"expected": Object.freeze([
+					"TestConcurrentAdmissionProducesExactlyOneStart",
+					"TestRunPermitConsumptionIsSingleUseAndAdjacentToStart",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/internal/contractexec/runner",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^(?:TestConcurrentAdmissionProducesExactlyOneStart|TestRunPermitConsumptionIsSingleUseAndAdjacentToStart)$",
+			}),
+			"contract-cli-standalone-closure-20": Object.freeze({
+				"caseID": "contract-cli-standalone-closure-20",
+				"count": 20,
+				"expected": Object.freeze([
+					"TestCLIContractExecutionClosesStandaloneScope",
+					"TestCLIContractExecutionForbiddenPositiveControls",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/contractexec/cli",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^(?:TestCLIContractExecutionClosesStandaloneScope|TestCLIContractExecutionForbiddenPositiveControls)$",
+			}),
+			"compiler-generated-runtime-20": Object.freeze({
+				"caseID": "compiler-generated-runtime-20",
+				"count": 20,
+				"expected": Object.freeze([
+					"TestGeneratedCLIContractDistinguishesAbsentAndPresentEmptyStdin",
+					"TestGeneratedCLIContractRunsFromPrivateTargetInventory",
+					"TestGeneratedContractReportsHarnessFailureForVerifiedLoaderFailure",
+					"TestGeneratedHTTPContractClassifiesProbeTimeout",
+					"TestGeneratedHTTPContractClassifiesSocketReset",
+					"TestGeneratedHTTPContractRunsFromPrivateTargetInventory",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/internal/emit/node/compiler",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^(?:TestGeneratedCLIContractDistinguishesAbsentAndPresentEmptyStdin|TestGeneratedCLIContractRunsFromPrivateTargetInventory|TestGeneratedContractReportsHarnessFailureForVerifiedLoaderFailure|TestGeneratedHTTPContractClassifiesProbeTimeout|TestGeneratedHTTPContractClassifiesSocketReset|TestGeneratedHTTPContractRunsFromPrivateTargetInventory)$",
+			}),
+			"program-lifecycle-20": Object.freeze({
+				"caseID": "program-lifecycle-20",
+				"count": 20,
+				"expected": Object.freeze([
+					"TestCopiedHarnessLifecycleStateMachines",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/internal/emit/node/program/v1",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCopiedHarnessLifecycleStateMachines$",
+			}),
+			"store-cross-process-cas-20": Object.freeze({
+				"caseID": "store-cross-process-cas-20",
+				"count": 20,
+				"expected": Object.freeze([
+					"TestStudyHeadCrossProcessCASHasExactlyOneWinner",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/internal/store",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestStudyHeadCrossProcessCASHasExactlyOneWinner$",
+			}),
+			"cli-physical-reducer-01-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-01-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-02-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-02-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-03-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-03-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-04-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-04-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-05-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-05-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-06-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-06-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-07-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-07-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-08-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-08-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-09-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-09-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-10-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-10-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-11-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-11-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-12-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-12-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-13-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-13-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-14-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-14-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-15-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-15-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-16-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-16-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-17-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-17-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-18-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-18-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-19-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-19-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-20-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-20-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"http-physical-reducer-01-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-01-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-02-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-02-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-03-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-03-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-04-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-04-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-05-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-05-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-06-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-06-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-07-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-07-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-08-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-08-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-09-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-09-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-10-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-10-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-11-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-11-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-12-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-12-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-13-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-13-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-14-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-14-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-15-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-15-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-16-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-16-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-17-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-17-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-18-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-18-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-19-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-19-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-20-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-20-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"parity-evaluator-20": Object.freeze({
+				"caseID": "parity-evaluator-20",
+				"count": 20,
+				"expected": Object.freeze([
+					"TestGoAndNodeParityEvaluatorsMatchLiteralOracle",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/internal/emit/node/parity",
+				"profile": "general",
+				"qualification": true,
+				"run": "^TestGoAndNodeParityEvaluatorsMatchLiteralOracle$",
+			}),
+			"parity-framing-20": Object.freeze({
+				"caseID": "parity-framing-20",
+				"count": 20,
+				"expected": Object.freeze([
+					"TestNodeParityRunnerAcceptsExactWholeWireCap",
+					"TestNodeParityRunnerRejectsInvalidFramesAtomically",
+					"TestNodeParityRunnerRejectsMissingFinalLFWithoutStderr",
+					"TestParityFramingRejectsExpandedSemanticResultAtomically",
+					"TestParityResponseFramingExactBodyBoundary",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/internal/emit/node/parity",
+				"profile": "general",
+				"qualification": true,
+				"run": "^(?:TestNodeParityRunnerAcceptsExactWholeWireCap|TestNodeParityRunnerRejectsInvalidFramesAtomically|TestNodeParityRunnerRejectsMissingFinalLFWithoutStderr|TestParityFramingRejectsExpandedSemanticResultAtomically|TestParityResponseFramingExactBodyBoundary)$",
+			}),
+			"parity-full-package-3": Object.freeze({
+				"caseID": "parity-full-package-3",
+				"count": 3,
+				"expected": Object.freeze([
+					"FuzzParseContractParityCorpusLine",
+					"TestContractParityCorpus",
+					"TestContractParityCorpusExactSizeBoundaries",
+					"TestContractParityCorpusIsOrderAndOracleIndependent",
+					"TestContractParityCorpusParserRejectsEnvelopeAliases",
+					"TestContractParityCorpusRejectsClosedSchemaDrift",
+					"TestContractParityManifestMatchesCopiedEntrypointParser",
+					"TestContractParityOracleLeakMutantsAreKilledByRequestRoster",
+					"TestDirectResultSelectorExhaustiveGoNodeMatrix",
+					"TestGoAndNodeParityEvaluatorsMatchLiteralOracle",
+					"TestNodeParityRunnerAcceptsExactWholeWireCap",
+					"TestNodeParityRunnerRejectsInvalidFramesAtomically",
+					"TestNodeParityRunnerRejectsMissingFinalLFWithoutStderr",
+					"TestOwnerEligibilitySelectorExhaustiveGoNodeMatrix",
+					"TestParityFramingRejectsExpandedSemanticResultAtomically",
+					"TestParityResponseFramingExactBodyBoundary",
+					"TestResultFrameBytesExactBoundaries",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/internal/emit/node/parity",
+				"profile": "general",
+				"qualification": true,
+				"run": "^(?:Test|Fuzz|Example).*$",
+			}),
+			"cli-physical-full-package-3": Object.freeze({
+				"caseID": "cli-physical-full-package-3",
+				"count": 3,
+				"expected": Object.freeze([
+					"TestCLICompilationFreshProcessRestartHelper",
+					"TestCLIMaterializationControlCrossesAdapterAndExcludedMap",
+					"TestCLIP07BBPublicationHelper",
+					"TestCLIPhysicalReducerBudgetFenceRetainsOnlyBestKnown",
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+					"TestCLIPresentBytesStdinCrossesWorldAndAdapter",
+					"TestCLIPresentEmptyStdinCrossesWorldAndAdapter",
+					"TestCLIReferenceControlClassificationMatrix",
+					"TestCLIReferenceDisplayPermutationPreservesMapWithFreshAttempts",
+					"TestCLIReferencePrecedenceStudy",
+					"TestCLIStudyUsesStrictSourceCompilerAndPlanBoundSchedule",
+					"TestOptionalReceiptMeasurementKeepsAbsenceExplicit",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^(?:Test|Fuzz|Example).*$",
+			}),
+			"http-physical-full-package-3": Object.freeze({
+				"caseID": "http-physical-full-package-3",
+				"count": 3,
+				"expected": Object.freeze([
+					"TestHTTPCompilationFreshProcessRestartHelper",
+					"TestHTTPInvoiceAlternatingCandidateUsesAllTrialsNeverMajority",
+					"TestHTTPInvoiceOutcomeMapUsesExactCandidateLabelsNotGroupShape",
+					"TestHTTPInvoicePermutationPreservesExactMapWithFreshEvidence",
+					"TestHTTPInvoicePortableChildBindPhysicalLineage",
+					"TestHTTPInvoiceReferenceStudy",
+					"TestHTTPInvoiceRequestFactsDrivePhysicalPolicy",
+					"TestHTTPInvoiceStudyRecordsTimingAndTrialMultiplication",
+					"TestHTTPInvoiceStudyUsesStrictSourceCompilerAndPlanBoundSchedule",
+					"TestHTTPInvoiceTenantSeedShapeTrapIsPhysicalAndLabelSensitive",
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+					"TestHTTPPhysicalTenantSeedNeighborChangesExactLabeledMapWithStableRoster",
+					"TestNegativeSharedRootContaminationCreatesFalseEquality",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^(?:Test|Fuzz|Example).*$",
+			}),
+		}),
+		"digest": "3be703fae10155c83b19be54ae7cd79cfc5b1bbaddfcf86bb2c9781ad93f853a",
 	}),
-));
-export const qualificationCaseIDs = Object.freeze(Object.keys(qualificationCases));
+	"C5": Object.freeze({
+		"caseIDs": Object.freeze([
+			"processmechanics-output-caps-50",
+			"processmechanics-output-independence-20",
+			"processmechanics-simultaneous-overflow-20",
+			"world-lifecycle-readiness-20",
+			"contract-runner-admission-50",
+			"contract-cli-standalone-closure-20",
+			"contract-http-readiness-50",
+			"contract-http-teardown-20",
+			"compiler-generated-runtime-20",
+			"program-lifecycle-20",
+			"store-cross-process-cas-20",
+			"cli-physical-reducer-01-of-20",
+			"cli-physical-reducer-02-of-20",
+			"cli-physical-reducer-03-of-20",
+			"cli-physical-reducer-04-of-20",
+			"cli-physical-reducer-05-of-20",
+			"cli-physical-reducer-06-of-20",
+			"cli-physical-reducer-07-of-20",
+			"cli-physical-reducer-08-of-20",
+			"cli-physical-reducer-09-of-20",
+			"cli-physical-reducer-10-of-20",
+			"cli-physical-reducer-11-of-20",
+			"cli-physical-reducer-12-of-20",
+			"cli-physical-reducer-13-of-20",
+			"cli-physical-reducer-14-of-20",
+			"cli-physical-reducer-15-of-20",
+			"cli-physical-reducer-16-of-20",
+			"cli-physical-reducer-17-of-20",
+			"cli-physical-reducer-18-of-20",
+			"cli-physical-reducer-19-of-20",
+			"cli-physical-reducer-20-of-20",
+			"http-physical-reducer-01-of-20",
+			"http-physical-reducer-02-of-20",
+			"http-physical-reducer-03-of-20",
+			"http-physical-reducer-04-of-20",
+			"http-physical-reducer-05-of-20",
+			"http-physical-reducer-06-of-20",
+			"http-physical-reducer-07-of-20",
+			"http-physical-reducer-08-of-20",
+			"http-physical-reducer-09-of-20",
+			"http-physical-reducer-10-of-20",
+			"http-physical-reducer-11-of-20",
+			"http-physical-reducer-12-of-20",
+			"http-physical-reducer-13-of-20",
+			"http-physical-reducer-14-of-20",
+			"http-physical-reducer-15-of-20",
+			"http-physical-reducer-16-of-20",
+			"http-physical-reducer-17-of-20",
+			"http-physical-reducer-18-of-20",
+			"http-physical-reducer-19-of-20",
+			"http-physical-reducer-20-of-20",
+			"parity-evaluator-20",
+			"parity-framing-20",
+			"parity-full-package-3",
+			"cli-physical-full-package-3",
+			"http-physical-full-package-3",
+		]),
+		"cases": Object.freeze({
+			"processmechanics-output-caps-50": Object.freeze({
+				"caseID": "processmechanics-output-caps-50",
+				"count": 50,
+				"expected": Object.freeze([
+					"TestStdoutAndStderrHaveIndependentExactCaps",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/internal/processmechanics",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestStdoutAndStderrHaveIndependentExactCaps$",
+			}),
+			"processmechanics-output-independence-20": Object.freeze({
+				"caseID": "processmechanics-output-independence-20",
+				"count": 20,
+				"expected": Object.freeze([
+					"TestStdoutAndStderrLimitsAreIndependentMutationGuard",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/internal/processmechanics",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestStdoutAndStderrLimitsAreIndependentMutationGuard$",
+			}),
+			"processmechanics-simultaneous-overflow-20": Object.freeze({
+				"caseID": "processmechanics-simultaneous-overflow-20",
+				"count": 20,
+				"expected": Object.freeze([
+					"TestSimultaneousChannelOverflowRetainsIndependentFacts",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/internal/processmechanics",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestSimultaneousChannelOverflowRetainsIndependentFacts$",
+			}),
+			"world-lifecycle-readiness-20": Object.freeze({
+				"caseID": "world-lifecycle-readiness-20",
+				"count": 20,
+				"expected": Object.freeze([
+					"TestExecuteBuildsFreshWorldsAndPublishesMarkerBeforeSpawn",
+					"TestFinalGroupProbeRequiresObservedAbsence",
+					"TestHTTPPortableEarlyExitRetainsCausallyLaterReadinessEOF",
+					"TestHTTPPortableReadinessFailuresRemainFinalizedReceipts",
+					"TestPreTermProbeControlsWhetherTheOriginalGroupIsSignaled",
+					"TestProcessGroupAndSessionEscapesRemainExplicitExclusions",
+					"TestProcessLifecycleControlsAndCleansDescendants",
+					"TestToolVersionProbeCleansDescendantHeldPipesWithinItsBound",
+					"TestUnexpectedWaitFailureIsNotACompletedCleanupEdge",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/internal/world",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^(?:TestExecuteBuildsFreshWorldsAndPublishesMarkerBeforeSpawn|TestFinalGroupProbeRequiresObservedAbsence|TestHTTPPortableEarlyExitRetainsCausallyLaterReadinessEOF|TestHTTPPortableReadinessFailuresRemainFinalizedReceipts|TestPreTermProbeControlsWhetherTheOriginalGroupIsSignaled|TestProcessGroupAndSessionEscapesRemainExplicitExclusions|TestProcessLifecycleControlsAndCleansDescendants|TestToolVersionProbeCleansDescendantHeldPipesWithinItsBound|TestUnexpectedWaitFailureIsNotACompletedCleanupEdge)$",
+			}),
+			"contract-runner-admission-50": Object.freeze({
+				"caseID": "contract-runner-admission-50",
+				"count": 50,
+				"expected": Object.freeze([
+					"TestConcurrentAdmissionProducesExactlyOneStart",
+					"TestRunPermitConsumptionIsSingleUseAndAdjacentToStart",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/internal/contractexec/runner",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^(?:TestConcurrentAdmissionProducesExactlyOneStart|TestRunPermitConsumptionIsSingleUseAndAdjacentToStart)$",
+			}),
+			"contract-cli-standalone-closure-20": Object.freeze({
+				"caseID": "contract-cli-standalone-closure-20",
+				"count": 20,
+				"expected": Object.freeze([
+					"TestCLIContractExecutionClosesStandaloneScope",
+					"TestCLIContractExecutionForbiddenPositiveControls",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/contractexec/cli",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^(?:TestCLIContractExecutionClosesStandaloneScope|TestCLIContractExecutionForbiddenPositiveControls)$",
+			}),
+			"contract-http-readiness-50": Object.freeze({
+				"caseID": "contract-http-readiness-50",
+				"count": 50,
+				"expected": Object.freeze([
+					"TestHTTPChildReportedReadinessBindsExactService",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/contractexec/http",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPChildReportedReadinessBindsExactService$",
+			}),
+			"contract-http-teardown-20": Object.freeze({
+				"caseID": "contract-http-teardown-20",
+				"count": 20,
+				"expected": Object.freeze([
+					"TestHTTPEarlyExitAndTeardownRetainCausalFacts",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/contractexec/http",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPEarlyExitAndTeardownRetainCausalFacts$",
+			}),
+			"compiler-generated-runtime-20": Object.freeze({
+				"caseID": "compiler-generated-runtime-20",
+				"count": 20,
+				"expected": Object.freeze([
+					"TestGeneratedCLIContractDistinguishesAbsentAndPresentEmptyStdin",
+					"TestGeneratedCLIContractRunsFromPrivateTargetInventory",
+					"TestGeneratedContractReportsHarnessFailureForVerifiedLoaderFailure",
+					"TestGeneratedHTTPContractClassifiesProbeTimeout",
+					"TestGeneratedHTTPContractClassifiesSocketReset",
+					"TestGeneratedHTTPContractRunsFromPrivateTargetInventory",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/internal/emit/node/compiler",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^(?:TestGeneratedCLIContractDistinguishesAbsentAndPresentEmptyStdin|TestGeneratedCLIContractRunsFromPrivateTargetInventory|TestGeneratedContractReportsHarnessFailureForVerifiedLoaderFailure|TestGeneratedHTTPContractClassifiesProbeTimeout|TestGeneratedHTTPContractClassifiesSocketReset|TestGeneratedHTTPContractRunsFromPrivateTargetInventory)$",
+			}),
+			"program-lifecycle-20": Object.freeze({
+				"caseID": "program-lifecycle-20",
+				"count": 20,
+				"expected": Object.freeze([
+					"TestCopiedHarnessLifecycleStateMachines",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/internal/emit/node/program/v1",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCopiedHarnessLifecycleStateMachines$",
+			}),
+			"store-cross-process-cas-20": Object.freeze({
+				"caseID": "store-cross-process-cas-20",
+				"count": 20,
+				"expected": Object.freeze([
+					"TestStudyHeadCrossProcessCASHasExactlyOneWinner",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/internal/store",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestStudyHeadCrossProcessCASHasExactlyOneWinner$",
+			}),
+			"cli-physical-reducer-01-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-01-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-02-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-02-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-03-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-03-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-04-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-04-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-05-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-05-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-06-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-06-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-07-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-07-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-08-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-08-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-09-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-09-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-10-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-10-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-11-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-11-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-12-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-12-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-13-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-13-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-14-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-14-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-15-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-15-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-16-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-16-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-17-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-17-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-18-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-18-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-19-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-19-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"cli-physical-reducer-20-of-20": Object.freeze({
+				"caseID": "cli-physical-reducer-20-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence$",
+			}),
+			"http-physical-reducer-01-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-01-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-02-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-02-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-03-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-03-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-04-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-04-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-05-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-05-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-06-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-06-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-07-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-07-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-08-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-08-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-09-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-09-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-10-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-10-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-11-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-11-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-12-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-12-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-13-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-13-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-14-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-14-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-15-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-15-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-16-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-16-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-17-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-17-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-18-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-18-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-19-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-19-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"http-physical-reducer-20-of-20": Object.freeze({
+				"caseID": "http-physical-reducer-20-of-20",
+				"count": 1,
+				"expected": Object.freeze([
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence$",
+			}),
+			"parity-evaluator-20": Object.freeze({
+				"caseID": "parity-evaluator-20",
+				"count": 20,
+				"expected": Object.freeze([
+					"TestGoAndNodeParityEvaluatorsMatchLiteralOracle",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/internal/emit/node/parity",
+				"profile": "general",
+				"qualification": true,
+				"run": "^TestGoAndNodeParityEvaluatorsMatchLiteralOracle$",
+			}),
+			"parity-framing-20": Object.freeze({
+				"caseID": "parity-framing-20",
+				"count": 20,
+				"expected": Object.freeze([
+					"TestNodeParityRunnerAcceptsExactWholeWireCap",
+					"TestNodeParityRunnerRejectsInvalidFramesAtomically",
+					"TestNodeParityRunnerRejectsMissingFinalLFWithoutStderr",
+					"TestParityFramingRejectsExpandedSemanticResultAtomically",
+					"TestParityResponseFramingExactBodyBoundary",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/internal/emit/node/parity",
+				"profile": "general",
+				"qualification": true,
+				"run": "^(?:TestNodeParityRunnerAcceptsExactWholeWireCap|TestNodeParityRunnerRejectsInvalidFramesAtomically|TestNodeParityRunnerRejectsMissingFinalLFWithoutStderr|TestParityFramingRejectsExpandedSemanticResultAtomically|TestParityResponseFramingExactBodyBoundary)$",
+			}),
+			"parity-full-package-3": Object.freeze({
+				"caseID": "parity-full-package-3",
+				"count": 3,
+				"expected": Object.freeze([
+					"FuzzParseContractParityCorpusLine",
+					"TestContractParityCorpus",
+					"TestContractParityCorpusExactSizeBoundaries",
+					"TestContractParityCorpusIsOrderAndOracleIndependent",
+					"TestContractParityCorpusParserRejectsEnvelopeAliases",
+					"TestContractParityCorpusRejectsClosedSchemaDrift",
+					"TestContractParityManifestMatchesCopiedEntrypointParser",
+					"TestContractParityOracleLeakMutantsAreKilledByRequestRoster",
+					"TestDirectResultSelectorExhaustiveGoNodeMatrix",
+					"TestGoAndNodeParityEvaluatorsMatchLiteralOracle",
+					"TestNodeParityRunnerAcceptsExactWholeWireCap",
+					"TestNodeParityRunnerRejectsInvalidFramesAtomically",
+					"TestNodeParityRunnerRejectsMissingFinalLFWithoutStderr",
+					"TestOwnerEligibilitySelectorExhaustiveGoNodeMatrix",
+					"TestParityFramingRejectsExpandedSemanticResultAtomically",
+					"TestParityResponseFramingExactBodyBoundary",
+					"TestResultFrameBytesExactBoundaries",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/internal/emit/node/parity",
+				"profile": "general",
+				"qualification": true,
+				"run": "^(?:Test|Fuzz|Example).*$",
+			}),
+			"cli-physical-full-package-3": Object.freeze({
+				"caseID": "cli-physical-full-package-3",
+				"count": 3,
+				"expected": Object.freeze([
+					"TestCLICompilationFreshProcessRestartHelper",
+					"TestCLIMaterializationControlCrossesAdapterAndExcludedMap",
+					"TestCLIP07BBPublicationHelper",
+					"TestCLIPhysicalReducerBudgetFenceRetainsOnlyBestKnown",
+					"TestCLIPhysicalReducerRemovesIrrelevantEnvironmentWithFreshEvidence",
+					"TestCLIPresentBytesStdinCrossesWorldAndAdapter",
+					"TestCLIPresentEmptyStdinCrossesWorldAndAdapter",
+					"TestCLIReferenceControlClassificationMatrix",
+					"TestCLIReferenceDisplayPermutationPreservesMapWithFreshAttempts",
+					"TestCLIReferencePrecedenceStudy",
+					"TestCLIStudyUsesStrictSourceCompilerAndPlanBoundSchedule",
+					"TestOptionalReceiptMeasurementKeepsAbsenceExplicit",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^(?:Test|Fuzz|Example).*$",
+			}),
+			"http-physical-full-package-3": Object.freeze({
+				"caseID": "http-physical-full-package-3",
+				"count": 3,
+				"expected": Object.freeze([
+					"TestHTTPCompilationFreshProcessRestartHelper",
+					"TestHTTPInvoiceAlternatingCandidateUsesAllTrialsNeverMajority",
+					"TestHTTPInvoiceOutcomeMapUsesExactCandidateLabelsNotGroupShape",
+					"TestHTTPInvoicePermutationPreservesExactMapWithFreshEvidence",
+					"TestHTTPInvoicePortableChildBindPhysicalLineage",
+					"TestHTTPInvoiceReferenceStudy",
+					"TestHTTPInvoiceRequestFactsDrivePhysicalPolicy",
+					"TestHTTPInvoiceStudyRecordsTimingAndTrialMultiplication",
+					"TestHTTPInvoiceStudyUsesStrictSourceCompilerAndPlanBoundSchedule",
+					"TestHTTPInvoiceTenantSeedShapeTrapIsPhysicalAndLabelSensitive",
+					"TestHTTPPhysicalReducerRemovesIrrelevantSeedWithFreshEvidence",
+					"TestHTTPPhysicalTenantSeedNeighborChangesExactLabeledMapWithStableRoster",
+					"TestNegativeSharedRootContaminationCreatesFalseEquality",
+				]),
+				"packagePath": "github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+				"profile": "sensitive",
+				"qualification": true,
+				"run": "^(?:Test|Fuzz|Example).*$",
+			}),
+		}),
+		"digest": "08db7c338eb3ba900cf6df2545c04f27bed16889c81dd16e5fb18197c4d52958",
+	}),
+});
+export const qualificationCaseIDs = qualificationMatrices.C4.caseIDs;
+export const qualificationCases = qualificationMatrices.C4.cases;
 
-export function qualificationMatrixDigest() {
-	return createHash("sha256").update(JSON.stringify(qualificationCases)).digest("hex");
+export function qualificationMatrixDigest(boundary = "C4") {
+	if (boundary === "C4" || boundary === "C5") return qualificationMatrices[boundary].digest;
+	throw new Error("GO_REPETITION_QUALIFICATION_MATRIX");
 }
 
-function parseRunArguments(argv) {
+export function qualificationCaseForID(caseID) {
+	if (Object.hasOwn(qualificationMatrices.C4.cases, caseID)) return qualificationMatrices.C4.cases[caseID];
+	if (Object.hasOwn(qualificationMatrices.C5.cases, caseID)) return qualificationMatrices.C5.cases[caseID];
+	throw new Error("GO_REPETITION_QUALIFICATION_CASE");
+}
+
+export function parseRunArguments(argv) {
 	if (argv.length === 2 && argv[0] === "--case") {
-		const specification = qualificationCases[argv[1]];
-		if (!specification) fail("GO_REPETITION_QUALIFICATION_CASE", String(argv[1]));
-		return specification;
+		return qualificationCaseForID(argv[1]);
 	}
 	if (argv.length < 10 || argv.length % 2 !== 0 || argv[0] !== "--package" || argv[2] !== "--profile" ||
 		argv[4] !== "--count" || argv[6] !== "--run") {
-		fail("GO_REPETITION_ARGUMENTS", "expected --case ID or --package P --profile general|sensitive --count N --run REGEX --expect ENTRY [...]");
+		throw new Error("GO_REPETITION_ARGUMENTS");
 	}
-	const packagePath = argv[1];
-	const profile = argv[3];
-	const count = Number(argv[5]);
-	const run = argv[7];
-	const expected = [];
-	for (let index = 8; index < argv.length; index += 2) {
-		if (argv[index] !== "--expect") fail("GO_REPETITION_ARGUMENTS", `unexpected token ${argv[index]}`);
-		expected.push(argv[index + 1]);
-	}
-	if (typeof packagePath !== "string" || !packagePath.startsWith(`${modulePath}/`) ||
-		!(/^github\.com\/nelsonwerd\/countershape(?:\/[A-Za-z0-9_.-]+)+$/u.test(packagePath)) || packagePath.split("/").includes("..")) {
-		fail("GO_REPETITION_PACKAGE", String(packagePath));
-	}
-	if (!(profile === "general" || profile === "sensitive")) fail("GO_REPETITION_PROFILE", String(profile));
-	const requiredProfile = sensitiveGoPackages.includes(packagePath) ? "sensitive" : "general";
-	if (profile !== requiredProfile) {
-		fail("GO_REPETITION_PROFILE_CLASS", `${packagePath}: supplied=${profile} required=${requiredProfile}`);
-	}
-	if (!Number.isSafeInteger(count) || count < 1 || count > 50) fail("GO_REPETITION_COUNT_ARGUMENT", String(argv[5]));
-	if (typeof run !== "string" || run.length < 3 || run.length > 4096 || !run.startsWith("^") || !run.endsWith("$") ||
-		/[\u0000-\u001f\u007f]/u.test(run)) fail("GO_REPETITION_RUN_PATTERN", String(run));
-	if (expected.length === 0 || new Set(expected).size !== expected.length ||
-		expected.some((name) => !expectedEntrypointPattern.test(name))) fail("GO_REPETITION_EXPECTED_ROSTER", expected.join(","));
-	return Object.freeze({
-		caseID: null,
-		count,
-		expected: Object.freeze([...expected].sort()),
-		packagePath,
-		profile,
-		qualification: false,
-		run,
-	});
+	throw new Error("GO_REPETITION_ARGUMENTS");
 }
 
-function validateExecutionSpecification(specification) {
-	const exactKeys = ["caseID", "count", "expected", "packagePath", "profile", "qualification", "run"];
-	if (!specification || typeof specification !== "object" || Array.isArray(specification) ||
-		JSON.stringify(Object.keys(specification).sort()) !== JSON.stringify([...exactKeys].sort()) ||
-		!Array.isArray(specification.expected)) {
-		fail("GO_REPETITION_SPECIFICATION", "exact execution specification shape required");
-	}
+export function validateExecutionSpecification(specification) {
 	if (typeof specification.caseID === "string") {
-		const canonical = qualificationCases[specification.caseID];
-		if (!canonical || canonical.count !== specification.count || canonical.packagePath !== specification.packagePath ||
-			canonical.profile !== specification.profile || canonical.qualification !== specification.qualification ||
-			canonical.run !== specification.run || JSON.stringify(canonical.expected) !== JSON.stringify(specification.expected)) {
-			fail("GO_REPETITION_SPECIFICATION", `qualification case mismatch: ${specification.caseID}`);
+		const canonical = qualificationCaseForID(specification.caseID);
+		if (canonical !== specification) {
+			throw new Error("GO_REPETITION_SPECIFICATION");
 		}
 		return canonical;
 	}
-	if (specification.caseID !== null || specification.qualification !== false) {
-		fail("GO_REPETITION_SPECIFICATION", "ad hoc execution cannot claim qualification");
-	}
-	const argv = [
-		"--package", specification.packagePath,
-		"--profile", specification.profile,
-		"--count", String(specification.count),
-		"--run", specification.run,
-		...specification.expected.flatMap((name) => ["--expect", name]),
-	];
-	const canonical = parseRunArguments(argv);
-	if (JSON.stringify(canonical) !== JSON.stringify(specification)) {
-		fail("GO_REPETITION_SPECIFICATION", "ad hoc execution specification is not canonical");
-	}
-	return canonical;
+	throw new Error("GO_REPETITION_SPECIFICATION");
 }
 
 export function buildGoTestArguments(specification) {
@@ -421,7 +1675,7 @@ function expectCode(invoke, code) {
 	try {
 		invoke();
 	} catch (error) {
-		if (error instanceof GoRepetitionError && error.code === code) return;
+		if ((error instanceof GoRepetitionError && error.code === code) || error.message === code) return;
 		throw error;
 	}
 	fail("GO_REPETITION_SELFTEST_FALSE_NEGATIVE", code);
@@ -439,16 +1693,16 @@ async function expectAsyncFailure(invoke, predicate, detail) {
 
 export async function runRepetition(specification, dependencies = {}) {
 	const executionSpecification = validateExecutionSpecification(specification);
-	const platformName = dependencies.platform ?? platform();
-	const architecture = dependencies.arch ?? arch();
-	if (platformName !== "darwin" || architecture !== "arm64") fail("GO_REPETITION_PLATFORM", `${platformName}/${architecture}`);
+	if ((dependencies.platform ?? platform()) !== "darwin" || (dependencies.arch ?? arch()) !== "arm64") {
+		fail("GO_REPETITION_PLATFORM", `${dependencies.platform ?? platform()}/${dependencies.arch ?? arch()}`);
+	}
 	const acquire = dependencies.acquireVerificationLock ?? acquireVerificationLock;
+	const executeChild = dependencies.childResult ?? childResult;
 	const admit = dependencies.admitTools ?? admitTools;
 	const createRoots = dependencies.createPrivateRoots ?? createPrivateRoots;
 	const makeEnvironment = dependencies.buildChildEnvironment ?? buildChildEnvironment;
-	const executeChild = dependencies.childResult ?? childResult;
 	const finalize = dependencies.finalizeVerificationResources ?? finalizeVerificationResources;
-	const remove = dependencies.remove ?? rm;
+	const remove = dependencies.remove ?? cleanupVerificationResources;
 	const write = dependencies.write ?? ((value) => process.stdout.write(value));
 	const lock = await acquire();
 	let roots;
@@ -480,12 +1734,11 @@ export async function runRepetition(specification, dependencies = {}) {
 		failure = error;
 	} finally {
 		if (!finalized) {
-			const cleanup = [];
-			if (roots) {
-				try { await remove(roots.runRoot, { recursive: true, force: true }); } catch (error) { cleanup.push(error); }
+			try {
+				await remove(lock, roots);
+			} catch (error) {
+				failure = new AggregateError([...(failure ? [failure] : []), error], "Go repetition verification cleanup failed");
 			}
-			try { await lock.release(); } catch (error) { cleanup.push(error); }
-			if (cleanup.length > 0) failure = new AggregateError([...(failure ? [failure] : []), ...cleanup], "Go repetition verification cleanup failed");
 		}
 	}
 	if (failure) throw failure;
@@ -553,7 +1806,7 @@ async function compositionSelfTest(specification, cleanStdout) {
 		cursor = next;
 	}
 	const success = joined.indexOf("Go repetition verification passed:");
-	if (success <= cursor || !joined.includes("qualification=false") || !joined.includes("authorities_sha256:")) {
+	if (success <= cursor || !joined.includes("qualification=true") || !joined.includes("authorities_sha256:")) {
 		fail("GO_REPETITION_SELFTEST_SUCCESS_ORDER", joined);
 	}
 
@@ -577,7 +1830,11 @@ async function compositionSelfTest(specification, cleanStdout) {
 				cleanup.push("finalize");
 				if (finalizeFailure) throw new Error("injected finalization failure");
 			},
-			async remove() { cleanup.push("remove"); },
+			async remove(actualLock, actualRoots) {
+				if (actualRoots !== roots) throw new Error("cleanup roots drift");
+				cleanup.push("remove");
+				await actualLock.release();
+			},
 			write(value) { failureOutput.push(value); },
 		}), () => true, name);
 		if (JSON.stringify(cleanup) !== JSON.stringify(expectedCleanup) ||
@@ -589,14 +1846,47 @@ async function compositionSelfTest(specification, cleanStdout) {
 	await expectAsyncFailure(() => runRepetition(specification, {
 		platform: "darwin",
 		arch: "arm64",
-		async acquireVerificationLock() { return { async release() { throw new Error("release failed"); } }; },
+		async acquireVerificationLock() { return {}; },
 		async admitTools() { return admitted; },
 		async createPrivateRoots() { return roots; },
 		buildChildEnvironment() { return {}; },
 		async childResult() { return { status: 1, signal: null, error: null, stdout: "", stderr: "" }; },
-		async remove() { throw new Error("remove failed"); },
+		async remove() {
+			throw new AggregateError([new Error("remove failed"), new Error("release failed")], "cleanup failed");
+		},
 		write() {},
-	}), (error) => error instanceof AggregateError && error.errors.length === 3, "aggregate cleanup failure");
+	}), (error) => error instanceof AggregateError && error.errors.length === 2 &&
+		error.errors[1] instanceof AggregateError && error.errors[1].errors.length === 2, "aggregate cleanup failure");
+}
+
+export async function dormantQualificationSelfTest(caseID) {
+	const parsed = parseRunArguments(["--case", caseID]);
+	const canonical = validateExecutionSpecification(parsed);
+	const args = buildGoTestArguments(canonical);
+	if (!Object.isFrozen(args)) {
+		throw new Error("dormant qualification argv is not frozen");
+	}
+	await runRepetition(canonical, {
+		platform: "darwin",
+		arch: "arm64",
+		acquireVerificationLock: async () => Object.freeze({}),
+		admitTools: async () => Object.freeze({
+			go: Object.freeze({ path: "/authority/go", sha256: "0000000000000000000000000000000000000000000000000000000000000001" }),
+			node: Object.freeze({ path: "/authority/node", sha256: "0000000000000000000000000000000000000000000000000000000000000002" }),
+			git: Object.freeze({ path: "/authority/git", sha256: "0000000000000000000000000000000000000000000000000000000000000003" }),
+			sh: Object.freeze({ path: "/authority/sh", sha256: "0000000000000000000000000000000000000000000000000000000000000004" }),
+			cc: Object.freeze({ path: "/authority/cc", sha256: "0000000000000000000000000000000000000000000000000000000000000005" }),
+			cxx: Object.freeze({ path: "/authority/cxx", sha256: "0000000000000000000000000000000000000000000000000000000000000006" }),
+		}),
+		createPrivateRoots: async () => Object.freeze({ runRoot: "/private/dormant" }),
+		buildChildEnvironment: () => Object.freeze({}),
+		childResult: async () => {
+			return Object.freeze({ status: 0, signal: null, error: null, stdout: encoded(cleanEvents(canonical)), stderr: "" });
+		},
+		finalizeVerificationResources: async () => {},
+		remove: async () => {},
+		write: () => {},
+	});
 }
 
 async function selfTest() {
@@ -658,18 +1948,16 @@ async function selfTest() {
 		expectCode(() => assertGoTestJSON(value, specification), code);
 		if (!name) fail("GO_REPETITION_SELFTEST_CASE", code);
 	}
-	const parsed = parseRunArguments([
-		"--package", `${modulePath}/internal/example`, "--profile", "general", "--count", "2",
-		"--run", "^(ExampleAlpha|FuzzAlpha|TestAlpha)$", "--expect", "TestAlpha", "--expect", "FuzzAlpha", "--expect", "ExampleAlpha",
-	]);
-	if (parsed.expected.join(",") !== "ExampleAlpha,FuzzAlpha,TestAlpha") fail("GO_REPETITION_SELFTEST_ARGUMENTS", parsed.expected.join(","));
 	if (parseRunArguments(["--case", "parity-full-package-3"]) !== qualificationCases["parity-full-package-3"] ||
 		!qualificationCases["parity-full-package-3"].expected.includes("FuzzParseContractParityCorpusLine")) {
 		fail("GO_REPETITION_SELFTEST_QUALIFICATION_CASE", "parity-full-package-3");
 	}
 	const cliPhysicalShards = qualificationCaseIDs.filter((id) => /^cli-physical-reducer-[0-9]{2}-of-20$/u.test(id));
 	const httpPhysicalShards = qualificationCaseIDs.filter((id) => /^http-physical-reducer-[0-9]{2}-of-20$/u.test(id));
-	if (qualificationCaseIDs.length !== 52 || cliPhysicalShards.length !== 20 || httpPhysicalShards.length !== 20 ||
+	if (qualificationCaseIDs.length !== 54 || qualificationMatrices.C5.caseIDs.length !== 56 ||
+		qualificationMatrixDigest() !== "3be703fae10155c83b19be54ae7cd79cfc5b1bbaddfcf86bb2c9781ad93f853a" ||
+		qualificationMatrixDigest("C5") !== "08db7c338eb3ba900cf6df2545c04f27bed16889c81dd16e5fb18197c4d52958" ||
+		cliPhysicalShards.length !== 20 || httpPhysicalShards.length !== 20 ||
 		[...cliPhysicalShards, ...httpPhysicalShards].some((id) => qualificationCases[id].count !== 1)) {
 		fail("GO_REPETITION_SELFTEST_QUALIFICATION_SHARDS", JSON.stringify({ cliPhysicalShards, httpPhysicalShards }));
 	}
@@ -677,22 +1965,21 @@ async function selfTest() {
 	expectCode(() => parseRunArguments([
 		"--package", `${modulePath}/internal/world`, "--profile", "general", "--count", "2",
 		"--run", "^TestAlpha$", "--expect", "TestAlpha",
-	]), "GO_REPETITION_PROFILE_CLASS");
-	expectCode(() => parseRunArguments([
-		"--package", `${modulePath}/internal/emit/node/parity`, "--profile", "sensitive", "--count", "2",
-		"--run", "^TestAlpha$", "--expect", "TestAlpha",
-	]), "GO_REPETITION_PROFILE_CLASS");
+	]), "GO_REPETITION_ARGUMENTS");
 	await expectAsyncFailure(() => runRepetition({ ...specification, qualification: true }, {
 		platform: "darwin",
 		arch: "arm64",
 		async acquireVerificationLock() { throw new Error("forged qualification reached lock acquisition"); },
-	}), (error) => error instanceof GoRepetitionError && error.code === "GO_REPETITION_SPECIFICATION", "forged ad hoc qualification");
-	await expectAsyncFailure(() => runRepetition({ ...qualificationCases["world-output-caps-50"], count: 1 }, {
+	}), (error) => error.message === "GO_REPETITION_SPECIFICATION", "forged ad hoc qualification");
+	await expectAsyncFailure(() => runRepetition({ ...qualificationCases["processmechanics-output-caps-50"], count: 1 }, {
 		platform: "darwin",
 		arch: "arm64",
 		async acquireVerificationLock() { throw new Error("mutated qualification reached lock acquisition"); },
-	}), (error) => error instanceof GoRepetitionError && error.code === "GO_REPETITION_SPECIFICATION", "mutated named qualification");
-	await compositionSelfTest(specification, cleanText);
+	}), (error) => error.message === "GO_REPETITION_SPECIFICATION", "mutated named qualification");
+	const compositionSpecification = qualificationCases["parity-evaluator-20"];
+	await compositionSelfTest(compositionSpecification, encoded(cleanEvents(compositionSpecification)));
+	await dormantQualificationSelfTest("contract-http-readiness-50");
+	await dormantQualificationSelfTest("contract-http-teardown-20");
 	process.stdout.write(
 		`Go repetition verifier self-test passed: matrix_sha256:${qualificationMatrixDigest()} exact JSON/state framing, ` +
 		"profile classification, Test/Fuzz/Example rosters, authority binding, exact child composition, finalization ordering, and failure cleanup\n",
@@ -707,10 +1994,6 @@ async function main() {
 	await runRepetition(parseRunArguments(process.argv.slice(2)));
 }
 
-const invoked = process.argv[1] ? await realpath(resolve(process.argv[1])) : "";
-if (invoked === fileURLToPath(import.meta.url)) {
-	main().catch((error) => {
-		process.stderr.write(`${error.stack ?? error}\n`);
-		process.exitCode = 1;
-	});
+if (process.argv[1] !== undefined && pathToFileURL(process.argv[1]).href === import.meta.url) {
+	await main();
 }

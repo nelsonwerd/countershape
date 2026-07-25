@@ -514,11 +514,24 @@ func (store *ObjectStore) OpenContractTargetRecord(ctx context.Context, attempt 
 	if err != nil {
 		return ContractTargetRecord{}, err
 	}
-	target, err := contractmodel.ParseContractExecutionTarget(record.record.object.CanonicalBytes(), record.record.object.Digest())
+	target, err := parseContractTargetStorageRecord(record)
 	if err != nil || !attemptJoinsTarget(attempt.record.state, target) {
 		return ContractTargetRecord{}, refuse(codeContractRecordRefused, "reopened target differs from its attempt graph", err)
 	}
 	return ContractTargetRecord{store: store, record: record}, nil
+}
+
+func parseContractTargetStorageRecord(record targetStorageRecord) (contractmodel.ContractExecutionTarget, error) {
+	if !record.record.object.Valid() || record.record.object.Kind() != contractTargetKind {
+		return contractmodel.ContractExecutionTarget{}, refuse(codeContractRecordRefused, "target storage record is invalid", nil)
+	}
+	target, err := contractmodel.ParseContractExecutionTarget(
+		record.record.object.CanonicalBytes(), record.record.object.Digest(),
+	)
+	if err != nil {
+		return contractmodel.ContractExecutionTarget{}, refuse(codeContractRecordRefused, "target model did not reconstruct exactly", err)
+	}
+	return target, nil
 }
 
 func attemptJoinsTarget(state *conformanceAttemptState, target contractmodel.ContractExecutionTarget) bool {
@@ -531,6 +544,39 @@ func attemptJoinsTarget(state *conformanceAttemptState, target contractmodel.Con
 		input.Tree.TreeIdentityDigest == state.input.TreeIdentityDigest &&
 		input.Tree.MaterializationPolicyDigest == state.input.MaterializationPolicyDigest &&
 		input.Attempt.ArtifactDigest == state.object.Digest() && input.Attempt.InstanceNonce == state.nonce
+}
+
+// finalizedRunSemanticObject is the store-side codec seam for an inert model
+// value. Contract-run bridge code may join opaque records, but it does not own
+// or reinterpret the semantic bytes.
+func finalizedRunSemanticObject(run contractmodel.FinalizedContractRun) (SemanticObject, error) {
+	if !run.Valid() {
+		return SemanticObject{}, refuse(codeContractRecordRefused, "finalized run model is invalid", nil)
+	}
+	return NewSemanticObject(contractRunKind, run.Digest(), run.CanonicalBytes())
+}
+
+func parseFinalizedRunStorageRecord(
+	record finalizedRunStorageRecord,
+	target contractmodel.ContractExecutionTarget,
+) (contractmodel.FinalizedContractRun, error) {
+	if !record.record.object.Valid() || record.record.object.Kind() != contractRunKind || !target.Valid() {
+		return contractmodel.FinalizedContractRun{}, refuse(codeContractRecordRefused, "finalized run record or target model is invalid", nil)
+	}
+	run, err := contractmodel.ParseFinalizedContractRun(
+		record.record.object.CanonicalBytes(), record.record.object.Digest(), target,
+	)
+	if err != nil {
+		return contractmodel.FinalizedContractRun{}, refuse(codeContractRecordRefused, "finalized run model did not reconstruct exactly", err)
+	}
+	return run, nil
+}
+
+func contractExecutionSemanticObject(execution contractmodel.ContractExecution) (SemanticObject, error) {
+	if !execution.Valid() {
+		return SemanticObject{}, refuse(codeContractRecordRefused, "contract execution model is invalid", nil)
+	}
+	return NewSemanticObject(contractExecutionKind, execution.Digest(), execution.CanonicalBytes())
 }
 
 func rootsAt(attemptRoot string) conformanceAttemptRoots {
@@ -552,6 +598,63 @@ func attemptRootPaths(roots conformanceAttemptRoots) []string {
 	}
 }
 
+func boundedExactDirectoryNames(path string, retained os.FileInfo, maximum int) ([]string, error) {
+	if !filepath.IsAbs(path) || filepath.Clean(path) != path || retained == nil || !retained.IsDir() ||
+		retained.Mode()&os.ModeSymlink != 0 || maximum < 0 || maximum > 32 {
+		return nil, errors.New("bounded exact directory-roster inputs are invalid")
+	}
+	before, err := os.Lstat(path)
+	if err != nil || !before.IsDir() || before.Mode() != retained.Mode() || !os.SameFile(retained, before) {
+		return nil, errors.Join(err, errors.New("bounded exact directory-roster root identity differs"))
+	}
+	handle, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	opened, openErr := handle.Stat()
+	if openErr != nil || !opened.IsDir() || opened.Mode() != retained.Mode() || !os.SameFile(retained, opened) {
+		return nil, errors.Join(openErr, handle.Close(), errors.New("bounded exact directory-roster descriptor differs"))
+	}
+	entries := make([]os.DirEntry, 0, maximum+1)
+	var rosterErr error
+	for {
+		remaining := maximum + 1 - len(entries)
+		if remaining <= 0 {
+			rosterErr = errors.New("bounded exact directory-roster exceeds its direct-entry ceiling")
+			break
+		}
+		batch, readErr := handle.ReadDir(remaining)
+		entries = append(entries, batch...)
+		if len(entries) > maximum {
+			rosterErr = errors.New("bounded exact directory-roster exceeds its direct-entry ceiling")
+			break
+		}
+		if readErr != nil {
+			if !errors.Is(readErr, io.EOF) {
+				rosterErr = readErr
+			}
+			break
+		}
+		if len(batch) == 0 {
+			rosterErr = errors.New("bounded exact directory-roster made no progress")
+			break
+		}
+	}
+	afterDescriptor, descriptorErr := handle.Stat()
+	closeErr := handle.Close()
+	afterPath, pathErr := os.Lstat(path)
+	if rosterErr != nil || descriptorErr != nil || closeErr != nil || pathErr != nil ||
+		afterDescriptor.Mode() != opened.Mode() || afterPath.Mode() != opened.Mode() ||
+		!os.SameFile(opened, afterDescriptor) || !os.SameFile(opened, afterPath) {
+		return nil, errors.Join(rosterErr, descriptorErr, closeErr, pathErr, errors.New("bounded exact directory-roster read did not close exactly"))
+	}
+	names := make([]string, len(entries))
+	for index, entry := range entries {
+		names[index] = entry.Name()
+	}
+	return names, nil
+}
+
 func inspectAttemptRoots(
 	roots conformanceAttemptRoots,
 	exact []byte,
@@ -564,20 +667,18 @@ func inspectAttemptRoots(
 		}
 		dirs[path] = info
 	}
-	entries, err := os.ReadDir(roots.attempt)
-	if err != nil || len(entries) != len(conformanceAttemptRootNames) {
+	names, err := boundedExactDirectoryNames(
+		roots.attempt, dirs[roots.attempt], len(conformanceAttemptRootNames),
+	)
+	if err != nil || len(names) != len(conformanceAttemptRootNames) {
 		return nil, nil, refuse(codeContractRecordRefused, "attempt root roster differs", err)
-	}
-	names := make([]string, len(entries))
-	for index, entry := range entries {
-		names[index] = entry.Name()
 	}
 	sort.Strings(names)
 	if !stringRosterEqual(names, conformanceAttemptRootNames[:]) {
 		return nil, nil, refuse(codeContractRecordRefused, "attempt root names differ", nil)
 	}
-	evidenceEntries, err := os.ReadDir(roots.evidence)
-	if err != nil || len(evidenceEntries) != 1 || evidenceEntries[0].Name() != contractAttemptMarker {
+	evidenceNames, err := boundedExactDirectoryNames(roots.evidence, dirs[roots.evidence], 1)
+	if err != nil || len(evidenceNames) != 1 || evidenceNames[0] != contractAttemptMarker {
 		return nil, nil, refuse(codeContractRecordRefused, "attempt evidence roster differs", err)
 	}
 	marker, err := exactObjectInfo(roots.marker, int64(len(exact)))

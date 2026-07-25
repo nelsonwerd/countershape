@@ -6,6 +6,7 @@ import { constants, realpathSync } from "node:fs";
 import { lstat, open, readdir } from "node:fs/promises";
 import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
+import { isDeepStrictEqual } from "node:util";
 
 const checkerPath = fileURLToPath(import.meta.url);
 const repositoryRoot = resolve(dirname(checkerPath), "..");
@@ -30,6 +31,105 @@ const futureSemanticFamilies = Object.freeze([
 	"FinalizedContractRun",
 	"ContractExecution",
 ]);
+const futureSurfaceAuthorityPath = "spec/verification/p07b-b-future-surface-authority.json";
+const futureSurfaceInstanceSchema = "countershape/p07b-b-future-surface-authority/v1";
+const futureSurfaceSchemaDigest = "91c4ca13a4b30a683b82066fdcdc1a7892de2679a2e5419a57142e36b22f5937";
+const futureSurfaceBaselinePolicyDigest = "5a1c3e2f33969143765612f4934ce4ca41cc1e3df95383b8d7780354461e3399";
+const futureSurfaceHistoricalInventoryDigest = "901d7cb5ca65cb9cb1ca7932ece1741fbfc82df5f9e375d43fadd6e057615960";
+const futureSurfaceTestVectorDigest = "4ebfb5ae2608f0cdaa2e316e087fd8c8e479a891e7e52d0a7aab7f9a45541807";
+const futureSurfaceFamilies = Object.freeze([
+	"ContractExecution", "ContractExecutionTarget", "FinalizedContractRun",
+]);
+export const futureSurfaceHistoricalInventory = Object.freeze([
+	Object.freeze({ path: "internal/contractexec/model/execution.go", symbol: "ContractExecution" }),
+	Object.freeze({ path: "internal/contractexec/model/execution.go", symbol: "ContractExecutionClassifierProfile" }),
+	Object.freeze({ path: "internal/contractexec/model/execution.go", symbol: "ContractExecutionTarget" }),
+	Object.freeze({ path: "internal/contractexec/model/execution.go", symbol: "DeriveContractExecution" }),
+	Object.freeze({ path: "internal/contractexec/model/execution.go", symbol: "FinalizedContractRun" }),
+	Object.freeze({ path: "internal/contractexec/model/execution.go", symbol: "ParseContractExecution" }),
+	Object.freeze({ path: "internal/contractexec/model/run.go", symbol: "ContractExecutionTarget" }),
+	Object.freeze({ path: "internal/contractexec/model/run.go", symbol: "FinalizedContractRun" }),
+	Object.freeze({ path: "internal/contractexec/model/run.go", symbol: "NewFinalizedContractRun" }),
+	Object.freeze({ path: "internal/contractexec/model/run_parse.go", symbol: "ContractExecutionTarget" }),
+	Object.freeze({ path: "internal/contractexec/model/run_parse.go", symbol: "FinalizedContractRun" }),
+	Object.freeze({ path: "internal/contractexec/model/run_parse.go", symbol: "NewFinalizedContractRun" }),
+	Object.freeze({ path: "internal/contractexec/model/run_parse.go", symbol: "ParseFinalizedContractRun" }),
+	Object.freeze({ path: "internal/contractexec/model/target.go", symbol: "ContractExecutionTarget" }),
+	Object.freeze({ path: "internal/contractexec/model/target.go", symbol: "NewContractExecutionTarget" }),
+	Object.freeze({ path: "internal/contractexec/model/target.go", symbol: "ParseContractExecutionTarget" }),
+	Object.freeze({ path: "internal/contractexec/model/types.go", symbol: "ContractExecution" }),
+	Object.freeze({ path: "internal/contractexec/model/types.go", symbol: "ContractExecutionTarget" }),
+	Object.freeze({ path: "internal/contractexec/model/types.go", symbol: "FinalizedContractRun" }),
+	Object.freeze({ path: "internal/contractexec/target.go", symbol: "ContractExecutionTarget" }),
+	Object.freeze({ path: "internal/contractexec/target.go", symbol: "NewContractExecutionTarget" }),
+	Object.freeze({ path: "internal/contractexec/target.go", symbol: "ParseContractExecutionTarget" }),
+	Object.freeze({ path: "internal/store/nonhead_contract.go", symbol: "ContractExecution" }),
+	Object.freeze({ path: "internal/store/nonhead_contract.go", symbol: "ContractExecutionClassifierProfile" }),
+	Object.freeze({ path: "internal/store/nonhead_contract.go", symbol: "ContractExecutionTarget" }),
+	Object.freeze({ path: "internal/store/nonhead_contract.go", symbol: "FinalizedContractRun" }),
+	Object.freeze({ path: "internal/store/nonhead_contract.go", symbol: "ParseContractExecutionTarget" }),
+]);
+const futureSurfaceBoundaryOrder = Object.freeze(["C4", "C5"]);
+const futureSurfaceC4RequiredRows = Object.freeze([
+	Object.freeze({ boundary: "C4", path: "internal/store/contract_run_bridge.go", symbol: "ContractExecutionRecord" }),
+]);
+const futureSurfaceC4AllowedExact = Object.freeze([
+	"internal/store/contract_run_bridge.go", "internal/store/nonhead_contract.go",
+]);
+const futureSurfaceC4AllowedPrefixes = Object.freeze(["internal/contractexec/runner/"]);
+const futureSurfaceC4PresencePrefixes = Object.freeze(["internal/contractexec/runner/"]);
+const futureSurfaceC5AllowedPrefixes = Object.freeze([
+	"internal/contractexec/http/", "internal/contractexec/scope/",
+]);
+const futureSurfaceC5PresencePrefixes = futureSurfaceC5AllowedPrefixes;
+const futureSurfaceC5ReservedRows = Object.freeze([
+	Object.freeze({ boundary: "C5", path: "internal/contractexec/http/evidence.go", symbol: "ContractExecutionTarget" }),
+	Object.freeze({ boundary: "C5", path: "internal/contractexec/http/runner.go", symbol: "ContractExecutionRecord" }),
+	Object.freeze({ boundary: "C5", path: "internal/contractexec/http/runner_darwin.go", symbol: "ContractExecutionRecord" }),
+	Object.freeze({ boundary: "C5", path: "internal/contractexec/http/runner_darwin.go", symbol: "DeriveContractExecution" }),
+	Object.freeze({ boundary: "C5", path: "internal/contractexec/http/runner_darwin.go", symbol: "NewFinalizedContractRun" }),
+	Object.freeze({ boundary: "C5", path: "internal/contractexec/http/runner_darwin.go", symbol: "PersistContractExecutionRecord" }),
+	Object.freeze({ boundary: "C5", path: "internal/contractexec/http/runner_unsupported.go", symbol: "ContractExecutionRecord" }),
+]);
+const futureSurfaceC5ReservedRowsDigest = "e6bce1eddaba4d6cfd2843faba1393010d3a140d2e4c941d091890c055db7c75";
+const futureSurfaceBaselinePolicy = Object.freeze({
+	schema: "countershape/p07b-b-future-surface-baseline-policy/v1",
+	candidate_source: "strict-index-snapshot",
+	ordinary_source: "stable-worktree-no-follow",
+	source_root: "internal",
+	include_suffix: ".go",
+	exclude_suffix: "_test.go",
+	required_mode: "100644",
+	byte_ceiling: 128 * 1024 * 1024,
+	encoding: "utf-8-fatal",
+	token_pattern: "[_\\p{L}][_\\p{L}\\p{N}]*",
+	family_match: "substring",
+	families: futureSurfaceFamilies,
+	historical_inventory_count: futureSurfaceHistoricalInventory.length,
+	historical_inventory_sha256: futureSurfaceHistoricalInventoryDigest,
+});
+const futureSurfaceSchemaDescriptor = Object.freeze({
+	schema: "countershape/p07b-b-future-surface-schema/v1",
+	instance_schema: futureSurfaceInstanceSchema,
+	baseline_policy_sha256: futureSurfaceBaselinePolicyDigest,
+	historical_inventory_count: futureSurfaceHistoricalInventory.length,
+	historical_inventory_sha256: futureSurfaceHistoricalInventoryDigest,
+	scanner: Object.freeze({
+		root: "internal", include_suffix: ".go", exclude_suffix: "_test.go",
+		token_pattern: "[_\\p{L}][_\\p{L}\\p{N}]*", family_match: "substring",
+	}),
+	families: futureSurfaceFamilies,
+	boundary_order: futureSurfaceBoundaryOrder,
+	row_keys: Object.freeze(["boundary", "path", "symbol"]),
+	c4_required_rows: futureSurfaceC4RequiredRows,
+	c4_allowed_exact: futureSurfaceC4AllowedExact,
+	c4_allowed_prefixes: futureSurfaceC4AllowedPrefixes,
+	c4_presence_prefixes: futureSurfaceC4PresencePrefixes,
+	c5_required_rows: Object.freeze([]),
+	c5_allowed_exact: Object.freeze([]),
+	c5_allowed_prefixes: futureSurfaceC5AllowedPrefixes,
+	c5_presence_prefixes: futureSurfaceC5PresencePrefixes,
+});
 
 const reviewedFiles = Object.freeze([
 	"internal/emit/node/internal/publication/authority.go",
@@ -202,6 +302,147 @@ export function futureSymbolsInSource(path, source) {
 	return [...symbols].sort();
 }
 
+function futureSurfaceObservedRowCompare(left, right) {
+	return Buffer.compare(
+		Buffer.from(`${left.path}\0${left.symbol}`, "utf8"),
+		Buffer.from(`${right.path}\0${right.symbol}`, "utf8"),
+	);
+}
+
+function futureSurfaceManifestRowCompare(left, right) {
+	const boundaryDelta = futureSurfaceBoundaryOrder.indexOf(left.boundary) -
+		futureSurfaceBoundaryOrder.indexOf(right.boundary);
+	return boundaryDelta || futureSurfaceObservedRowCompare(left, right);
+}
+
+export function futureSurfaceManifest(rows) {
+	return {
+		schema: futureSurfaceInstanceSchema,
+		schema_sha256: futureSurfaceSchemaDigest,
+		rows: rows.map(({ boundary, path, symbol }) => ({ boundary, path, symbol })),
+	};
+}
+
+export function futureSurfaceManifestBytes(manifest) {
+	return Buffer.from(`${JSON.stringify(manifest)}\n`, "utf8");
+}
+
+function futureSurfaceRowPathAllowed(row) {
+	if (row.boundary === "C4") {
+		return futureSurfaceC4AllowedExact.includes(row.path) ||
+			futureSurfaceC4AllowedPrefixes.some((prefix) => row.path.startsWith(prefix));
+	}
+	if (row.boundary === "C5") {
+		return futureSurfaceC5AllowedPrefixes.some((prefix) => row.path.startsWith(prefix));
+	}
+	return false;
+}
+
+export function validateFutureSurfaceManifest(manifest) {
+	const errors = [];
+	if (!manifest || typeof manifest !== "object" || Array.isArray(manifest) ||
+		!isDeepStrictEqual(Object.keys(manifest), ["schema", "schema_sha256", "rows"])) {
+		return ["root keys/order"];
+	}
+	if (manifest.schema !== futureSurfaceInstanceSchema) errors.push("schema");
+	if (manifest.schema_sha256 !== futureSurfaceSchemaDigest) errors.push("schema digest");
+	if (!Array.isArray(manifest.rows) || manifest.rows.length === 0 || manifest.rows.length > 4096) {
+		errors.push("row cardinality");
+		return errors;
+	}
+	const rows = [];
+	for (let index = 0; index < manifest.rows.length; index += 1) {
+		const row = manifest.rows[index];
+		if (!row || typeof row !== "object" || Array.isArray(row) ||
+			!isDeepStrictEqual(Object.keys(row), ["boundary", "path", "symbol"])) {
+			errors.push(`row ${index} keys/order`);
+			continue;
+		}
+		if (!futureSurfaceBoundaryOrder.includes(row.boundary)) errors.push(`row ${index} boundary`);
+		const pathValid = typeof row.path === "string" && row.path.length > 0 && row.path.length <= 4096 &&
+			row.path.startsWith("internal/") && row.path.endsWith(".go") && !row.path.endsWith("_test.go") &&
+			!isAbsolute(row.path) && !row.path.startsWith("./") && !row.path.includes("\\") && !row.path.includes("//") &&
+			!row.path.split("/").some((part) => part === "" || part === "." || part === "..") &&
+			!/[\u0000-\u001f\u007f]/u.test(row.path);
+		if (!pathValid) errors.push(`row ${index} path`);
+		if (typeof row.symbol !== "string" || !/^[_\p{L}][_\p{L}\p{N}]*$/u.test(row.symbol) ||
+			!futureSurfaceFamilies.some((family) => row.symbol.includes(family))) {
+			errors.push(`row ${index} symbol`);
+		}
+		if (pathValid && !futureSurfaceRowPathAllowed(row)) errors.push(`row ${index} location`);
+		rows.push({ boundary: row.boundary, path: row.path, symbol: row.symbol });
+	}
+	const sortedRows = [...rows].sort(futureSurfaceManifestRowCompare);
+	if (!isDeepStrictEqual(rows, sortedRows)) errors.push("row order");
+	const rowKeys = rows.map(({ boundary, path, symbol }) => `${boundary}\0${path}\0${symbol}`);
+	if (new Set(rowKeys).size !== rowKeys.length) errors.push("duplicate row");
+	const c5Rows = rows.filter(({ boundary }) => boundary === "C5");
+	const c5Digest = sha256(Buffer.from(JSON.stringify(c5Rows), "utf8"));
+	if (c5Rows.length !== 7 || c5Digest !== futureSurfaceC5ReservedRowsDigest ||
+		!isDeepStrictEqual(c5Rows, futureSurfaceC5ReservedRows)) {
+		errors.push("C5 reserved rows");
+	}
+	for (const required of futureSurfaceC4RequiredRows) {
+		if (!rows.some((row) => isDeepStrictEqual(row, required))) {
+			errors.push(`missing required row ${required.path}:${required.symbol}`);
+		}
+	}
+	return errors;
+}
+
+export function futureSurfaceRowsInSource(path, source) {
+	const symbols = new Set();
+	for (const match of source.matchAll(/[_\p{L}][_\p{L}\p{N}]*/gu)) {
+		if (futureSurfaceFamilies.some((family) => match[0].includes(family))) symbols.add(match[0]);
+	}
+	return [...symbols].map((symbol) => ({ path, symbol })).sort(futureSurfaceObservedRowCompare);
+}
+
+function validateFrozenFutureSurfaceContract() {
+	const errors = [];
+	const baselineDigest = sha256(Buffer.from(JSON.stringify(futureSurfaceBaselinePolicy), "utf8"));
+	if (baselineDigest !== futureSurfaceBaselinePolicyDigest) errors.push(`baseline policy digest ${baselineDigest}`);
+	const schemaDigest = sha256(Buffer.from(JSON.stringify(futureSurfaceSchemaDescriptor), "utf8"));
+	if (schemaDigest !== futureSurfaceSchemaDigest) errors.push(`schema digest ${schemaDigest}`);
+	const historicalDigest = sha256(Buffer.from(JSON.stringify(futureSurfaceHistoricalInventory), "utf8"));
+	if (futureSurfaceHistoricalInventory.length !== 27 || historicalDigest !== futureSurfaceHistoricalInventoryDigest) {
+		errors.push(`historical inventory ${futureSurfaceHistoricalInventory.length}/${historicalDigest}`);
+	}
+	const vectorDigest = sha256(Buffer.from(JSON.stringify(futureSurfaceManifest(futureSurfaceC4RequiredRows)), "utf8"));
+	if (vectorDigest !== futureSurfaceTestVectorDigest) errors.push(`test vector digest ${vectorDigest}`);
+	return errors;
+}
+
+export function validateFutureSurfaceState(manifest, observedRows, productionPaths, boundary) {
+	const errors = [...validateFrozenFutureSurfaceContract()];
+	const manifestErrors = validateFutureSurfaceManifest(manifest);
+	if (manifestErrors.length > 0) return [...errors, ...manifestErrors.map((error) => `manifest ${error}`)];
+	if (!futureSurfaceBoundaryOrder.includes(boundary)) return [...errors, `state boundary ${boundary}`];
+	const sortedObserved = [...observedRows].sort(futureSurfaceObservedRowCompare);
+	if (!isDeepStrictEqual(observedRows, sortedObserved) ||
+		new Set(observedRows.map(({ path, symbol }) => `${path}\0${symbol}`)).size !== observedRows.length) {
+		errors.push("observed rows order/uniqueness");
+		return errors;
+	}
+	const historicalKeys = new Set(futureSurfaceHistoricalInventory.map(({ path, symbol }) => `${path}\0${symbol}`));
+	const historical = observedRows.filter(({ path, symbol }) => historicalKeys.has(`${path}\0${symbol}`));
+	if (!isDeepStrictEqual(historical, futureSurfaceHistoricalInventory)) errors.push("historical 27-row inventory");
+	const future = observedRows.filter(({ path, symbol }) => !historicalKeys.has(`${path}\0${symbol}`));
+	const expectedFuture = manifest.rows.filter(({ boundary: owner }) => boundary === "C4" ? owner === "C4" : true)
+		.map(({ path, symbol }) => ({ path, symbol })).sort(futureSurfaceObservedRowCompare);
+	if (!isDeepStrictEqual(future, expectedFuture)) errors.push(`${boundary} observed future rows`);
+	const realized = (prefix) => productionPaths.some((path) => path.startsWith(prefix));
+	for (const prefix of futureSurfaceC4PresencePrefixes) {
+		if (!realized(prefix)) errors.push(`C4 topology missing ${prefix}`);
+	}
+	for (const prefix of futureSurfaceC5PresencePrefixes) {
+		if (boundary === "C4" ? realized(prefix) : !realized(prefix)) {
+			errors.push(`${boundary} topology ${boundary === "C4" ? "premature" : "missing"} ${prefix}`);
+		}
+	}
+	return errors;
+}
+
 async function readReviewedFile(relativePath) {
 	const absolute = resolve(repositoryRoot, relativePath);
 	const fromRoot = relative(repositoryRoot, absolute);
@@ -228,10 +469,29 @@ async function readReviewedFile(relativePath) {
 		} catch {
 			throw new ArchitectureError("P07B_B_INVALID_UTF8", relativePath);
 		}
-		return Object.freeze({ path: relativePath, source, digest: sha256(bytes) });
+		return Object.freeze({ path: relativePath, source, digest: sha256(bytes), byteLength: bytes.length });
 	} finally {
 		await handle?.close();
 	}
+}
+
+async function readFutureSurfaceManifest() {
+	const status = await lstat(resolve(repositoryRoot, futureSurfaceAuthorityPath));
+	if (!status.isFile() || status.isSymbolicLink() || (status.mode & 0o7777) !== 0o644) {
+		throw new ArchitectureError("P07B_B_FUTURE_SURFACE_MANIFEST_MODE", futureSurfaceAuthorityPath);
+	}
+	const entry = await readReviewedFile(futureSurfaceAuthorityPath);
+	let manifest;
+	try {
+		manifest = JSON.parse(entry.source);
+	} catch (error) {
+		throw new ArchitectureError("P07B_B_FUTURE_SURFACE_MANIFEST_JSON", error.message);
+	}
+	const errors = [];
+	if (!Buffer.from(entry.source, "utf8").equals(futureSurfaceManifestBytes(manifest))) {
+		errors.push("manifest noncanonical one-line JSON");
+	}
+	return Object.freeze({ manifest, errors: Object.freeze(errors) });
 }
 
 async function exactDirectory(path, files, directories = []) {
@@ -275,11 +535,20 @@ async function inspectTopology() {
 
 async function walkProduction(path, output) {
 	const entries = await readdir(resolve(repositoryRoot, path), { withFileTypes: true });
+	entries.sort((left, right) => Buffer.compare(Buffer.from(left.name, "utf8"), Buffer.from(right.name, "utf8")));
 	for (const entry of entries) {
 		const relativePath = slash(join(path, entry.name));
 		if (entry.isSymbolicLink()) throw new ArchitectureError("P07B_B_PRODUCTION_SYMLINK", relativePath);
 		if (entry.isDirectory()) await walkProduction(relativePath, output);
-		else if (entry.isFile() && entry.name.endsWith(".go") && !entry.name.endsWith("_test.go")) output.push(relativePath);
+		else if (entry.isFile() && entry.name.endsWith(".go") && !entry.name.endsWith("_test.go")) {
+			const status = await lstat(resolve(repositoryRoot, relativePath));
+			if (!status.isFile() || status.isSymbolicLink() || (status.mode & 0o7777) !== 0o644) {
+				throw new ArchitectureError("P07B_B_PRODUCTION_MODE", relativePath);
+			}
+			output.push(relativePath);
+		} else if (!entry.isFile()) {
+			throw new ArchitectureError("P07B_B_PRODUCTION_NONREGULAR", relativePath);
+		}
 	}
 }
 
@@ -407,8 +676,27 @@ export async function collectFacts() {
 	const authorizedCore = functionBody(materialize, "materializeAuthorized");
 	const existingAcceptance = functionBody(materialize, "acceptExistingOpen");
 	const alreadyReopenedAcceptance = functionBody(materialize, "acceptAlreadyReopened");
-	const futureSymbols = productionEntries.flatMap((entry) => futureSymbolsInSource(entry.path, entry.source));
-	const futureSymbolPartition = partitionFutureSymbols(futureSymbols);
+	const productionBytes = productionEntries.reduce((sum, entry) => sum + entry.byteLength, 0);
+	if (productionBytes > futureSurfaceBaselinePolicy.byte_ceiling) {
+		throw new ArchitectureError("P07B_B_FUTURE_SURFACE_BYTE_CEILING", String(productionBytes));
+	}
+	const futureSurfaceRows = productionEntries.flatMap((entry) =>
+		futureSurfaceRowsInSource(entry.path, entry.source)).sort(futureSurfaceObservedRowCompare);
+	const futureSurfaceFile = await readFutureSurfaceManifest();
+	const runnerPresent = productionPaths.some((path) => path.startsWith("internal/contractexec/runner/"));
+	const httpPresent = productionPaths.some((path) => path.startsWith("internal/contractexec/http/"));
+	const scopePresent = productionPaths.some((path) => path.startsWith("internal/contractexec/scope/"));
+	let futureSurfaceBoundary = null;
+	if (runnerPresent && !httpPresent && !scopePresent) futureSurfaceBoundary = "C4";
+	else if (runnerPresent && httpPresent && scopePresent) futureSurfaceBoundary = "C5";
+	const futureSurfaceErrors = [...futureSurfaceFile.errors];
+	if (futureSurfaceBoundary === null) {
+		futureSurfaceErrors.push(`mixed topology runner=${runnerPresent} http=${httpPresent} scope=${scopePresent}`);
+	} else {
+		futureSurfaceErrors.push(...validateFutureSurfaceState(
+			futureSurfaceFile.manifest, futureSurfaceRows, productionPaths, futureSurfaceBoundary,
+		));
+	}
 	const issueCallers = productionEntries.filter((entry) => entry.source.includes("internalpublication.Issue("))
 		.map((entry) => entry.path);
 	const api = {};
@@ -501,7 +789,9 @@ export async function collectFacts() {
 				imported === `${modulePrefix}internal/gitobj` || imported.startsWith(`${modulePrefix}internal/git`) ||
 				imported.startsWith(`${modulePrefix}internal/server`) || imported.startsWith(`${modulePrefix}internal/studio`))),
 		c1BoundaryPassed,
-		foreignFutureSymbols: futureSymbolPartition.foreign,
+		futureSurfaceBoundary,
+		futureSurfaceErrors,
+		foreignFutureSymbols: [],
 		tests,
 		cliEvidence: [
 			"cancelled CLI terminal publication changed durable state", "runCLIP07BBPublicationRace",
@@ -568,6 +858,7 @@ export function validateFacts(facts) {
 	add(!facts.renameReconciliationShape, "P07B_B_RENAME_RECONCILIATION", "exact destination, retained stage, or ambiguity");
 	add(facts.forbiddenMaterializerImport, "P07B_B_MATERIALIZER_CAPABILITY", "forbidden production import");
 	add(!facts.c1BoundaryPassed, "P07B_B_C1_SEMANTIC_BOUNDARY", "inert C1 architecture gate did not pass");
+	add(facts.futureSurfaceErrors.length !== 0, "P07B_B_FUTURE_SURFACE_AUTHORITY", facts.futureSurfaceErrors.join(","));
 	add(facts.foreignFutureSymbols.length !== 0, "P07B_B_PREMATURE_C_SURFACE", facts.foreignFutureSymbols.join(","));
 	for (const [path, expected] of Object.entries(requiredTests)) {
 		add(expected.some((name) => !facts.tests[path].includes(name)), "P07B_B_REQUIRED_TEST_MISSING",

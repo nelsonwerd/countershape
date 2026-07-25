@@ -18,7 +18,7 @@ import (
 )
 
 var c2ProductionSurfaceFiles = [...]string{
-	"execution_interlock.go", "nonhead_contract.go", "object_store.go", "private_contract_run.go",
+	"contract_run_bridge.go", "execution_interlock.go", "nonhead_contract.go", "object_store.go", "private_contract_run.go",
 }
 
 func c2ReceiverName(expression ast.Expr) string {
@@ -179,6 +179,7 @@ func objectStorePublicMethods() []string {
 
 func TestC2StoreExportsNoOfficialIssuerOrRunPermit(t *testing.T) {
 	wantPackageSurface := []string{
+		"AcquireContractRunOwner",
 		"ConformanceAttemptInput", "ConformanceAttemptInput.ContractBundleDigest",
 		"ConformanceAttemptInput.MaterializationPolicyDigest", "ConformanceAttemptInput.ResidueHeadDigest",
 		"ConformanceAttemptInput.TreeIdentityDigest", "ConformanceAttemptRecord",
@@ -191,14 +192,21 @@ func TestC2StoreExportsNoOfficialIssuerOrRunPermit(t *testing.T) {
 		"ConformanceAttemptRoots.MarkerPath", "ConformanceAttemptRoots.StateRoot", "ConformanceAttemptRoots.TemporaryRoot",
 		"ConformanceAttemptRoots.XDGCacheRoot", "ConformanceAttemptRoots.XDGConfigRoot",
 		"ConformanceAttemptRoots.XDGDataRoot", "ConformanceAttemptRoots.XDGStateRoot",
+		"ContractExecutionRecord", "ContractExecutionRecord.Digest", "ContractExecutionRecord.Model", "ContractExecutionRecord.Valid",
+		"ContractRunOwner", "ContractRunOwner.ConsumeForStart", "ContractRunOwner.PersistFinalizedRun",
+		"ContractRunOwner.PersistPrivateRunManifest", "ContractRunOwner.PersistSpawnObservation", "ContractRunOwner.StartClaimDigest",
 		"ContractTargetRecord", "ContractTargetRecord.AttemptDigest", "ContractTargetRecord.Digest", "ContractTargetRecord.Valid",
 		"Error", "Error.Cause", "Error.Code", "Error.Detail", "Error.Error", "Error.Unwrap",
+		"FinalizedRunRecord", "FinalizedRunRecord.Digest", "FinalizedRunRecord.Model", "FinalizedRunRecord.Valid",
 		"NewSemanticObject", "ObjectAuthority", "ObjectStore",
 		"ObjectStore.AllocateConformanceAttempt", "ObjectStore.Open", "ObjectStore.OpenConformanceAttempt",
 		"ObjectStore.OpenContractTargetRecord", "ObjectStore.PersistContractTargetRecord",
 		"ObjectStore.Publish", "ObjectStore.Read", "ObjectStore.Validate",
-		"ObjectStore.ValidateExternalPublicationPath", "OpenObjectStore", "SemanticObject",
+		"ObjectStore.ValidateExternalPublicationPath", "OpenFinalizedRunRecord", "OpenObjectStore", "OpenTerminalClosure",
+		"PersistContractExecutionRecord",
+		"PrivateRunManifest", "PrivateRunManifest.EvidenceRef", "PrivateRunManifest.Summary", "PrivateRunManifest.Valid", "SemanticObject",
 		"SemanticObject.CanonicalBytes", "SemanticObject.Digest", "SemanticObject.Kind", "SemanticObject.Valid",
+		"TerminalClosure", "TerminalClosure.FinalizedRun", "TerminalClosure.Release",
 	}
 	if actual := c2ExportedProductionSurface(t); !reflect.DeepEqual(actual, wantPackageSurface) {
 		t.Fatalf("C2 changed the compiler-parsed package surface: got %v, want %v", actual, wantPackageSurface)
@@ -262,6 +270,49 @@ func TestC3StoreBridgeExportsOnlyInertAttemptAndTargetRecords(t *testing.T) {
 		for _, method := range objectStorePublicMethods() {
 			if strings.Contains(strings.ToLower(method), forbidden) {
 				t.Fatalf("store bridge exposes forbidden %s method %q", forbidden, method)
+			}
+		}
+	}
+}
+
+func TestC4StoreRunBridgeExportsOnlyOpaqueTypedAuthority(t *testing.T) {
+	for _, value := range []any{
+		store.ContractRunOwner{}, store.PrivateRunManifest{}, store.FinalizedRunRecord{},
+		store.TerminalClosure{}, store.ContractExecutionRecord{},
+	} {
+		typeOfValue := reflect.TypeOf(value)
+		for index := 0; index < typeOfValue.NumField(); index++ {
+			if typeOfValue.Field(index).IsExported() {
+				t.Fatalf("%s exposes authority-bearing field %s", typeOfValue, typeOfValue.Field(index).Name)
+			}
+		}
+	}
+	acquire := reflect.TypeOf(store.AcquireContractRunOwner)
+	if acquire.NumIn() != 3 || acquire.In(1) != reflect.TypeOf(store.ContractTargetRecord{}) ||
+		acquire.In(2).PkgPath() != "github.com/nelsonwerd/countershape/internal/hostepoch" {
+		t.Fatalf("run-owner acquisition does not require target record plus measured host epoch: %v", acquire)
+	}
+	consume, present := reflect.TypeOf(store.ContractRunOwner{}).MethodByName("ConsumeForStart")
+	if !present || consume.Type.NumIn() != 3 ||
+		consume.Type.In(2).PkgPath() != "github.com/nelsonwerd/countershape/internal/domain" {
+		t.Fatalf("start consumption does not bind an exact prepared invocation digest: %v", consume.Type)
+	}
+	persist, present := reflect.TypeOf(store.FinalizedRunRecord{}).MethodByName("Model")
+	if !present || persist.Type.NumOut() != 1 ||
+		persist.Type.Out(0).PkgPath() != "github.com/nelsonwerd/countershape/internal/contractexec/model" {
+		t.Fatalf("finalized record does not expose only its inert typed model: %v", persist.Type)
+	}
+	execution := reflect.TypeOf(store.PersistContractExecutionRecord)
+	if execution.NumIn() != 3 || execution.In(2).PkgPath() != "github.com/nelsonwerd/countershape/internal/contractexec/model" {
+		t.Fatalf("execution persistence accepts an untyped result surface: %v", execution)
+	}
+	for _, forbidden := range []string{
+		"OpenContractRunOwner", "IssueRunPermit", "AcquireByDigest", "AcquireByBody",
+		"ListContractRuns", "LatestContractRun", "ContractRunStatus",
+	} {
+		for _, declaration := range c2ExportedProductionSurface(t) {
+			if declaration == forbidden {
+				t.Fatalf("store run bridge exposes forbidden authority %s", forbidden)
 			}
 		}
 	}

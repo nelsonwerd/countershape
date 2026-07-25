@@ -14,35 +14,44 @@ import (
 )
 
 const (
-	interlockFilename      = "execution-interlock.json"
-	startClaimDirectory    = "start-claims"
-	clearReceiptDirectory  = "clear-receipts"
-	interlockKind          = "ExecutionInterlockState"
-	interlockVersionV1     = "execution-interlock/v1"
-	interlockStateClear    = "CLEAR"
-	interlockStateHeld     = "HELD"
-	startClaimVersionV1    = "start-claim/v1"
-	clearReceiptKind       = "ExecutionInterlockClearReceipt"
-	clearReceiptVersionV1  = "execution-interlock-clear-receipt/v1"
-	codeInterlockRefused   = "EXECUTION_INTERLOCK_REFUSED"
-	codeInterlockHeld      = "EXECUTION_INTERLOCK_HELD"
-	codeInterlockAmbiguous = "EXECUTION_INTERLOCK_AMBIGUOUS"
-	codeStartClaimConsumed = "TARGET_START_ALREADY_CLAIMED"
+	interlockFilename         = "execution-interlock.json"
+	startClaimDirectory       = "start-claims"
+	clearReceiptDirectory     = "clear-receipts"
+	finalizedReleaseDirectory = "finalized-run-releases"
+	interlockKind             = "ExecutionInterlockState"
+	interlockVersionV1        = "execution-interlock/v1"
+	interlockStateClear       = "CLEAR"
+	interlockStateHeld        = "HELD"
+	startClaimVersionV1       = "start-claim/v1"
+	clearReceiptKind          = "ExecutionInterlockClearReceipt"
+	clearReceiptVersionV1     = "execution-interlock-clear-receipt/v1"
+	finalizedReleaseKind      = "FinalizedRunRelease"
+	finalizedReleaseV1        = "finalized-run-release/v1"
+	codeInterlockRefused      = "EXECUTION_INTERLOCK_REFUSED"
+	codeInterlockHeld         = "EXECUTION_INTERLOCK_HELD"
+	codeInterlockAmbiguous    = "EXECUTION_INTERLOCK_AMBIGUOUS"
+	codeStartClaimConsumed    = "TARGET_START_ALREADY_CLAIMED"
 )
 
 const (
-	faultBeforeInterlockReplace contractFaultPhase = "before-interlock-replace"
-	faultAfterInterlockRename   contractFaultPhase = "after-interlock-rename"
-	faultAfterInterlockSync     contractFaultPhase = "after-interlock-sync"
-	faultBeforeClaimLink        contractFaultPhase = "before-start-claim-link"
-	faultAfterClaimLink         contractFaultPhase = "after-start-claim-link"
-	faultAfterClaimSync         contractFaultPhase = "after-start-claim-sync"
-	faultBeforeClearReceipt     contractFaultPhase = "before-clear-receipt-create"
-	faultAfterClearReceiptTemp  contractFaultPhase = "after-clear-receipt-temporary-sync"
-	faultBeforeClearReceiptLink contractFaultPhase = "before-clear-receipt-link"
-	faultAfterClearReceiptLink  contractFaultPhase = "after-clear-receipt-link"
-	faultAfterClearReceiptSync  contractFaultPhase = "after-clear-receipt-directory-sync"
-	faultBeforeClearReceiptOpen contractFaultPhase = "before-clear-receipt-reopen"
+	faultBeforeInterlockReplace     contractFaultPhase = "before-interlock-replace"
+	faultAfterInterlockRename       contractFaultPhase = "after-interlock-rename"
+	faultAfterInterlockSync         contractFaultPhase = "after-interlock-sync"
+	faultBeforeClaimLink            contractFaultPhase = "before-start-claim-link"
+	faultAfterClaimLink             contractFaultPhase = "after-start-claim-link"
+	faultAfterClaimSync             contractFaultPhase = "after-start-claim-sync"
+	faultBeforeClearReceipt         contractFaultPhase = "before-clear-receipt-create"
+	faultAfterClearReceiptTemp      contractFaultPhase = "after-clear-receipt-temporary-sync"
+	faultBeforeClearReceiptLink     contractFaultPhase = "before-clear-receipt-link"
+	faultAfterClearReceiptLink      contractFaultPhase = "after-clear-receipt-link"
+	faultAfterClearReceiptSync      contractFaultPhase = "after-clear-receipt-directory-sync"
+	faultBeforeClearReceiptOpen     contractFaultPhase = "before-clear-receipt-reopen"
+	faultBeforeFinalizedReleaseTemp contractFaultPhase = "before-finalized-release-temporary-create"
+	faultAfterFinalizedReleaseTemp  contractFaultPhase = "after-finalized-release-temporary-sync"
+	faultBeforeFinalizedReleaseLink contractFaultPhase = "before-finalized-release-link"
+	faultAfterFinalizedReleaseLink  contractFaultPhase = "after-finalized-release-link"
+	faultAfterFinalizedReleaseSync  contractFaultPhase = "after-finalized-release-directory-sync"
+	faultBeforeFinalizedReleaseOpen contractFaultPhase = "before-finalized-release-reopen"
 )
 
 type executionInterlockState struct {
@@ -306,23 +315,341 @@ func releaseInterlockAfterFinalizedRun(
 	}
 	statePath := filepath.Join(store.contractOps, interlockFilename)
 	current, present, err := readExecutionInterlockState(statePath)
-	if err != nil || !present || current.state != interlockStateHeld ||
-		current.targetDigest != claim.targetDigest || current.attemptDigest != claim.attemptDigest ||
-		current.bootDigest != claim.bootDigest || current.generation != claim.generation {
-		return refuse(codeInterlockRefused, "held interlock does not match the finalized owner", err)
+	if err != nil || !present {
+		return refuse(codeInterlockRefused, "interlock is absent or unreadable during finalized release", err)
 	}
-	clear, err := newExecutionInterlockState(
-		interlockStateClear, current.bootDigest, "", "", deriveInterlockGeneration(
-			current.digest, current.targetDigest, current.attemptDigest, current.bootDigest, current.revision+1,
-		), current.revision+1,
+	switch current.state {
+	case interlockStateHeld:
+		if current.targetDigest != claim.targetDigest || current.attemptDigest != claim.attemptDigest ||
+			current.bootDigest != claim.bootDigest || current.generation != claim.generation {
+			return refuse(codeInterlockRefused, "held interlock does not match the finalized owner", nil)
+		}
+		clear, clearErr := newExecutionInterlockState(
+			interlockStateClear, current.bootDigest, "", "", deriveInterlockGeneration(
+				current.digest, current.targetDigest, current.attemptDigest, current.bootDigest, current.revision+1,
+			), current.revision+1,
+		)
+		if clearErr != nil {
+			return clearErr
+		}
+		if err := replaceExecutionInterlock(statePath, clear, true, fault); err != nil {
+			return err
+		}
+		if err := persistFinalizedRunReleaseLocked(store, clear, current, claim, run.record.object.Digest(), fault); err != nil {
+			return err
+		}
+		return persistClearReceiptLocked(store, clear, current, "FINALIZED_RUN", run.record.object.Digest(), fault)
+
+	case interlockStateClear:
+		previous, previousErr := finalizedRunClearPredecessor(current, claim)
+		if previousErr != nil {
+			return previousErr
+		}
+		if err := persistFinalizedRunReleaseLocked(store, current, previous, claim, run.record.object.Digest(), fault); err != nil {
+			return err
+		}
+		return persistClearReceiptLocked(store, current, previous, "FINALIZED_RUN", run.record.object.Digest(), fault)
+
+	default:
+		return refuse(codeInterlockRefused, "interlock state is not releasable", nil)
+	}
+}
+
+func finalizedRunClearPredecessor(
+	clear executionInterlockState,
+	claim startClaimRecord,
+) (executionInterlockState, error) {
+	if !clear.valid() || clear.state != interlockStateClear || clear.revision < 2 ||
+		clear.bootDigest != claim.bootDigest {
+		return executionInterlockState{}, refuse(
+			codeInterlockRefused, "clear interlock cannot be the finalized owner's immediate successor", nil,
+		)
+	}
+	previous, err := newExecutionInterlockState(
+		interlockStateHeld, claim.bootDigest, claim.targetDigest, claim.attemptDigest,
+		claim.generation, clear.revision-1,
 	)
+	if err != nil {
+		return executionInterlockState{}, err
+	}
+	expected, err := newExecutionInterlockState(
+		interlockStateClear, claim.bootDigest, "", "", deriveInterlockGeneration(
+			previous.digest, claim.targetDigest, claim.attemptDigest, claim.bootDigest, clear.revision,
+		), clear.revision,
+	)
+	if err != nil || !sameInterlockState(expected, clear) {
+		return executionInterlockState{}, refuse(
+			codeInterlockRefused, "clear interlock differs from the exact matching HELD successor", err,
+		)
+	}
+	return previous, nil
+}
+
+func validateFinalizedRunRelease(
+	ctx context.Context,
+	store *ObjectStore,
+	claim startClaimRecord,
+	runDigest domain.Digest,
+) error {
+	if store == nil || !claim.validFor(store) || !runDigest.Valid() {
+		return refuse(codeInterlockRefused, "exact start claim and finalized run are required", nil)
+	}
+	if err := storeContextRefusal(ctx, codeInterlockRefused); err != nil {
+		return err
+	}
+	store.instance.mu.Lock()
+	defer store.instance.mu.Unlock()
+	if err := store.assertReady(); err != nil {
+		return err
+	}
+	lock, err := openAndLockStudy(ctx, filepath.Join(store.contractRoot, contractNamespaceLock), true)
+	if err != nil {
+		return refuse(codeInterlockRefused, "store-wide contract lock failed", err)
+	}
+	defer lock.release()
+	if !claim.validForLocked(store) {
+		return refuse(codeInterlockRefused, "start claim changed before release validation", nil)
+	}
+	releaseDirectory, err := store.ensureContractDirectoryLocked(store.contractOps, finalizedReleaseDirectory)
 	if err != nil {
 		return err
 	}
-	if err := replaceExecutionInterlock(statePath, clear, true, fault); err != nil {
+	runHex, err := strictDigestHex(runDigest)
+	if err != nil {
 		return err
 	}
-	return persistClearReceiptLocked(store, clear, current, "FINALIZED_RUN", run.record.object.Digest(), fault)
+	releasePath := filepath.Join(releaseDirectory, runHex)
+	if err := rejectPathCaseAlias(releasePath); err != nil {
+		return refuse(codeInterlockRefused, "finalized-run release path changed exact spelling", err)
+	}
+	releaseBody, err := readExactPrivateFile(releasePath, -1)
+	if err != nil {
+		return refuse(codeInterlockRefused, "finalized-run release link is absent or invalid", err)
+	}
+	clearDigest, receiptDigest, err := parseFinalizedRunRelease(releaseBody, claim, runDigest)
+	if err != nil {
+		return refuse(codeInterlockRefused, "finalized-run release link differs", err)
+	}
+	receiptDirectory, err := store.ensureContractDirectoryLocked(store.contractOps, clearReceiptDirectory)
+	if err != nil {
+		return err
+	}
+	clearHex, err := strictDigestHex(clearDigest)
+	if err != nil {
+		return err
+	}
+	receiptPath := filepath.Join(receiptDirectory, clearHex)
+	if err := rejectPathCaseAlias(receiptPath); err != nil {
+		return refuse(codeInterlockRefused, "finalized-run receipt path changed exact spelling", err)
+	}
+	receiptBody, err := readExactPrivateFile(receiptPath, -1)
+	if err != nil || !finalizedRunReceiptExact(receiptBody, claim, runDigest, clearDigest, receiptDigest) {
+		return refuse(codeInterlockRefused, "exact finalized-run release receipt is absent or mismatched", err)
+	}
+	if effect, convergeErr := createExactPrivateFile(releaseDirectory, runHex, releaseBody, nil); convergeErr != nil || effect != contractExactConverged {
+		return refuse(codeInterlockAmbiguous, "finalized-run release link did not converge durably", convergeErr)
+	}
+	if effect, convergeErr := createExactPrivateFile(receiptDirectory, clearHex, receiptBody, nil); convergeErr != nil || effect != contractExactConverged {
+		return refuse(codeInterlockAmbiguous, "finalized-run release receipt did not converge durably", convergeErr)
+	}
+	return store.assertReady()
+}
+
+func persistFinalizedRunReleaseLocked(
+	store *ObjectStore,
+	clear executionInterlockState,
+	previous executionInterlockState,
+	claim startClaimRecord,
+	runDigest domain.Digest,
+	fault contractFault,
+) error {
+	if store == nil || !clear.valid() || !previous.valid() || !claim.digest.Valid() || !runDigest.Valid() ||
+		clear.state != interlockStateClear || previous.state != interlockStateHeld ||
+		previous.targetDigest != claim.targetDigest || previous.attemptDigest != claim.attemptDigest ||
+		previous.bootDigest != claim.bootDigest || previous.generation != claim.generation {
+		return refuse(codeInterlockRefused, "finalized-run release-link inputs are invalid", nil)
+	}
+	receiptBody, err := clearReceiptBytes(clear, previous, "FINALIZED_RUN", runDigest)
+	if err != nil {
+		return err
+	}
+	receiptDigestValue, err := canon.DigestBytes(clearReceiptKind, receiptBody)
+	if err != nil {
+		return err
+	}
+	receiptDigest, err := domain.ParseDigest(receiptDigestValue.String())
+	if err != nil {
+		return err
+	}
+	releaseBody, err := canon.CanonicalizeTyped(map[string]any{
+		"schema_version":       domain.SchemaVersion,
+		"kind":                 finalizedReleaseKind,
+		"release_version":      finalizedReleaseV1,
+		"target_digest":        claim.targetDigest.String(),
+		"attempt_digest":       claim.attemptDigest.String(),
+		"boot_digest":          claim.bootDigest.String(),
+		"interlock_generation": claim.generation.String(),
+		"start_claim_digest":   claim.digest.String(),
+		"finalized_run_digest": runDigest.String(),
+		"clear_state_digest":   clear.digest.String(),
+		"clear_receipt_digest": receiptDigest.String(),
+	})
+	if err != nil {
+		return err
+	}
+	directory, err := store.ensureContractDirectoryLocked(store.contractOps, finalizedReleaseDirectory)
+	if err != nil {
+		return err
+	}
+	hex, err := strictDigestHex(runDigest)
+	if err != nil {
+		return err
+	}
+	releaseFault := func(phase contractFaultPhase) error {
+		switch phase {
+		case faultBeforeTemporary:
+			return injectContractFault(fault, faultBeforeFinalizedReleaseTemp)
+		case faultAfterTempSync:
+			return injectContractFault(fault, faultAfterFinalizedReleaseTemp)
+		case faultBeforeLink:
+			return injectContractFault(fault, faultBeforeFinalizedReleaseLink)
+		case faultAfterLink:
+			return injectContractFault(fault, faultAfterFinalizedReleaseLink)
+		case faultAfterParentSync:
+			return injectContractFault(fault, faultAfterFinalizedReleaseSync)
+		case faultBeforeReopen:
+			return injectContractFault(fault, faultBeforeFinalizedReleaseOpen)
+		default:
+			return nil
+		}
+	}
+	if _, err := createExactPrivateFile(directory, hex, releaseBody, releaseFault); err != nil {
+		return refuse(codeInterlockAmbiguous, "finalized-run release link did not persist exactly", err)
+	}
+	reopened, err := readExactPrivateFile(filepath.Join(directory, hex), int64(len(releaseBody)))
+	if err != nil || !bytes.Equal(reopened, releaseBody) {
+		return refuse(codeInterlockAmbiguous, "finalized-run release link did not reopen exactly", err)
+	}
+	return nil
+}
+
+func parseFinalizedRunRelease(
+	body []byte,
+	claim startClaimRecord,
+	runDigest domain.Digest,
+) (domain.Digest, domain.Digest, error) {
+	value, err := canon.Parse(body)
+	if err != nil || !contractRoster(value,
+		"schema_version", "kind", "release_version", "target_digest", "attempt_digest",
+		"boot_digest", "interlock_generation", "start_claim_digest", "finalized_run_digest",
+		"clear_state_digest", "clear_receipt_digest",
+	) {
+		return "", "", errors.Join(err, errors.New("finalized-run release roster differs"))
+	}
+	readText := func(name string) (string, bool) {
+		member, ok := value.LookupMember(name)
+		if !ok {
+			return "", false
+		}
+		result, ok := member.Text()
+		return result, ok
+	}
+	schema, schemaOK := readText("schema_version")
+	kind, kindOK := readText("kind")
+	version, versionOK := readText("release_version")
+	targetRaw, targetOK := readText("target_digest")
+	attemptRaw, attemptOK := readText("attempt_digest")
+	bootRaw, bootOK := readText("boot_digest")
+	generationRaw, generationOK := readText("interlock_generation")
+	claimRaw, claimOK := readText("start_claim_digest")
+	runRaw, runOK := readText("finalized_run_digest")
+	clearRaw, clearOK := readText("clear_state_digest")
+	receiptRaw, receiptOK := readText("clear_receipt_digest")
+	clearDigest, clearErr := domain.ParseDigest(clearRaw)
+	receiptDigest, receiptErr := domain.ParseDigest(receiptRaw)
+	if !schemaOK || !kindOK || !versionOK || !targetOK || !attemptOK || !bootOK || !generationOK ||
+		!claimOK || !runOK || !clearOK || !receiptOK || clearErr != nil || receiptErr != nil ||
+		schema != domain.SchemaVersion || kind != finalizedReleaseKind || version != finalizedReleaseV1 ||
+		targetRaw != claim.targetDigest.String() || attemptRaw != claim.attemptDigest.String() ||
+		bootRaw != claim.bootDigest.String() || generationRaw != claim.generation.String() ||
+		claimRaw != claim.digest.String() || runRaw != runDigest.String() {
+		return "", "", errors.New("finalized-run release parents differ")
+	}
+	exact, err := value.CanonicalChecked()
+	if err != nil || !bytes.Equal(exact, body) {
+		return "", "", errors.Join(err, errors.New("finalized-run release is not exact canonical JSON"))
+	}
+	return clearDigest, receiptDigest, nil
+}
+
+func finalizedRunReceiptExact(
+	body []byte,
+	claim startClaimRecord,
+	runDigest domain.Digest,
+	clearDigest domain.Digest,
+	receiptDigest domain.Digest,
+) bool {
+	value, err := canon.Parse(body)
+	if err != nil || !contractRoster(value,
+		"schema_version", "kind", "receipt_version", "cause", "clear_state_digest",
+		"previous_held_digest", "previous_target_digest", "previous_attempt_digest",
+		"previous_boot_digest", "previous_generation", "previous_revision", "boot_digest", "terminal_run_digest",
+	) {
+		return false
+	}
+	readText := func(name string) (string, bool) {
+		member, ok := value.LookupMember(name)
+		if !ok {
+			return "", false
+		}
+		result, ok := member.Text()
+		return result, ok
+	}
+	schema, schemaOK := readText("schema_version")
+	kind, kindOK := readText("kind")
+	version, versionOK := readText("receipt_version")
+	cause, causeOK := readText("cause")
+	clearRaw, clearOK := readText("clear_state_digest")
+	previousRaw, previousOK := readText("previous_held_digest")
+	previousTargetRaw, targetOK := readText("previous_target_digest")
+	previousAttemptRaw, attemptOK := readText("previous_attempt_digest")
+	previousBootRaw, bootOK := readText("previous_boot_digest")
+	previousGenerationRaw, generationOK := readText("previous_generation")
+	currentBootRaw, currentBootOK := readText("boot_digest")
+	runRaw, runOK := readText("terminal_run_digest")
+	revisionValue, revisionPresent := value.LookupMember("previous_revision")
+	previousRevision, revisionOK := revisionValue.Int64()
+	if !schemaOK || !kindOK || !versionOK || !causeOK || !clearOK || !previousOK ||
+		!targetOK || !attemptOK || !bootOK || !generationOK || !currentBootOK || !runOK ||
+		!revisionPresent || !revisionOK || previousRevision < 1 ||
+		schema != domain.SchemaVersion || kind != clearReceiptKind || version != clearReceiptVersionV1 ||
+		cause != "FINALIZED_RUN" || clearRaw != clearDigest.String() ||
+		previousTargetRaw != claim.targetDigest.String() || previousAttemptRaw != claim.attemptDigest.String() ||
+		previousBootRaw != claim.bootDigest.String() || previousGenerationRaw != claim.generation.String() ||
+		currentBootRaw != claim.bootDigest.String() || runRaw != runDigest.String() {
+		return false
+	}
+	previous, err := newExecutionInterlockState(
+		interlockStateHeld, claim.bootDigest, claim.targetDigest, claim.attemptDigest,
+		claim.generation, previousRevision,
+	)
+	if err != nil || previousRaw != previous.digest.String() {
+		return false
+	}
+	clear, err := newExecutionInterlockState(
+		interlockStateClear, claim.bootDigest, "", "", deriveInterlockGeneration(
+			previous.digest, claim.targetDigest, claim.attemptDigest, claim.bootDigest, previousRevision+1,
+		), previousRevision+1,
+	)
+	if err != nil || clear.digest != clearDigest {
+		return false
+	}
+	expected, err := clearReceiptBytes(clear, previous, "FINALIZED_RUN", runDigest)
+	if err != nil || !bytes.Equal(expected, body) {
+		return false
+	}
+	digestValue, err := canon.DigestBytes(clearReceiptKind, body)
+	return err == nil && digestValue.String() == receiptDigest.String()
 }
 
 func resetInterlockAfterBootChange(
@@ -883,9 +1210,10 @@ func clearReceiptExactLocked(store *ObjectStore, clear executionInterlockState) 
 	if err != nil || !sameInterlockState(expectedClear, clear) {
 		return false
 	}
+	var run domain.Digest
 	if cause == "FINALIZED_RUN" {
-		run, runErr := domain.ParseDigest(runRaw)
-		if runErr != nil || !run.Valid() {
+		run, err = domain.ParseDigest(runRaw)
+		if err != nil || !run.Valid() {
 			return false
 		}
 	} else if runRaw != "" {
@@ -895,8 +1223,65 @@ func clearReceiptExactLocked(store *ObjectStore, clear executionInterlockState) 
 	if err != nil || !bytes.Equal(exact, body) {
 		return false
 	}
+	if cause == "FINALIZED_RUN" && !finalizedRunClearLinkExactLocked(store, clear, previousState, run, body) {
+		return false
+	}
 	effect, err := createExactPrivateFile(directory, hex, body, nil)
 	return err == nil && effect == contractExactConverged && store.assertReady() == nil
+}
+
+func finalizedRunClearLinkExactLocked(
+	store *ObjectStore,
+	clear executionInterlockState,
+	previous executionInterlockState,
+	runDigest domain.Digest,
+	receiptBody []byte,
+) bool {
+	if store == nil || !clear.valid() || clear.state != interlockStateClear ||
+		!previous.valid() || previous.state != interlockStateHeld || !runDigest.Valid() {
+		return false
+	}
+	claimDirectory, err := store.ensureContractDirectoryLocked(store.contractOps, startClaimDirectory)
+	if err != nil {
+		return false
+	}
+	claimPath := claimPathFor(claimDirectory, previous.targetDigest)
+	claimBody, err := readExactPrivateFile(claimPath, -1)
+	if err != nil {
+		return false
+	}
+	claim, err := parseStartClaim(store, claimBody, claimPath)
+	if err != nil || !claim.validForLocked(store) || claim.targetDigest != previous.targetDigest ||
+		claim.attemptDigest != previous.attemptDigest || claim.bootDigest != previous.bootDigest ||
+		claim.generation != previous.generation {
+		return false
+	}
+	receiptDigestValue, err := canon.DigestBytes(clearReceiptKind, receiptBody)
+	if err != nil {
+		return false
+	}
+	receiptDigest, err := domain.ParseDigest(receiptDigestValue.String())
+	if err != nil {
+		return false
+	}
+	releaseDirectory, err := store.ensureContractDirectoryLocked(store.contractOps, finalizedReleaseDirectory)
+	if err != nil {
+		return false
+	}
+	runHex, err := strictDigestHex(runDigest)
+	if err != nil {
+		return false
+	}
+	releasePath := filepath.Join(releaseDirectory, runHex)
+	if err := rejectPathCaseAlias(releasePath); err != nil {
+		return false
+	}
+	releaseBody, err := readExactPrivateFile(releasePath, -1)
+	if err != nil {
+		return false
+	}
+	linkedClear, linkedReceipt, err := parseFinalizedRunRelease(releaseBody, claim, runDigest)
+	return err == nil && linkedClear == clear.digest && linkedReceipt == receiptDigest
 }
 
 func deriveInterlockGeneration(

@@ -1,22 +1,29 @@
 #!/usr/bin/env node
 
-import { createHash, randomBytes } from "node:crypto";
-import { spawnSync } from "node:child_process";
-import { constants } from "node:fs";
-import { chmod, lstat, mkdir, mkdtemp, open, readdir, realpath, rm, symlink, unlink } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { lstat, readdir, realpath } from "node:fs/promises";
 import { arch, platform } from "node:os";
-import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
-import { fileURLToPath } from "node:url";
+import { join, relative, resolve, sep } from "node:path";
+import { pathToFileURL } from "node:url";
 
-export const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const verifierPath = resolve(repositoryRoot, "tools/verify-current.mjs");
-const maxChildOutput = 64 * 1024 * 1024;
-const childTimeoutMS = 20 * 60 * 1000;
-const lockRecordMaxBytes = 4096;
-const lockSchemaVersion = "countershape/verify-current-lock/v1";
+import {
+	acquireVerificationLock,
+	admitTools,
+	buildChildEnvironment,
+	childResult,
+	cleanupVerificationResources,
+	createPrivateRoots,
+	finalizeVerificationResources,
+	repositoryRoot,
+} from "./verify-runtime-authority.mjs";
+
 const modulePath = "github.com/nelsonwerd/countershape";
 const generalJobs = 1;
 const goTestParallelism = 2;
+const authorityNames = Object.freeze(["go", "node", "git", "sh", "cc", "cxx"]);
+
+// Sealed C0 compatibility invariants now enforced by verify-runtime-authority.mjs:
+// GOFLAGS: "-mod=readonly -buildvcs=false -p=1" and review-first VERIFY_STALE_LOCK refusal.
 
 export class VerificationError extends Error {
 	constructor(code, detail) {
@@ -25,23 +32,17 @@ export class VerificationError extends Error {
 	}
 }
 
-export const toolSpecifications = Object.freeze([
-	Object.freeze({ name: "go", variable: "COUNTERSHAPE_GO", fallback: "/opt/homebrew/bin/go" }),
-	Object.freeze({ name: "node", variable: null, fallback: process.execPath }),
-	Object.freeze({ name: "git", variable: "COUNTERSHAPE_GIT", fallback: "/usr/bin/git" }),
-	Object.freeze({ name: "sh", variable: "COUNTERSHAPE_SH", fallback: "/bin/sh" }),
-	Object.freeze({ name: "cc", variable: "COUNTERSHAPE_CC", fallback: "/usr/bin/clang" }),
-	Object.freeze({ name: "cxx", variable: "COUNTERSHAPE_CXX", fallback: "/usr/bin/clang++" }),
-]);
-
 const goGeneralCommon = Object.freeze(["-mod=readonly", "-buildvcs=false", `-p=${generalJobs}`]);
 const goSerialCommon = Object.freeze(["-mod=readonly", "-buildvcs=false", "-p=1"]);
 
 export const sensitiveGoPackages = Object.freeze([
+	`${modulePath}/internal/contractexec/runner`,
 	`${modulePath}/internal/emit/node/compiler`,
 	`${modulePath}/internal/emit/node/program/v1`,
+	`${modulePath}/internal/processmechanics`,
 	`${modulePath}/internal/store`,
 	`${modulePath}/internal/world`,
+	`${modulePath}/testkit/contractexec/cli`,
 	`${modulePath}/testkit/studies/cli_precedence`,
 	`${modulePath}/testkit/studies/http_invoices`,
 ]);
@@ -52,15 +53,15 @@ export const currentSteps = Object.freeze([
 		id: "go-package-partition", kind: "package-guard", tool: "go", tools: Object.freeze(["go"]),
 		args: Object.freeze(["list", "-mod=readonly", "-buildvcs=false", "./..."]), marker: "PACKAGE_PARTITION exact",
 	}),
-	Object.freeze({ id: "go-build", tool: "go", tools: Object.freeze(["go", "cc", "cxx"]), args: Object.freeze(["build", ...goGeneralCommon, "./..."]) }),
-	Object.freeze({ id: "go-vet", tool: "go", tools: Object.freeze(["go", "cc", "cxx"]), args: Object.freeze(["vet", ...goGeneralCommon, "./..."]) }),
+	Object.freeze({ id: "go-build", tool: "go", tools: Object.freeze(["go", "cc", "cxx"]), args: Object.freeze(["build", goGeneralCommon[0], goGeneralCommon[1], goGeneralCommon[2], "./..."]) }),
+	Object.freeze({ id: "go-vet", tool: "go", tools: Object.freeze(["go", "cc", "cxx"]), args: Object.freeze(["vet", goGeneralCommon[0], goGeneralCommon[1], goGeneralCommon[2], "./..."]) }),
 	Object.freeze({
 		id: "go-test-general", tool: "go", tools: Object.freeze(["go", "node", "git", "sh", "cc", "cxx"]), packageClass: "general",
-		args: Object.freeze(["test", ...goGeneralCommon, `-parallel=${goTestParallelism}`, "-count=1", "-timeout=20m"]),
+		args: Object.freeze(["test", goGeneralCommon[0], goGeneralCommon[1], goGeneralCommon[2], `-parallel=${goTestParallelism}`, "-count=1", "-timeout=20m"]),
 	}),
 	Object.freeze({
 		id: "go-test-sensitive-serial", tool: "go", tools: Object.freeze(["go", "node", "git", "sh", "cc", "cxx"]), packageClass: "sensitive",
-		args: Object.freeze(["test", ...goSerialCommon, `-parallel=${goTestParallelism}`, "-count=1", "-timeout=20m"]),
+		args: Object.freeze(["test", goSerialCommon[0], goSerialCommon[1], goSerialCommon[2], `-parallel=${goTestParallelism}`, "-count=1", "-timeout=20m"]),
 	}),
 	Object.freeze({
 		id: "go-package-partition-revalidation", kind: "package-revalidation", tool: "go", tools: Object.freeze(["go"]),
@@ -174,6 +175,46 @@ export const currentSteps = Object.freeze([
 		marker: "P07B-C C3 Go JSON target execution OK (c3-store-bridge: 6 passed, 0 skipped)",
 	}),
 	Object.freeze({
+		id: "architecture-p07b-c-c4", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
+		path: "tools/check-p07b-c-architecture.mjs", args: Object.freeze(["--c4"]),
+		marker: "P07B-C C4 cumulative architecture boundary OK",
+	}),
+	Object.freeze({
+		id: "architecture-p07b-c-c4-selftest", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
+		path: "tools/check-p07b-c-architecture-selftest.mjs", args: Object.freeze(["--c4"]),
+		marker: "P07B-C C4 cumulative architecture defensive self-test OK (14 metadata cases; 42 Go JSON parser cases; 7 command cases; 5 owner-reference parser cases)",
+	}),
+	Object.freeze({
+		id: "go-json-p07b-c-c4-processmechanics-parity", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
+		path: "tools/check-p07b-c-architecture.mjs", args: Object.freeze(["--run-go-json", "c4-processmechanics-parity"]),
+		marker: "P07B-C C4 Go JSON target execution OK (c4-processmechanics-parity: 12 passed, 0 skipped)",
+	}),
+	Object.freeze({
+		id: "go-json-p07b-c-c4-admission-permit", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
+		path: "tools/check-p07b-c-architecture.mjs", args: Object.freeze(["--run-go-json", "c4-admission-permit"]),
+		marker: "P07B-C C4 Go JSON target execution OK (c4-admission-permit: 7 passed, 0 skipped)",
+	}),
+	Object.freeze({
+		id: "go-json-p07b-c-c4-cli-closure", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
+		path: "tools/check-p07b-c-architecture.mjs", args: Object.freeze(["--run-go-json", "c4-cli-closure"]),
+		marker: "P07B-C C4 Go JSON target execution OK (c4-cli-closure: 4 passed, 0 skipped)",
+	}),
+	Object.freeze({
+		id: "go-json-p07b-c-c4-finalized-run-release", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
+		path: "tools/check-p07b-c-architecture.mjs", args: Object.freeze(["--run-go-json", "c4-finalized-run-release"]),
+		marker: "P07B-C C4 Go JSON target execution OK (c4-finalized-run-release: 5 passed, 0 skipped)",
+	}),
+	Object.freeze({
+		id: "go-json-p07b-c-c4-classification-recovery", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
+		path: "tools/check-p07b-c-architecture.mjs", args: Object.freeze(["--run-go-json", "c4-classification-recovery"]),
+		marker: "P07B-C C4 Go JSON target execution OK (c4-classification-recovery: 2 passed, 0 skipped)",
+	}),
+	Object.freeze({
+		id: "go-json-p07b-c-c4-authority-race", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
+		path: "tools/check-p07b-c-architecture.mjs", args: Object.freeze(["--run-go-json", "c4-authority-race"]),
+		marker: "P07B-C C4 Go JSON target execution OK (c4-authority-race: 4 passed, 0 skipped)",
+	}),
+	Object.freeze({
 		id: "architecture-p07b-c-plan-selftest", tool: "node", tools: Object.freeze(["node", "git"]), path: "tools/check-p07b-c-plan.mjs",
 		args: Object.freeze(["--self-test"]), marker: "P07B-C evolved plan checker self-test passed:",
 	}),
@@ -208,315 +249,7 @@ export const historicalOnly = Object.freeze([
 	Object.freeze({ id: "mutation-p07b-a2-1", scripts: Object.freeze(["tools/mutate-p07b-a2-authority.mjs"]), status: "docs/status/P07B-A2-1-AUTHORITY.md" }),
 ]);
 
-function sameOpenedFile(left, right) {
-	return left.dev === right.dev && left.ino === right.ino && left.size === right.size &&
-		left.mode === right.mode && left.mtimeMs === right.mtimeMs;
-}
-
-function sameFileIdentity(left, right) {
-	return left.dev === right.dev && left.ino === right.ino;
-}
-
-function effectiveUID() {
-	if (typeof process.geteuid !== "function") throw new VerificationError("VERIFY_EFFECTIVE_UID_UNAVAILABLE", platform());
-	return process.geteuid();
-}
-
-async function requireOwnedDirectory(path, code, { exactMode, writableMode = 0 } = {}) {
-	let handle;
-	try {
-		handle = await open(path, constants.O_RDONLY | (constants.O_DIRECTORY ?? 0) | (constants.O_NOFOLLOW ?? 0));
-		const opened = await handle.stat();
-		const atPath = await lstat(path);
-		const canonical = await realpath(path);
-		if (!opened.isDirectory() || atPath.isSymbolicLink() || !sameFileIdentity(opened, atPath) || canonical !== path ||
-			opened.uid !== effectiveUID() || (exactMode !== undefined && (opened.mode & 0o777) !== exactMode) ||
-			(writableMode !== 0 && (opened.mode & writableMode) !== 0)) {
-			throw new VerificationError(code, path);
-		}
-	} catch (error) {
-		if (error instanceof VerificationError) throw error;
-		throw new VerificationError(code, `${path}: ${error.code ?? error.message}`);
-	} finally {
-		await handle?.close();
-	}
-}
-
-export async function createPrivateBase(root = repositoryRoot) {
-	const absoluteRoot = resolve(root);
-	const canonicalRoot = await realpath(absoluteRoot);
-	if (absoluteRoot !== canonicalRoot) {
-		throw new VerificationError("VERIFY_REPOSITORY_ROOT_NOT_CANONICAL", `${absoluteRoot} != ${canonicalRoot}`);
-	}
-	const artifactRoot = join(canonicalRoot, ".countershape");
-	try {
-		await mkdir(artifactRoot, { mode: 0o700 });
-	} catch (error) {
-		if (error.code !== "EEXIST") throw new VerificationError("VERIFY_ARTIFACT_ROOT_CREATE_FAILED", `${artifactRoot}: ${error.code ?? error.message}`);
-	}
-	await requireOwnedDirectory(artifactRoot, "VERIFY_ARTIFACT_ROOT_INVALID", { writableMode: 0o022 });
-	const base = join(artifactRoot, "verify-current");
-	try {
-		await mkdir(base, { mode: 0o700 });
-	} catch (error) {
-		if (error.code !== "EEXIST") throw new VerificationError("VERIFY_PRIVATE_BASE_CREATE_FAILED", `${base}: ${error.code ?? error.message}`);
-	}
-	await requireOwnedDirectory(base, "VERIFY_PRIVATE_BASE_INVALID", { exactMode: 0o700 });
-	return base;
-}
-
-function canonicalLockRecord(record) {
-	return `${JSON.stringify({
-		created_at_unix_ms: record.created_at_unix_ms,
-		nonce: record.nonce,
-		pid: record.pid,
-		repository_root_sha256: record.repository_root_sha256,
-		schema_version: record.schema_version,
-	})}\n`;
-}
-
-async function readBoundedHandle(handle, code, path) {
-	const before = await handle.stat();
-	if (!before.isFile() || before.size <= 0 || before.size > lockRecordMaxBytes) {
-		throw new VerificationError(code, `${path}: invalid byte length ${before.size}`);
-	}
-	const buffer = Buffer.alloc(before.size);
-	let offset = 0;
-	while (offset < buffer.length) {
-		const { bytesRead } = await handle.read(buffer, offset, buffer.length - offset, offset);
-		if (bytesRead === 0) throw new VerificationError(code, `${path}: unexpected EOF at ${offset}/${buffer.length}`);
-		offset += bytesRead;
-	}
-	const after = await handle.stat();
-	if (!sameOpenedFile(before, after)) throw new VerificationError(code, `${path}: changed while reading`);
-	return buffer.toString("utf8");
-}
-
-function validateLockRecord(text, expectedRootDigest, path) {
-	let record;
-	try {
-		record = JSON.parse(text);
-	} catch (error) {
-		throw new VerificationError("VERIFY_LOCK_INVALID", `${path}: ${error.message}`);
-	}
-	const expectedKeys = ["created_at_unix_ms", "nonce", "pid", "repository_root_sha256", "schema_version"];
-	if (!record || typeof record !== "object" || Array.isArray(record) ||
-		JSON.stringify(Object.keys(record)) !== JSON.stringify(expectedKeys) ||
-		record.schema_version !== lockSchemaVersion || !Number.isSafeInteger(record.pid) || record.pid <= 0 ||
-		!Number.isSafeInteger(record.created_at_unix_ms) || record.created_at_unix_ms < 0 ||
-		!(/^[0-9a-f]{32}$/u.test(record.nonce)) || record.repository_root_sha256 !== expectedRootDigest ||
-		canonicalLockRecord(record) !== text) {
-		throw new VerificationError("VERIFY_LOCK_INVALID", path);
-	}
-	return Object.freeze(record);
-}
-
-async function inspectExistingLock(path, expectedRootDigest) {
-	let handle;
-	try {
-		const before = await lstat(path);
-		if (!before.isFile() || before.isSymbolicLink() || before.uid !== effectiveUID() || (before.mode & 0o777) !== 0o600) {
-			throw new VerificationError("VERIFY_LOCK_INVALID", path);
-		}
-		handle = await open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
-		const opened = await handle.stat();
-		if (!opened.isFile() || !sameFileIdentity(before, opened)) throw new VerificationError("VERIFY_LOCK_INVALID", path);
-		const text = await readBoundedHandle(handle, "VERIFY_LOCK_INVALID", path);
-		const finalOpened = await handle.stat();
-		const after = await lstat(path);
-		if (after.isSymbolicLink() || !after.isFile() || after.uid !== effectiveUID() || (after.mode & 0o777) !== 0o600 ||
-			!sameOpenedFile(finalOpened, after)) throw new VerificationError("VERIFY_LOCK_INVALID", path);
-		return validateLockRecord(text, expectedRootDigest, path);
-	} catch (error) {
-		if (error instanceof VerificationError) throw error;
-		throw new VerificationError("VERIFY_LOCK_INVALID", `${path}: ${error.code ?? error.message}`);
-	} finally {
-		await handle?.close();
-	}
-}
-
-export function processLiveness(pid, signal = process.kill) {
-	try {
-		signal(pid, 0);
-		return "live";
-	} catch (error) {
-		if (error.code === "ESRCH") return "absent";
-		return "indeterminate";
-	}
-}
-
-export async function acquireVerificationLock(root = repositoryRoot, dependencies = {}) {
-	const canonicalRoot = await realpath(resolve(root));
-	const base = await createPrivateBase(canonicalRoot);
-	const path = join(base, "active.lock");
-	const repositoryRootDigest = createHash("sha256").update(canonicalRoot).digest("hex");
-	const record = Object.freeze({
-		created_at_unix_ms: dependencies.now?.() ?? Date.now(),
-		nonce: dependencies.nonce ?? randomBytes(16).toString("hex"),
-		pid: dependencies.pid ?? process.pid,
-		repository_root_sha256: repositoryRootDigest,
-		schema_version: lockSchemaVersion,
-	});
-	const serialized = canonicalLockRecord(record);
-	validateLockRecord(serialized, repositoryRootDigest, path);
-	let handle;
-	try {
-		handle = await open(path, constants.O_CREAT | constants.O_EXCL | constants.O_RDWR | (constants.O_NOFOLLOW ?? 0), 0o600);
-	} catch (error) {
-		if (error.code !== "EEXIST") throw new VerificationError("VERIFY_LOCK_CREATE_FAILED", `${path}: ${error.code ?? error.message}`);
-		const existing = await inspectExistingLock(path, repositoryRootDigest);
-		const state = await (dependencies.liveness?.(existing.pid) ?? processLiveness(existing.pid));
-		if (state === "absent") {
-			throw new VerificationError("VERIFY_STALE_LOCK", `${path}: pid=${existing.pid}; inspect and unlink only after confirming no verifier is active`);
-		}
-		throw new VerificationError("VERIFY_ALREADY_RUNNING", `${path}: pid=${existing.pid}; liveness=${state}`);
-	}
-	try {
-		const opened = await handle.stat();
-		if (!opened.isFile() || opened.uid !== effectiveUID() || (opened.mode & 0o777) !== 0o600) {
-			throw new VerificationError("VERIFY_LOCK_INVALID", path);
-		}
-		await handle.writeFile(serialized, { encoding: "utf8" });
-		await handle.sync();
-		await dependencies.afterWrite?.({ path, record });
-		const atPath = await lstat(path);
-		if (atPath.isSymbolicLink() || !sameFileIdentity(opened, atPath)) throw new VerificationError("VERIFY_LOCK_INVALID", path);
-	} catch (error) {
-		let created;
-		try { created = await handle.stat(); } catch { /* leave uncertain ownership fail-closed */ }
-		try {
-			const atPath = await lstat(path);
-			if (created && !atPath.isSymbolicLink() && sameFileIdentity(created, atPath)) await unlink(path);
-		} catch { /* preserve the primary failure and any uncertain path */ }
-		let closeFailure;
-		try { await handle.close(); } catch (failure) { closeFailure = failure; }
-		if (closeFailure) throw new AggregateError([error, closeFailure], "lock acquisition and handle close both failed");
-		if (error instanceof VerificationError) throw error;
-		throw new VerificationError("VERIFY_LOCK_WRITE_FAILED", `${path}: ${error.code ?? error.message}`);
-	}
-	let released = false;
-	const assertHeld = async () => {
-		if (released) throw new VerificationError("VERIFY_LOCK_INTEGRITY", `${path}: already released`);
-		const opened = await handle.stat();
-		const before = await lstat(path);
-		if (!opened.isFile() || opened.uid !== effectiveUID() || (opened.mode & 0o777) !== 0o600 ||
-			before.isSymbolicLink() || !before.isFile() || before.uid !== effectiveUID() || (before.mode & 0o777) !== 0o600 ||
-			!sameFileIdentity(opened, before)) {
-			throw new VerificationError("VERIFY_LOCK_INTEGRITY", path);
-		}
-		const text = await readBoundedHandle(handle, "VERIFY_LOCK_INTEGRITY", path);
-		const finalOpened = await handle.stat();
-		const after = await lstat(path);
-		if (after.isSymbolicLink() || !after.isFile() || after.uid !== effectiveUID() || (after.mode & 0o777) !== 0o600 ||
-			!sameOpenedFile(finalOpened, after) || text !== serialized) {
-			throw new VerificationError("VERIFY_LOCK_INTEGRITY", path);
-		}
-	};
-	return Object.freeze({
-		path,
-		pid: record.pid,
-		assertHeld,
-		async release() {
-			if (released) return;
-			let failure;
-			try {
-				await assertHeld();
-				await unlink(path);
-			} catch (error) {
-				failure = error instanceof VerificationError ? error : new VerificationError("VERIFY_LOCK_INTEGRITY", `${path}: ${error.code ?? error.message}`);
-			}
-			try {
-				await handle.close();
-			} catch (error) {
-				failure ??= new VerificationError("VERIFY_LOCK_CLOSE_FAILED", `${path}: ${error.code ?? error.message}`);
-			}
-			released = true;
-			if (failure) throw failure;
-		},
-	});
-}
-
-export async function admitTool(name, suppliedPath) {
-	if (!isAbsolute(suppliedPath)) {
-		throw new VerificationError("VERIFY_TOOL_PATH_NOT_ABSOLUTE", `${name}: ${suppliedPath}`);
-	}
-	if (/[\u0000-\u001f\u007f]/u.test(suppliedPath) || suppliedPath.includes(":")) {
-		throw new VerificationError("VERIFY_TOOL_PATH_UNSAFE", name);
-	}
-	let canonical;
-	try {
-		canonical = await realpath(suppliedPath);
-	} catch (error) {
-		throw new VerificationError("VERIFY_TOOL_REALPATH_FAILED", `${name}: ${suppliedPath}: ${error.code ?? error.message}`);
-	}
-	let before;
-	try {
-		before = await lstat(canonical);
-	} catch (error) {
-		throw new VerificationError("VERIFY_TOOL_LSTAT_FAILED", `${name}: ${canonical}: ${error.code ?? error.message}`);
-	}
-	if (!before.isFile() || before.isSymbolicLink() || (before.mode & 0o111) === 0) {
-		throw new VerificationError("VERIFY_TOOL_NOT_EXECUTABLE_REGULAR", `${name}: ${canonical}`);
-	}
-	let handle;
-	try {
-		handle = await open(canonical, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
-		const opened = await handle.stat();
-		if (!opened.isFile() || !sameOpenedFile(before, opened)) {
-			throw new VerificationError("VERIFY_TOOL_CHANGED", `${name}: ${canonical}`);
-		}
-		const bytes = await handle.readFile();
-		const after = await handle.stat();
-		if (!sameOpenedFile(opened, after)) {
-			throw new VerificationError("VERIFY_TOOL_CHANGED", `${name}: ${canonical}`);
-		}
-		return Object.freeze({
-			name,
-			path: canonical,
-			sha256: createHash("sha256").update(bytes).digest("hex"),
-			device: opened.dev,
-			inode: opened.ino,
-			size: opened.size,
-		});
-	} catch (error) {
-		if (error instanceof VerificationError) throw error;
-		throw new VerificationError("VERIFY_TOOL_OPEN_FAILED", `${name}: ${canonical}: ${error.code ?? error.message}`);
-	} finally {
-		await handle?.close();
-	}
-}
-
-export async function admitTools(environment = process.env) {
-	if (environment.COUNTERSHAPE_NODE) {
-		if (!isAbsolute(environment.COUNTERSHAPE_NODE)) {
-			throw new VerificationError("VERIFY_NODE_AUTHORITY_INVOKE_REQUIRED", "COUNTERSHAPE_NODE must name the Node runtime that invoked this verifier");
-		}
-		const [requested, running] = await Promise.all([realpath(environment.COUNTERSHAPE_NODE), realpath(process.execPath)]);
-		if (requested !== running) {
-			throw new VerificationError("VERIFY_NODE_AUTHORITY_INVOKE_REQUIRED", `invoke ${environment.COUNTERSHAPE_NODE} tools/verify-current.mjs instead of overriding a running verifier`);
-		}
-	}
-	const admitted = {};
-	for (const specification of toolSpecifications) {
-		const supplied = specification.variable ? (environment[specification.variable] || specification.fallback) : specification.fallback;
-		admitted[specification.name] = await admitTool(specification.name, supplied);
-	}
-	return Object.freeze(admitted);
-}
-
-export async function revalidateTool(admitted) {
-	const current = await admitTool(admitted.name, admitted.path);
-	if (current.path !== admitted.path || current.sha256 !== admitted.sha256 || current.device !== admitted.device ||
-		current.inode !== admitted.inode || current.size !== admitted.size) {
-		throw new VerificationError("VERIFY_TOOL_REVALIDATION_FAILED", admitted.name);
-	}
-}
-
-export async function revalidateTools(admitted) {
-	for (const specification of toolSpecifications) await revalidateTool(admitted[specification.name]);
-}
-
-export function childToolNames(step) {
+function childToolNames(step) {
 	if (!step || typeof step !== "object" || typeof step.tool !== "string") {
 		throw new VerificationError("VERIFY_PLAN_PRIMARY_TOOL_REQUIRED", step?.id ?? "unnamed step");
 	}
@@ -526,25 +259,16 @@ export function childToolNames(step) {
 	if (step.tools[0] !== step.tool) {
 		throw new VerificationError("VERIFY_PLAN_PRIMARY_TOOL_MISMATCH", `${step.id ?? step.tool}: ${step.tools[0]} != ${step.tool}`);
 	}
-	const known = new Set(toolSpecifications.map((specification) => specification.name));
+	const known = new Set(authorityNames);
 	const seen = new Set();
 	for (const name of step.tools) {
 		if (typeof name !== "string" || !known.has(name)) {
 			throw new VerificationError("VERIFY_PLAN_TOOL_UNKNOWN", `${step.id ?? step.tool}: ${String(name)}`);
 		}
-		if (seen.has(name)) {
-			throw new VerificationError("VERIFY_PLAN_TOOL_DUPLICATE", `${step.id ?? step.tool}: ${name}`);
-		}
+		if (seen.has(name)) throw new VerificationError("VERIFY_PLAN_TOOL_DUPLICATE", `${step.id ?? step.tool}: ${name}`);
 		seen.add(name);
 	}
 	return [...step.tools];
-}
-
-export async function revalidateStepTools(step, admitted, revalidate = revalidateTool) {
-	for (const name of childToolNames(step)) {
-		if (!admitted?.[name]) throw new VerificationError("VERIFY_TOOL_NOT_ADMITTED", `${step.id ?? step.tool}: ${name}`);
-		await revalidate(admitted[name]);
-	}
 }
 
 function slash(value) {
@@ -583,7 +307,7 @@ export async function validateRepositoryPlan(root = repositoryRoot, steps = curr
 	const absoluteRoot = resolve(root);
 	const canonicalRoot = await realpath(absoluteRoot);
 	if (absoluteRoot !== canonicalRoot) throw new VerificationError("VERIFY_REPOSITORY_ROOT_NOT_CANONICAL", `${absoluteRoot} != ${canonicalRoot}`);
-	const paths = new Set(["tools/verify-current.mjs"]);
+	const paths = new Set(["tools/verify-current.mjs", "tools/verify-runtime-authority.mjs"]);
 	for (const step of steps) {
 		if (step.tool) childToolNames(step);
 		else if (Object.hasOwn(step, "tools")) throw new VerificationError("VERIFY_PLAN_PRIMARY_TOOL_REQUIRED", step.id ?? "unnamed step");
@@ -615,65 +339,6 @@ export async function assertNoDSStore(root = repositoryRoot) {
 	if (findings.length > 0) {
 		throw new VerificationError("VERIFY_FINDER_ARTIFACT_PRESENT", findings.map(slash).join(","));
 	}
-}
-
-async function requirePrivateDirectory(path, code) {
-	const canonical = await realpath(path);
-	const metadata = await lstat(canonical);
-	if (canonical !== path || !metadata.isDirectory() || metadata.isSymbolicLink() || metadata.uid !== effectiveUID() ||
-		(metadata.mode & 0o777) !== 0o700) {
-		throw new VerificationError(code, path);
-	}
-}
-
-export async function createPrivateRoots(root = repositoryRoot, admitted) {
-	const base = await createPrivateBase(root);
-	const runRoot = await mkdtemp(join(base, "run-"));
-	await chmod(runRoot, 0o700);
-	const paths = { runRoot };
-	for (const name of ["home", "tmp", "gotmp", "gocache", "gopath", "gomodcache", "authorityBin"]) {
-		paths[name] = join(runRoot, name);
-		await mkdir(paths[name], { mode: 0o700 });
-		await requirePrivateDirectory(paths[name], "VERIFY_PRIVATE_DIRECTORY_INVALID");
-	}
-	for (const [name, target] of [
-		["go", admitted.go.path], ["node", admitted.node.path], ["git", admitted.git.path], ["sh", admitted.sh.path],
-		["cc", admitted.cc.path], ["c++", admitted.cxx.path],
-	]) await symlink(target, join(paths.authorityBin, name));
-	return Object.freeze(paths);
-}
-
-export function buildChildEnvironment(admitted, roots) {
-	return Object.freeze({
-		HOME: roots.home,
-		TMPDIR: roots.tmp,
-		GOTMPDIR: roots.gotmp,
-		GOCACHE: roots.gocache,
-		GOPATH: roots.gopath,
-		GOMODCACHE: roots.gomodcache,
-		GOENV: "off",
-		GOWORK: "off",
-		GOTOOLCHAIN: "local",
-		GOPROXY: "off",
-		GOSUMDB: "off",
-		GOVCS: "*:off",
-		GOFLAGS: "-mod=readonly -buildvcs=false -p=1",
-		CGO_ENABLED: "1",
-		CC: admitted.cc.path,
-		CXX: admitted.cxx.path,
-		GOMAXPROCS: "2",
-		LANG: "C",
-		LC_ALL: "C",
-		TZ: "UTC",
-		NO_COLOR: "1",
-		PATH: `${roots.authorityBin}:/usr/bin:/bin`,
-		COUNTERSHAPE_GO: admitted.go.path,
-		COUNTERSHAPE_NODE: admitted.node.path,
-		COUNTERSHAPE_GIT: admitted.git.path,
-		COUNTERSHAPE_SH: admitted.sh.path,
-		COUNTERSHAPE_CC: admitted.cc.path,
-		COUNTERSHAPE_CXX: admitted.cxx.path,
-	});
 }
 
 export function childArguments(step, root = repositoryRoot) {
@@ -730,43 +395,6 @@ export function revalidatePackagePartition(initial, current) {
 	}
 }
 
-export async function childResult(step, admitted, childEnvironment, dependencies = {}) {
-	const executable = admitted[step.tool].path;
-	const args = dependencies.args ?? childArguments(step);
-	const revalidate = dependencies.revalidate ?? revalidateStepTools;
-	const spawn = dependencies.spawn ?? spawnSync;
-	await revalidate(step, admitted);
-	let result;
-	let spawnFailure;
-	try {
-		result = spawn(executable, args, {
-			cwd: repositoryRoot,
-			encoding: "utf8",
-			env: childEnvironment,
-			timeout: childTimeoutMS,
-			maxBuffer: maxChildOutput,
-		});
-	} catch (error) {
-		spawnFailure = error;
-	}
-	await revalidate(step, admitted);
-	if (spawnFailure) throw spawnFailure;
-	return {
-		status: result.status,
-		signal: result.signal,
-		error: result.error,
-		stdout: result.stdout ?? "",
-		stderr: result.stderr ?? "",
-	};
-}
-
-export async function finalizeVerificationResources(lock, runRoot, dependencies = {}) {
-	const remove = dependencies.remove ?? rm;
-	await lock.assertHeld();
-	await remove(runRoot, { recursive: true, force: true });
-	await lock.release();
-}
-
 function writeChildFrames(write, step, stream, source) {
 	if (!source) return;
 	const lines = source.split(/\r?\n/u);
@@ -788,9 +416,9 @@ export async function executeCurrentPlan({
 	clock = () => performance.now(),
 }) {
 	write(`COUNTERSHAPE_VERIFY_V1 platform=${platform()}/${arch()} general_jobs=${generalJobs} nested_jobs=1 gomaxprocs=2 roster_sha256:${rosterDigest(steps, historical)}\n`);
-	for (const specification of toolSpecifications) {
-		const tool = admitted[specification.name];
-		write(`AUTHORITY ${specification.name} path=${JSON.stringify(tool.path)} sha256:${tool.sha256}\n`);
+	for (const name of authorityNames) {
+		const tool = admitted[name];
+		write(`AUTHORITY ${name} path=${JSON.stringify(tool.path)} sha256:${tool.sha256}\n`);
 	}
 	write(`ROSTER CURRENT ${steps.map((step) => step.id).join(",")}\n`);
 	for (const row of historical) {
@@ -838,17 +466,17 @@ async function main() {
 	const lock = await acquireVerificationLock();
 	let primaryFailure;
 	let resourcesFinalized = false;
+	let roots;
 	try {
 		await validateRepositoryPlan();
 		const admitted = await admitTools();
-		const roots = await createPrivateRoots(repositoryRoot, admitted);
-		try {
-			const childEnvironment = buildChildEnvironment(admitted, roots);
-			let packagePartition;
-			const status = await executeCurrentPlan({
-				admitted,
-				childEnvironment,
-				executor: async (step) => {
+		roots = await createPrivateRoots(repositoryRoot, admitted);
+		const childEnvironment = buildChildEnvironment(admitted, roots);
+		let packagePartition;
+		const status = await executeCurrentPlan({
+			admitted,
+			childEnvironment,
+			executor: async (step) => {
 					if (step.kind === "guard") {
 						await assertNoDSStore();
 						return { status: 0, signal: null, error: null, stdout: "workspace contains no .DS_Store artifacts\n", stderr: "" };
@@ -874,7 +502,7 @@ async function main() {
 						};
 					}
 					if (step.kind === "authority-guard") {
-						await revalidateTools(admitted);
+						await admitTools(process.env, admitted);
 						return { status: 0, signal: null, error: null, stdout: "all admitted tool authorities revalidated\n", stderr: "" };
 					}
 					if (step.kind === "finalization-guard") {
@@ -886,29 +514,22 @@ async function main() {
 						args: packageArguments(step, packagePartition),
 					});
 					return await childResult(step, admitted, childEnvironment);
-				},
-			});
-			process.exitCode = status;
-		} finally {
-			if (!resourcesFinalized) await rm(roots.runRoot, { recursive: true, force: true });
-		}
+			},
+		});
+		process.exitCode = status;
 	} catch (error) {
 		primaryFailure = error;
 		throw error;
 	} finally {
 		try {
-			if (!resourcesFinalized) await lock.release();
-		} catch (releaseFailure) {
-			if (primaryFailure) throw new AggregateError([primaryFailure, releaseFailure], "verification and lock release both failed");
-			throw releaseFailure;
+			if (!resourcesFinalized) await cleanupVerificationResources(lock, roots);
+		} catch (cleanupFailure) {
+			if (primaryFailure) throw new AggregateError([primaryFailure, cleanupFailure], "verification and cleanup both failed");
+			throw cleanupFailure;
 		}
 	}
 }
 
-const invokedModule = process.argv[1] ? await realpath(resolve(process.argv[1])) : "";
-if (invokedModule === verifierPath) {
-	main().catch((error) => {
-		process.stderr.write(`${error.stack ?? error}\n`);
-		process.exitCode = 1;
-	});
+if (process.argv[1] !== undefined && pathToFileURL(process.argv[1]).href === import.meta.url) {
+	await main();
 }

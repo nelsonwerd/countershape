@@ -2,6 +2,7 @@
 
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
+import { readFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -10,10 +11,16 @@ import {
 	collectC3PredecessorRecordAuthority,
 	collectC2Facts,
 	collectC3Facts,
+	collectC4Facts,
 	collectFacts,
+	goJSONArguments,
 	inspectC3DidrunNote,
+	parseC4FinalRunbookClaimMap,
+	parseC4StatusClaimMap,
+	productionStoreOwnerReferenceCount,
 	validateC2Facts,
 	validateC3Facts,
+	validateC4Facts,
 	validateFacts,
 	validateGoJSONTranscript,
 } from "./check-p07b-c-architecture.mjs";
@@ -110,6 +117,23 @@ const c3Cases = Object.freeze([
 	Object.freeze({ id: "predecessor", code: "P07B_C3_PREDECESSOR" }),
 ]);
 const expectedC3RosterDigest = "d4e3f7a08fadd7e09022d7113aec267cc7dd66de41829a2bbe687d4c86350740";
+const c4Cases = Object.freeze([
+	Object.freeze({ id: "inherited-c3", code: "P07B_C4_INHERITED_C3" }),
+	Object.freeze({ id: "package-topology", code: "P07B_C4_PACKAGE_TOPOLOGY" }),
+	Object.freeze({ id: "build-tags", code: "P07B_C4_BUILD_TAG_ROSTER" }),
+	Object.freeze({ id: "test-file-roster", code: "P07B_C4_TEST_FILE_ROSTER" }),
+	Object.freeze({ id: "mechanics-authority", code: "P07B_C4_MECHANICS_AUTHORITY" }),
+	Object.freeze({ id: "mechanics-importers", code: "P07B_C4_MECHANICS_IMPORTERS" }),
+	Object.freeze({ id: "world-adapter", code: "P07B_C4_WORLD_ADAPTER" }),
+	Object.freeze({ id: "runner-surface", code: "P07B_C4_RUNNER_SURFACE" }),
+	Object.freeze({ id: "admission-adjacency", code: "P07B_C4_ADMISSION_ADJACENCY" }),
+	Object.freeze({ id: "execution-chronology", code: "P07B_C4_EXECUTION_CHRONOLOGY" }),
+	Object.freeze({ id: "terminal-graph", code: "P07B_C4_TERMINAL_GRAPH" }),
+	Object.freeze({ id: "evidence-scope", code: "P07B_C4_EVIDENCE_SCOPE" }),
+	Object.freeze({ id: "scope-root", code: "P07B_C4_SCOPE_ROOT" }),
+	Object.freeze({ id: "profile-command", code: "P07B_C4_PROFILE_COMMAND" }),
+]);
+const expectedC4RosterDigest = "671e79b65d43aec47c3dd14531f3e64180392ac73482c6698e2e809534c51670";
 
 function rosterDigest(roster = cases) {
 	const hash = createHash("sha256");
@@ -140,14 +164,47 @@ function requireC3Violation(facts, code, id) {
 	}
 }
 
+function requireC4Violation(facts, code, id) {
+	const problems = validateC4Facts(facts);
+	if (!problems.some((problem) => problem.code === code)) {
+		fail("P07B_C4_SELFTEST_FALSE_NEGATIVE", `${id}:${problems.map((problem) => problem.code).join(",")}`);
+	}
+}
+
+function requireC4ParserRefusal(callback, id) {
+	let refused = false;
+	try {
+		callback();
+	} catch (error) {
+		refused = error?.code === "P07B_C4_PROFILE_COMMAND";
+	}
+	if (!refused) fail("P07B_C4_SELFTEST_PARSER_FALSE_NEGATIVE", id);
+}
+
+function renderC4RunbookSource() {
+	const result = spawnSync(process.execPath, [resolve(root, "tools/check-p07b-c-plan.mjs"), "--print-final-runbook", "C4"], {
+		cwd: root,
+		encoding: "utf8",
+		timeout: 30_000,
+		maxBuffer: 32 * 1024 * 1024,
+		env: process.env,
+	});
+	if (result.error || result.signal || result.status !== 0 || result.stderr !== "") {
+		fail("P07B_C4_SELFTEST_RUNBOOK_SOURCE", `${result.status ?? result.signal}: ${result.stderr || result.stdout || result.error}`);
+	}
+	return result.stdout;
+}
+
 function runCleanChecker(phase = "c1") {
-	const args = phase === "c3" ? [checker, "--c3"] : phase === "c2" ? [checker, "--c2"] : [checker];
-	const marker = phase === "c3" ? "P07B-C C3 cumulative architecture boundary OK" :
+	const args = phase === "c4" ? [checker, "--c4"] :
+		phase === "c3" ? [checker, "--c3"] : phase === "c2" ? [checker, "--c2"] : [checker];
+	const marker = phase === "c4" ? "P07B-C C4 cumulative architecture boundary OK" :
+		phase === "c3" ? "P07B-C C3 cumulative architecture boundary OK" :
 		phase === "c2" ? "P07B-C C2 cumulative architecture boundary OK" : "P07B-C C1 architecture boundary OK";
 	const result = spawnSync(process.execPath, args, {
 		cwd: root,
 		encoding: "utf8",
-		timeout: phase === "c3" ? 1_200_000 : phase === "c2" ? 420_000 : 180_000,
+		timeout: phase === "c4" ? 1_800_000 : phase === "c3" ? 1_200_000 : phase === "c2" ? 420_000 : 180_000,
 		maxBuffer: 32 * 1024 * 1024,
 		env: {
 			...process.env,
@@ -157,7 +214,8 @@ function runCleanChecker(phase = "c1") {
 		},
 	});
 	if (result.error || result.signal || result.status !== 0 || result.stderr !== "" || result.stdout.trim() !== marker) {
-		fail(phase === "c3" ? "P07B_C3_SELFTEST_CLEAN_CHECKER" :
+		fail(phase === "c4" ? "P07B_C4_SELFTEST_CLEAN_CHECKER" :
+			phase === "c3" ? "P07B_C3_SELFTEST_CLEAN_CHECKER" :
 			phase === "c2" ? "P07B_C2_SELFTEST_CLEAN_CHECKER" : "P07B_C1_SELFTEST_CLEAN_CHECKER",
 			`${result.status ?? result.signal}: ${result.stderr || result.stdout || result.error}`);
 	}
@@ -313,6 +371,91 @@ const c3ParserProfiles = Object.freeze([
 	}),
 ]);
 
+const c4ParserProfiles = Object.freeze([
+	Object.freeze({
+		name: "c4-processmechanics-parity",
+		packagePath: "github.com/nelsonwerd/countershape/internal/processmechanics",
+		packageArgument: "./internal/processmechanics",
+		race: true,
+		tests: Object.freeze([
+			"TestStdoutAndStderrHaveIndependentExactCaps",
+			"TestStdoutAndStderrLimitsAreIndependentMutationGuard",
+			"TestSimultaneousChannelOverflowRetainsIndependentFacts",
+			"TestPreTermRetryNeverUsesPostDeadlineProbeAsSignalAuthority",
+			"TestPreTermRetryWaitOvershootDoesNotConsumeAnotherProbe",
+			"TestPreparedProcessStartsOnceAndClosesWithParentObservedFacts",
+			"TestCopiedPreparedHandleCannotMultiplyStartAuthority",
+			"TestCopiedRunningHandleSharesOneTerminalClosure",
+			"TestPresentEmptyStdinRemainsPhysicallyDistinctFromAbsentStdin",
+			"TestExecutionBudgetStartsAtPhysicalStartNotClose",
+			"TestPostPermitCancellationStillProducesAChildObservation",
+			"TestSpawnObservationPersistenceAbortIsClosedAndTerminal",
+		]),
+	}),
+	Object.freeze({
+		name: "c4-admission-permit",
+		packagePath: "github.com/nelsonwerd/countershape/internal/contractexec/runner",
+		packageArgument: "./internal/contractexec/runner",
+		race: false,
+		tests: Object.freeze([
+			"TestConcurrentAdmissionProducesExactlyOneStart",
+			"TestRunPermitConsumptionIsSingleUseAndAdjacentToStart",
+			"TestStartErrorClosesDurableRunAndClassificationWithoutChild",
+			"TestPreparedCLIEnvironmentUsesFreshAttemptEvidenceRootAndShortCanaries",
+			"TestParentSentinelEnvironmentIsOmittedFromRealChild",
+			"TestSameTargetRetryRefusesAfterTerminalClosure",
+			"TestCallerCancellationAfterAdmissionStillClosesTerminalFacts",
+		]),
+	}),
+	Object.freeze({
+		name: "c4-cli-closure",
+		packagePath: "github.com/nelsonwerd/countershape/testkit/contractexec/cli",
+		packageArgument: "./testkit/contractexec/cli",
+		race: false,
+		tests: Object.freeze([
+			"TestCLIContractExecutionClosesStandaloneScope",
+			"TestCLIContractExecutionForbiddenPositiveControls",
+			"TestCLIContractExecutionChildBindingEvidenceStates",
+			"TestCLIContractExecutionTargetMutationBlocksFinalization",
+		]),
+	}),
+	Object.freeze({
+		name: "c4-finalized-run-release",
+		packagePath: "github.com/nelsonwerd/countershape/internal/store",
+		packageArgument: "./internal/store",
+		race: false,
+		tests: Object.freeze([
+			"TestC4ContractRunBridgePersistsClosesClassifiesAndReopens",
+			"TestC4FinalizedReleaseConvergesReceiptWithoutRewritingClear",
+			"TestC4FinalizedClearReceiptWithoutRunLinkCannotReadmit",
+			"TestC4FinalizedRunRefusesMissingSpawnObservationBeforePublication",
+			"TestC4TerminalClosureRequiresDurableSpawnObservationButClassificationDoesNot",
+		]),
+	}),
+	Object.freeze({
+		name: "c4-classification-recovery",
+		packagePath: "github.com/nelsonwerd/countershape/internal/store",
+		packageArgument: "./internal/store",
+		race: false,
+		tests: Object.freeze([
+			"TestC4ClassificationRecoveryUsesHistoricalRunReleaseLink",
+			"TestC4ClassificationRecoveryDoesNotRequireRetainedPrivatePack",
+		]),
+	}),
+	Object.freeze({
+		name: "c4-authority-race",
+		packagePath: "github.com/nelsonwerd/countershape/internal/store",
+		packageArgument: "./internal/store",
+		race: true,
+		tests: Object.freeze([
+			"TestC4ContractRunBridgeRefusesSkippedAndMismatchedEdges",
+			"TestC4SpawnObservationPersistsEveryClosedStartErrorExactly",
+			"TestC4PrivateManifestDerivesRefsGroupsBodiesAndCannotFork",
+			"TestC4StoreRunBridgeExportsOnlyOpaqueTypedAuthority",
+		]),
+	}),
+]);
+
 function inspectC3GoJSONTranscriptParser() {
 	const encode = (events) => Buffer.from(`${events.map((event) => JSON.stringify(event)).join("\n")}\n`, "utf8");
 	let count = 0;
@@ -352,6 +495,84 @@ function inspectC3GoJSONTranscriptParser() {
 		}
 	}
 	return count;
+}
+
+function inspectC4GoJSONTranscriptParser() {
+	const encode = (events) => Buffer.from(`${events.map((event) => JSON.stringify(event)).join("\n")}\n`, "utf8");
+	let count = 0;
+	for (const profile of c4ParserProfiles) {
+		const clean = [
+			{ Action: "start", Package: profile.packagePath },
+			...profile.tests.flatMap((Test) => [
+				{ Action: "run", Package: profile.packagePath, Test },
+				{ Action: "pass", Package: profile.packagePath, Test },
+			]),
+			{ Action: "pass", Package: profile.packagePath },
+		];
+		validateGoJSONTranscript(profile.name, encode(clean));
+		count += 1;
+		const first = profile.tests[0];
+		const last = profile.tests.at(-1);
+		const hostile = [
+			clean.filter((event) => !(event.Action === "pass" && event.Test === last)),
+			clean.map((event) => event.Action === "pass" && event.Test === first ? { ...event, Action: "skip" } : event),
+			[...clean.slice(0, -1),
+				{ Action: "run", Package: profile.packagePath, Test: "TestC4Unexpected" },
+				{ Action: "pass", Package: profile.packagePath, Test: "TestC4Unexpected" },
+				clean.at(-1)],
+			[...clean.slice(0, 3), clean[2], ...clean.slice(3)],
+			clean.map((event) => event.Action === "pass" && !event.Test ? { ...event, Action: "fail" } : event),
+			clean.map((event, index) => index === 0 ? { ...event, Package: "example.invalid/foreign" } : event),
+		];
+		for (const [index, events] of hostile.entries()) {
+			let rejected = false;
+			try {
+				validateGoJSONTranscript(profile.name, encode(events));
+			} catch {
+				rejected = true;
+			}
+			if (!rejected) fail("P07B_C4_SELFTEST_GO_JSON_FALSE_NEGATIVE", `${profile.name}:${index + 1}`);
+			count += 1;
+		}
+	}
+	return count;
+}
+
+function inspectC4GoJSONArguments() {
+	for (const profile of c4ParserProfiles) {
+		const expected = [
+			"test", ...(profile.race ? ["-race"] : []),
+			"-mod=readonly", "-buildvcs=false", "-p=1", "-count=1", "-json", "-run",
+			`^(?:${profile.tests.join("|")})$`, profile.packageArgument,
+		];
+		const actual = goJSONArguments(profile.name);
+		if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+			fail("P07B_C4_SELFTEST_GO_JSON_ARGUMENTS", `${profile.name}:${JSON.stringify(actual)}`);
+		}
+	}
+	let rejected = false;
+	try {
+		goJSONArguments("c4-unregistered-profile");
+	} catch {
+		rejected = true;
+	}
+	if (!rejected) fail("P07B_C4_SELFTEST_GO_JSON_ARGUMENTS", "unknown C4 profile was accepted");
+	return c4ParserProfiles.length + 1;
+}
+
+function inspectC4OwnerReferenceParser() {
+	const cases = [
+		{ source: "package store\nfunc AcquireContractRunOwner() {}\n", want: 1 },
+		{ source: "package runner\nvar acquire = vault.AcquireContractRunOwner\n", want: 1 },
+		{ source: "package runner\nfunc f() { AcquireContractRunOwner() }\n", want: 1 },
+		{ source: "package runner\n// AcquireContractRunOwner\nvar text = `AcquireContractRunOwner`\n", want: 0 },
+		{ source: "package runner\nvar a = store.AcquireContractRunOwner\nvar b = store.AcquireContractRunOwner\n", want: 2 },
+	];
+	for (const [index, test] of cases.entries()) {
+		const actual = productionStoreOwnerReferenceCount(test.source);
+		if (actual !== test.want) fail("P07B_C4_SELFTEST_OWNER_REFERENCE_PARSER", `${index}:${actual} != ${test.want}`);
+	}
+	return cases.length;
 }
 
 function inspectC3PredecessorAuthorityParser() {
@@ -576,7 +797,146 @@ async function runC3Selftest() {
 	process.stdout.write(`P07B-C C3 cumulative architecture defensive self-test OK (${c3Cases.length} metadata cases; ${goJSONCases} Go JSON parser cases; ${predecessorCases} raw predecessor/parser cases)\n`);
 }
 
+async function runC4Selftest() {
+	const digest = rosterDigest(c4Cases);
+	if (digest !== expectedC4RosterDigest) fail("P07B_C4_SELFTEST_ROSTER_DRIFT", `${digest} != ${expectedC4RosterDigest}`);
+	runCleanChecker("c4");
+	const clean = await collectC4Facts();
+	const cleanProblems = validateC4Facts(clean);
+	if (cleanProblems.length > 0) fail("P07B_C4_SELFTEST_CLEAN_FACTS", cleanProblems.map((problem) => problem.code).join(","));
+	const statusSource = await readFile(resolve(root, "docs/status/P07B-C-C4-CLI-PROFILE.md"), "utf8");
+	const runbookSource = renderC4RunbookSource();
+
+	for (const test of c4Cases) {
+		const facts = structuredClone(clean);
+		switch (test.id) {
+		case "inherited-c3":
+			facts.c3Problems.push({ code: "P07B_C3_SELFTEST_SENTINEL", detail: "forced" });
+			break;
+		case "package-topology":
+			facts.packages["github.com/nelsonwerd/countershape/internal/processmechanics"].go.pop();
+			break;
+		case "build-tags":
+			facts.buildTags["internal/processmechanics/process_darwin.go"] = "darwin && arm64";
+			break;
+		case "test-file-roster":
+			facts.testFiles["internal/contractexec/runner/runner_darwin_test.go"].pop();
+			break;
+		case "mechanics-authority":
+			facts.mechanics.copySafeState = false;
+			break;
+		case "mechanics-importers":
+			facts.mechanics.importers.push("github.com/nelsonwerd/countershape/testkit/contractexec/cli");
+			facts.mechanics.importers.sort();
+			break;
+		case "world-adapter":
+			facts.worldAdapter.noDuplicateSpawn = false;
+			break;
+		case "runner-surface":
+			facts.runner.surface.pop();
+			break;
+		case "admission-adjacency":
+			facts.runner.spawnAdjacentRevalidation = false;
+			facts.runner.soleOwnerAcquirer.push("internal/store/alternate_owner.go:1");
+			break;
+		case "execution-chronology":
+			for (const field of [
+				"physicalConforms", "executionChronology", "startErrorChronology", "immutableSourceCacheIsolation",
+				"boundedPhysicalTestConcurrency",
+				"preOwnerEvidenceCapacity", "actualDraftCapacityGate",
+			]) {
+				const hostile = structuredClone(clean);
+				hostile.runner[field] = false;
+				requireC4Violation(hostile, test.code, `${test.id}-${field}`);
+			}
+			continue;
+		case "terminal-graph":
+			facts.terminalGraph.releaseOrder = false;
+			break;
+		case "evidence-scope":
+			for (const field of [
+				"invocationClosure", "boundedCandidateInventory", "rawFramedSingleCopy", "boundedStoreRosters",
+			]) {
+				const hostile = structuredClone(clean);
+				hostile.evidence[field] = false;
+				requireC4Violation(hostile, test.code, `${test.id}-${field}`);
+			}
+			continue;
+		case "scope-root":
+			for (const field of [
+				"attemptPrivateRoot", "shortPrivateAlias", "boundedDescriptorRoster",
+				"identityBoundTerminalCleanup", "residueHostiles",
+			]) {
+				const hostile = structuredClone(clean);
+				hostile.scopeProbe[field] = false;
+				requireC4Violation(hostile, test.code, `${test.id}-${field}`);
+			}
+			continue;
+		case "profile-command": {
+			const commandHostile = structuredClone(clean);
+			const args = commandHostile.profiles["c4-authority-race"];
+			args.splice(args.indexOf("-race"), 1);
+			requireC4Violation(commandHostile, test.code, `${test.id}-go-argv`);
+
+			const firstLabel = clean.claimMap.status[0].label;
+			const driftLabel = `${firstLabel} drift`;
+			const statusLabelToken = `| 1 | \`${firstLabel}\` |`;
+			const statusDriftSource = statusSource.replace(statusLabelToken, `| 1 | \`${driftLabel}\` |`);
+			if (statusDriftSource === statusSource) fail("P07B_C4_SELFTEST_SOURCE_FIXTURE", "status label token");
+			const parsedStatusDrift = parseC4StatusClaimMap(statusDriftSource);
+			if (parsedStatusDrift[0].label !== driftLabel) fail("P07B_C4_SELFTEST_PARSER_HARDCODED", "status label");
+			const statusSourceHostile = structuredClone(clean);
+			statusSourceHostile.claimMap.status = parsedStatusDrift;
+			requireC4Violation(statusSourceHostile, test.code, `${test.id}-status-source`);
+			requireC4ParserRefusal(() => parseC4StatusClaimMap(statusSource.replace(
+				"| ---: | --- | --- | --- |", "| --- | --- | --- | --- |",
+			)), `${test.id}-status-delimiter`);
+			requireC4ParserRefusal(() => parseC4StatusClaimMap(statusSource.replace(
+				"| `UNRECEIPTED` |", "| `TREE-EXACT` |",
+			)), `${test.id}-status-grade`);
+			const statusSection = statusSource.slice(statusSource.indexOf("## Intended C4 claim map\n"));
+			requireC4ParserRefusal(
+				() => parseC4StatusClaimMap(`${statusSource}\n${statusSection}`),
+				`${test.id}-status-duplicate-section`,
+			);
+
+			const headingToken = `# 1. ${firstLabel}`;
+			const claimToken = `--label '${firstLabel}'`;
+			const runbookDriftSource = runbookSource.replace(headingToken, `# 1. ${driftLabel}`)
+				.replace(claimToken, `--label '${driftLabel}'`);
+			if (runbookDriftSource === runbookSource) fail("P07B_C4_SELFTEST_SOURCE_FIXTURE", "runbook label tokens");
+			const parsedRunbookDrift = parseC4FinalRunbookClaimMap(runbookDriftSource);
+			if (parsedRunbookDrift[0].label !== driftLabel) fail("P07B_C4_SELFTEST_PARSER_HARDCODED", "runbook label");
+			const runbookSourceHostile = structuredClone(clean);
+			runbookSourceHostile.claimMap.runbook = parsedRunbookDrift;
+			requireC4Violation(runbookSourceHostile, test.code, `${test.id}-runbook-source`);
+			requireC4ParserRefusal(
+				() => parseC4FinalRunbookClaimMap(runbookSource.replace(headingToken, `# 1. ${driftLabel}`)),
+				`${test.id}-runbook-heading-claim-disagreement`,
+			);
+
+			const normalizedHostile = structuredClone(clean);
+			normalizedHostile.claimMap.status[0].label = driftLabel;
+			requireC4Violation(normalizedHostile, test.code, `${test.id}-normalized-validator`);
+			continue;
+		}
+		default:
+			fail("P07B_C4_SELFTEST_UNKNOWN_CASE", test.id);
+		}
+		requireC4Violation(facts, test.code, test.id);
+	}
+	const goJSONCases = inspectC4GoJSONTranscriptParser();
+	const argumentCases = inspectC4GoJSONArguments();
+	const ownerReferenceCases = inspectC4OwnerReferenceParser();
+	process.stdout.write(`P07B-C C4 cumulative architecture defensive self-test OK (${c4Cases.length} metadata cases; ${goJSONCases} Go JSON parser cases; ${argumentCases} command cases; ${ownerReferenceCases} owner-reference parser cases)\n`);
+}
+
 async function main() {
+	if (process.argv[2] === "--c4") {
+		if (process.argv.length !== 3) fail("P07B_C4_SELFTEST_ARGUMENTS", "--c4 accepts no other arguments");
+		await runC4Selftest();
+		return;
+	}
 	if (process.argv[2] === "--c3") {
 		if (process.argv.length !== 3) fail("P07B_C3_SELFTEST_ARGUMENTS", "--c3 accepts no other arguments");
 		await runC3Selftest();
@@ -668,7 +1028,7 @@ async function main() {
 			facts.c0.objects.pop();
 			break;
 		case "topology":
-			facts.topology.contractexecEntries.push("runner:directory");
+			facts.topology.contractexecEntries.push("http:directory");
 			facts.topology.contractexecEntries.sort();
 			break;
 		default:

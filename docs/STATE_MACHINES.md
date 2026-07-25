@@ -2,9 +2,10 @@
 
 - **Contract version:** U0 / `state-machines-v1`
 - **Target:** narrowed Darwin reference instrument
-- **Status:** normative separation of implemented and future transitions. P07B-C through C3S is sealed and strict-clean. C3 exact-target publication is active and `UNRECEIPTED`; C4–C6 physical-run and classification-publication transitions remain future.
+- **Status:** normative separation of implemented and future transitions. P07B-C through C4P is sealed and strict-clean. C4 CLI-profile physical-run and classification-publication transitions are active and `UNRECEIPTED`; HTTP completion and C6 remain future.
+- **Historical C3 checkpoint:** C3 exact-target publication is active names the earlier unreceipted transition state; the live state is C4 above.
 
-For the active target transition, `OfficialTarget.Valid()` is structural only. `ReopenOfficialTarget` repeats the live prerequisite graph, and C4 must consume a fresh reopen adjacent to physical admission. A conflicting same-attempt target link is first-durable-writer-wins and carries no semantic arbitration.
+For the active CLI transition, `OfficialTarget.Valid()` is structural only. `ReopenOfficialTarget` repeats the live prerequisite graph; after owner acquisition C4 consumes a fourth fresh reopen on a detached bounded closure context in the exact guarded window immediately before permit consumption and physical `Start`. A conflicting same-attempt target link is first-durable-writer-wins and carries no semantic arbitration.
 
 Countershape state is a set of immutable semantic artifacts connected by validated transitions. State names are not presentation copy. The Go domain model, JSON schemas, API DTOs, CLI, studio, generated residue, examples, and tests must agree on these names and preconditions.
 
@@ -435,6 +436,7 @@ EXPLICIT_TARGET_REF_PINNED
   -> C3_OFFICIAL_TARGET_REJOINED_FROM_LIVE_AUTHORITIES
   -> EXECUTION_INTERLOCK_HELD_FOR_TARGET_BOOT_AND_GENERATION
   -> START_CLAIM_DURABLY_CREATED
+  -> SPAWN_ADJACENT_TARGET_REOPENED_ON_DETACHED_BOUNDED_CLOSURE_CONTEXT
   -> RUN_PERMIT_CREATED_AND_CONSUMED
   -> SPAWN_ATTEMPTED
   -> START_ERROR_OBSERVED | CHILD_PID_OBSERVED
@@ -445,6 +447,7 @@ EXPLICIT_TARGET_REF_PINNED
   -> CLEAR_STATE_WRITTEN
   -> CLEAR_RECEIPT_DURABLE
   -> EXECUTION_INTERLOCK_RELEASED
+  -> START_CLAIM_AND_FINALIZED_RELEASE_REVALIDATED
   -> CONTRACT_EXECUTION_CLASSIFIED_AND_REOPENED
 
 SPAWN_OUTCOME_UNKNOWN
@@ -484,6 +487,10 @@ One store-private `ExecutionInterlock` is the sole mutable operational exception
 - `INELIGIBLE_EXECUTION`: process control and/or partial/violated standalone scope prevented an eligible conclusion; exact reasons remain only in the finalized run.
 
 Both contradiction and ineligibility produce a nonzero ordinary direct Node test, but TAP diagnostics and machine codes remain distinct. Direct generated execution remains a separately exercised operator/black-box path and never becomes Go target/run/classification authority. `ContractExecution` binds the exact official target/run plus literal classifier profile and persists only the derived class. A classification-publication retry performs no spawn. A target execution never freshens, modifies, or reclassifies the historical Choicepoint, even when its pinned tree equals a historical candidate tree. Each target/run/classification triple is separate immutable nonhead evidence; package topology and before/after head evidence prove no head advance rather than an authored Boolean.
+
+C4 physically exercises both eligible branches: the historical enrolled reference remains `CONTRADICTS`; a separately compiled real ruling over the same exact enrolled two-file tree yields `CONFORMS` with the profile-ordered two-field `argv` tuple. Private-evidence closure preserves logical-reference multiplicity and rejects repeated references before FCR publication. Classification readiness alone is nonterminal: the store must reopen the exact StartClaim and validate the finalized-run release relationship immediately before persisting the execution object. Missing or corrupt durable release produces no execution relation. These are CLI-profile transitions only; HTTP remains absent.
+
+Evidence preparation has a separate pre-owner guard: legal channel limits derive one 48 MiB maximum-unique-body envelope before the interlock/StartClaim owner exists. Terminal drafting caps every draft at 15 logical kinds and 14 unique bodies because Drain and Captured share the same raw stdout/stderr frame; the full projected child reaches both caps, while controlled/start-error drafts may be smaller. The actual draft is revalidated before manifest persistence. Post-child roster closure is fixed-cardinality. Exact evidence returns to marker-only; exact scope removes only retained named leaves and empty roots. Foreign evidence transitions to hard closure refusal, while foreign or replaced scope residue transitions that scope measurement to ambiguous/partial and leaves the unknown residue untraversed. No recursive cleanup transition exists in C4 production code.
 
 ## Future product study-presentation lifecycle target
 
@@ -536,9 +543,12 @@ A crash may leave finalized immutable semantic objects and nonadvancing partial-
 | `CandidateExecutionKey` or copied digests -> evidence allocation | typed binding refusal | allocation requires opaque `CandidateExecutionBinding` plus actual matching `WorldPlan` |
 | copied target/tree/source/runtime fields, parsed `ContractExecutionTarget`, fake one-member candidate set, or historical `WorldInstance` -> official target/run | target-authority refusal | only the C3 live issuer may return official-target authority, and only the C4 runner may consume it |
 | generic CAS read, C2 fixture, existing StartClaim, losing interlock/claimant, copied owner epoch, lease expiry, or restart -> RunPermit | `TARGET_START_ALREADY_CLAIMED` or interlock refusal; no permit | only the C4 combined interlock/claim durable winner may receive the one process-local permit |
+| post-admission target drift or a missing exact detached-context reopen window -> permit consumption or `Start` | `TARGET_CHANGED`; no spawn | target authority must be refreshed after owner acquisition in the exact guarded spawn-adjacent window |
 | StartClaim -> child started/stopped/absent fact | preserve intent only; spawn outcome remains unknown without owner observation | store intent is not an OS-process transaction |
 | ambiguous/crashed target -> FCR, interlock release, or any same-boot target spawn | refuse; keep interlock held | fresh target identity does not clear survivor uncertainty; only explicit operator reset plus a measured boot-session identity demonstrably distinct from the held identity can reopen admission |
 | receiptless/corrupt/mismatched `CLEAR` -> released interlock or later acquisition | `AMBIGUOUS_BLOCKED`; no admission | only first-ever absent state bootstraps without a receipt; every persisted clear transition must reopen its exact receipt |
+| classification-ready cached run with missing/corrupt durable finalized-release relation -> `ContractExecution` | refuse publication; create no execution relation | classification reopens the exact StartClaim and revalidates release immediately before persistence |
+| duplicate logical reference in private manifest -> set-equivalent accepted roster | exact manifest mismatch | logical-reference multiplicity is evidence and cannot be erased by set deduplication |
 | finalized run for target/attempt A -> classification for target/attempt B | `TARGET_RUN_MISMATCH`; no classification | lifecycle and observation authority cannot be caller-paired across physical attempts |
 | standalone `PARTIAL` or `VIOLATED` plus projected tuple -> eligible conformance | `INELIGIBLE_EXECUTION` | missing or forbidden scope evidence cannot become a behavior conclusion |
 | standalone-scope failure -> process `ControlReason` | preserve a separate scope axis | process control and absence measurement have different truth jurisdictions |
@@ -596,7 +606,7 @@ Additional prohibited transitions include promoting an unqualified `STABLE` labe
 | U6c / P07B-A2.1 | nontransitioning current-ruling compilation preparation | source/ruling/Choicepoint/confirmation/proof equality and selected-tuple partition gates pass; no head advance or durable currentness after return |
 | U6c / P07B-A2.2 | nontransitioning recoverable bundle compilation and strict Go/Node semantic evaluation | sealed parity, recovery, generated-runtime, and pure-boundary gates pass; no head advance |
 | U6c / P07B-B (complete sealed boundary) | exact `RULING -> RESIDUE` terminal transition plus nonsemantic retryable physical materialization | final handoff, receipt reconciliation, and exact-boundary HTML are sealed and strict-clean; no C execution state is inferred |
-| U6c / P07B-C (through C3S sealed; C3 active) | sealed C1/C2 nonhead algebra, typed persistence, bounded private evidence, receipt-backed interlock substrate, corrected boot profile, and the C3A/C3L/C3F/C3S maintenance chain; C3 now composes the exact pre-spawn target without physical run authority | C3 must strict-close before C3B, C3B before C4, and every later physical/scope/classification authority remains separate; the interlock and receipt have no result/absence authority, and study head remains terminal residue |
+| U6c / P07B-C (through C4P sealed; C4 active) | sealed C1/C2/C3 target and persistence authority plus active C4 CLI mechanics, spawn-adjacent reopen, five-domain CLI closure, exact private manifest, durable release, FCR, and classification publication | C4 remains `UNRECEIPTED` until its 80-claim seal; HTTP/two-profile completion remains C5, the interlock and receipt have no result/absence authority, and study head remains terminal residue |
 | U7 | complete study lifecycle and both decisive reference lineages | three clean runs preserve semantic bytes while all attempts are new |
 | U8 | authenticated transport and full renderer state matrix | blind leakage, request forgery, presentation obligations, visual/accessibility gates pass |
 | U9 | export/packaging/final claim mapping | exact environment receipts, final strict verify, HTML evidence, honest handoff |

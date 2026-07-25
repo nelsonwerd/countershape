@@ -365,7 +365,7 @@ func TestDirectProcessUsesSparseEnvironmentAndMeasuredProcessGroup(t *testing.T)
 	}
 }
 
-func TestStdoutAndStderrHaveIndependentExactCaps(t *testing.T) {
+func TestWorldAdapterPreservesIndependentExactCaptureCaps(t *testing.T) {
 	executable := buildProcessFixture(t)
 	t.Run("exact-boundary", func(t *testing.T) {
 		result, _ := runFixtureProcess(t, context.Background(), executable, "emit",
@@ -397,7 +397,7 @@ func TestStdoutAndStderrHaveIndependentExactCaps(t *testing.T) {
 	})
 }
 
-func TestSimultaneousChannelOverflowRetainsIndependentFacts(t *testing.T) {
+func TestWorldAdapterPreservesSimultaneousChannelOverflowFacts(t *testing.T) {
 	executable := buildProcessFixture(t)
 	const limit = int64(4096)
 	result, _ := runFixtureProcess(
@@ -869,20 +869,6 @@ func TestUnexpectedWaitFailureIsNotACompletedCleanupEdge(t *testing.T) {
 	if result.directChildWaited || !result.teardownError || !result.orphanRisk ||
 		result.diagnosticCode != "WAIT_FAILED" || result.waitError == "" {
 		t.Fatalf("unexpected wait failure was receipted as complete cleanup: %+v", result)
-	}
-}
-
-func TestDirectCommandContainsNoShellOrAmbientCommandResolution(t *testing.T) {
-	request := processRequest{
-		tool:        resolvedTool{absolutePath: "/private/fixture"},
-		logicalArgv: []string{"fixture", "--mode", "report"},
-		environment: []string{"LANG=C"},
-		cwd:         "/private/candidate",
-	}
-	command := newDirectCommand(request)
-	if command.Path != request.tool.absolutePath || strings.Join(command.Args, "\x00") != strings.Join(request.logicalArgv, "\x00") ||
-		command.Dir != request.cwd || strings.Join(command.Env, "\x00") != "LANG=C" || command.SysProcAttr == nil || !command.SysProcAttr.Setpgid {
-		t.Fatalf("direct command changed authority: %+v", command)
 	}
 }
 
