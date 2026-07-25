@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { createHash } from "node:crypto";
-import { spawnSync } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { chmod, lstat, mkdir, mkdtemp, open, readFile, readdir, realpath, rm, symlink, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
@@ -59,6 +59,93 @@ async function expectCode(promise, code) {
 		fail("VERIFY_SELFTEST_WRONG_ERROR", `${code}: ${error.stack ?? error}`);
 	}
 	fail("VERIFY_SELFTEST_FALSE_NEGATIVE", code);
+}
+
+function capturedChild(command, args, options) {
+	const child = spawn(command, args, { ...options, stdio: ["pipe", "pipe", "pipe"] });
+	const capture = {
+		child, stdout: "", stderr: "", stdoutBytes: 0, stderrBytes: 0,
+		failure: null, didClose: false, closed: null, completed: null,
+	};
+	let resolveClosed;
+	capture.closed = new Promise((resolvePromise) => {
+		resolveClosed = resolvePromise;
+	});
+	const rejectCapture = (code, detail) => {
+		if (capture.failure !== null || capture.didClose) return;
+		capture.failure = new Error(`${code}: ${detail}`);
+		if (child.exitCode === null && child.signalCode === null) child.kill("SIGKILL");
+	};
+	const append = (name, chunk) => {
+		const bytesName = `${name}Bytes`;
+		capture[bytesName] += chunk.length;
+		capture[name] += chunk.toString("utf8");
+		if (capture[bytesName] > 64 * 1024) rejectCapture("VERIFY_SELFTEST_CHILD_OUTPUT_LIMIT", name);
+	};
+	child.stdout.on("data", (chunk) => append("stdout", chunk));
+	child.stderr.on("data", (chunk) => append("stderr", chunk));
+	child.once("error", (error) => rejectCapture("VERIFY_SELFTEST_CHILD_SPAWN", error.message));
+	child.stdout.once("error", (error) => rejectCapture("VERIFY_SELFTEST_CHILD_STDOUT", error.message));
+	child.stderr.once("error", (error) => rejectCapture("VERIFY_SELFTEST_CHILD_STDERR", error.message));
+	child.stdin.once("error", (error) => rejectCapture("VERIFY_SELFTEST_CHILD_STDIN", error.message));
+	child.once("close", (status, signal) => {
+		capture.didClose = true;
+		resolveClosed({ status, signal });
+	});
+	capture.completed = capture.closed.then((result) => {
+		if (capture.failure !== null) throw capture.failure;
+		return result;
+	});
+	void capture.completed.catch(() => {});
+	return capture;
+}
+
+function waitForChildMarker(capture, marker, timeoutMS = 10_000) {
+	if (capture.stdout.includes(marker)) return Promise.resolve();
+	return new Promise((resolvePromise, rejectPromise) => {
+		let finished = false;
+		const timeout = setTimeout(() => {
+			finish(rejectPromise, new Error(`timed out waiting for ${marker}: ${capture.stdout}${capture.stderr}`));
+		}, timeoutMS);
+		const onData = () => {
+			if (!capture.stdout.includes(marker)) return;
+			finish(resolvePromise);
+		};
+		const cleanup = () => {
+			clearTimeout(timeout);
+			capture.child.stdout.off("data", onData);
+		};
+		const finish = (settle, value) => {
+			if (finished) return;
+			finished = true;
+			cleanup();
+			settle(value);
+		};
+		capture.child.stdout.on("data", onData);
+		capture.completed.then(
+			({ status, signal }) => finish(
+				rejectPromise,
+				new Error(`child closed before ${marker}: status=${status} signal=${signal}: ${capture.stdout}${capture.stderr}`),
+			),
+			(error) => finish(rejectPromise, error),
+		);
+	});
+}
+
+async function waitForChildExit(capture, timeoutMS = 10_000) {
+	let timeout;
+	try {
+		return await Promise.race([
+			capture.completed,
+			new Promise((_, rejectPromise) => {
+				timeout = setTimeout(() => {
+					rejectPromise(new Error(`timed out waiting for child close: ${capture.stdout}${capture.stderr}`));
+				}, timeoutMS);
+			}),
+		]);
+	} finally {
+		clearTimeout(timeout);
+	}
 }
 
 function fakeAuthorities() {
@@ -783,6 +870,161 @@ async function inspectVerificationLock() {
 	}
 }
 
+async function inspectVerificationLockSubprocesses() {
+	const repositories = [];
+	const children = [];
+	const createRepository = async (prefix) => {
+		const root = await realpath(await mkdtemp(join(tmpdir(), prefix)));
+		repositories.push(root);
+		const toolsDirectory = join(root, "tools");
+		await mkdir(toolsDirectory, { mode: 0o700 });
+		await Promise.all([
+			writeFile(join(toolsDirectory, "verify-current.mjs"), await readFile(verifierPath), { mode: 0o600 }),
+			writeFile(join(toolsDirectory, "verify-runtime-authority.mjs"), await readFile(runtimePath), { mode: 0o600 }),
+		]);
+		return root;
+	};
+	const startOwner = (root) => {
+		const runtime = join(root, "tools/verify-runtime-authority.mjs");
+		const program = [
+			`const { acquireVerificationLock } = await import(${JSON.stringify(pathToFileURL(runtime).href)});`,
+			"const lock = await acquireVerificationLock();",
+			'process.stdout.write(`VERIFY_SELFTEST_LOCK_OWNER_READY pid=${process.pid}\\n`);',
+			"process.stdin.resume();",
+			"await new Promise((resolvePromise) => process.stdin.once(\"end\", resolvePromise));",
+			"await lock.release();",
+		].join("\n");
+		const capture = capturedChild(process.execPath, ["--input-type=module", "--eval", program], {
+			cwd: root,
+			env: {
+				HOME: process.env.HOME || "/",
+				TMPDIR: process.env.TMPDIR || "/tmp",
+				PATH: "/usr/bin:/bin",
+				LANG: "C",
+				LC_ALL: "C",
+				NO_COLOR: "1",
+				NODE_OPTIONS: "",
+			},
+		});
+		children.push(capture);
+		return capture;
+	};
+	const runVerifier = (root) => spawnSync(process.execPath, [join(root, "tools/verify-current.mjs")], {
+		cwd: root,
+		encoding: "utf8",
+		timeout: 10_000,
+		env: {
+			HOME: process.env.HOME || "/",
+			TMPDIR: process.env.TMPDIR || "/tmp",
+			PATH: "/usr/bin:/bin",
+			LANG: "C",
+			LC_ALL: "C",
+			NO_COLOR: "1",
+			NODE_OPTIONS: "",
+		},
+	});
+	try {
+		const repositoryA = await createRepository("countershape-verify-lock-process-a-");
+		const repositoryB = await createRepository("countershape-verify-lock-process-b-");
+		const ownerA = startOwner(repositoryA);
+		await waitForChildMarker(ownerA, "VERIFY_SELFTEST_LOCK_OWNER_READY");
+		const ownerB = startOwner(repositoryB);
+		await waitForChildMarker(ownerB, "VERIFY_SELFTEST_LOCK_OWNER_READY");
+
+		const contended = runVerifier(repositoryA);
+		const contendedOutput = `${contended.stdout ?? ""}${contended.stderr ?? ""}`;
+		expect(
+			contended.error === undefined && contended.signal === null && contended.status !== 0 &&
+			/(?:^|\n)VerificationRuntimeError: VERIFY_ALREADY_RUNNING:/u.test(contendedOutput),
+			"VERIFY_SELFTEST_PROCESS_LOCK_CONTENTION",
+			contendedOutput,
+		);
+		for (const forbidden of ["VERIFY_PLAN_", "VERIFY_TOOL_", "VERIFY_PRIVATE_ROOT_"]) {
+			expect(!contendedOutput.includes(forbidden), "VERIFY_SELFTEST_PROCESS_LOCK_ORDER", `${forbidden}:${contendedOutput}`);
+		}
+		const baseA = join(repositoryA, ".countershape", "verify-current");
+		expect(
+			JSON.stringify((await readdir(baseA)).sort()) === JSON.stringify(["active.lock"]),
+			"VERIFY_SELFTEST_PROCESS_LOCK_CREATED_RUN_ROOT",
+			(await readdir(baseA)).join(","),
+		);
+
+		const ownerAPIDMatch = /pid=(\d+)\n/u.exec(ownerA.stdout);
+		expect(ownerAPIDMatch !== null, "VERIFY_SELFTEST_PROCESS_LOCK_OWNER_PID", ownerA.stdout);
+		const ownerAPID = Number(ownerAPIDMatch[1]);
+		ownerA.child.kill("SIGKILL");
+		const killed = await waitForChildExit(ownerA);
+		expect(killed.status === null && killed.signal === "SIGKILL", "VERIFY_SELFTEST_PROCESS_LOCK_OWNER_NOT_KILLED", JSON.stringify(killed));
+
+		const stale = runVerifier(repositoryA);
+		const staleOutput = `${stale.stdout ?? ""}${stale.stderr ?? ""}`;
+		expect(
+			stale.error === undefined && stale.signal === null && stale.status !== 0 &&
+			/(?:^|\n)VerificationRuntimeError: VERIFY_STALE_LOCK:/u.test(staleOutput),
+			"VERIFY_SELFTEST_PROCESS_STALE_LOCK",
+			staleOutput,
+		);
+		for (const forbidden of ["VERIFY_PLAN_", "VERIFY_TOOL_", "VERIFY_PRIVATE_ROOT_"]) {
+			expect(!staleOutput.includes(forbidden), "VERIFY_SELFTEST_PROCESS_STALE_ORDER", `${forbidden}:${staleOutput}`);
+		}
+
+		const lockPath = join(baseA, "active.lock");
+		const lockMetadata = await lstat(lockPath);
+		expect(
+			lockMetadata.isFile() && !lockMetadata.isSymbolicLink() && (lockMetadata.mode & 0o777) === 0o600,
+			"VERIFY_SELFTEST_PROCESS_STALE_LOCK_METADATA",
+			lockPath,
+		);
+		const lockText = await readFile(lockPath, "utf8");
+		const lockRecord = JSON.parse(lockText);
+		const expectedLockText = `${JSON.stringify({
+			created_at_unix_ms: lockRecord.created_at_unix_ms,
+			nonce: lockRecord.nonce,
+			pid: lockRecord.pid,
+			repository_root_sha256: lockRecord.repository_root_sha256,
+			schema_version: lockRecord.schema_version,
+		})}\n`;
+		expect(lockText === expectedLockText, "VERIFY_SELFTEST_PROCESS_STALE_LOCK_CANONICAL", lockText);
+		expect(lockRecord.schema_version === "countershape/verify-current-lock/v1", "VERIFY_SELFTEST_PROCESS_STALE_LOCK_SCHEMA", lockText);
+		expect(lockRecord.pid === ownerAPID, "VERIFY_SELFTEST_PROCESS_STALE_LOCK_PID", `${lockRecord.pid} != ${ownerAPID}`);
+		expect(
+			lockRecord.repository_root_sha256 === createHash("sha256").update(repositoryA).digest("hex"),
+			"VERIFY_SELFTEST_PROCESS_STALE_LOCK_ROOT",
+			lockText,
+		);
+		expect(processLiveness(ownerAPID) === "absent", "VERIFY_SELFTEST_PROCESS_STALE_LOCK_LIVENESS", String(ownerAPID));
+		await unlink(lockPath);
+
+		const recoveryA = startOwner(repositoryA);
+		await waitForChildMarker(recoveryA, "VERIFY_SELFTEST_LOCK_OWNER_READY");
+		recoveryA.child.stdin.end();
+		const recovered = await waitForChildExit(recoveryA);
+		expect(recovered.status === 0 && recovered.signal === null && recoveryA.stderr === "", "VERIFY_SELFTEST_PROCESS_LOCK_RECOVERY", `${JSON.stringify(recovered)}:${recoveryA.stderr}`);
+		let recoveredLockPresent = false;
+		try {
+			await lstat(lockPath);
+			recoveredLockPresent = true;
+		} catch (error) {
+			if (error.code !== "ENOENT") throw error;
+		}
+		expect(!recoveredLockPresent, "VERIFY_SELFTEST_PROCESS_LOCK_RECOVERY_RETAINED", lockPath);
+
+		ownerB.child.stdin.end();
+		const independent = await waitForChildExit(ownerB);
+		expect(independent.status === 0 && independent.signal === null && ownerB.stderr === "", "VERIFY_SELFTEST_PROCESS_LOCK_INDEPENDENT", `${JSON.stringify(independent)}:${ownerB.stderr}`);
+	} finally {
+		for (const capture of children) {
+			if (!capture.didClose && capture.child.exitCode === null && capture.child.signalCode === null) {
+				capture.child.kill("SIGKILL");
+			}
+			if (!capture.didClose) {
+				try { await capture.closed; } catch { /* an always-resolving close observer should not reject */ }
+			}
+		}
+		for (const root of repositories) await rm(root, { recursive: true, force: true });
+	}
+}
+
 async function inspectResourceFinalization() {
 	const events = [];
 	const lock = {
@@ -840,12 +1082,16 @@ async function inspectSourceAndArguments() {
 		const toolsDirectory = join(importFixture, "tools");
 		await mkdir(toolsDirectory, { mode: 0o700 });
 		const copiedRuntime = join(toolsDirectory, "verify-runtime-authority.mjs");
-		await writeFile(copiedRuntime, runtimeSource, { mode: 0o600 });
+		const copiedVerifier = join(toolsDirectory, "verify-current.mjs");
+		await Promise.all([
+			writeFile(copiedRuntime, runtimeSource, { mode: 0o600 }),
+			writeFile(copiedVerifier, source, { mode: 0o600 }),
+		]);
 		const inert = spawnSync(process.execPath, [
 			"--input-type=module", "--eval",
-			`await import(${JSON.stringify(pathToFileURL(copiedRuntime).href)}); process.stdout.write("runtime import inert\\n");`,
+			`await import(${JSON.stringify(pathToFileURL(copiedVerifier).href)}); process.stdout.write("verifier import inert\\n");`,
 		], { encoding: "utf8", timeout: 10_000 });
-		expect(inert.status === 0 && inert.stdout === "runtime import inert\n" && inert.stderr === "", "VERIFY_SELFTEST_RUNTIME_IMPORT_EFFECT", `${inert.stdout ?? ""}${inert.stderr ?? ""}`);
+		expect(inert.status === 0 && inert.stdout === "verifier import inert\n" && inert.stderr === "", "VERIFY_SELFTEST_VERIFIER_IMPORT_EFFECT", `${inert.stdout ?? ""}${inert.stderr ?? ""}`);
 		let artifactPresent = false;
 		try {
 			await lstat(join(importFixture, ".countershape"));
@@ -859,14 +1105,28 @@ async function inspectSourceAndArguments() {
 	}
 	const result = spawnSync(process.execPath, [verifierPath, "--unexpected"], { encoding: "utf8", timeout: 10_000 });
 	const output = `${result.stdout ?? ""}${result.stderr ?? ""}`;
-	expect(result.status !== 0 && output.includes("VERIFY_ARGUMENTS"), "VERIFY_SELFTEST_ARGUMENTS_FALSE_GREEN", output);
+	expect(
+		result.error === undefined && result.signal === null && Number.isInteger(result.status) && result.status !== 0 &&
+		/(?:^|\n)VerificationError: VERIFY_ARGUMENTS:/u.test(output),
+		"VERIFY_SELFTEST_ARGUMENTS_FALSE_GREEN",
+		output,
+	);
 	let fixture = await realpath(await mkdtemp(join(tmpdir(), "countershape-verify-symlink-main-")));
 	try {
 		const alias = join(fixture, "verify-current-link.mjs");
 		await symlink(verifierPath, alias);
-		const linked = spawnSync(process.execPath, [alias, "--unexpected"], { encoding: "utf8", timeout: 10_000 });
+		expect(await realpath(alias) === verifierPath, "VERIFY_SELFTEST_SYMLINK_REALPATH", alias);
+		const linked = spawnSync(process.execPath, [alias], { encoding: "utf8", timeout: 10_000 });
 		const linkedOutput = `${linked.stdout ?? ""}${linked.stderr ?? ""}`;
-		expect(linked.status === 0 && linkedOutput === "", "VERIFY_SELFTEST_FROZEN_SYMLINK_NOOP_CEILING", linkedOutput);
+		expect(
+			linked.status !== 0 && linked.signal === null && linked.stdout === "" &&
+			/(?:^|\n)VerificationError: VERIFY_NONCANONICAL_ENTRY:/u.test(linkedOutput),
+			"VERIFY_SELFTEST_NONCANONICAL_ENTRY_FALSE_GREEN",
+			linkedOutput,
+		);
+		for (const forbidden of ["VERIFY_ARGUMENTS", "VERIFY_PLATFORM_", "VERIFY_ALREADY_RUNNING", "VERIFY_STALE_LOCK", "VERIFY_PLAN_", "VERIFY_TOOL_"]) {
+			expect(!linkedOutput.includes(forbidden), "VERIFY_SELFTEST_NONCANONICAL_ENTRY_ORDER", `${forbidden}:${linkedOutput}`);
+		}
 	} finally {
 		await rm(fixture, { recursive: true, force: true });
 	}
@@ -881,13 +1141,14 @@ async function main() {
 	await inspectFailClosedExecution();
 	await inspectFilesystemGuards();
 	await inspectVerificationLock();
+	await inspectVerificationLockSubprocesses();
 	await inspectResourceFinalization();
 	await inspectSourceAndArguments();
 	const sourceDigest = createHash("sha256")
 		.update(await readFile(verifierPath))
 		.update(await readFile(runtimePath))
 		.digest("hex");
-	process.stdout.write(`verification runner self-test passed: exact C4 rosters/env/package partition, fail-closed status/signal/error/marker, bounded tool admission, framed child output, canonical plan/tool paths, private root isolation, exclusive lock integrity, inert module imports, cleanup aggregation, historical nonexecution, and artifact refusal (sources sha256:${sourceDigest})\n`);
+	process.stdout.write(`verification runner self-test passed: exact C4 rosters/env/package partition, fail-closed status/signal/error/marker, bounded tool admission, framed child output, canonical plan/tool paths, private root isolation, exclusive lock integrity plus real subprocess contention/stale recovery, inert verifier imports, noncanonical-entry refusal, cleanup aggregation, historical nonexecution, and artifact refusal (sources sha256:${sourceDigest})\n`);
 }
 
 main().catch((error) => {

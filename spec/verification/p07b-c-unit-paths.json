@@ -1,5 +1,5 @@
 {
-  "schema_version": "countershape/p07b-c-unit-paths/v20",
+  "schema_version": "countershape/p07b-c-unit-paths/v21",
   "units": {
     "C0A": {
       "exact": [
@@ -794,6 +794,36 @@
       },
       "verification_profile": "SOURCE_FULL"
     },
+    "C4H": {
+      "exact": [
+        "docs/HANDOFF_MODE_C.md",
+        "docs/PROMPT_PACK.md",
+        "docs/VERIFICATION.md",
+        "docs/status/P07B-C-C4H-VERIFIER-HERMETICITY-MAINTENANCE.md",
+        "research/deep-dive/p07b-c-maintenance-architecture/00-scope-and-method.md",
+        "research/deep-dive/p07b-c-maintenance-architecture/01-proof-semantics.md",
+        "research/deep-dive/p07b-c-maintenance-architecture/02-verifier-throughput.md",
+        "research/deep-dive/p07b-c-maintenance-architecture/03-maintenance-order.md",
+        "research/deep-dive/p07b-c-maintenance-architecture/04-synthesis.md",
+        "research/deep-dive/p07b-c-maintenance-architecture/05-follow-up-verification.md",
+        "research/deep-dive/p07b-c-maintenance-architecture/06-different-model-red-team.md",
+        "research/deep-dive/p07b-c-maintenance-architecture/07-executive-briefing.md",
+        "spec/verification/p07b-c-unit-paths.json",
+        "tools/check-p07b-c-plan.mjs",
+        "tools/check-p07b-c-unit-scope.mjs",
+        "tools/generate-p07-planning-example.mjs",
+        "tools/verify-current-selftest.mjs",
+        "tools/verify-current.mjs"
+      ],
+      "parent": "C4",
+      "prefixes": [],
+      "receipt_states": {
+        "C3P": "PRESENT",
+        "C3": "PRESENT",
+        "C6A": "ABSENT"
+      },
+      "verification_profile": "SOURCE_FULL"
+    },
     "C5": {
       "exact": [
         "docs/ARCHITECTURE.md",
@@ -809,7 +839,7 @@
         "tools/verify-current-selftest.mjs",
         "tools/verify-current.mjs"
       ],
-      "parent": "C4",
+      "parent": "C4H",
       "prefixes": [
         "internal/contractexec/http/",
         "internal/contractexec/scope/",

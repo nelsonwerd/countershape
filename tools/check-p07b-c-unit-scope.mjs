@@ -10,12 +10,13 @@ import { isDeepStrictEqual } from "node:util";
 
 export const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const specificationPath = resolve(repositoryRoot, "spec/verification/p07b-c-unit-paths.json");
-const unitOrder = Object.freeze(["C0A", "C0B", "C1", "C1M", "C1V", "C1E", "C1B", "C2", "C2M", "C2B", "C3P", "C3V", "C3M", "C3PB", "C3A", "C3L", "C3F", "C3S", "C3", "C3R", "C3Q", "C3T", "C3U", "C3B", "C3D", "C4V", "C4M", "C4N", "C4P", "C4", "C5", "C6A", "C6M", "C6B"]);
+const gitStderrPrefixBytes = 256;
+const unitOrder = Object.freeze(["C0A", "C0B", "C1", "C1M", "C1V", "C1E", "C1B", "C2", "C2M", "C2B", "C3P", "C3V", "C3M", "C3PB", "C3A", "C3L", "C3F", "C3S", "C3", "C3R", "C3Q", "C3T", "C3U", "C3B", "C3D", "C4V", "C4M", "C4N", "C4P", "C4", "C4H", "C5", "C6A", "C6M", "C6B"]);
 const receiptPhaseUnitOrder = Object.freeze(unitOrder.slice(unitOrder.indexOf("C3M")));
 const receiptPhaseUnitSet = new Set(receiptPhaseUnitOrder);
 const receiptPhaseKeys = Object.freeze(["C3P", "C3", "C6A"]);
 const receiptPhaseStates = new Set(["ABSENT", "PRESENT"]);
-const receiptPhaseAuthoritySHA256 = "6d7e41d5ff22fc73118ceb0ae9f27a2151e7121d3a91c8945a391b3f42868f7d";
+const receiptPhaseAuthoritySHA256 = "66f568efb313303c92b23a51b743200f15b47a451a9b3424aaa251e0228e7928";
 const sealedC4NReceiptPhaseAuthoritySHA256 = "8f237c7d883c212167e5a04e5dd24d6efdacf4a9ce5492215fd06892a8237c4a";
 const receiptPhaseCapsuleStart = "<!-- P07B-C-RECEIPT-PHASE:START -->";
 const receiptPhaseCapsuleEnd = "<!-- P07B-C-RECEIPT-PHASE:END -->";
@@ -50,15 +51,35 @@ const sealedC4NCandidateParent = Object.freeze({
 	commit: "b915d43cced850936c46b52620654f7506bdb993",
 	tree: "3ea928443ecb32d6457babe2bce02ddec1d9632f",
 });
+const sealedC4CandidateParent = Object.freeze({
+	commit: "c4089ab31181c08dad880bf9e5d40c622c8c91c4",
+	tree: "f427e23b6fe297a49a36a99fa037073b637d82ca",
+});
 const candidateSpecificationOwnerContracts = Object.freeze({
 	C4V: Object.freeze({ parent: "C3D", authority: sealedC3DCandidateParent, priorSchema: "countershape/p07b-c-unit-paths/v16" }),
 	C4M: Object.freeze({ parent: "C4V", authority: sealedC4VCandidateParent, priorSchema: "countershape/p07b-c-unit-paths/v17" }),
 	C4N: Object.freeze({ parent: "C4M", authority: sealedC4MCandidateParent, priorSchema: "countershape/p07b-c-unit-paths/v18" }),
 	C4P: Object.freeze({ parent: "C4N", authority: sealedC4NCandidateParent, priorSchema: "countershape/p07b-c-unit-paths/v19" }),
+	C4H: Object.freeze({ parent: "C4", authority: sealedC4CandidateParent, priorSchema: "countershape/p07b-c-unit-paths/v20" }),
 });
 const candidateSpecificationOwners = new Set(["C3D", ...Object.keys(candidateSpecificationOwnerContracts)]);
 const verificationProfiles = new Set(["SOURCE_FULL", "RECEIPT_RECONCILIATION"]);
 const receiptClaimTypes = new Set(["tests-pass", "command-succeeded"]);
+function boundedErrorDescriptor(error) {
+	if (error === undefined || error === null) return null;
+	const message = Buffer.from(String(error.message ?? error), "utf8");
+	const prefix = message.subarray(0, gitStderrPrefixBytes);
+	const name = Buffer.from(String(error.name ?? "Error"), "utf8").subarray(0, 64).toString("hex");
+	const code = error.code === undefined ? null :
+		Buffer.from(String(error.code), "utf8").subarray(0, 64).toString("hex");
+	return Object.freeze({
+		name_hex: name,
+		code_hex: code,
+		message_bytes: message.length,
+		message_prefix_hex: prefix.toString("hex"),
+		message_truncated: message.length > gitStderrPrefixBytes,
+	});
+}
 const c3FrozenUnitContracts = Object.freeze({
 	C3: Object.freeze({
 		verification_profile: "SOURCE_FULL",
@@ -214,6 +235,31 @@ const c4DeclaredSourceContract = Object.freeze({
 	]),
 	exact_roster_sha256: "99bda0d3e5c2f2a2ee4f354945188bf2e5563716c9e26511211a4bfc9197bf56",
 	prefix_roster_sha256: "f5f7b8cdfeba3581e8632c0d6686287f5afa00aef224bb4babe39ee1fdc7f4b2",
+});
+const c4hDeclaredMaintenanceContract = Object.freeze({
+	verification_profile: "SOURCE_FULL",
+	prefixes: Object.freeze([]),
+	exact: Object.freeze([
+		"docs/HANDOFF_MODE_C.md",
+		"docs/PROMPT_PACK.md",
+		"docs/VERIFICATION.md",
+		"docs/status/P07B-C-C4H-VERIFIER-HERMETICITY-MAINTENANCE.md",
+		"research/deep-dive/p07b-c-maintenance-architecture/00-scope-and-method.md",
+		"research/deep-dive/p07b-c-maintenance-architecture/01-proof-semantics.md",
+		"research/deep-dive/p07b-c-maintenance-architecture/02-verifier-throughput.md",
+		"research/deep-dive/p07b-c-maintenance-architecture/03-maintenance-order.md",
+		"research/deep-dive/p07b-c-maintenance-architecture/04-synthesis.md",
+		"research/deep-dive/p07b-c-maintenance-architecture/05-follow-up-verification.md",
+		"research/deep-dive/p07b-c-maintenance-architecture/06-different-model-red-team.md",
+		"research/deep-dive/p07b-c-maintenance-architecture/07-executive-briefing.md",
+		"spec/verification/p07b-c-unit-paths.json",
+		"tools/check-p07b-c-plan.mjs",
+		"tools/check-p07b-c-unit-scope.mjs",
+		"tools/generate-p07-planning-example.mjs",
+		"tools/verify-current-selftest.mjs",
+		"tools/verify-current.mjs",
+	]),
+	exact_roster_sha256: "1adc913036078ad4efdf418e78581d81369aa630d245a5b493c60a69a0478532",
 });
 const c5DeclaredSourceContract = Object.freeze({
 	verification_profile: "SOURCE_FULL",
@@ -451,7 +497,7 @@ export function validateSpecification(specification) {
 		JSON.stringify(Object.keys(specification).sort()) !== JSON.stringify(["schema_version", "units"])) {
 		fail("specification root roster");
 	}
-	if (specification.schema_version !== "countershape/p07b-c-unit-paths/v20") fail("specification version");
+	if (specification.schema_version !== "countershape/p07b-c-unit-paths/v21") fail("specification version");
 	if (!specification.units || typeof specification.units !== "object" || Array.isArray(specification.units) ||
 		JSON.stringify(Object.keys(specification.units)) !== JSON.stringify(unitOrder)) fail("unit roster/order");
 
@@ -543,6 +589,12 @@ export function validateSpecification(specification) {
 			exactRosterDigest(entry.exact) !== c4DeclaredSourceContract.exact_roster_sha256 ||
 			exactRosterDigest(entry.prefixes) !== c4DeclaredSourceContract.prefix_roster_sha256)) {
 			fail("C4: declared source contract");
+		}
+		if (unit === "C4H" && (entry.verification_profile !== c4hDeclaredMaintenanceContract.verification_profile ||
+			JSON.stringify(entry.prefixes) !== JSON.stringify(c4hDeclaredMaintenanceContract.prefixes) ||
+			JSON.stringify(entry.exact) !== JSON.stringify(c4hDeclaredMaintenanceContract.exact) ||
+			exactRosterDigest(entry.exact) !== c4hDeclaredMaintenanceContract.exact_roster_sha256)) {
+			fail("C4H: declared maintenance contract");
 		}
 		if (unit === "C5" && (entry.verification_profile !== c5DeclaredSourceContract.verification_profile ||
 			JSON.stringify(entry.prefixes) !== JSON.stringify(c5DeclaredSourceContract.prefixes) ||
@@ -1238,6 +1290,23 @@ async function loadSpecification() {
 	return validateSpecification(parsed);
 }
 
+function checkedGitOutput(result) {
+	const stdout = result.stdout ?? Buffer.alloc(0);
+	const stderr = result.stderr ?? Buffer.alloc(0);
+	if (!Buffer.isBuffer(stdout) || !Buffer.isBuffer(stderr)) fail("git inventory returned non-buffer streams");
+	if (result.error || result.status !== 0 || result.signal || stderr.length !== 0) {
+		const stderrPrefix = stderr.subarray(0, gitStderrPrefixBytes);
+		const errorDetail = boundedErrorDescriptor(result.error);
+		fail(
+			`git inventory failed (status=${JSON.stringify(result.status ?? null)}, ` +
+			`signal=${JSON.stringify(result.signal ?? null)}, error=${JSON.stringify(errorDetail)}, ` +
+			`stderr_bytes=${stderr.length}, stderr_prefix_hex=${stderrPrefix.toString("hex")}, ` +
+			`stderr_truncated=${stderr.length > gitStderrPrefixBytes})`,
+		);
+	}
+	return stdout;
+}
+
 export async function gitOutput(args) {
 	const requested = process.env.COUNTERSHAPE_GIT || "/usr/bin/git";
 	if (!isAbsolute(requested)) fail("COUNTERSHAPE_GIT must be absolute");
@@ -1245,7 +1314,7 @@ export async function gitOutput(args) {
 	try {
 		git = await realpath(requested);
 	} catch (error) {
-		fail(`git admission failed: ${error.message}`);
+		fail(`git admission failed: ${JSON.stringify(boundedErrorDescriptor(error))}`);
 	}
 	const result = spawnSync(git, ["--no-replace-objects", ...args], {
 		cwd: repositoryRoot,
@@ -1259,10 +1328,7 @@ export async function gitOutput(args) {
 			GIT_OPTIONAL_LOCKS: "0", GIT_TERMINAL_PROMPT: "0",
 		},
 	});
-	if (result.error || result.status !== 0 || result.signal || (result.stderr?.length ?? 0) !== 0) {
-		fail(`git inventory failed (status=${result.status}, signal=${result.signal}, error=${result.error?.message ?? "none"})`);
-	}
-	return result.stdout ?? Buffer.alloc(0);
+	return checkedGitOutput(result);
 }
 
 export async function stagedPaths() {
@@ -1489,7 +1555,7 @@ function runIndependentCandidatePhaseSelfTest(specification) {
 	];
 	const integrityParent = rows[integrityBoundary].parent;
 	refuse("CLI capsule mismatch", fixture(integrityBoundary, integrityParent), (value) => {
-		value.stagedHandoffBytes = value.workingHandoffBytes = document("C5");
+		value.stagedHandoffBytes = value.workingHandoffBytes = document(integrityParent);
 	});
 	refuse("HANDOFF worktree drift", fixture(integrityBoundary, integrityParent), (value) => { value.workingHandoffBytes = Buffer.from("drift\n"); });
 	refuse("specification worktree drift", fixture(integrityBoundary, integrityParent), (value) => { value.workingSpecificationBytes = Buffer.from("drift\n"); });
@@ -1546,7 +1612,7 @@ function runIndependentCandidatePhaseSelfTest(specification) {
 		if (!refused) fail(`independent candidate self-test false negative: ${name}`);
 		rejected += 1;
 	}
-	if (accepted.length !== 10 || rejected !== 253) fail(`independent candidate self-test cardinality ${accepted.length}/${rejected}`);
+	if (accepted.length !== 11 || rejected !== 289) fail(`independent candidate self-test cardinality ${accepted.length}/${rejected}`);
 }
 
 function runFutureC6MaterialSelfTest(authority) {
@@ -1773,8 +1839,96 @@ function requireSpecificationMutationRejected(specification, label, mutate) {
 	if (!rejected) fail(`${label} self-test false negative`);
 }
 
+function runGitOutputDiagnosticSelfTest() {
+	const cleanStdout = Buffer.from([0x00, 0xff, 0x41]);
+	const clean = checkedGitOutput({
+		error: undefined, status: 0, signal: null, stdout: cleanStdout, stderr: Buffer.alloc(0),
+	});
+	if (clean !== cleanStdout) fail("Git diagnostic self-test did not preserve exact stdout Buffer identity");
+
+	const expectRejected = (label, result, expected) => {
+		let message;
+		try {
+			checkedGitOutput(result);
+		} catch (error) {
+			message = String(error.message ?? error);
+		}
+		if (message === undefined) fail(`Git diagnostic self-test false negative: ${label}`);
+		for (const fragment of expected) {
+			if (!message.includes(fragment)) fail(`Git diagnostic self-test ${label} omitted ${JSON.stringify(fragment)}: ${message}`);
+		}
+		if (message.includes("stdout-secret")) fail(`Git diagnostic self-test ${label} reflected stdout`);
+		if (/[\u0000-\u001f\u007f\ufffd]/u.test(message)) {
+			fail(`Git diagnostic self-test ${label} emitted a raw control or replacement character`);
+		}
+		return message;
+	};
+	const base = {
+		error: undefined, status: 0, signal: null,
+		stdout: Buffer.from("stdout-secret", "utf8"), stderr: Buffer.alloc(0),
+	};
+	expectRejected("spawn error", { ...base, error: new Error("injected spawn failure") }, [
+		"status=0", "signal=null",
+		`"name_hex":"${Buffer.from("Error").toString("hex")}"`,
+		`"message_prefix_hex":"${Buffer.from("injected spawn failure").toString("hex")}"`,
+		'"message_bytes":22', '"message_truncated":false',
+		"stderr_bytes=0", "stderr_prefix_hex=", "stderr_truncated=false",
+	]);
+	const oversizedErrorMessage = `${"\u0000\u0001"}${"x".repeat(gitStderrPrefixBytes + 1)}`;
+	expectRejected("oversized control-bearing spawn error", {
+		...base, error: new Error(oversizedErrorMessage),
+	}, [
+		`"message_bytes":${gitStderrPrefixBytes + 3}`,
+		`"message_prefix_hex":"${Buffer.from(oversizedErrorMessage).subarray(0, gitStderrPrefixBytes).toString("hex")}"`,
+		'"message_truncated":true',
+		"stderr_bytes=0", "stderr_prefix_hex=", "stderr_truncated=false",
+	]);
+	expectRejected("signal", { ...base, status: null, signal: "SIGTERM" }, [
+		"status=null", 'signal=\"SIGTERM\"', "error=null",
+		"stderr_bytes=0", "stderr_prefix_hex=", "stderr_truncated=false",
+	]);
+	expectRejected("nonzero", { ...base, status: 7 }, [
+		"status=7", "signal=null", "error=null",
+		"stderr_bytes=0", "stderr_prefix_hex=", "stderr_truncated=false",
+	]);
+	expectRejected("stderr only", { ...base, stdout: Buffer.alloc(0), stderr: Buffer.from("diagnostic", "utf8") }, [
+		"status=0", "stderr_bytes=10", "stderr_prefix_hex=646961676e6f73746963", "stderr_truncated=false",
+	]);
+	expectRejected("mixed streams", { ...base, stderr: Buffer.from("mixed", "utf8") }, [
+		"stderr_bytes=5", "stderr_prefix_hex=6d69786564", "stderr_truncated=false",
+	]);
+	const exactBound = Buffer.alloc(gitStderrPrefixBytes, 0xab);
+	expectRejected("exact bound", { ...base, stderr: exactBound }, [
+		`stderr_bytes=${gitStderrPrefixBytes}`,
+		`stderr_prefix_hex=${exactBound.toString("hex")}`,
+		"stderr_truncated=false",
+	]);
+	const overBound = Buffer.concat([exactBound, Buffer.from([0xcd])]);
+	const overBoundMessage = expectRejected("over bound", { ...base, stderr: overBound }, [
+		`stderr_bytes=${gitStderrPrefixBytes + 1}`,
+		`stderr_prefix_hex=${exactBound.toString("hex")}`,
+		"stderr_truncated=true",
+	]);
+	const overBoundFields = /stderr_bytes=(\d+), stderr_prefix_hex=([0-9a-f]*), stderr_truncated=(true|false)\)$/u.exec(overBoundMessage);
+	if (overBoundFields === null ||
+		Number(overBoundFields[1]) !== gitStderrPrefixBytes + 1 ||
+		overBoundFields[2] !== exactBound.toString("hex") ||
+		overBoundFields[2].length !== gitStderrPrefixBytes * 2 ||
+		overBoundFields[3] !== "true") {
+		fail(`Git diagnostic self-test over-bound exact fields drifted: ${overBoundMessage}`);
+	}
+	expectRejected("invalid UTF-8", { ...base, stderr: Buffer.from([0xff, 0xfe, 0xfd]) }, [
+		"stderr_bytes=3", "stderr_prefix_hex=fffefd", "stderr_truncated=false",
+	]);
+	expectRejected("NUL and controls", { ...base, stderr: Buffer.from([0x00, 0x01, 0x0a, 0x1f, 0x7f]) }, [
+		"stderr_bytes=5", "stderr_prefix_hex=00010a1f7f", "stderr_truncated=false",
+	]);
+	return 11;
+}
+
 async function runSelfTest() {
 	const specification = await loadSpecification();
+	const gitDiagnosticCases = runGitOutputDiagnosticSelfTest();
 	runIndependentCandidatePhaseSelfTest(specification);
 	const c6aSourceAuthorityRejections = runC6ASourceAuthoritySelfTest();
 	const cases = [
@@ -1904,9 +2058,12 @@ async function runSelfTest() {
 		!exactPathsMatch(specification, "C4P", specification.units.C4P.exact.slice(1)),
 		isDeepStrictEqual(specification.units.C4.exact, c4DeclaredSourceContract.exact),
 		isDeepStrictEqual(specification.units.C4.prefixes, c4DeclaredSourceContract.prefixes),
+		exactPathsMatch(specification, "C4H", c4hDeclaredMaintenanceContract.exact),
+		!exactPathsMatch(specification, "C4H", c4hDeclaredMaintenanceContract.exact.slice(1)),
 		isDeepStrictEqual(specification.units.C5.exact, c5DeclaredSourceContract.exact),
 		isDeepStrictEqual(specification.units.C5.prefixes, c5DeclaredSourceContract.prefixes),
 		unexpectedPaths(specification, "C4", ["tools/verify-runtime-authority.mjs"]).length === 0,
+		unexpectedPaths(specification, "C4H", ["tools/verify-runtime-authority.mjs"])[0] === "tools/verify-runtime-authority.mjs",
 		unexpectedPaths(specification, "C5", ["tools/verify-runtime-authority.mjs"])[0] === "tools/verify-runtime-authority.mjs",
 		unexpectedPaths(specification, "C4", ["spec/verification/p07b-b-future-surface-authority.json"]).length === 0,
 		unexpectedPaths(specification, "C5", ["spec/verification/p07b-b-future-surface-authority.json"])[0] ===
@@ -1932,6 +2089,7 @@ async function runSelfTest() {
 		exactSourceGateAdmitted(specification, "C4M"),
 		exactSourceGateAdmitted(specification, "C4N"),
 		exactSourceGateAdmitted(specification, "C4P"),
+		exactSourceGateAdmitted(specification, "C4H"),
 		exactSourceGateAdmitted(specification, "C6M"),
 		!exactSourceGateAdmitted(specification, "C2B"),
 		!exactSourceGateAdmitted(specification, "C3B"),
@@ -1945,7 +2103,8 @@ async function runSelfTest() {
 		specification.units.C4M.verification_profile === "SOURCE_FULL" && specification.units.C4M.prefixes.length === 0,
 		specification.units.C4N.verification_profile === "SOURCE_FULL" && specification.units.C4N.prefixes.length === 0,
 		specification.units.C4P.verification_profile === "SOURCE_FULL" && specification.units.C4P.prefixes.length === 0,
-		receiptPhaseRows(specification).length === 22,
+		specification.units.C4H.verification_profile === "SOURCE_FULL" && specification.units.C4H.prefixes.length === 0,
+		receiptPhaseRows(specification).length === 23,
 		receiptPhaseRows(specification).at(-1).boundary === "C6B",
 		receiptPhaseAuthorityDigest(specification) === receiptPhaseAuthoritySHA256,
 		!["C4", "C5", "C6A", "C6M", "C6B"].some((boundary) =>
@@ -1954,6 +2113,7 @@ async function runSelfTest() {
 		specification.units.C4M.exact.includes("spec/verification/p07b-c-unit-paths.json"),
 		specification.units.C4N.exact.includes("spec/verification/p07b-c-unit-paths.json"),
 		specification.units.C4P.exact.includes("spec/verification/p07b-c-unit-paths.json"),
+		specification.units.C4H.exact.includes("spec/verification/p07b-c-unit-paths.json"),
 		exactPathsMatch(specification, "C6M", c6mDeclaredAdapterContract.exact),
 		!specification.units.C6M.exact.includes("docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md"),
 		!specification.units.C6M.exact.includes("docs/status/P07B-C-C6-EVIDENCE.md"),
@@ -1993,8 +2153,8 @@ async function runSelfTest() {
 			fail(`${boundary} visible-capsule active-boundary pointer self-test`);
 		}
 	}
-	requireSpecificationMutationRejected(specification, "schema v19 downgrade", (hostile) => {
-		hostile.schema_version = "countershape/p07b-c-unit-paths/v19";
+	requireSpecificationMutationRejected(specification, "schema v20 downgrade", (hostile) => {
+		hostile.schema_version = "countershape/p07b-c-unit-paths/v20";
 	});
 	requireSpecificationMutationRejected(specification, "duplicated specification active boundary", (hostile) => {
 		hostile.active_boundary = "C3D";
@@ -2077,11 +2237,27 @@ async function runSelfTest() {
 		hostile.units.C4.exact = hostile.units.C4.exact.filter((path) =>
 			path !== "spec/verification/p07b-b-future-surface-authority.json");
 	});
+	requireSpecificationMutationRejected(specification, "C4H profile drift", (hostile) => {
+		hostile.units.C4H.verification_profile = "RECEIPT_RECONCILIATION";
+	});
+	requireSpecificationMutationRejected(specification, "C4H parent drift", (hostile) => {
+		hostile.units.C4H.parent = "C4P";
+	});
+	requireSpecificationMutationRejected(specification, "C4H exact substitution", (hostile) => {
+		hostile.units.C4H.exact[0] = "docs/ADVERSARY.md";
+	});
+	requireSpecificationMutationRejected(specification, "C4H runtime authority capture", (hostile) => {
+		hostile.units.C4H.exact.push("tools/verify-runtime-authority.mjs");
+		hostile.units.C4H.exact.sort();
+	});
+	requireSpecificationMutationRejected(specification, "C4H receipt state drift", (hostile) => {
+		hostile.units.C4H.receipt_states.C6A = "PRESENT";
+	});
 	requireSpecificationMutationRejected(specification, "C5 profile drift", (hostile) => {
 		hostile.units.C5.verification_profile = "RECEIPT_RECONCILIATION";
 	});
-	requireSpecificationMutationRejected(specification, "C5 parent drift", (hostile) => {
-		hostile.units.C5.parent = "C4V";
+	requireSpecificationMutationRejected(specification, "C5 old C4 parent drift", (hostile) => {
+		hostile.units.C5.parent = "C4";
 	});
 	requireSpecificationMutationRejected(specification, "C5 exact substitution", (hostile) => {
 		hostile.units.C5.exact[0] = "docs/ADVERSARY.md";
@@ -2452,7 +2628,7 @@ async function runSelfTest() {
 		}
 		if (!rejected) fail(`unsafe path self-test false negative: ${JSON.stringify(invalid)}`);
 	}
-	console.log(`P07B-C unit scope self-test passed: strict specification plus deletion/rename, directory-boundary, allow/refuse, path-safety, and ${c6aSourceAuthorityRejections} C6A source-authority hostile cases`);
+	console.log(`P07B-C unit scope self-test passed: strict specification plus deletion/rename, directory-boundary, allow/refuse, path-safety, ${gitDiagnosticCases} byte-safe Git result cases, and ${c6aSourceAuthorityRejections} C6A source-authority hostile cases`);
 }
 
 async function main() {
@@ -2467,7 +2643,7 @@ async function main() {
 	}
 	if (process.argv.length !== 5 || process.argv[2] !== "--unit" ||
 		!(["--staged", "--exact-staged", "--receipt-manifest", "--source-final-gate", "--receipt-final-gate", "--credential-scan", "--source-authority-gate"].includes(process.argv[4]))) {
-		fail("usage: check-p07b-c-unit-scope.mjs --candidate-phase <C3D|C4V|C4M|C4N|C4P|C4|C5|C6A|C6M|C6B> | --unit <C0A|C0B|C1|C1M|C1V|C1E|C1B|C2|C2M|C2B|C3P|C3V|C3M|C3PB|C3A|C3L|C3F|C3S|C3|C3R|C3Q|C3T|C3U|C3B|C3D|C4V|C4M|C4N|C4P|C4|C5|C6A|C6M|C6B> <--staged|--exact-staged|--receipt-manifest|--source-final-gate|--receipt-final-gate|--credential-scan|--source-authority-gate> | --self-test");
+		fail("usage: check-p07b-c-unit-scope.mjs --candidate-phase <C3D|C4V|C4M|C4N|C4P|C4|C4H|C5|C6A|C6M|C6B> | --unit <C0A|C0B|C1|C1M|C1V|C1E|C1B|C2|C2M|C2B|C3P|C3V|C3M|C3PB|C3A|C3L|C3F|C3S|C3|C3R|C3Q|C3T|C3U|C3B|C3D|C4V|C4M|C4N|C4P|C4|C4H|C5|C6A|C6M|C6B> <--staged|--exact-staged|--receipt-manifest|--source-final-gate|--receipt-final-gate|--credential-scan|--source-authority-gate> | --self-test");
 	}
 	const specification = await loadSpecification();
 	if (process.argv[4] === "--source-authority-gate") {

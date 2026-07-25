@@ -149,14 +149,98 @@ function checkOrWrite(mode) {
   process.stdout.write(`P07 C1 semantic examples: Go-model exact (${built.execution.contract_execution_target_digest})\n`);
 }
 
+function assertExactDirectoryMode(directory, expected) {
+  const metadata = fs.lstatSync(directory);
+  assert.equal(metadata.isSymbolicLink(), false, `${directory} must not be a symlink`);
+  assert.equal(metadata.isDirectory(), true, `${directory} must be a directory`);
+  assert.equal(metadata.mode & 0o7777, expected, `${directory} mode drifted`);
+}
+
+function ensureExactDirectory(directory, expected = 0o700) {
+  try {
+    const prior = fs.lstatSync(directory);
+    assert.equal(prior.isSymbolicLink(), false, `${directory} must not be a symlink`);
+    assert.equal(prior.isDirectory(), true, `${directory} must be a directory`);
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+    fs.mkdirSync(directory, { recursive: true, mode: expected });
+  }
+  const prior = fs.lstatSync(directory);
+  assert.equal(prior.isSymbolicLink(), false, `${directory} must not be a symlink`);
+  assert.equal(prior.isDirectory(), true, `${directory} must be a directory`);
+  assert.equal(Number.isInteger(fs.constants.O_DIRECTORY), true, "O_DIRECTORY must be available");
+  assert.equal(Number.isInteger(fs.constants.O_NOFOLLOW), true, "O_NOFOLLOW must be available");
+  const descriptor = fs.openSync(
+    directory,
+    fs.constants.O_RDONLY | fs.constants.O_DIRECTORY | fs.constants.O_NOFOLLOW,
+  );
+  try {
+    const opened = fs.fstatSync(descriptor);
+    assert.equal(opened.isDirectory(), true, `${directory} opened target must be a directory`);
+    assert.equal(opened.dev, prior.dev, `${directory} directory device changed`);
+    assert.equal(opened.ino, prior.ino, `${directory} directory inode changed`);
+    fs.fchmodSync(descriptor, expected);
+    assert.equal(fs.fstatSync(descriptor).mode & 0o7777, expected, `${directory} opened mode drifted`);
+  } finally {
+    fs.closeSync(descriptor);
+  }
+  assertExactDirectoryMode(directory, expected);
+}
+
+function assertExactRegularMode(file, expected) {
+  const metadata = fs.lstatSync(file);
+  assert.equal(metadata.isSymbolicLink(), false, `${file} must not be a symlink`);
+  assert.equal(metadata.isFile(), true, `${file} must be a regular file`);
+  assert.equal(metadata.mode & 0o7777, expected, `${file} mode drifted`);
+}
+
+function writeExactFixtureFile(file, bytes, expected = 0o644, replace = false) {
+  let prior;
+  if (replace) {
+    prior = fs.lstatSync(file);
+    assert.equal(prior.isSymbolicLink(), false, `${file} replacement target must not be a symlink`);
+    assert.equal(prior.isFile(), true, `${file} replacement target must be a regular file`);
+  }
+  assert.equal(Number.isInteger(fs.constants.O_NOFOLLOW), true, "O_NOFOLLOW must be available");
+  const noFollow = fs.constants.O_NOFOLLOW;
+  const flags = replace
+    ? fs.constants.O_WRONLY | noFollow
+    : fs.constants.O_WRONLY | fs.constants.O_CREAT | fs.constants.O_EXCL | noFollow;
+  const descriptor = fs.openSync(file, flags, expected);
+  try {
+    const opened = fs.fstatSync(descriptor);
+    assert.equal(opened.isFile(), true, `${file} opened target must be regular`);
+    if (prior) {
+      assert.equal(opened.dev, prior.dev, `${file} replacement device changed`);
+      assert.equal(opened.ino, prior.ino, `${file} replacement inode changed`);
+    }
+    if (replace) fs.ftruncateSync(descriptor, 0);
+    fs.writeFileSync(descriptor, bytes);
+    fs.fchmodSync(descriptor, expected);
+    fs.fsyncSync(descriptor);
+    const finalOpened = fs.fstatSync(descriptor);
+    assert.equal(finalOpened.mode & 0o7777, expected, `${file} opened mode drifted`);
+  } finally {
+    fs.closeSync(descriptor);
+  }
+  assertExactRegularMode(file, expected);
+}
+
+function assertBundleModes(root, bundle) {
+  assertExactDirectoryMode(root, 0o700);
+  for (const entry of bundle.files) assertExactRegularMode(path.join(root, entry.path), 0o644);
+}
+
 function materialize(root, bundle) {
-  fs.mkdirSync(root, { recursive: true, mode: 0o700 });
+  ensureExactDirectory(root);
   for (const entry of bundle.files) {
     const bytes = Buffer.from(entry.content_base64, "base64");
     assert.equal(bytes.length, entry.byte_count);
     assert.equal(rawDigest(bytes), entry.byte_sha256);
-    fs.writeFileSync(path.join(root, entry.path), bytes, { mode: 0o644, flag: "wx" });
+    assert.equal(entry.mode, "100644", `${entry.path} logical mode drifted`);
+    writeExactFixtureFile(path.join(root, entry.path), bytes);
   }
+  assertBundleModes(root, bundle);
 }
 
 function runFixture(bundleRoot, targetRoot, runtimeRoot, runnerHome) {
@@ -184,13 +268,17 @@ function runFixture(bundleRoot, targetRoot, runtimeRoot, runnerHome) {
   });
 }
 
-function exercise() {
-  const { bundle } = buildExamples();
-  const parent = fs.mkdtempSync(path.join(os.tmpdir(), "countershape-p07-example-"));
+function exerciseAtUmask(bundle, mask) {
+  const previousUmask = process.umask(mask);
+  let parent;
   try {
+    parent = fs.mkdtempSync(path.join(os.tmpdir(), `countershape-p07-example-${mask.toString(8)}-`));
+    fs.chmodSync(parent, 0o700);
+    assertExactDirectoryMode(parent, 0o700);
     const target = path.join(parent, "prepared target");
     const targetFixture = path.join(target, "fixture");
-    fs.mkdirSync(targetFixture, { recursive: true, mode: 0o755 });
+    ensureExactDirectory(target);
+    ensureExactDirectory(targetFixture);
     const subject = `setTimeout(() => process.exit(70), 15_000).unref();\n` +
       `const chunks = [];\n` +
       `process.stdin.on("data", (chunk) => chunks.push(Buffer.from(chunk)));\n` +
@@ -199,39 +287,54 @@ function exercise() {
       `  process.stdout.write("ok\\n");\n` +
       `});\n` +
       `process.stdin.resume();\n`;
-    fs.writeFileSync(path.join(targetFixture, "subject.mjs"), subject, { mode: 0o644, flag: "wx" });
+    const subjectPath = path.join(targetFixture, "subject.mjs");
+    writeExactFixtureFile(subjectPath, Buffer.from(subject, "utf8"));
 
     const cleanBundle = path.join(parent, "clean bundle");
     const cleanRuntime = path.join(parent, "clean runtime");
     const cleanHome = path.join(parent, "clean home");
     materialize(cleanBundle, bundle);
-    fs.mkdirSync(cleanRuntime, { mode: 0o700 });
-    fs.mkdirSync(cleanHome, { mode: 0o700 });
+    ensureExactDirectory(cleanRuntime);
+    ensureExactDirectory(cleanHome);
     const passed = runFixture(cleanBundle, target, cleanRuntime, cleanHome);
     assert.equal(passed.status, 0, `runtime ContractBundle example failed:\n${passed.stdout}\n${passed.stderr}`);
     assert.equal(passed.stderr, "", "conforming runtime ContractBundle wrote outer stderr");
     assert.match(passed.stdout, /# COUNTERSHAPE_RESULT_V1\|CONFORMS\|NONE\n/u);
     assert.equal((passed.stdout.match(/COUNTERSHAPE_RESULT_V1/gu) ?? []).length, 1);
+    assertExactRegularMode(subjectPath, 0o644);
+    assertBundleModes(cleanBundle, bundle);
 
     const tampered = path.join(parent, "tampered bundle");
     const tamperedRuntime = path.join(parent, "tampered runtime");
     const tamperedHome = path.join(parent, "tampered home");
     materialize(tampered, bundle);
-    fs.mkdirSync(tamperedRuntime, { mode: 0o700 });
-    fs.mkdirSync(tamperedHome, { mode: 0o700 });
+    ensureExactDirectory(tamperedRuntime);
+    ensureExactDirectory(tamperedHome);
     const marker = path.join(parent, "tampered-harness-loaded");
     const hostileHarness = `import fs from "node:fs";\nfs.writeFileSync(${JSON.stringify(marker)}, "loaded");\n`;
-    fs.writeFileSync(path.join(tampered, "harness.mjs"), hostileHarness, { mode: 0o644 });
+    writeExactFixtureFile(path.join(tampered, "harness.mjs"), Buffer.from(hostileHarness, "utf8"), 0o644, true);
     const refused = runFixture(tampered, target, tamperedRuntime, tamperedHome);
     assert.notEqual(refused.status, 0, "companion tampering unexpectedly passed");
     assert.equal(refused.stderr, "", "tamper refusal wrote outer stderr");
     assert.match(refused.stdout, /# COUNTERSHAPE_RESULT_V1\|TAMPER_DETECTED\|COMPANION_INTEGRITY_MISMATCH\n/u);
     assert.equal((refused.stdout.match(/COUNTERSHAPE_RESULT_V1/gu) ?? []).length, 1);
     assert.equal(fs.existsSync(marker), false, "tampered companion loaded before manifest verification");
-    process.stdout.write("P07 planning example: real A2.2 bundle conformed and intact entrypoint refused companion tamper before harness load\n");
+    assertExactRegularMode(subjectPath, 0o644);
+    assertBundleModes(tampered, bundle);
   } finally {
-    fs.rmSync(parent, { recursive: true, force: true });
+    try {
+      if (parent !== undefined) fs.rmSync(parent, { recursive: true, force: true });
+    } finally {
+      process.umask(previousUmask);
+    }
   }
+}
+
+function exercise() {
+  const { bundle } = buildExamples();
+  exerciseAtUmask(bundle, 0o077);
+  exerciseAtUmask(bundle, 0o022);
+  process.stdout.write("P07 planning example: real A2.2 bundle conformed and intact entrypoint refused companion tamper before harness load; caller umasks 077 and 022 restored exact 0700 directories and 0644 files\n");
 }
 
 const arguments_ = process.argv.slice(2);

@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { lstat, readdir, realpath } from "node:fs/promises";
 import { arch, platform } from "node:os";
 import { join, relative, resolve, sep } from "node:path";
-import { pathToFileURL } from "node:url";
+import { fileURLToPath } from "node:url";
 
 import {
 	acquireVerificationLock,
@@ -530,6 +530,27 @@ async function main() {
 	}
 }
 
-if (process.argv[1] !== undefined && pathToFileURL(process.argv[1]).href === import.meta.url) {
+async function classifyEntry(entry) {
+	if (entry === undefined) return Object.freeze({ kind: "IMPORTED" });
+	const source = await realpath(fileURLToPath(import.meta.url));
+	let supplied;
+	try {
+		supplied = resolve(entry);
+		if (await realpath(supplied) !== source) return Object.freeze({ kind: "IMPORTED" });
+	} catch {
+		return Object.freeze({ kind: "IMPORTED" });
+	}
+	if (supplied === source) return Object.freeze({ kind: "CANONICAL", canonical: source, supplied });
+	return Object.freeze({ kind: "NONCANONICAL", canonical: source, supplied });
+}
+
+const entry = await classifyEntry(process.argv[1]);
+if (entry.kind === "NONCANONICAL") {
+	throw new VerificationError(
+		"VERIFY_NONCANONICAL_ENTRY",
+		`${JSON.stringify(entry.supplied)} != ${JSON.stringify(entry.canonical)}`,
+	);
+}
+if (entry.kind === "CANONICAL") {
 	await main();
 }
