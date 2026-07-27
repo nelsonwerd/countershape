@@ -1,6 +1,8 @@
 package main
 
 import (
+	bytespkg "bytes"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -21,6 +23,8 @@ const (
 	evidenceEnvironment      = "COUNTERSHAPE_EVIDENCE_ROOT"
 	attemptEnvironment       = "COUNTERSHAPE_ATTEMPT_ID"
 	originalGroupEnvironment = "COUNTERSHAPE_FIXTURE_ORIGINAL_PGID"
+	escapeProtocol           = "countershape/process-escape/v1"
+	escapeSelfLease          = 15 * time.Second
 )
 
 type options struct {
@@ -28,6 +32,65 @@ type options struct {
 	stdoutBytes int
 	stderrBytes int
 	exitCode    int
+}
+
+var errEscapeRecordPublishing = errors.New("coordinated escape record publication is incomplete")
+
+type escapePreparedRecord struct {
+	Protocol        string `json:"protocol"`
+	Phase           string `json:"phase"`
+	AttemptID       string `json:"attempt_id"`
+	Kind            string `json:"kind"`
+	PID             int    `json:"pid"`
+	OriginalGroupID int    `json:"original_process_group_id"`
+}
+
+type escapeAuthorizationRecord struct {
+	Protocol        string `json:"protocol"`
+	Phase           string `json:"phase"`
+	AttemptID       string `json:"attempt_id"`
+	Kind            string `json:"kind"`
+	PID             int    `json:"pid"`
+	OriginalGroupID int    `json:"original_process_group_id"`
+	PreparedSHA256  string `json:"prepared_sha256"`
+}
+
+type escapeReadyRecord struct {
+	Protocol            string `json:"protocol"`
+	Phase               string `json:"phase"`
+	AttemptID           string `json:"attempt_id"`
+	Kind                string `json:"kind"`
+	PID                 int    `json:"pid"`
+	OriginalGroupID     int    `json:"original_process_group_id"`
+	PreparedSHA256      string `json:"prepared_sha256"`
+	AuthorizationSHA256 string `json:"authorization_sha256"`
+	ProcessGroupID      int    `json:"process_group_id"`
+	SessionID           int    `json:"session_id"`
+}
+
+type escapeReleaseRecord struct {
+	Protocol            string `json:"protocol"`
+	Phase               string `json:"phase"`
+	AttemptID           string `json:"attempt_id"`
+	Kind                string `json:"kind"`
+	PID                 int    `json:"pid"`
+	OriginalGroupID     int    `json:"original_process_group_id"`
+	PreparedSHA256      string `json:"prepared_sha256"`
+	AuthorizationSHA256 string `json:"authorization_sha256"`
+	ReadySHA256         string `json:"ready_sha256"`
+}
+
+type escapeReleasedRecord struct {
+	Protocol            string `json:"protocol"`
+	Phase               string `json:"phase"`
+	AttemptID           string `json:"attempt_id"`
+	Kind                string `json:"kind"`
+	PID                 int    `json:"pid"`
+	OriginalGroupID     int    `json:"original_process_group_id"`
+	PreparedSHA256      string `json:"prepared_sha256"`
+	AuthorizationSHA256 string `json:"authorization_sha256"`
+	ReadySHA256         string `json:"ready_sha256"`
+	ReleaseSHA256       string `json:"release_sha256"`
 }
 
 func main() {
@@ -104,6 +167,10 @@ func main() {
 		spawnEscapeAndWait("escaped-child")
 	case "setpgid-escape":
 		spawnEscapeAndWait("escaped-group-child")
+	case "setsid-escape-coordinated":
+		spawnEscapeAndWait("escaped-child-coordinated")
+	case "setpgid-escape-coordinated":
+		spawnEscapeAndWait("escaped-group-child-coordinated")
 	case "escaped-child":
 		if _, err := syscall.Setsid(); err != nil {
 			fatal(err)
@@ -118,6 +185,10 @@ func main() {
 		writePID("escaped-group.pid")
 		writeEscapeIdentity("setpgid", "escaped-group.identity.json")
 		waitForever()
+	case "escaped-child-coordinated":
+		runCoordinatedEscape("setsid", "escaped-coordinated")
+	case "escaped-group-child-coordinated":
+		runCoordinatedEscape("setpgid", "escaped-group-coordinated")
 	default:
 		fatal(fmt.Errorf("unsupported mode %q", options.mode))
 	}
@@ -335,6 +406,224 @@ func writeEscapeIdentity(kind, name string) {
 	if err := os.WriteFile(filepath.Join(state, name), bytes, 0o600); err != nil {
 		fatal(err)
 	}
+}
+
+func runCoordinatedEscape(kind, stem string) {
+	state := os.Getenv(stateEnvironment)
+	attemptID := os.Getenv(attemptEnvironment)
+	originalGroup, err := strconv.Atoi(os.Getenv(originalGroupEnvironment))
+	if state == "" || attemptID == "" || err != nil || originalGroup <= 0 {
+		fatal(errors.New("coordinated escape received incomplete attempt authority"))
+	}
+	pid := os.Getpid()
+	if currentGroup := processGroupID(); pid <= 0 || currentGroup != originalGroup || currentGroup == pid {
+		fatal(errors.New("coordinated escape was not initially contained by the original process group"))
+	}
+	prepared := escapePreparedRecord{
+		Protocol: escapeProtocol, Phase: "prepared", AttemptID: attemptID,
+		Kind: kind, PID: pid, OriginalGroupID: originalGroup,
+	}
+	deadline := time.Now().Add(escapeSelfLease)
+	preparedBytes, err := publishEscapeRecord(state, stem+".prepared.json", prepared)
+	if err != nil {
+		fatal(err)
+	}
+	preparedDigest := escapeRecordDigest(preparedBytes)
+	var authorization escapeAuthorizationRecord
+	authorizationBytes, err := waitForEscapeRecord(
+		filepath.Join(state, stem+".authorization.json"), deadline, &authorization,
+	)
+	if err != nil {
+		return
+	}
+	if authorization != (escapeAuthorizationRecord{
+		Protocol: escapeProtocol, Phase: "authorized", AttemptID: attemptID,
+		Kind: kind, PID: pid, OriginalGroupID: originalGroup, PreparedSHA256: preparedDigest,
+	}) {
+		fatal(errors.New("coordinated escape authorization did not bind the prepared record"))
+	}
+	authorizationDigest := escapeRecordDigest(authorizationBytes)
+	sessionID := 0
+	switch kind {
+	case "setsid":
+		sessionID, err = syscall.Setsid()
+		if err != nil || sessionID != pid {
+			fatal(fmt.Errorf("coordinated setsid failed: session=%d err=%v", sessionID, err))
+		}
+	case "setpgid":
+		if err := syscall.Setpgid(0, 0); err != nil {
+			fatal(err)
+		}
+	default:
+		fatal(fmt.Errorf("unsupported coordinated escape kind %q", kind))
+	}
+	currentGroup := processGroupID()
+	if currentGroup != pid || currentGroup == originalGroup ||
+		(kind == "setsid" && sessionID != pid) {
+		fatal(fmt.Errorf(
+			"coordinated escape identity invalid: group=%d session=%d original=%d",
+			currentGroup, sessionID, originalGroup,
+		))
+	}
+	stdoutMarker := "countershape-coordinated-escape-" + kind + "-stdout\n"
+	stderrMarker := "countershape-coordinated-escape-" + kind + "-stderr\n"
+	if _, err := io.WriteString(os.Stdout, stdoutMarker); err != nil {
+		fatal(err)
+	}
+	if _, err := io.WriteString(os.Stderr, stderrMarker); err != nil {
+		fatal(err)
+	}
+	ready := escapeReadyRecord{
+		Protocol: escapeProtocol, Phase: "ready", AttemptID: attemptID,
+		Kind: kind, PID: pid, OriginalGroupID: originalGroup,
+		PreparedSHA256: preparedDigest, AuthorizationSHA256: authorizationDigest,
+		ProcessGroupID: currentGroup, SessionID: sessionID,
+	}
+	readyBytes, err := publishEscapeRecord(state, stem+".ready.json", ready)
+	if err != nil {
+		fatal(err)
+	}
+	var release escapeReleaseRecord
+	releaseBytes, err := waitForEscapeRecord(filepath.Join(state, stem+".release.json"), deadline, &release)
+	if err != nil {
+		return
+	}
+	if release != (escapeReleaseRecord{
+		Protocol: escapeProtocol, Phase: "release", AttemptID: attemptID,
+		Kind: kind, PID: pid, OriginalGroupID: originalGroup,
+		PreparedSHA256: preparedDigest, AuthorizationSHA256: authorizationDigest,
+		ReadySHA256: escapeRecordDigest(readyBytes),
+	}) {
+		fatal(errors.New("coordinated escape release did not bind the ready record"))
+	}
+	released := escapeReleasedRecord{
+		Protocol: escapeProtocol, Phase: "released", AttemptID: attemptID,
+		Kind: kind, PID: pid, OriginalGroupID: originalGroup,
+		PreparedSHA256: preparedDigest, AuthorizationSHA256: authorizationDigest,
+		ReadySHA256: escapeRecordDigest(readyBytes), ReleaseSHA256: escapeRecordDigest(releaseBytes),
+	}
+	if _, err := publishEscapeRecord(state, stem+".released.json", released); err != nil {
+		fatal(err)
+	}
+}
+
+func publishEscapeRecord(root, name string, value any) ([]byte, error) {
+	bytes, err := json.Marshal(value)
+	if err != nil {
+		return nil, err
+	}
+	finalPath := filepath.Join(root, name)
+	temporaryPath := filepath.Join(root, "."+name+"."+strconv.Itoa(os.Getpid())+".tmp")
+	handle, err := os.OpenFile(temporaryPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+	if err != nil {
+		return nil, err
+	}
+	removeTemporary := func() {
+		_ = os.Remove(temporaryPath)
+	}
+	if _, err := handle.Write(bytes); err != nil {
+		_ = handle.Close()
+		removeTemporary()
+		return nil, err
+	}
+	if err := handle.Sync(); err != nil {
+		_ = handle.Close()
+		removeTemporary()
+		return nil, err
+	}
+	if err := handle.Close(); err != nil {
+		removeTemporary()
+		return nil, err
+	}
+	if err := os.Link(temporaryPath, finalPath); err != nil {
+		removeTemporary()
+		return nil, err
+	}
+	if err := os.Remove(temporaryPath); err != nil {
+		return nil, err
+	}
+	directory, err := os.Open(root)
+	if err != nil {
+		return nil, err
+	}
+	syncErr := directory.Sync()
+	closeErr := directory.Close()
+	if err := errors.Join(syncErr, closeErr); err != nil {
+		return nil, err
+	}
+	info, err := os.Lstat(finalPath)
+	if err != nil {
+		return nil, err
+	}
+	stat, statOK := info.Sys().(*syscall.Stat_t)
+	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 || info.Mode().Perm() != 0o600 ||
+		!statOK || stat.Nlink != 1 {
+		return nil, fmt.Errorf("published coordinated escape record has invalid authority at %s", name)
+	}
+	published, err := os.ReadFile(finalPath)
+	if err != nil {
+		return nil, err
+	}
+	if !bytespkg.Equal(bytes, published) {
+		return nil, fmt.Errorf("published coordinated escape record drifted at %s", name)
+	}
+	return bytes, nil
+}
+
+func waitForEscapeRecord(path string, deadline time.Time, value any) ([]byte, error) {
+	var lastErr error
+	for {
+		bytes, err := readEscapeRecord(path, value)
+		if err == nil {
+			return bytes, nil
+		}
+		lastErr = err
+		if !errors.Is(err, os.ErrNotExist) && !errors.Is(err, errEscapeRecordPublishing) {
+			return nil, err
+		}
+		if !time.Now().Before(deadline) {
+			return nil, fmt.Errorf("timed out waiting for coordinated escape record %s: %w", filepath.Base(path), lastErr)
+		}
+		time.Sleep(time.Millisecond)
+	}
+}
+
+func readEscapeRecord(path string, value any) ([]byte, error) {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return nil, err
+	}
+	stat, statOK := info.Sys().(*syscall.Stat_t)
+	if info.Mode().IsRegular() && info.Mode()&os.ModeSymlink == 0 && info.Mode().Perm() == 0o600 &&
+		statOK && stat.Nlink == 2 {
+		return nil, errEscapeRecordPublishing
+	}
+	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 || info.Mode().Perm() != 0o600 ||
+		!statOK || stat.Nlink != 1 {
+		return nil, fmt.Errorf("coordinated escape record has invalid authority at %s", filepath.Base(path))
+	}
+	bytes, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	if len(bytes) == 0 || len(bytes) > 4096 {
+		return nil, fmt.Errorf("coordinated escape record size is invalid at %s", filepath.Base(path))
+	}
+	if err := json.Unmarshal(bytes, value); err != nil {
+		return nil, err
+	}
+	canonical, err := json.Marshal(value)
+	if err != nil {
+		return nil, err
+	}
+	if !bytespkg.Equal(bytes, canonical) {
+		return nil, fmt.Errorf("coordinated escape record is not canonical at %s", filepath.Base(path))
+	}
+	return bytes, nil
+}
+
+func escapeRecordDigest(bytes []byte) string {
+	return fmt.Sprintf("sha256:%x", sha256.Sum256(bytes))
 }
 
 func waitForStateFile(name string) {

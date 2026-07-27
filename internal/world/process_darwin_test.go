@@ -5,8 +5,10 @@ package world
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -34,6 +36,80 @@ type fixtureEscapeIdentity struct {
 	PID             int    `json:"pid"`
 	ProcessGroupID  int    `json:"process_group_id"`
 	OriginalGroupID int    `json:"original_process_group_id"`
+}
+
+const fixtureEscapeProtocol = "countershape/process-escape/v1"
+
+var errFixtureEscapeRecordPublishing = errors.New("coordinated escape record publication is incomplete")
+
+type fixtureEscapePreparedRecord struct {
+	Protocol        string `json:"protocol"`
+	Phase           string `json:"phase"`
+	AttemptID       string `json:"attempt_id"`
+	Kind            string `json:"kind"`
+	PID             int    `json:"pid"`
+	OriginalGroupID int    `json:"original_process_group_id"`
+}
+
+type fixtureEscapeAuthorizationRecord struct {
+	Protocol        string `json:"protocol"`
+	Phase           string `json:"phase"`
+	AttemptID       string `json:"attempt_id"`
+	Kind            string `json:"kind"`
+	PID             int    `json:"pid"`
+	OriginalGroupID int    `json:"original_process_group_id"`
+	PreparedSHA256  string `json:"prepared_sha256"`
+}
+
+type fixtureEscapeReadyRecord struct {
+	Protocol            string `json:"protocol"`
+	Phase               string `json:"phase"`
+	AttemptID           string `json:"attempt_id"`
+	Kind                string `json:"kind"`
+	PID                 int    `json:"pid"`
+	OriginalGroupID     int    `json:"original_process_group_id"`
+	PreparedSHA256      string `json:"prepared_sha256"`
+	AuthorizationSHA256 string `json:"authorization_sha256"`
+	ProcessGroupID      int    `json:"process_group_id"`
+	SessionID           int    `json:"session_id"`
+}
+
+type fixtureEscapeReleaseRecord struct {
+	Protocol            string `json:"protocol"`
+	Phase               string `json:"phase"`
+	AttemptID           string `json:"attempt_id"`
+	Kind                string `json:"kind"`
+	PID                 int    `json:"pid"`
+	OriginalGroupID     int    `json:"original_process_group_id"`
+	PreparedSHA256      string `json:"prepared_sha256"`
+	AuthorizationSHA256 string `json:"authorization_sha256"`
+	ReadySHA256         string `json:"ready_sha256"`
+}
+
+type fixtureEscapeReleasedRecord struct {
+	Protocol            string `json:"protocol"`
+	Phase               string `json:"phase"`
+	AttemptID           string `json:"attempt_id"`
+	Kind                string `json:"kind"`
+	PID                 int    `json:"pid"`
+	OriginalGroupID     int    `json:"original_process_group_id"`
+	PreparedSHA256      string `json:"prepared_sha256"`
+	AuthorizationSHA256 string `json:"authorization_sha256"`
+	ReadySHA256         string `json:"ready_sha256"`
+	ReleaseSHA256       string `json:"release_sha256"`
+}
+
+type fixtureEscapeCleanup struct {
+	once                sync.Once
+	err                 error
+	stateRoot           string
+	stem                string
+	prepared            fixtureEscapePreparedRecord
+	preparedSHA256      string
+	authorizationSHA256 string
+	readySHA256         string
+	ready               bool
+	leaseReapDeadline   time.Time
 }
 
 func resolvedPrivateTempDir(t *testing.T) string {
@@ -178,10 +254,52 @@ func runFixtureProcessWithStdin(
 	probe time.Duration,
 	teardown time.Duration,
 ) (physicalProcessResult, Roots) {
+	return runFixtureProcessWithStdinAndGroupOwnedBarrier(
+		t, ctx, executable, mode, extra, stdin, stdoutLimit, stderrLimit, probe, teardown, nil,
+	)
+}
+
+func runFixtureProcessWithGroupOwnedBarrier(
+	t *testing.T,
+	ctx context.Context,
+	executable string,
+	mode string,
+	extra []string,
+	stdoutLimit int64,
+	stderrLimit int64,
+	probe time.Duration,
+	teardown time.Duration,
+	onGroupOwned func(Roots) error,
+) (physicalProcessResult, Roots) {
+	return runFixtureProcessWithStdinAndGroupOwnedBarrier(
+		t, ctx, executable, mode, extra, processStdin{}, stdoutLimit, stderrLimit,
+		probe, teardown, onGroupOwned,
+	)
+}
+
+func runFixtureProcessWithStdinAndGroupOwnedBarrier(
+	t *testing.T,
+	ctx context.Context,
+	executable string,
+	mode string,
+	extra []string,
+	stdin processStdin,
+	stdoutLimit int64,
+	stderrLimit int64,
+	probe time.Duration,
+	teardown time.Duration,
+	onGroupOwned func(Roots) error,
+) (physicalProcessResult, Roots) {
 	t.Helper()
 	roots := processRoots(t)
 	logicalArgv := []string{"fixture", "--mode", mode}
 	logicalArgv = append(logicalArgv, extra...)
+	var barrier func() error
+	if onGroupOwned != nil {
+		barrier = func() error {
+			return onGroupOwned(roots)
+		}
+	}
 	result := runPlatformProcess(ctx, processRequest{
 		tool:              admittedFixtureTool(t, executable),
 		logicalArgv:       logicalArgv,
@@ -192,6 +310,7 @@ func runFixtureProcessWithStdin(
 		stderrLimit:       stderrLimit,
 		executionBudgetMS: probe.Milliseconds(),
 		teardownBudgetMS:  teardown.Milliseconds(),
+		onGroupOwned:      barrier,
 	})
 	return result, roots
 }
@@ -475,35 +594,134 @@ func TestProcessLifecycleControlsAndCleansDescendants(t *testing.T) {
 func TestProcessGroupAndSessionEscapesRemainExplicitExclusions(t *testing.T) {
 	executable := buildProcessFixture(t)
 	for _, fixture := range []struct {
-		name, mode, pidFile, identityFile, kind string
+		name, mode, stem, kind string
 	}{
-		{name: "setsid", mode: "setsid-escape", pidFile: "escaped.pid", identityFile: "escaped.identity.json", kind: "setsid"},
-		{name: "setpgid", mode: "setpgid-escape", pidFile: "escaped-group.pid", identityFile: "escaped-group.identity.json", kind: "setpgid"},
+		{name: "setsid", mode: "setsid-escape-coordinated", stem: "escaped-coordinated", kind: "setsid"},
+		{name: "setpgid", mode: "setpgid-escape-coordinated", stem: "escaped-group-coordinated", kind: "setpgid"},
 	} {
 		t.Run(fixture.name, func(t *testing.T) {
-			result, roots := runFixtureProcess(t, context.Background(), executable, fixture.mode, nil, 1024, 1024, 100*time.Millisecond, 300*time.Millisecond)
-			pidBytes, err := os.ReadFile(filepath.Join(roots.state, fixture.pidFile))
-			if err != nil {
-				t.Fatalf("escape fixture did not publish pid: %v", err)
+			var (
+				setupErr error
+				prepared fixtureEscapePreparedRecord
+				ready    fixtureEscapeReadyRecord
+				cleanup  *fixtureEscapeCleanup
+			)
+			result, _ := runFixtureProcessWithGroupOwnedBarrier(
+				t, context.Background(), executable, fixture.mode, nil,
+				1024, 1024, 100*time.Millisecond, 300*time.Millisecond,
+				func(roots Roots) error {
+					setupDeadline := time.Now().Add(10 * time.Second)
+					preparedDeadline := time.Now().Add(5 * time.Second)
+					preparedPath := filepath.Join(roots.state, fixture.stem+".prepared.json")
+					preparedBytes, err := waitForFixtureEscapeRecord(preparedPath, preparedDeadline, &prepared)
+					if err != nil {
+						setupErr = err
+						return err
+					}
+					if prepared.Protocol != fixtureEscapeProtocol || prepared.Phase != "prepared" ||
+						prepared.AttemptID != "attempt:test" || prepared.Kind != fixture.kind ||
+						prepared.PID <= 0 || prepared.OriginalGroupID <= 0 ||
+						prepared.PID == prepared.OriginalGroupID {
+						setupErr = fmt.Errorf("prepared record is incomplete: %+v", prepared)
+						return setupErr
+					}
+					cleanup = &fixtureEscapeCleanup{
+						stateRoot: roots.state, stem: fixture.stem, prepared: prepared,
+						preparedSHA256:    fixtureEscapeRecordDigest(preparedBytes),
+						leaseReapDeadline: time.Now().Add(17 * time.Second),
+					}
+					t.Cleanup(func() {
+						if err := cleanup.close(); err != nil {
+							t.Errorf("coordinated escape cleanup failed: %v", err)
+						}
+					})
+					preAuthorizationGroup, err := syscall.Getpgid(prepared.PID)
+					if err != nil || preAuthorizationGroup != prepared.OriginalGroupID {
+						setupErr = fmt.Errorf(
+							"prepared process left its original group before authorization: group=%d original=%d err=%v",
+							preAuthorizationGroup, prepared.OriginalGroupID, err,
+						)
+						return setupErr
+					}
+					authorization := fixtureEscapeAuthorizationRecord{
+						Protocol: fixtureEscapeProtocol, Phase: "authorized",
+						AttemptID: prepared.AttemptID, Kind: prepared.Kind,
+						PID: prepared.PID, OriginalGroupID: prepared.OriginalGroupID,
+						PreparedSHA256: cleanup.preparedSHA256,
+					}
+					authorizationBytes, err := publishFixtureEscapeRecord(
+						roots.state, fixture.stem+".authorization.json", authorization,
+					)
+					if err != nil {
+						setupErr = err
+						return err
+					}
+					cleanup.authorizationSHA256 = fixtureEscapeRecordDigest(authorizationBytes)
+					readyDeadline := time.Now().Add(5 * time.Second)
+					if readyDeadline.After(setupDeadline) {
+						readyDeadline = setupDeadline
+					}
+					readyPath := filepath.Join(roots.state, fixture.stem+".ready.json")
+					readyBytes, err := waitForFixtureEscapeRecord(readyPath, readyDeadline, &ready)
+					if err != nil {
+						setupErr = err
+						return err
+					}
+					if ready.Protocol != fixtureEscapeProtocol || ready.Phase != "ready" ||
+						ready.AttemptID != prepared.AttemptID || ready.Kind != prepared.Kind ||
+						ready.PID != prepared.PID || ready.OriginalGroupID != prepared.OriginalGroupID ||
+						ready.PreparedSHA256 != cleanup.preparedSHA256 ||
+						ready.AuthorizationSHA256 != cleanup.authorizationSHA256 ||
+						ready.ProcessGroupID != prepared.PID ||
+						(fixture.kind == "setsid" && ready.SessionID != prepared.PID) ||
+						(fixture.kind == "setpgid" && ready.SessionID != 0) {
+						setupErr = fmt.Errorf("ready record is incomplete: prepared=%+v ready=%+v", prepared, ready)
+						return setupErr
+					}
+					currentGroup, err := syscall.Getpgid(prepared.PID)
+					if err != nil || currentGroup != prepared.PID {
+						setupErr = fmt.Errorf(
+							"ready process was not independently observed in its escaped group: group=%d err=%v",
+							currentGroup, err,
+						)
+						return setupErr
+					}
+					if fixture.kind == "setsid" {
+						sessionID, err := syscall.Getsid(prepared.PID)
+						if err != nil || sessionID != prepared.PID {
+							setupErr = fmt.Errorf(
+								"ready process was not independently observed in its escaped session: session=%d err=%v",
+								sessionID, err,
+							)
+							return setupErr
+						}
+					}
+					cleanup.readySHA256 = fixtureEscapeRecordDigest(readyBytes)
+					cleanup.ready = true
+					return nil
+				},
+			)
+			if setupErr != nil {
+				t.Fatalf("coordinated escape setup failed: %v result=%+v", setupErr, result)
 			}
-			escapedPID, err := strconv.Atoi(string(pidBytes))
-			if err != nil || escapedPID <= 0 {
-				t.Fatalf("invalid escaped pid %q", pidBytes)
+			if cleanup == nil || !cleanup.ready {
+				t.Fatalf("coordinated escape setup returned without cleanup authority: %+v", result)
 			}
-			identityBytes, err := os.ReadFile(filepath.Join(roots.state, fixture.identityFile))
-			var identity fixtureEscapeIdentity
-			if err != nil || json.Unmarshal(identityBytes, &identity) != nil || identity.Kind != fixture.kind ||
-				identity.PID != escapedPID || identity.ProcessGroupID != escapedPID ||
-				identity.OriginalGroupID != result.processGroupID || identity.OriginalGroupID == identity.ProcessGroupID {
-				t.Fatalf("escape fixture identity is incomplete: bytes=%s identity=%+v err=%v result=%+v", identityBytes, identity, err, result)
-			}
-			t.Cleanup(func() {
-				_ = syscall.Kill(escapedPID, syscall.SIGKILL)
-			})
-			if result.primary != domain.ControlTimeout || !result.finalProbeClean || result.processGroupID == escapedPID {
+			stdout := []byte("countershape-coordinated-escape-" + fixture.kind + "-stdout\n")
+			stderr := []byte("countershape-coordinated-escape-" + fixture.kind + "-stderr\n")
+			if !result.physicalExecutionEntered || !result.spawnAttempted || !result.started ||
+				result.pid <= 0 || !result.processGroupOwned || result.processGroupID != result.pid ||
+				result.primary != domain.ControlTimeout || result.preTermProbe != preTermProbePresent ||
+				!result.termSent || !result.directChildWaited || !result.finalProbeClean ||
+				result.finalProbeError != "" || result.processGroupID != prepared.OriginalGroupID ||
+				result.processGroupID == prepared.PID {
 				t.Fatalf("original process-group result is malformed: %+v", result)
 			}
-			if !result.teardownError || !result.orphanRisk || result.stdoutDrained || result.stderrDrained {
+			if !bytes.Equal(result.stdout, stdout) || !bytes.Equal(result.stderr, stderr) ||
+				result.stdoutObserved != int64(len(stdout)) || result.stderrObserved != int64(len(stderr)) ||
+				result.stdoutOverflow || result.stderrOverflow ||
+				!result.teardownError || !result.orphanRisk || result.stdoutDrained || result.stderrDrained ||
+				result.diagnosticCode != "PIPE_DRAIN_DEADLINE" {
 				t.Fatalf("escaped inherited pipes should make bounded drains visibly incomplete and orphan-uncertain: %+v", result)
 			}
 			if processEscapeExclusion != "PROCESS_GROUP_OR_SESSION_ESCAPE_EXCLUDED_FROM_CONTAINMENT_CLAIM" {
@@ -512,13 +730,228 @@ func TestProcessGroupAndSessionEscapesRemainExplicitExclusions(t *testing.T) {
 			if processGroupReuseExclusion != "PRE_TERM_PROBE_AND_SIGNAL_ARE_NON_ATOMIC_PGID_REUSE_EXCLUDED_FROM_CLEANUP_CLAIM" {
 				t.Fatalf("process-group signal boundary changed: %q", processGroupReuseExclusion)
 			}
-			if err := syscall.Kill(escapedPID, 0); err != nil {
-				t.Fatalf("escaped child was not demonstrably outside the original group: %v", err)
+			currentGroup, err := syscall.Getpgid(prepared.PID)
+			if err != nil || currentGroup != prepared.PID || ready.ProcessGroupID != currentGroup {
+				t.Fatalf(
+					"escaped child was not demonstrably outside the original group after teardown: group=%d ready=%+v err=%v",
+					currentGroup, ready, err,
+				)
 			}
-			if err := syscall.Kill(escapedPID, syscall.SIGKILL); err != nil && !errors.Is(err, syscall.ESRCH) {
-				t.Fatalf("out-of-band cleanup of explicit exclusion failed: %v", err)
+			if fixture.kind == "setsid" {
+				sessionID, err := syscall.Getsid(prepared.PID)
+				if err != nil || sessionID != prepared.PID || ready.SessionID != sessionID {
+					t.Fatalf(
+						"escaped child was not demonstrably outside the original session after teardown: session=%d ready=%+v err=%v",
+						sessionID, ready, err,
+					)
+				}
+			}
+			if err := cleanup.close(); err != nil {
+				t.Fatalf("coordinated escape release failed: %v", err)
 			}
 		})
+	}
+}
+
+func publishFixtureEscapeRecord(root, name string, value any) ([]byte, error) {
+	raw, err := json.Marshal(value)
+	if err != nil {
+		return nil, err
+	}
+	finalPath := filepath.Join(root, name)
+	temporaryPath := filepath.Join(root, "."+name+"."+strconv.Itoa(os.Getpid())+".tmp")
+	handle, err := os.OpenFile(temporaryPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
+	if err != nil {
+		return nil, err
+	}
+	removeTemporary := func() {
+		_ = os.Remove(temporaryPath)
+	}
+	if _, err := handle.Write(raw); err != nil {
+		_ = handle.Close()
+		removeTemporary()
+		return nil, err
+	}
+	if err := handle.Sync(); err != nil {
+		_ = handle.Close()
+		removeTemporary()
+		return nil, err
+	}
+	if err := handle.Close(); err != nil {
+		removeTemporary()
+		return nil, err
+	}
+	if err := os.Link(temporaryPath, finalPath); err != nil {
+		removeTemporary()
+		return nil, err
+	}
+	if err := os.Remove(temporaryPath); err != nil {
+		return nil, err
+	}
+	directory, err := os.Open(root)
+	if err != nil {
+		return nil, err
+	}
+	if err := errors.Join(directory.Sync(), directory.Close()); err != nil {
+		return nil, err
+	}
+	info, err := os.Lstat(finalPath)
+	if err != nil {
+		return nil, err
+	}
+	stat, statOK := info.Sys().(*syscall.Stat_t)
+	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 || info.Mode().Perm() != 0o600 ||
+		!statOK || stat.Nlink != 1 {
+		return nil, fmt.Errorf("published coordinated escape record has invalid authority at %s", name)
+	}
+	published, err := os.ReadFile(finalPath)
+	if err != nil {
+		return nil, err
+	}
+	if !bytes.Equal(raw, published) {
+		return nil, fmt.Errorf("published coordinated escape record drifted at %s", name)
+	}
+	return raw, nil
+}
+
+func waitForFixtureEscapeRecord(path string, deadline time.Time, value any) ([]byte, error) {
+	var lastErr error
+	for {
+		bytes, err := readFixtureEscapeRecord(path, value)
+		if err == nil {
+			return bytes, nil
+		}
+		lastErr = err
+		if !errors.Is(err, os.ErrNotExist) && !errors.Is(err, errFixtureEscapeRecordPublishing) {
+			return nil, err
+		}
+		if !time.Now().Before(deadline) {
+			return nil, fmt.Errorf(
+				"timed out waiting for coordinated escape record %s: %w",
+				filepath.Base(path), lastErr,
+			)
+		}
+		time.Sleep(time.Millisecond)
+	}
+}
+
+func readFixtureEscapeRecord(path string, value any) ([]byte, error) {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return nil, err
+	}
+	stat, statOK := info.Sys().(*syscall.Stat_t)
+	if info.Mode().IsRegular() && info.Mode()&os.ModeSymlink == 0 && info.Mode().Perm() == 0o600 &&
+		statOK && stat.Nlink == 2 {
+		return nil, errFixtureEscapeRecordPublishing
+	}
+	if !info.Mode().IsRegular() || info.Mode()&os.ModeSymlink != 0 || info.Mode().Perm() != 0o600 ||
+		!statOK || stat.Nlink != 1 {
+		return nil, fmt.Errorf("coordinated escape record has invalid authority at %s", filepath.Base(path))
+	}
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	if len(raw) == 0 || len(raw) > 4096 {
+		return nil, fmt.Errorf("coordinated escape record size is invalid at %s", filepath.Base(path))
+	}
+	if err := json.Unmarshal(raw, value); err != nil {
+		return nil, err
+	}
+	canonical, err := json.Marshal(value)
+	if err != nil {
+		return nil, err
+	}
+	if !bytes.Equal(raw, canonical) {
+		return nil, fmt.Errorf("coordinated escape record is not canonical at %s", filepath.Base(path))
+	}
+	return raw, nil
+}
+
+func fixtureEscapeRecordDigest(bytes []byte) string {
+	return fmt.Sprintf("sha256:%x", sha256.Sum256(bytes))
+}
+
+func (cleanup *fixtureEscapeCleanup) close() error {
+	if cleanup == nil {
+		return errors.New("coordinated escape cleanup authority is nil")
+	}
+	cleanup.once.Do(func() {
+		cleanup.err = cleanup.closeOnce()
+	})
+	return cleanup.err
+}
+
+func (cleanup *fixtureEscapeCleanup) closeOnce() error {
+	var releaseErr, acknowledgementErr error
+	if cleanup.ready {
+		release := fixtureEscapeReleaseRecord{
+			Protocol: fixtureEscapeProtocol, Phase: "release",
+			AttemptID: cleanup.prepared.AttemptID, Kind: cleanup.prepared.Kind,
+			PID: cleanup.prepared.PID, OriginalGroupID: cleanup.prepared.OriginalGroupID,
+			PreparedSHA256:      cleanup.preparedSHA256,
+			AuthorizationSHA256: cleanup.authorizationSHA256,
+			ReadySHA256:         cleanup.readySHA256,
+		}
+		releaseBytes, err := publishFixtureEscapeRecord(
+			cleanup.stateRoot, cleanup.stem+".release.json", release,
+		)
+		if err != nil {
+			releaseErr = fmt.Errorf("publish release: %w", err)
+		} else {
+			var released fixtureEscapeReleasedRecord
+			_, err := waitForFixtureEscapeRecord(
+				filepath.Join(cleanup.stateRoot, cleanup.stem+".released.json"),
+				cleanup.leaseReapDeadline,
+				&released,
+			)
+			if err != nil {
+				acknowledgementErr = fmt.Errorf("await release acknowledgement: %w", err)
+			} else {
+				expected := fixtureEscapeReleasedRecord{
+					Protocol: fixtureEscapeProtocol, Phase: "released",
+					AttemptID: cleanup.prepared.AttemptID, Kind: cleanup.prepared.Kind,
+					PID: cleanup.prepared.PID, OriginalGroupID: cleanup.prepared.OriginalGroupID,
+					PreparedSHA256:      cleanup.preparedSHA256,
+					AuthorizationSHA256: cleanup.authorizationSHA256,
+					ReadySHA256:         cleanup.readySHA256,
+					ReleaseSHA256:       fixtureEscapeRecordDigest(releaseBytes),
+				}
+				if released != expected {
+					acknowledgementErr = fmt.Errorf(
+						"release acknowledgement did not bind the release record: got=%+v want=%+v",
+						released, expected,
+					)
+				}
+			}
+		}
+	}
+	var absenceErr error
+	if err := waitForFixturePIDAbsence(cleanup.prepared.PID, cleanup.leaseReapDeadline); err != nil {
+		absenceErr = fmt.Errorf(
+			"coordinated escape remained beyond its self-lease and reap grace without identity-safe cleanup: %w",
+			err,
+		)
+	}
+	return errors.Join(releaseErr, acknowledgementErr, absenceErr)
+}
+
+func waitForFixturePIDAbsence(pid int, deadline time.Time) error {
+	var lastErr error
+	for {
+		err := syscall.Kill(pid, 0)
+		if errors.Is(err, syscall.ESRCH) {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		lastErr = fmt.Errorf("pid %d is still present", pid)
+		if !time.Now().Before(deadline) {
+			return lastErr
+		}
+		time.Sleep(time.Millisecond)
 	}
 }
 

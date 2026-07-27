@@ -12,6 +12,7 @@ import {
 	realpathSync,
 	rmSync,
 	statSync,
+	symlinkSync,
 	writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
@@ -242,9 +243,10 @@ function readBundleFiles() {
 }
 
 function runScenario(node, sourceFiles, scenario, repeatProfile) {
-	const root = mkdtempSync(join(realpathSync(tmpdir()), "countershape-a2-surface-"));
-	chmodSync(root, 0o700);
+	let root;
 	try {
+		root = mkdtempSync(join(realpathSync(tmpdir()), "countershape-a2-surface-"));
+		chmodSync(root, 0o700);
 		const bundleRoot = join(root, "bundle");
 		const targetRoot = join(root, "target");
 		const runtimeRoot = join(root, "runtime");
@@ -282,7 +284,8 @@ function runScenario(node, sourceFiles, scenario, repeatProfile) {
 		);
 		assert.equal(run.error, undefined, `${scenario.id}: runner error`);
 		assert.equal(run.signal, null, `${scenario.id}: runner signal`);
-		assert.equal(run.status, scenario.exitCode, `${scenario.id}: exit code`);
+		const resultMarkers = run.stdout.toString("utf8").match(/# COUNTERSHAPE_RESULT_V1\|[A-Z_]+\|[A-Z_]+\n/gu) ?? [];
+		assert.equal(run.status, scenario.exitCode, `${scenario.id}: exit code markers=${JSON.stringify(resultMarkers)}`);
 		assert.equal(Buffer.isBuffer(run.stdout), true, `${scenario.id}: stdout bytes`);
 		assert.equal(Buffer.isBuffer(run.stderr), true, `${scenario.id}: stderr bytes`);
 		assert.equal(run.stderr.length, 0, `${scenario.id}: outer stderr`);
@@ -292,8 +295,10 @@ function runScenario(node, sourceFiles, scenario, repeatProfile) {
 		assert.deepEqual(readdirSync(home), [], `${scenario.id}: home residue`);
 		return stableCLIRecord(scenario, run.stdout, run.stderr, run.status, run.signal);
 	} finally {
-		rmSync(root, { recursive: true, force: true });
-		assert.equal(lstatExists(root), false, `${scenario.id}: capture root survived cleanup`);
+		if (root !== undefined) {
+			rmSync(root, { recursive: true, force: true });
+			assert.equal(lstatExists(root), false, `${scenario.id}: capture root survived cleanup`);
+		}
 	}
 }
 
@@ -356,11 +361,12 @@ function assertVariantPrerequisites(sourceFiles, files, scenario) {
 function writeExactFile(path, bytes, mode) {
 	const exact = Buffer.isBuffer(bytes) ? bytes : Buffer.from(bytes, "utf8");
 	writeFileSync(path, exact, { flag: "wx", mode });
+	chmodSync(path, mode);
 	const info = lstatSync(path);
 	assert.equal(info.isFile(), true, `${path}: not a regular file after write`);
 	assert.equal(info.isSymbolicLink(), false, `${path}: became a symlink`);
 	assert.equal(info.nlink, 1, `${path}: unexpected link count`);
-	assert.equal(info.mode & 0o777, mode, `${path}: mode drifted`);
+	assert.equal(info.mode & 0o7777, mode, `${path}: mode drifted`);
 	assert.deepEqual(readFileSync(path), exact, `${path}: bytes drifted`);
 }
 
@@ -701,6 +707,100 @@ function selfTest() {
 		rmSync(cleanupRoot, { recursive: true, force: true });
 	}
 	assert.equal(lstatExists(cleanupRoot), false, "capture-failure cleanup left a root");
+	selfTestExactFileWriter();
+}
+
+function selfTestExactFileWriter() {
+	const originalUmask = process.umask();
+	let root;
+	try {
+		root = mkdtempSync(join(realpathSync(tmpdir()), "countershape-a2-mode-selftest-"));
+		chmodSync(root, 0o700);
+		for (const mask of [0o077, 0o022]) {
+			const maskRoot = join(root, `umask-${mask.toString(8)}`);
+			mkdirSync(maskRoot, { mode: 0o700 });
+			chmodSync(maskRoot, 0o700);
+			const previousUmask = process.umask(mask);
+			try {
+				const exactPath = join(maskRoot, "exact.txt");
+				const exactBytes = Buffer.from(`exact-${mask.toString(8)}\n`, "utf8");
+				writeExactFile(exactPath, exactBytes, 0o644);
+				assert.deepEqual(readFileSync(exactPath), exactBytes, `${mask.toString(8)}: exact bytes drifted`);
+				assert.equal(lstatSync(exactPath).mode & 0o7777, 0o644, `${mask.toString(8)}: exact mode drifted`);
+
+				const regularPath = join(maskRoot, "existing.txt");
+				const regularBytes = Buffer.from(`existing-${mask.toString(8)}\n`, "utf8");
+				const regularMode = mask === 0o077 ? 0o600 : 0o755;
+				writeFileSync(regularPath, regularBytes, { flag: "wx", mode: regularMode });
+				chmodSync(regularPath, regularMode);
+				assert.throws(
+					() => writeExactFile(regularPath, Buffer.from("replacement\n", "utf8"), 0o644),
+					(error) => error?.code === "EEXIST",
+					`${mask.toString(8)}: existing regular file was not refused`,
+				);
+				assert.deepEqual(readFileSync(regularPath), regularBytes, `${mask.toString(8)}: existing bytes changed`);
+				assert.equal(lstatSync(regularPath).mode & 0o7777, regularMode, `${mask.toString(8)}: existing mode changed`);
+
+				const sentinelPath = join(maskRoot, "sentinel.txt");
+				const sentinelBytes = Buffer.from(`sentinel-${mask.toString(8)}\n`, "utf8");
+				writeFileSync(sentinelPath, sentinelBytes, { flag: "wx", mode: 0o600 });
+				chmodSync(sentinelPath, 0o600);
+				const linkPath = join(maskRoot, "existing-link");
+				symlinkSync(sentinelPath, linkPath);
+				assert.throws(
+					() => writeExactFile(linkPath, Buffer.from("replacement\n", "utf8"), 0o644),
+					(error) => error?.code === "EEXIST",
+					`${mask.toString(8)}: existing symlink was not refused`,
+				);
+				assert.equal(lstatSync(linkPath).isSymbolicLink(), true, `${mask.toString(8)}: symlink changed`);
+				assert.deepEqual(readFileSync(sentinelPath), sentinelBytes, `${mask.toString(8)}: symlink target bytes changed`);
+				assert.equal(lstatSync(sentinelPath).mode & 0o7777, 0o600, `${mask.toString(8)}: symlink target mode changed`);
+
+				const directoryPath = join(maskRoot, "existing-directory");
+				mkdirSync(directoryPath, { mode: 0o700 });
+				chmodSync(directoryPath, 0o700);
+				assert.throws(
+					() => writeExactFile(directoryPath, Buffer.from("replacement\n", "utf8"), 0o644),
+					(error) => error?.code === "EEXIST",
+					`${mask.toString(8)}: existing directory was not refused`,
+				);
+				assert.equal(lstatSync(directoryPath).isDirectory(), true, `${mask.toString(8)}: directory changed`);
+				assert.equal(lstatSync(directoryPath).mode & 0o7777, 0o700, `${mask.toString(8)}: directory mode changed`);
+			} finally {
+				process.umask(previousUmask);
+			}
+			assert.equal(process.umask(), originalUmask, `${mask.toString(8)}: caller umask was not restored`);
+		}
+
+		const partialRoot = join(root, "partial-failure");
+		mkdirSync(partialRoot, { mode: 0o700 });
+		chmodSync(partialRoot, 0o700);
+		const previousUmask = process.umask(0o077);
+		try {
+			writeExactFile(join(partialRoot, "first.txt"), Buffer.from("first\n", "utf8"), 0o644);
+			mkdirSync(join(partialRoot, "collision"), { mode: 0o700 });
+			assert.throws(
+				() => writeExactFile(join(partialRoot, "collision"), Buffer.from("second\n", "utf8"), 0o644),
+				(error) => error?.code === "EEXIST",
+				"partial fixture collision was not refused",
+			);
+		} finally {
+			try {
+				rmSync(partialRoot, { recursive: true, force: true });
+			} finally {
+				process.umask(previousUmask);
+			}
+		}
+		assert.equal(lstatExists(partialRoot), false, "partial fixture survived failure cleanup");
+		assert.equal(process.umask(), originalUmask, "caller umask was not restored after partial failure");
+	} finally {
+		try {
+			if (root !== undefined) rmSync(root, { recursive: true, force: true });
+		} finally {
+			process.umask(originalUmask);
+		}
+	}
+	if (root !== undefined) assert.equal(lstatExists(root), false, "mode self-test root survived cleanup");
 }
 
 function tapSample(pass, duration, root, outcome, reason) {

@@ -1,5 +1,5 @@
 {
-  "schema_version": "countershape/p07b-c-unit-paths/v21",
+  "schema_version": "countershape/p07b-c-unit-paths/v22",
   "units": {
     "C0A": {
       "exact": [
@@ -824,6 +824,32 @@
       },
       "verification_profile": "SOURCE_FULL"
     },
+    "C4I": {
+      "exact": [
+        "docs/HANDOFF_MODE_C.md",
+        "docs/PROMPT_PACK.md",
+        "docs/THREAT_MODEL.md",
+        "docs/VERIFICATION.md",
+        "docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md",
+        "docs/status/P07B-C-C4I-A2-AST-STABILITY-MAINTENANCE.md",
+        "internal/world/process_darwin_test.go",
+        "spec/verification/p07b-c-unit-paths.json",
+        "testkit/processfixture/main.go",
+        "tools/capture-p07b-a2-human-surface.mjs",
+        "tools/check-p07b-a2-architecture-selftest.mjs",
+        "tools/check-p07b-a2-architecture.mjs",
+        "tools/check-p07b-c-plan.mjs",
+        "tools/check-p07b-c-unit-scope.mjs"
+      ],
+      "parent": "C4H",
+      "prefixes": [],
+      "receipt_states": {
+        "C3P": "PRESENT",
+        "C3": "PRESENT",
+        "C6A": "ABSENT"
+      },
+      "verification_profile": "SOURCE_FULL"
+    },
     "C5": {
       "exact": [
         "docs/ARCHITECTURE.md",
@@ -839,7 +865,7 @@
         "tools/verify-current-selftest.mjs",
         "tools/verify-current.mjs"
       ],
-      "parent": "C4H",
+      "parent": "C4I",
       "prefixes": [
         "internal/contractexec/http/",
         "internal/contractexec/scope/",

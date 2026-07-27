@@ -166,7 +166,7 @@ const javascriptProfiles = Object.freeze([
 	Object.freeze({
 		path: "tools/capture-p07b-a2-human-surface.mjs",
 		digestCode: "P07B_A2_HUMAN_CAPTURE_DIGEST",
-		rawSHA256: "sha256:1f0d14b97c28e2ef5b85bcebc2841234dc86b3ce76469dc9f3998556c3b6b419",
+		rawSHA256: "sha256:28744ca026cf9b67bc451a44d5bd0548dff249b3ad7e12724276bf3544b2cc4e",
 		shallowAST: true,
 		staticImports: Object.freeze([
 			"node:assert/strict", "node:child_process", "node:crypto", "node:fs", "node:os", "node:path", "node:url", "node:util",
@@ -178,7 +178,8 @@ const javascriptProfiles = Object.freeze([
 			"node:fs|named|mkdtempSync|mkdtempSync", "node:fs|named|readFileSync|readFileSync",
 			"node:fs|named|readdirSync|readdirSync", "node:fs|named|realpathSync|realpathSync",
 			"node:fs|named|rmSync|rmSync", "node:fs|named|statSync|statSync",
-			"node:fs|named|writeFileSync|writeFileSync", "node:os|named|tmpdir|tmpdir",
+			"node:fs|named|symlinkSync|symlinkSync", "node:fs|named|writeFileSync|writeFileSync",
+			"node:os|named|tmpdir|tmpdir",
 			"node:path|named|dirname|dirname", "node:path|named|isAbsolute|isAbsolute",
 			"node:path|named|join|join", "node:path|named|resolve|resolve",
 			"node:url|named|fileURLToPath|fileURLToPath", "node:util|named|TextDecoder|TextDecoder",
@@ -1969,6 +1970,18 @@ function inspectJavaScriptAST(entries) {
 	try {
 		const parsed = JSON.parse(result.stdout);
 		if (!Array.isArray(parsed) || parsed.length !== entries.length) throw new Error("row count");
+		const requestedPaths = entries.map((entry) => entry.path);
+		const actualPaths = parsed.map((entry, index) => {
+			if (!entry || typeof entry !== "object" || Array.isArray(entry) || typeof entry.path !== "string") {
+				throw new Error(`malformed row ${index}`);
+			}
+			return entry.path;
+		});
+		if (new Set(actualPaths).size !== actualPaths.length ||
+			JSON.stringify(actualPaths) !== JSON.stringify(requestedPaths)) {
+			throw new Error(`row paths ${JSON.stringify(actualPaths)} != ${JSON.stringify(requestedPaths)}`);
+		}
+		if (fixtureOverride) process.stderr.write(`P07B_A2_JS_AST_ROWS ${JSON.stringify(actualPaths)}\n`);
 		return new Map(parsed.map((entry) => [entry.path, entry]));
 	} catch (error) {
 		throw new ArchitectureError("P07B_A2_JS_AST_QUERY_FAILED", error.message);
@@ -1997,21 +2010,22 @@ async function inspectJavaScriptArchitecture() {
 	const violations = [];
 	const add = (condition, code, detail) => { if (condition) violations.push([code, detail]); };
 	const entries = new Map();
-	let profiledBytesExact = true;
+	const driftedEntries = [];
 	for (const profile of javascriptProfiles) {
 		const bytes = await readRegular(profile.path);
 		const source = utf8(bytes, profile.path);
 		const entry = { path: profile.path, bytes, source, shallowAST: profile.shallowAST === true };
 		entries.set(profile.path, entry);
 		const actualDigest = `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
-		if (actualDigest !== profile.rawSHA256) profiledBytesExact = false;
+		if (actualDigest !== profile.rawSHA256) driftedEntries.push(entry);
 		add(actualDigest !== profile.rawSHA256, profile.digestCode, `${profile.path}:${actualDigest}`);
 	}
-	let shapes;
-	if (!profiledBytesExact) {
-		shapes = inspectJavaScriptAST([...entries.values()]);
+	let shapes = new Map();
+	if (driftedEntries.length > 0) {
+		shapes = inspectJavaScriptAST(driftedEntries);
 		for (const profile of javascriptProfiles) {
 			const shape = shapes.get(profile.path);
+			if (!shape) continue;
 			const dynamic = shape.dynamicImports.map((edge) => edge.value).sort();
 			add(JSON.stringify(shape.staticImports) !== JSON.stringify([...profile.staticImports].sort()),
 				"P07B_A2_JS_IMPORT_ROSTER", `${profile.path}:${shape.staticImports.join(",")}`);
@@ -2069,25 +2083,27 @@ async function inspectJavaScriptArchitecture() {
 		"P07B_A2_FIXED_ASSET_VALIDATION_DATAFLOW", "Bytes/RawSHA256 must share one literal-pin validator");
 	add(rawBody.includes("sha256.Sum256") || rawBody.includes("hex.EncodeToString") || !compactRawBody.includes("returnreviewed,nil"),
 		"P07B_A2_FIXED_ASSET_SELF_DERIVED", "RawSHA256 must return the reviewed pin only after shared validation");
-	if (profiledBytesExact) return violations;
+	if (driftedEntries.length === 0) return violations;
 
 	const contract = shapes.get(javascriptProfiles[0].path);
 	const harness = shapes.get(javascriptProfiles[1].path);
 	const runner = shapes.get(javascriptProfiles[2].path);
-	const dynamicIndex = contract.dynamicImports[0]?.start ?? -1;
-	const manifestIndex = contract.calls.find((call) => call.callee === "parseManifestEnvelope")?.start ?? -1;
-	const verifyIndex = contract.calls.filter((call) => call.callee === "verified.set").at(-1)?.start ?? -1;
-	add(dynamicIndex < 0 || manifestIndex < 0 || verifyIndex < 0 || dynamicIndex <= manifestIndex || dynamicIndex <= verifyIndex,
-		"P07B_A2_ENTRYPOINT_VERIFY_BEFORE_IMPORT", `${manifestIndex}/${verifyIndex}/${dynamicIndex}`);
-	const entrypointFlow = contract.entrypointFlows[0];
-	add(contract.entrypointFlows.length !== 1 || entrypointFlow.dynamicImportIndexes.length !== 1 ||
-		entrypointFlow.manifestIndexes.length !== 1 || entrypointFlow.verifyIndexes.length !== 1 ||
-		entrypointFlow.dynamicImportIndexes[0] <= entrypointFlow.manifestIndexes[0] ||
-		entrypointFlow.dynamicImportIndexes[0] <= entrypointFlow.verifyIndexes[0],
-	"P07B_A2_ENTRYPOINT_VERIFY_BEFORE_IMPORT", JSON.stringify(contract.entrypointFlows));
-	add(contract.calls.filter((call) => call.callee === "process.cwd").length !== 1 ||
-		contract.members.some((member) => member === "process.env" || member === "process.argv"),
-	"P07B_A2_ENTRYPOINT_RUNTIME_SURFACE", "entrypoint may capture only the initial target cwd");
+	if (contract) {
+		const dynamicIndex = contract.dynamicImports[0]?.start ?? -1;
+		const manifestIndex = contract.calls.find((call) => call.callee === "parseManifestEnvelope")?.start ?? -1;
+		const verifyIndex = contract.calls.filter((call) => call.callee === "verified.set").at(-1)?.start ?? -1;
+		add(dynamicIndex < 0 || manifestIndex < 0 || verifyIndex < 0 || dynamicIndex <= manifestIndex || dynamicIndex <= verifyIndex,
+			"P07B_A2_ENTRYPOINT_VERIFY_BEFORE_IMPORT", `${manifestIndex}/${verifyIndex}/${dynamicIndex}`);
+		const entrypointFlow = contract.entrypointFlows[0];
+		add(contract.entrypointFlows.length !== 1 || entrypointFlow.dynamicImportIndexes.length !== 1 ||
+				entrypointFlow.manifestIndexes.length !== 1 || entrypointFlow.verifyIndexes.length !== 1 ||
+				entrypointFlow.dynamicImportIndexes[0] <= entrypointFlow.manifestIndexes[0] ||
+				entrypointFlow.dynamicImportIndexes[0] <= entrypointFlow.verifyIndexes[0],
+			"P07B_A2_ENTRYPOINT_VERIFY_BEFORE_IMPORT", JSON.stringify(contract.entrypointFlows));
+		add(contract.calls.filter((call) => call.callee === "process.cwd").length !== 1 ||
+				contract.members.some((member) => member === "process.env" || member === "process.argv"),
+			"P07B_A2_ENTRYPOINT_RUNTIME_SURFACE", "entrypoint may capture only the initial target cwd");
+	}
 
 	const expectedOptionKeys = ["argv0", "cwd", "detached", "env", "shell", "stdio"];
 	const validSpawn = (spawn, index) => spawn.executable?.kind === "path" && spawn.executable.value === "process.execPath" &&
@@ -2097,57 +2113,64 @@ async function inspectJavaScriptArchitecture() {
 		spawn.options.env?.kind === "path" && spawn.options.env.value === "environment" &&
 		spawn.options.shell?.kind === "literal" && spawn.options.shell.value === false &&
 		spawn.options.detached?.kind === "literal" && spawn.options.detached.value === true &&
-		(index === 0 ? spawn.argv?.kind === "path" && spawn.argv.value === "contract.runtime.argv" :
-			spawn.argv?.kind === "array" && spawn.argv.values?.length === 1 &&
-			spawn.argv.values[0]?.kind === "path" && spawn.argv.values[0].value === "contract.source.entrypoint") &&
-		spawn.options.stdio?.kind === "array" && spawn.options.stdio.values?.length === (index === 0 ? 3 : 4);
-	add(harness.spawns.length !== 2 || harness.spawns.some((spawn, index) => !validSpawn(spawn, index)) ||
-		harness.spawnAliases.length !== 0 || harness.calls.filter((call) => call.callee === "spawn").length !== 2,
-		"P07B_A2_JS_SPAWN_PROFILE", JSON.stringify(harness.spawns));
-	add(harness.spawns.some((spawn) => spawn.options.cwd?.value !== "roots.candidate"),
-		"P07B_A2_DIRECT_TARGET_EXECUTION", "spawn cwd may only be the private copied candidate root");
-	add(harness.members.some((member) => ["process.env", "process.argv", "process.cwd", "process.getBuiltinModule"].includes(member)) ||
-		harness.calls.some((call) => ["eval", "Function", "fetch", "globalThis.fetch"].includes(call.callee)),
-	"P07B_A2_JS_CAPABILITY_OPENING", "ambient process or dynamic-code surface in fixed harness");
-	add(harness.identifiers.some((identifier) => /^(?:faultHook|testHook|injectFault|COUNTERSHAPE_FAULT)$/iu.test(identifier)),
-		"P07B_A2_PRODUCTION_FAULT_HOOK", "fixed harness contains a production fault hook");
+			(index === 0 ? spawn.argv?.kind === "path" && spawn.argv.value === "contract.runtime.argv" :
+				spawn.argv?.kind === "array" && spawn.argv.values?.length === 1 &&
+				spawn.argv.values[0]?.kind === "path" && spawn.argv.values[0].value === "contract.source.entrypoint") &&
+			spawn.options.stdio?.kind === "array" && spawn.options.stdio.values?.length === (index === 0 ? 3 : 4);
+	if (harness) {
+		add(harness.spawns.length !== 2 || harness.spawns.some((spawn, index) => !validSpawn(spawn, index)) ||
+				harness.spawnAliases.length !== 0 || harness.calls.filter((call) => call.callee === "spawn").length !== 2,
+			"P07B_A2_JS_SPAWN_PROFILE", JSON.stringify(harness.spawns));
+		add(harness.spawns.some((spawn) => spawn.options.cwd?.value !== "roots.candidate"),
+			"P07B_A2_DIRECT_TARGET_EXECUTION", "spawn cwd may only be the private copied candidate root");
+		add(harness.members.some((member) => ["process.env", "process.argv", "process.cwd", "process.getBuiltinModule"].includes(member)) ||
+				harness.calls.some((call) => ["eval", "Function", "fetch", "globalThis.fetch"].includes(call.callee)),
+			"P07B_A2_JS_CAPABILITY_OPENING", "ambient process or dynamic-code surface in fixed harness");
+		add(harness.identifiers.some((identifier) => /^(?:faultHook|testHook|injectFault|COUNTERSHAPE_FAULT)$/iu.test(identifier)),
+			"P07B_A2_PRODUCTION_FAULT_HOOK", "fixed harness contains a production fault hook");
 
-	const evaluatorReachable = reachableJavascriptSummary(harness, ["evaluateParityOperation"]);
-	add([...evaluatorReachable.members].some((member) => ["expected", "id", "description", "tags"].includes(member.split(".").at(-1))),
-	"P07B_A2_PARITY_ORACLE_ACCESS", "reachable Node evaluator reads driver-only metadata");
-	add([...evaluatorReachable.literals].some((literal) => /(?:contract-parity|spec\/vectors|corpus)/iu.test(literal)),
-		"P07B_A2_PARITY_CORPUS_ACCESS", "reachable Node evaluator names corpus authority");
-	add([...evaluatorReachable.identifiers].some((identifier) =>
-		["process", "spawn", "readFileSync", "openSync", "watch", "createConnection", "randomBytes", "rmSync"].includes(identifier)),
-		"P07B_A2_PARITY_CAPABILITY_OPENING", "reachable Node evaluator opens runtime capability");
-	add(runner.members.some((member) => ["process.argv", "process.env", "process.cwd"].includes(member) ||
-		["expected", "id", "description", "tags"].includes(member.split(".").at(-1))) ||
-		runner.identifiers.some((identifier) => ["readFile", "spawn", "createConnection", "watch", "randomBytes"].includes(identifier)) ||
-		runner.literals.some((literal) => /(?:contract-parity|spec\/vectors|corpus)/iu.test(literal)) ||
-		runner.importBindings.some((binding) => /\|(?:runContract|readFileSync|spawn|createConnection|watch|randomBytes)\|/u.test(binding)),
-	"P07B_A2_PARITY_RUNNER_CAPABILITY", "runner may only frame input and invoke the input-only evaluator");
+		const evaluatorReachable = reachableJavascriptSummary(harness, ["evaluateParityOperation"]);
+		add([...evaluatorReachable.members].some((member) => ["expected", "id", "description", "tags"].includes(member.split(".").at(-1))),
+			"P07B_A2_PARITY_ORACLE_ACCESS", "reachable Node evaluator reads driver-only metadata");
+		add([...evaluatorReachable.literals].some((literal) => /(?:contract-parity|spec\/vectors|corpus)/iu.test(literal)),
+			"P07B_A2_PARITY_CORPUS_ACCESS", "reachable Node evaluator names corpus authority");
+		add([...evaluatorReachable.identifiers].some((identifier) =>
+				["process", "spawn", "readFileSync", "openSync", "watch", "createConnection", "randomBytes", "rmSync"].includes(identifier)),
+			"P07B_A2_PARITY_CAPABILITY_OPENING", "reachable Node evaluator opens runtime capability");
+	}
+	if (runner) {
+		add(runner.members.some((member) => ["process.argv", "process.env", "process.cwd"].includes(member) ||
+				["expected", "id", "description", "tags"].includes(member.split(".").at(-1))) ||
+				runner.identifiers.some((identifier) => ["readFile", "spawn", "createConnection", "watch", "randomBytes"].includes(identifier)) ||
+				runner.literals.some((literal) => /(?:contract-parity|spec\/vectors|corpus)/iu.test(literal)) ||
+				runner.importBindings.some((binding) => /\|(?:runContract|readFileSync|spawn|createConnection|watch|randomBytes)\|/u.test(binding)),
+			"P07B_A2_PARITY_RUNNER_CAPABILITY", "runner may only frame input and invoke the input-only evaluator");
+	}
 
-	const captureSource = entries.get("tools/capture-p07b-a2-human-surface.mjs")?.source ?? "";
-	add(!captureSource.includes("setTimeout(() => process.exit(70), 15_000).unref();") ||
-		!captureSource.includes("timeout: 20_000") || !captureSource.includes("assert.equal(run.error, undefined"),
-	"P07B_A2_CAPTURE_WATCHDOG", "human capture must bound subjects and reject outer runner failure");
-	add(!captureSource.includes('const digest = typedDigest("ContractBundle", canonicalBody);') ||
-		!captureSource.includes("contract_bundle_digest: bundle.digest") ||
-		!captureSource.includes('assert.equal(bundle.kind, "ContractBundle")'),
-	"P07B_A2_CAPTURE_BUNDLE_BINDING", "human capture must bind its exact canonical ContractBundle identity");
-	add(!captureSource.includes("function parseTAP(stdout, scenario, wantPass)") ||
-		!captureSource.includes('exact("TAP version 13", "version")') ||
-		!captureSource.includes("TAP has an unrecognized trailing line") ||
-		!captureSource.includes("countershape-node-tap-normalization/v1"),
-	"P07B_A2_CAPTURE_CLOSED_TAP", "human capture must closed-shape normalize the selected TAP stream");
-	const closedControlPattern = String.raw`return /[\u0000-\u0009\u000b-\u001f\u007f-\u009f\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069\ufeff]/u.test(text);`;
-	add(!captureSource.includes('new TextDecoder("utf-8", { fatal: true }).decode(bytes)') ||
-		!captureSource.includes(closedControlPattern) || !captureSource.includes("forbidden control code point"),
-	"P07B_A2_CAPTURE_CONTROL_REJECTION", "human capture must fatal-decode UTF-8 and reject the closed control roster");
-	add(!captureSource.includes("setup_profile: scenario.setupProfile") ||
-		!captureSource.includes("[...scenarios].reverse()") || !captureSource.includes("repeated capture drifted") ||
-		!captureSource.includes("MANIFEST_REPINNED_HARNESS_THROW"),
-	"P07B_A2_CAPTURE_SCENARIO_METADATA", "human capture must retain stable setup profiles and repeat in a second order");
+	const capturePath = "tools/capture-p07b-a2-human-surface.mjs";
+	if (shapes.has(capturePath)) {
+		const captureSource = entries.get(capturePath)?.source ?? "";
+		add(!captureSource.includes("setTimeout(() => process.exit(70), 15_000).unref();") ||
+				!captureSource.includes("timeout: 20_000") || !captureSource.includes("assert.equal(run.error, undefined"),
+			"P07B_A2_CAPTURE_WATCHDOG", "human capture must bound subjects and reject outer runner failure");
+		add(!captureSource.includes('const digest = typedDigest("ContractBundle", canonicalBody);') ||
+				!captureSource.includes("contract_bundle_digest: bundle.digest") ||
+				!captureSource.includes('assert.equal(bundle.kind, "ContractBundle")'),
+			"P07B_A2_CAPTURE_BUNDLE_BINDING", "human capture must bind its exact canonical ContractBundle identity");
+		add(!captureSource.includes("function parseTAP(stdout, scenario, wantPass)") ||
+				!captureSource.includes('exact("TAP version 13", "version")') ||
+				!captureSource.includes("TAP has an unrecognized trailing line") ||
+				!captureSource.includes("countershape-node-tap-normalization/v1"),
+			"P07B_A2_CAPTURE_CLOSED_TAP", "human capture must closed-shape normalize the selected TAP stream");
+		const closedControlPattern = String.raw`return /[\u0000-\u0009\u000b-\u001f\u007f-\u009f\u200e\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069\ufeff]/u.test(text);`;
+		add(!captureSource.includes('new TextDecoder("utf-8", { fatal: true }).decode(bytes)') ||
+				!captureSource.includes(closedControlPattern) || !captureSource.includes("forbidden control code point"),
+			"P07B_A2_CAPTURE_CONTROL_REJECTION", "human capture must fatal-decode UTF-8 and reject the closed control roster");
+		add(!captureSource.includes("setup_profile: scenario.setupProfile") ||
+				!captureSource.includes("[...scenarios].reverse()") || !captureSource.includes("repeated capture drifted") ||
+				!captureSource.includes("MANIFEST_REPINNED_HARNESS_THROW"),
+			"P07B_A2_CAPTURE_SCENARIO_METADATA", "human capture must retain stable setup profiles and repeat in a second order");
+	}
 	return violations;
 }
 

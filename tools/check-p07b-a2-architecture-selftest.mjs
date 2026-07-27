@@ -157,11 +157,83 @@ const roster = Object.freeze([
 	["human-capture-scenario-metadata-removal", "P07B_A2_CAPTURE_SCENARIO_METADATA"],
 ]);
 const expectedRosterDigest = "sha256:832d98ce1e73056e3133a9b6cc31d1ef3da4c88a451f85f122d35ab38b05c80e";
+const astProfileBindings = Object.freeze([
+	["asset-byte-drift", "internal/emit/node/program/v1/contract.test.mjs"],
+	["js-static-import-drift", "internal/emit/node/program/v1/contract.test.mjs"],
+	["js-second-dynamic-edge", "internal/emit/node/program/v1/contract.test.mjs"],
+	["js-import-before-verification", "internal/emit/node/program/v1/contract.test.mjs"],
+	["js-extra-export", "internal/emit/node/program/v1/contract.test.mjs"],
+	["js-indirect-import-before-verification", "internal/emit/node/program/v1/contract.test.mjs"],
+	["js-high-level-http-import", "internal/emit/node/program/v1/harness.mjs"],
+	["js-fetch-capability", "internal/emit/node/program/v1/harness.mjs"],
+	["js-shell-execution", "internal/emit/node/program/v1/harness.mjs"],
+	["js-ambient-environment", "internal/emit/node/program/v1/harness.mjs"],
+	["js-direct-target-root", "internal/emit/node/program/v1/harness.mjs"],
+	["js-production-fault-hook", "internal/emit/node/program/v1/harness.mjs"],
+	["node-evaluator-expected-read", "internal/emit/node/program/v1/harness.mjs"],
+	["node-evaluator-case-id-switch", "internal/emit/node/program/v1/harness.mjs"],
+	["node-evaluator-corpus-authority-reference", "internal/emit/node/program/v1/harness.mjs"],
+	["js-existing-module-capability-import", "internal/emit/node/program/v1/harness.mjs"],
+	["node-evaluator-arrow-oracle-read", "internal/emit/node/program/v1/harness.mjs"],
+	["node-evaluator-destructured-oracle-read", "internal/emit/node/program/v1/harness.mjs"],
+	["js-spawn-options-spread", "internal/emit/node/program/v1/harness.mjs"],
+	["js-spawn-alias", "internal/emit/node/program/v1/harness.mjs"],
+	["js-global-fetch-capability", "internal/emit/node/program/v1/harness.mjs"],
+	["runner-expected-access", "internal/emit/node/parity/runner.mjs"],
+	["runner-ambient-environment", "internal/emit/node/parity/runner.mjs"],
+	["runner-powerful-harness-import", "internal/emit/node/parity/runner.mjs"],
+	["example-generator-byte-drift", "tools/generate-p07b-a2-runtime-example.mjs"],
+	["recovery-verifier-byte-drift", "tools/verify-p07b-a2-recovery-process.mjs"],
+	["human-capture-byte-drift", "tools/capture-p07b-a2-human-surface.mjs"],
+	["human-capture-watchdog-removal", "tools/capture-p07b-a2-human-surface.mjs"],
+	["human-capture-bundle-binding-removal", "tools/capture-p07b-a2-human-surface.mjs"],
+	["human-capture-open-tap", "tools/capture-p07b-a2-human-surface.mjs"],
+	["human-capture-control-roster-weakening", "tools/capture-p07b-a2-human-surface.mjs"],
+	["human-capture-scenario-metadata-removal", "tools/capture-p07b-a2-human-surface.mjs"],
+].map((entry) => Object.freeze(entry)));
+const astProfileByMutation = new Map(astProfileBindings);
+const expectedASTProfileBindingsDigest = "sha256:16bf1f1a46090abc88d87d27726aa182c0cbe3977a52042db1c829bb58a85442";
 
 function rosterDigest() {
 	const hash = createHash("sha256");
 	for (const [id, code] of roster) hash.update(id).update("\0").update(code).update("\0");
 	return `sha256:${hash.digest("hex")}`;
+}
+
+function astProfileBindingsDigest() {
+	const hash = createHash("sha256");
+	for (const [id, path] of astProfileBindings) hash.update(id).update("\0").update(path).update("\0");
+	return `sha256:${hash.digest("hex")}`;
+}
+
+async function inspectASTIsolationContract() {
+	const source = await readFile(checker, "utf8");
+	for (const token of [
+		"const driftedEntries = [];",
+		"driftedEntries.push(entry);",
+		"shapes = inspectJavaScriptAST(driftedEntries);",
+		"const requestedPaths = entries.map((entry) => entry.path);",
+		"JSON.stringify(actualPaths) !== JSON.stringify(requestedPaths)",
+		"P07B_A2_JS_AST_ROWS ${JSON.stringify(actualPaths)}",
+		"if (!shape) continue;",
+		"if (contract) {",
+		"if (harness) {",
+		"if (runner) {",
+		"if (shapes.has(capturePath)) {",
+	]) {
+		if (source.split(token).length !== 2) {
+			throw new Error(`P07B_A2_AST_ISOLATION_CONTRACT: ${token}`);
+		}
+	}
+	if (source.includes("inspectJavaScriptAST([...entries.values()])")) {
+		throw new Error("P07B_A2_AST_ISOLATION_CONTRACT: all-profile reparsing remains reachable");
+	}
+	const digestIndex = source.indexOf("driftedEntries.push(entry);");
+	const workerIndex = source.indexOf("shapes = inspectJavaScriptAST(driftedEntries);");
+	const exactReturnIndex = source.indexOf("if (driftedEntries.length === 0) return violations;");
+	if (digestIndex < 0 || workerIndex <= digestIndex || exactReturnIndex <= workerIndex) {
+		throw new Error("P07B_A2_AST_ISOLATION_CONTRACT: digest/worker/exact chronology");
+	}
 }
 
 async function copyFixture(label) {
@@ -199,6 +271,49 @@ function run(directory) {
 	});
 }
 
+function outputOf(result) {
+	return `${result.stdout}\n${result.stderr}`;
+}
+
+function parsedASTRows(output) {
+	const rows = [];
+	for (const match of output.matchAll(/^P07B_A2_JS_AST_ROWS (.+)$/gmu)) {
+		let parsed;
+		try {
+			parsed = JSON.parse(match[1]);
+		} catch (error) {
+			throw new Error(`P07B_A2_AST_ROWS_MALFORMED: ${error.message}: ${match[1]}`);
+		}
+		if (!Array.isArray(parsed) || parsed.some((path) => typeof path !== "string")) {
+			throw new Error(`P07B_A2_AST_ROWS_MALFORMED: ${match[1]}`);
+		}
+		rows.push(parsed);
+	}
+	return rows;
+}
+
+function requireASTRows(id, output, expectedPaths) {
+	const rows = parsedASTRows(output);
+	const expected = expectedPaths.length === 0 ? [] : [expectedPaths];
+	if (JSON.stringify(rows) !== JSON.stringify(expected)) {
+		throw new Error(`${id} AST profile mismatch: ${JSON.stringify(rows)} != ${JSON.stringify(expected)}`);
+	}
+}
+
+function assertMutationResult(id, expectedCode, result, expectedPaths) {
+	const output = outputOf(result);
+	if (result.error || result.signal || !Number.isInteger(result.status)) {
+		throw new Error(`${id} infrastructure failure: ${result.signal ?? result.error?.message ?? result.status}: ${output}`);
+	}
+	if (output.includes("P07B_A2_JS_AST_QUERY_FAILED")) {
+		throw new Error(`${id} AST worker infrastructure failure: ${output}`);
+	}
+	if (result.status === 0 || !output.includes(expectedCode)) {
+		throw new Error(`${id} survived or wrong code ${expectedCode}: ${output}`);
+	}
+	requireASTRows(id, output, expectedPaths);
+}
+
 async function cleanControl() {
 	const directory = await copyFixture("clean");
 	try {
@@ -207,6 +322,7 @@ async function cleanControl() {
 			result.stdout.includes("P07B A2.2 architecture boundary OK")) {
 			throw new Error(`clean control failed: ${result.stderr || result.stdout}`);
 		}
+		requireASTRows("clean control", outputOf(result), []);
 	} finally {
 		await rm(directory, { recursive: true, force: true });
 	}
@@ -220,6 +336,7 @@ async function commentLiteralControl() {
 		await writeFile(join(directory, path), `${source}\n\n`);
 		const result = run(directory);
 		if (result.status !== 0) throw new Error(`comment/string clean control failed: ${result.stderr || result.stdout}`);
+		requireASTRows("comment/string clean control", outputOf(result), []);
 	} finally {
 		await rm(directory, { recursive: true, force: true });
 	}
@@ -636,13 +753,86 @@ async function mutate(id, expectedCode) {
 			throw new Error(`unknown mutant ${id}`);
 		}
 		const result = run(directory);
-		const output = `${result.stdout}\n${result.stderr}`;
+		const path = astProfileByMutation.get(id);
+		assertMutationResult(id, expectedCode, result, path ? [path] : []);
+	} finally {
+		await rm(directory, { recursive: true, force: true });
+	}
+}
+
+async function multiProfileControl() {
+	const directory = await copyFixture("multi-profile");
+	try {
+		await replaceRequired(directory, "internal/emit/node/program/v1/contract.test.mjs",
+			"const verified = new Map();", 'const harness = await import("./harness.mjs");\n    const verified = new Map();');
+		await replaceRequired(directory, "internal/emit/node/program/v1/contract.test.mjs",
+			'    const harness = await import("./harness.mjs");\n    result = await harness.runContract({',
+			"    result = await harness.runContract({");
+		await replaceRequired(directory, "internal/emit/node/program/v1/harness.mjs",
+			"child = spawn(process.execPath, contract.runtime.argv, {\n      argv0:",
+			"child = spawn(process.execPath, contract.runtime.argv, {\n      ...{},\n      argv0:");
+		await replaceRequired(directory, "internal/emit/node/parity/runner.mjs",
+			"try {\n  const request", "try {\n  process.env;\n  const request");
+		const result = run(directory);
+		const output = outputOf(result);
 		if (result.error || result.signal || !Number.isInteger(result.status)) {
-			throw new Error(`${id} infrastructure failure: ${result.signal ?? result.error?.message ?? result.status}: ${output}`);
+			throw new Error(`multi-profile infrastructure failure: ${result.signal ?? result.error?.message ?? result.status}: ${output}`);
 		}
-		if (result.status === 0 || !output.includes(expectedCode)) {
-			throw new Error(`${id} survived or wrong code ${expectedCode}: ${output}`);
+		if (output.includes("P07B_A2_JS_AST_QUERY_FAILED") || result.status === 0) {
+			throw new Error(`multi-profile worker failure or hostile survivor: ${output}`);
 		}
+		for (const code of [
+			"P07B_A2_ENTRYPOINT_VERIFY_BEFORE_IMPORT",
+			"P07B_A2_JS_SPAWN_PROFILE",
+			"P07B_A2_PARITY_RUNNER_CAPABILITY",
+		]) {
+			if (!output.includes(code)) throw new Error(`multi-profile missing ${code}: ${output}`);
+		}
+		requireASTRows("multi-profile", output, [
+			"internal/emit/node/program/v1/contract.test.mjs",
+			"internal/emit/node/program/v1/harness.mjs",
+			"internal/emit/node/parity/runner.mjs",
+		]);
+	} finally {
+		await rm(directory, { recursive: true, force: true });
+	}
+}
+
+function workerFailurePrecedenceControl() {
+	const expectedCode = "P07B_A2_EXAMPLE_GENERATOR_DIGEST";
+	const result = {
+		error: undefined,
+		signal: null,
+		status: 1,
+		stdout: "",
+		stderr: `P07B_A2_JS_AST_QUERY_FAILED: fixed-control\n${expectedCode}`,
+	};
+	let error;
+	try {
+		assertMutationResult("worker-failure-precedence", expectedCode, result, ["tools/generate-p07b-a2-runtime-example.mjs"]);
+	} catch (caught) {
+		error = caught;
+	}
+	if (!error || !String(error.message).includes("AST worker infrastructure failure")) {
+		throw new Error(`P07B_A2_AST_FAILURE_PRECEDENCE: ${error?.message ?? "classifier accepted worker failure"}`);
+	}
+}
+
+async function workerFailureEndToEndControl() {
+	const directory = await copyFixture("worker-failure");
+	try {
+		const path = "tools/generate-p07b-a2-runtime-example.mjs";
+		const source = await readFile(join(directory, path), "utf8");
+		await writeFile(join(directory, path), `export const = ;\n${source}`);
+		const result = run(directory);
+		const output = outputOf(result);
+		if (result.error || result.signal || !Number.isInteger(result.status)) {
+			throw new Error(`worker-failure control outer infrastructure failure: ${result.signal ?? result.error?.message ?? result.status}: ${output}`);
+		}
+		if (result.status === 0 || !output.includes("P07B_A2_JS_AST_QUERY_FAILED")) {
+			throw new Error(`worker-failure control did not fail closed: ${output}`);
+		}
+		requireASTRows("worker-failure control", output, []);
 	} finally {
 		await rm(directory, { recursive: true, force: true });
 	}
@@ -654,10 +844,19 @@ async function main() {
 	if (rosterDigest() !== expectedRosterDigest) {
 		throw new Error(`P07B_A2_SELFTEST_ROSTER_DIGEST: ${rosterDigest()} != ${expectedRosterDigest}`);
 	}
+	if (astProfileBindings.length !== 32 || astProfileByMutation.size !== astProfileBindings.length ||
+		astProfileBindings.some(([id]) => !roster.some(([rosterID]) => rosterID === id)) ||
+		astProfileBindingsDigest() !== expectedASTProfileBindingsDigest) {
+		throw new Error(`P07B_A2_AST_PROFILE_BINDINGS: ${astProfileBindings.length}/${astProfileByMutation.size} ${astProfileBindingsDigest()} != ${expectedASTProfileBindingsDigest}`);
+	}
+	await inspectASTIsolationContract();
 	await cleanControl();
 	await commentLiteralControl();
 	for (const [id, code] of roster) await mutate(id, code);
-	process.stdout.write(`P07B A2.2 architecture defensive self-test OK (${roster.length}/${roster.length}; roster ${expectedRosterDigest})\n`);
+	await multiProfileControl();
+	workerFailurePrecedenceControl();
+	await workerFailureEndToEndControl();
+	process.stdout.write(`P07B A2.2 architecture defensive self-test OK (${roster.length}/${roster.length}; roster ${expectedRosterDigest}; ast-profile-bindings ${astProfileBindings.length}/${astProfileBindings.length} ${expectedASTProfileBindingsDigest}; multi-profile 1/1; worker-infrastructure 2/2)\n`);
 }
 
 main().catch((error) => {
