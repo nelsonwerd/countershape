@@ -7,6 +7,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import {
+	c3ArchitectureProfileTimeoutMS,
 	collectC3PredecessorAuthority,
 	collectC3PredecessorRecordAuthority,
 	collectC2Facts,
@@ -28,6 +29,8 @@ import {
 const selftestPath = fileURLToPath(import.meta.url);
 const root = resolve(dirname(selftestPath), "..");
 const checker = resolve(root, "tools/check-p07b-c-architecture.mjs");
+const c3CleanCheckerTimeoutMS = 18 * 60 * 1000;
+const cumulativeVerifierChildTimeoutMS = 20 * 60 * 1000;
 const cases = Object.freeze([
 	Object.freeze({ id: "production-files", code: "P07B_C1_PRODUCTION_TOPOLOGY" }),
 	Object.freeze({ id: "test-files", code: "P07B_C1_TEST_TOPOLOGY" }),
@@ -204,7 +207,7 @@ function runCleanChecker(phase = "c1") {
 	const result = spawnSync(process.execPath, args, {
 		cwd: root,
 		encoding: "utf8",
-		timeout: phase === "c4" ? 1_800_000 : phase === "c3" ? 1_200_000 : phase === "c2" ? 420_000 : 180_000,
+		timeout: phase === "c4" ? 1_800_000 : phase === "c3" ? c3CleanCheckerTimeoutMS : phase === "c2" ? 420_000 : 180_000,
 		maxBuffer: 32 * 1024 * 1024,
 		env: {
 			...process.env,
@@ -299,6 +302,7 @@ const c3ParserProfiles = Object.freeze([
 	Object.freeze({
 		name: "c3-official-target",
 		packagePath: "github.com/nelsonwerd/countershape/internal/contractexec",
+		packageArgument: "./internal/contractexec",
 		tests: Object.freeze([
 			"TestC3OfficialTargetAttemptsAreFreshAndDistinct",
 			"TestC3OfficialTargetClosedCapabilityAndDefensiveGetters",
@@ -315,6 +319,7 @@ const c3ParserProfiles = Object.freeze([
 	Object.freeze({
 		name: "c3-single-target",
 		packagePath: "github.com/nelsonwerd/countershape/internal/gitobj",
+		packageArgument: "./internal/gitobj",
 		tests: Object.freeze([
 			"TestC3SingleTargetAmbiguityRequiresExplicitReopen",
 			"TestC3SingleTargetCannotPublishTwiceIntoOnePrivateParent",
@@ -328,6 +333,7 @@ const c3ParserProfiles = Object.freeze([
 	Object.freeze({
 		name: "c3-hostepoch",
 		packagePath: "github.com/nelsonwerd/countershape/internal/hostepoch",
+		packageArgument: "./internal/hostepoch",
 		tests: Object.freeze([
 			"TestC3HostEpochCanonicalMeasurement",
 			"TestC3HostEpochConcurrentMeasurementsNeverCache",
@@ -342,6 +348,7 @@ const c3ParserProfiles = Object.freeze([
 	Object.freeze({
 		name: "c3-noderuntime",
 		packagePath: "github.com/nelsonwerd/countershape/internal/noderuntime",
+		packageArgument: "./internal/noderuntime",
 		tests: Object.freeze([
 			"TestC3NodeRuntimeCopiedCapabilitiesSerializeRevalidation",
 			"TestC3NodeRuntimeDarwinLiveAdmissionAndRevalidation",
@@ -360,6 +367,7 @@ const c3ParserProfiles = Object.freeze([
 	Object.freeze({
 		name: "c3-store-bridge",
 		packagePath: "github.com/nelsonwerd/countershape/internal/store",
+		packageArgument: "./internal/store",
 		tests: Object.freeze([
 			"TestC3ConformanceAttemptConcurrentValidationAndReopenAreRaceFree",
 			"TestC3ConformanceAttemptIsFreshDurableAndRestartReopenable",
@@ -495,6 +503,36 @@ function inspectC3GoJSONTranscriptParser() {
 		}
 	}
 	return count;
+}
+
+function inspectC3GoJSONArguments() {
+	for (const profile of c3ParserProfiles) {
+		const expected = [
+			"test", "-mod=readonly", "-buildvcs=false", "-p=1", "-count=1",
+			...(profile.name === "c3-official-target" ? ["-timeout=12m"] : []),
+			"-json", "-run", `^(?:${profile.tests.join("|")})$`, profile.packageArgument,
+		];
+		const actual = goJSONArguments(profile.name);
+		if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+			fail("P07B_C3_SELFTEST_GO_JSON_ARGUMENTS", `${profile.name}:${JSON.stringify(actual)}`);
+		}
+	}
+}
+
+async function inspectC3TimeoutEnvelope() {
+	if (c3ArchitectureProfileTimeoutMS !== 15 * 60 * 1000 ||
+		c3CleanCheckerTimeoutMS !== 18 * 60 * 1000 ||
+		cumulativeVerifierChildTimeoutMS !== 20 * 60 * 1000 ||
+		!(12 * 60 * 1000 < c3ArchitectureProfileTimeoutMS &&
+			c3ArchitectureProfileTimeoutMS < c3CleanCheckerTimeoutMS &&
+			c3CleanCheckerTimeoutMS < cumulativeVerifierChildTimeoutMS)) {
+		fail("P07B_C3_SELFTEST_TIMEOUT_ENVELOPE", "720000<900000<1080000<1200000");
+	}
+	const runtimeSource = await readFile(resolve(root, "tools/verify-runtime-authority.mjs"), "utf8");
+	const marker = "const childTimeoutMS = 20 * 60 * 1000;";
+	if (runtimeSource.split(marker).length - 1 !== 1) {
+		fail("P07B_C3_SELFTEST_TIMEOUT_ENVELOPE", "cumulative verifier child timeout authority");
+	}
 }
 
 function inspectC4GoJSONTranscriptParser() {
@@ -733,6 +771,9 @@ async function runC2Selftest() {
 async function runC3Selftest() {
 	const digest = rosterDigest(c3Cases);
 	if (digest !== expectedC3RosterDigest) fail("P07B_C3_SELFTEST_ROSTER_DRIFT", `${digest} != ${expectedC3RosterDigest}`);
+	inspectC3GoJSONArguments();
+	inspectC4GoJSONArguments();
+	await inspectC3TimeoutEnvelope();
 	runCleanChecker("c3");
 	const clean = await collectC3Facts();
 	const cleanProblems = validateC3Facts(clean);

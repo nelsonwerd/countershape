@@ -1565,9 +1565,13 @@ export function goJSONArguments(profileName) {
 	const pattern = `^(?:${profile.pass.join("|")})$`;
 	return Object.freeze([
 		"test", ...(profile.race === true ? ["-race"] : []),
-		"-mod=readonly", "-buildvcs=false", "-p=1", "-count=1", "-json", "-run", pattern, profile.packageArgument,
+		"-mod=readonly", "-buildvcs=false", "-p=1", "-count=1",
+		...(profileName === "c3-official-target" ? ["-timeout=12m"] : []),
+		"-json", "-run", pattern, profile.packageArgument,
 	]);
 }
+
+export const c3ArchitectureProfileTimeoutMS = 15 * 60 * 1000;
 
 export function runGoJSONProfile(profileName) {
 	const output = run(
@@ -1575,7 +1579,7 @@ export function runGoJSONProfile(profileName) {
 		goJSONArguments(profileName),
 		profileName.startsWith("c4-") ? "P07B_C4_GO_JSON_RUN" :
 			profileName.startsWith("c3-") ? "P07B_C3_GO_JSON_RUN" : "P07B_C2_GO_JSON_RUN",
-		(profileName.startsWith("c3-") || profileName.startsWith("c4-")) ? 900_000 : 180_000,
+		(profileName.startsWith("c3-") || profileName.startsWith("c4-")) ? c3ArchitectureProfileTimeoutMS : 180_000,
 	);
 	return validateGoJSONTranscript(profileName, Buffer.from(output, "utf8"));
 }

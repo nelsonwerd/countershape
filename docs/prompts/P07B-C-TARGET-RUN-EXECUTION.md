@@ -9,7 +9,7 @@ This pack turns the planning-only P07B-C shapes into a capability-only, crash-ho
 
 ## How to use this pack
 
-Execute the core source/receipt sequence `C0 → C1 → C1B → C2 → C2B → C3P → C3PB → C3 → C3B → C4 → C5 → C6`, inserting every separately declared maintenance boundary at its machine-ordered unit edge. The complete declared execution-unit edge is `C3B → C3D → C4V → C4M → C4N → C4P → C4 → C4H → C4I → C5`; C5 may begin only after C4I seals and verifies strictly. This is a permanent ordering contract, not the live phase cursor: the delimited capsule in `docs/HANDOFF_MODE_C.md` is the sole live phase/receipt cursor. Every arrow is a fresh didrun ledger or preserved unit-local ledger, exact staging review, commit, seal, Git-note inspection, and `NO_COLOR=1 didrun verify --strict` loop. When exact source-commit identity or grades must enter repository documentation, use a second receipt-document sub-boundary (`Ca` source, then `Cb` reconciliation) rather than creating a self-referential commit. Do not begin the next implementation unit until its last required sub-boundary exits strict with `0`.
+Execute the core source/receipt sequence `C0 → C1 → C1B → C2 → C2B → C3P → C3PB → C3 → C3B → C4 → C5 → C6`, inserting every separately declared maintenance boundary at its machine-ordered unit edge. The complete declared execution-unit edge is `C3B → C3D → C4V → C4M → C4N → C4P → C4 → C4H → C4I → C4K → C5`; C5 may begin only after C4K seals and verifies strictly. This is a permanent ordering contract, not the live phase cursor: the delimited capsule in `docs/HANDOFF_MODE_C.md` is the sole live phase/receipt cursor. Every arrow is a fresh didrun ledger or preserved unit-local ledger, exact staging review, commit, seal, Git-note inspection, and `NO_COLOR=1 didrun verify --strict` loop. When exact source-commit identity or grades must enter repository documentation, use a second receipt-document sub-boundary (`Ca` source, then `Cb` reconciliation) rather than creating a self-referential commit. Do not begin the next implementation unit until its last required sub-boundary exits strict with `0`.
 
 The user has explicitly authorized commits at verified shippable boundaries. That authorization does not allow pushes, releases, external provider calls, or weakening a failed receipt.
 
@@ -19,7 +19,7 @@ The user has explicitly authorized commits at verified shippable boundaries. Tha
 2. Verify every file/line reference against current code. Current source wins over remembered locations and API facts; if it disagrees with a locked semantic ruling, stop and amend the ruling explicitly rather than silently letting stale code broaden authority.
 3. The root is the sole repository writer and sole didrun/Git/seal operator. Parallel agents are read-only critics.
 4. Every load-bearing command runs through `/opt/homebrew/bin/didrun run -- ...`; immediately claim each successful final event before any next event.
-5. Preserve sealed C1V's direct-general `-p=2` result as historical evidence, but use the current C4V/C4H/C4I recurrence profile: `GOMAXPROCS=2`; direct build, vet, and the exact general-package complement use `-p=1`; the declared sensitive packages (including `internal/store`) and every inherited/nested Go invocation remain `-p=1`; ordinary Go tests retain `-parallel=2`; fuzz uses `-parallel=1` with a count budget. C4I changes verification-only A2 and Darwin test-fixture surfaces—AST drift isolation, caller-umask-exact human-surface construction, and causal escape-test readiness—and preserves the package partition, fresh private caches, exclusive lock, 60/90-second verifier timeout hierarchy, and cumulative verifier order. C4 relocated the three output/capture repetition cases to `internal/processmechanics` and classified `internal/processmechanics`, `internal/contractexec/runner`, and `testkit/contractexec/cli` as sensitive. C4 froze exact 54-case and dormant 56-case catalogs at `sha256:3be703fae10155c83b19be54ae7cd79cfc5b1bbaddfcf86bb2c9781ad93f853a` and `sha256:08db7c338eb3ba900cf6df2545c04f27bed16889c81dd16e5fb18197c4d52958`; each C4 case runs as its own `--case <id>` didrun receipt, and C5 later does the same for all 56 parent-sealed cases, including `testkit/contractexec/http`. No shared matrix receipt substitutes for per-case isolation.
+5. Preserve sealed C1V's direct-general `-p=2` result as historical evidence, but use the current C4V/C4H/C4I recurrence profile: `GOMAXPROCS=2`; direct build, vet, and the exact general-package complement use `-p=1`; the declared sensitive packages (including `internal/store`) and every inherited/nested Go invocation remain `-p=1`; ordinary Go tests retain `-parallel=2`; fuzz uses `-parallel=1` with a count budget. C4I changes verification-only A2 and Darwin test-fixture surfaces—AST drift isolation, caller-umask-exact human-surface construction, and causal escape-test readiness—and preserves the package partition, fresh private caches, exclusive lock, 60/90-second verifier timeout hierarchy, and cumulative verifier order. C4K changes the nested C3 deadline envelope: only `c3-official-target` receives Go's `-timeout=12m`, yielding the bounded `720 s → 900 s → 1080 s → 1200 s` inner-Go/profile/clean-selftest/cumulative-parent ladder; the other four C3 profiles and all six C4 profiles receive no inner timeout flag. C4K changes no package partition, parallelism, cache, retry, assertion, or cumulative-row order. C4 relocated the three output/capture repetition cases to `internal/processmechanics` and classified `internal/processmechanics`, `internal/contractexec/runner`, and `testkit/contractexec/cli` as sensitive. C4 froze exact 54-case and dormant 56-case catalogs at `sha256:3be703fae10155c83b19be54ae7cd79cfc5b1bbaddfcf86bb2c9781ad93f853a` and `sha256:08db7c338eb3ba900cf6df2545c04f27bed16889c81dd16e5fb18197c4d52958`; each C4 case runs as its own `--case <id>` didrun receipt, and C5 later does the same for all 56 parent-sealed cases, including `testkit/contractexec/http`. No shared matrix receipt substitutes for per-case isolation.
 6. Stage only paths admitted by the machine-readable unit allowlist and fail unexpected paths. Never commit `.didrun/`, private captures, runtime roots, or `.countershape` artifacts. Never add AI co-author metadata.
 7. After commit, seal, require the exact Git note, and loop on strict verification. A nonzero gate means the unit is unfinished. Never weaken tests, remove claims, relabel, or erase failed history.
 8. Preserve the current didrun implementation for the longitudinal run. Record any misbehavior in `docs/status/DIDRUN_BUGS.md`.
@@ -162,10 +162,11 @@ Locked ceilings: every canonical C body remains within the existing 1 MiB object
 | C4 | process mechanics plus contract runner, production interlock/permit, CLI-profile physical closure, FCR, classification | CLI-profile-only native physical slice |
 | C4H | verifier hermeticity and operator-state repair after sealed C4 | verifier/checker authority only; no product execution |
 | C4I | drift-isolated A2 AST analysis, caller-umask-exact human-surface construction, and causal Darwin escape-fixture readiness after sealed C4H | verifier/test authority only; no product execution |
+| C4K | exact C3 official-target nested Go test deadline after sealed C4I | verifier/checker authority only; no product execution |
 | C5 | HTTP plus full five-domain standalone evidence | full P07B-C on exact exercised native tuple |
 | C6 | C6a cumulative hostile/fault/parity/expert-surface closure, then C6b receipt reconciliation | exact sealed P07B-C claims only |
 
-Every source boundary that must hand durable grades to a later unit is followed by its separately sealed receipt-reconciliation subunit. C1B, C2B, C3PB, and C3B may bind only their already-sealed source note, strict result, exact claim map, HTML snapshot, and ignored-ledger manifest; none may edit source/checker behavior or grade itself. The permanent prerequisite edge is `C3B → C3D → C4V → C4M → C4N → C4P → C4 → C4H → C4I → C5`; this paragraph does not declare the live phase. The delimited capsule in `docs/HANDOFF_MODE_C.md` remains the sole live phase/receipt cursor.
+Every source boundary that must hand durable grades to a later unit is followed by its separately sealed receipt-reconciliation subunit. C1B, C2B, C3PB, and C3B may bind only their already-sealed source note, strict result, exact claim map, HTML snapshot, and ignored-ledger manifest; none may edit source/checker behavior or grade itself. The permanent prerequisite edge is `C3B → C3D → C4V → C4M → C4N → C4P → C4 → C4H → C4I → C4K → C5`; this paragraph does not declare the live phase. The delimited capsule in `docs/HANDOFF_MODE_C.md` remains the sole live phase/receipt cursor.
 
 ## What this pack does not cover
 
@@ -400,7 +401,7 @@ C3 does not hand durable grades to C4 until the separate exact three-path C3B re
 
 ---
 
-The C4V and C4 sections below are sealed historical declarations. They retain their original local predecessor tokens for checker compatibility, but they are not current run instructions: later sealed C4M/C4N/C4P maintenance extended C4's ancestry, actual sealed C4 final ledger used `--verify-c4-sealed-c4p-note`, sealed C4H followed C4, and active C4I now gates C5. The complete current execution-unit edge and the live handoff capsule above govern.
+The C4V and C4 sections below are sealed historical declarations. They retain their original local predecessor tokens for checker compatibility, but they are not current run instructions: later sealed C4M/C4N/C4P maintenance extended C4's ancestry, actual sealed C4 final ledger used `--verify-c4-sealed-c4p-note`, sealed C4H and sealed C4I followed C4, and active C4K now gates the parked C4J repair before C5. The complete current execution-unit edge and the live handoff capsule above govern.
 
 # C4V — repair the execution-unit verification contract
 
@@ -485,6 +486,8 @@ The frozen C4V-era declaration listed exactly 80 commands and 80 immediate claim
 
 ---
 
+The C4I section below is sealed v22 pre-seal history. Its owner-tense “active” and “current” wording is retained to reproduce that boundary's frozen contract and does not supersede the active C4K cursor. Its historical machine edge was `C3B → C3D → C4V → C4M → C4N → C4P → C4 → C4H → C4I → C5`.
+
 # C4I — stabilize verification surfaces before C5
 
 **Risk:** high for cumulative verification integrity; zero product authority.
@@ -524,6 +527,41 @@ Every C4I grade remains `UNRECEIPTED` until the exact staged tree completes that
 
 ---
 
+# C4K — bound the C3 architecture Go test before resuming C4J
+
+**Risk:** high for cumulative verification availability; zero product authority.
+**Authority:** `OWNER_OUT_OF_BAND`; `predecessor-predeclared = false`. The owner authorized continuation and repair of the newly exposed blocking deadline defect. No external signed instruction artifact exists, so this authority remains unevidenced beyond the owner-attributed session instruction; C4K inherits or rewrites no C4I grade.
+**Parent:** exact sealed C4I commit `d784ace97dd03660c6c724e1cb8f838b869681ec`, tree `e38b702884b9df128b41bfa7710459dd92f901d7`, note blob `f1633147e2943e7272abf3b9b903ac72ab274494`, note-body SHA-256 `f221a99aaa1c0037d0de7ebe8c311bfd0ff1653434c4042f30b00a67d9c4e033`, subject `fix: stabilize verification surfaces`, 17/17 claims recorded-exact, all grades `TREE-EXACT`, and strict exit `0`.
+
+C4K owns exactly these 11 paths: `docs/HANDOFF_MODE_C.md`, `docs/PROMPT_PACK.md`, `docs/THREAT_MODEL.md`, `docs/VERIFICATION.md`, `docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md`, `docs/status/P07B-C-C4K-C3-GO-TIMEOUT-MAINTENANCE.md`, `spec/verification/p07b-c-unit-paths.json`, `tools/check-p07b-c-architecture-selftest.mjs`, `tools/check-p07b-c-architecture.mjs`, `tools/check-p07b-c-plan.mjs`, and `tools/check-p07b-c-unit-scope.mjs`. Their sorted-newline roster digest is `sha256:9ab25f722aeaae583d08df271d6162c873254c51799b36b03fc85ff64d78567e`.
+
+The commit subject is exactly `fix: bound C3 architecture test timeout`.
+
+## Goal
+
+Replace the implicit ten-minute Go package cutoff that terminated one otherwise bounded C3 architecture self-test with one explicit, profile-local deadline. Preserve every other verifier, product, and receipt boundary.
+
+## Exact maintenance contract
+
+- Evolve only the phase authority to `countershape/p07b-c-unit-paths/v23` with 25 ordered rows and edge `C4I → C4K → C5`. C4K is active; C4J remains parked in its protected checkpoint and C5 remains owner-blocked.
+- Add `-timeout=12m` only to the exact `c3-official-target` Go JSON argv, before `-json`. The other four C3 profiles and all six C4 profiles receive no inner timeout flag.
+- Preserve the outer C3/C4 profile ceiling at 900 seconds, set the clean C3 defensive self-test ceiling to 1,080 seconds, and preserve the cumulative-verifier child ceiling at 1,200 seconds, yielding the exact `720 s → 900 s → 1080 s → 1200 s` ladder. Bind all four values and strict inequalities in the defensive self-test. Another overrun is a diagnostic failure, not automatic authority for another increase.
+- Preserve package selection, package partition, `-p=1`, `GOMAXPROCS=2`, test parallelism, fresh private caches, exclusive verifier ownership, assertion set, retry refusal, cumulative-row order, C4J's independent timeout policy, and every frozen C5 label/type/argv/order byte.
+- The phase-plan transition corpus accepts 13 and rejects 380. The independent unit-scope corpus accepts 13 and rejects 367. The current positive-receipt authority covers 61 Markdown paths, 945 hostile rejections, and 315 controls.
+- Candidate gates are exactly `tools/check-p07b-c-plan.mjs --check-candidate-phase C4K` and `tools/check-p07b-c-unit-scope.mjs --candidate-phase C4K`. The ancestry and preseal gates are exactly `--verify-c4k-sealed-c4i-note` and `--verify-c4k-preseal-ledger`.
+
+## Qualification and gate
+
+Run the focused C3 checker, the clean C3 defensive self-test, and one complete cumulative verifier after the candidate, plan, exact sealed-C4I ancestry, unit-scope, and verifier-selftest gates. The final ledger is exactly 12 immediately claimed events: nine `tests-pass` claims followed by three `command-succeeded` claims for exact staged source scope, credential scan, and preseal reconciliation. Use private root `.countershape/p07bc-c4k-final` and render the sole authoritative sequence with `--print-final-runbook C4K`. Every emitted fence sets `umask 077`; any nonzero event remains permanent history and a repaired tree restarts at event zero.
+
+Every C4K grade remains `UNRECEIPTED` until the exact staged tree completes that ledger, commits, seals, exposes a readable Git note, and passes `NO_COLOR=1 didrun verify --strict` with exit `0`.
+
+## Commit
+
+`fix: bound C3 architecture test timeout`
+
+---
+
 # C5 — add HTTP and complete standalone-scope evidence
 
 **Risk:** high. Adds readiness/service/import evidence and completes the narrow standalone claim.
@@ -553,7 +591,7 @@ Add the locked child-bind/raw-HTTP profile, complete all five HTTP scope domains
 
 Machine-cleared full P07B-C only for the exact exercised CLI/HTTP native tuple.
 
-The final ledger is exactly 79 commands and 79 immediate claims: 76 `tests-pass`, then three `command-succeeded`. It includes five focused C5 profiles, C/B/U6 architecture and self-tests, repetition self-test plus 56 separate parent-sealed `--case <id>` qualification receipts, `--verify-c5-sealed-c4-note`, scope/verifier self-tests, three cumulative passes, source-final gate, credential scan, and `--verify-c5-preseal-ledger`. Each qualification receipt preserves its own lock and fresh private execution roots. Use private root `.countershape/p07bc-c5-final` and generate the exact sequence with `--print-final-runbook C5`. The historically named sealed-C4 consumer validates the dynamic sealed C4I parent, then the full exact `C4I → C4H → C4 → C4P → C4N → C4M → C4V → C3D` chain under one stable outer HEAD, including C4's one-parent exact A/M source diff, all three realized prefixes, 80-claim note, and full argv/grade/coverage.
+The final ledger is exactly 79 commands and 79 immediate claims: 76 `tests-pass`, then three `command-succeeded`. It includes five focused C5 profiles, C/B/U6 architecture and self-tests, repetition self-test plus 56 separate parent-sealed `--case <id>` qualification receipts, `--verify-c5-sealed-c4-note`, scope/verifier self-tests, three cumulative passes, source-final gate, credential scan, and `--verify-c5-preseal-ledger`. Each qualification receipt preserves its own lock and fresh private execution roots. Use private root `.countershape/p07bc-c5-final` and generate the exact sequence with `--print-final-runbook C5`. The historically named sealed-C4 consumer validates the dynamic sealed C4K parent, then the full exact `C4K → C4I → C4H → C4 → C4P → C4N → C4M → C4V → C3D` chain under one stable outer HEAD, including C4's one-parent exact A/M source diff, all three realized prefixes, 80-claim note, and full argv/grade/coverage.
 
 ## Commit
 

@@ -11,12 +11,12 @@ import { isDeepStrictEqual } from "node:util";
 export const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const specificationPath = resolve(repositoryRoot, "spec/verification/p07b-c-unit-paths.json");
 const gitStderrPrefixBytes = 256;
-const unitOrder = Object.freeze(["C0A", "C0B", "C1", "C1M", "C1V", "C1E", "C1B", "C2", "C2M", "C2B", "C3P", "C3V", "C3M", "C3PB", "C3A", "C3L", "C3F", "C3S", "C3", "C3R", "C3Q", "C3T", "C3U", "C3B", "C3D", "C4V", "C4M", "C4N", "C4P", "C4", "C4H", "C4I", "C5", "C6A", "C6M", "C6B"]);
+const unitOrder = Object.freeze(["C0A", "C0B", "C1", "C1M", "C1V", "C1E", "C1B", "C2", "C2M", "C2B", "C3P", "C3V", "C3M", "C3PB", "C3A", "C3L", "C3F", "C3S", "C3", "C3R", "C3Q", "C3T", "C3U", "C3B", "C3D", "C4V", "C4M", "C4N", "C4P", "C4", "C4H", "C4I", "C4K", "C5", "C6A", "C6M", "C6B"]);
 const receiptPhaseUnitOrder = Object.freeze(unitOrder.slice(unitOrder.indexOf("C3M")));
 const receiptPhaseUnitSet = new Set(receiptPhaseUnitOrder);
 const receiptPhaseKeys = Object.freeze(["C3P", "C3", "C6A"]);
 const receiptPhaseStates = new Set(["ABSENT", "PRESENT"]);
-const receiptPhaseAuthoritySHA256 = "3176e9a6764203afeed0ae836bd1a4974ae63887dbee8f0c1de1f66f2c93f580";
+const receiptPhaseAuthoritySHA256 = "6996cec6d83a380b82c912aebea52797984fadacdc0c9a053cf69c79f90e0a45";
 const sealedC4NReceiptPhaseAuthoritySHA256 = "8f237c7d883c212167e5a04e5dd24d6efdacf4a9ce5492215fd06892a8237c4a";
 const sealedC4PReceiptPhaseAuthoritySHA256 = "66f568efb313303c92b23a51b743200f15b47a451a9b3424aaa251e0228e7928";
 const sealedC4HIndependentCandidateRejected = 289;
@@ -61,6 +61,10 @@ const sealedC4HCandidateParent = Object.freeze({
 	commit: "4b4686ea30e5ddc5043eee11ba24725bcce8bb94",
 	tree: "2d02d220961f3fc41b2372df5eb8dc3aac47a529",
 });
+const sealedC4ICandidateParent = Object.freeze({
+	commit: "d784ace97dd03660c6c724e1cb8f838b869681ec",
+	tree: "e38b702884b9df128b41bfa7710459dd92f901d7",
+});
 const candidateSpecificationOwnerContracts = Object.freeze({
 	C4V: Object.freeze({ parent: "C3D", authority: sealedC3DCandidateParent, priorSchema: "countershape/p07b-c-unit-paths/v16" }),
 	C4M: Object.freeze({ parent: "C4V", authority: sealedC4VCandidateParent, priorSchema: "countershape/p07b-c-unit-paths/v17" }),
@@ -68,6 +72,7 @@ const candidateSpecificationOwnerContracts = Object.freeze({
 	C4P: Object.freeze({ parent: "C4N", authority: sealedC4NCandidateParent, priorSchema: "countershape/p07b-c-unit-paths/v19" }),
 	C4H: Object.freeze({ parent: "C4", authority: sealedC4CandidateParent, priorSchema: "countershape/p07b-c-unit-paths/v20" }),
 	C4I: Object.freeze({ parent: "C4H", authority: sealedC4HCandidateParent, priorSchema: "countershape/p07b-c-unit-paths/v21" }),
+	C4K: Object.freeze({ parent: "C4I", authority: sealedC4ICandidateParent, priorSchema: "countershape/p07b-c-unit-paths/v22" }),
 });
 const candidateSpecificationOwners = new Set(["C3D", ...Object.keys(candidateSpecificationOwnerContracts)]);
 const verificationProfiles = new Set(["SOURCE_FULL", "RECEIPT_RECONCILIATION"]);
@@ -288,6 +293,24 @@ const c4iDeclaredMaintenanceContract = Object.freeze({
 		"tools/check-p07b-c-unit-scope.mjs",
 	]),
 	exact_roster_sha256: "522af4209bde3f769a12c3943f46bd83e566977ad8f275165310962c1e697585",
+});
+const c4kDeclaredMaintenanceContract = Object.freeze({
+	verification_profile: "SOURCE_FULL",
+	prefixes: Object.freeze([]),
+	exact: Object.freeze([
+		"docs/HANDOFF_MODE_C.md",
+		"docs/PROMPT_PACK.md",
+		"docs/THREAT_MODEL.md",
+		"docs/VERIFICATION.md",
+		"docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md",
+		"docs/status/P07B-C-C4K-C3-GO-TIMEOUT-MAINTENANCE.md",
+		"spec/verification/p07b-c-unit-paths.json",
+		"tools/check-p07b-c-architecture-selftest.mjs",
+		"tools/check-p07b-c-architecture.mjs",
+		"tools/check-p07b-c-plan.mjs",
+		"tools/check-p07b-c-unit-scope.mjs",
+	]),
+	exact_roster_sha256: "9ab25f722aeaae583d08df271d6162c873254c51799b36b03fc85ff64d78567e",
 });
 const c5DeclaredSourceContract = Object.freeze({
 	verification_profile: "SOURCE_FULL",
@@ -525,7 +548,7 @@ export function validateSpecification(specification) {
 		JSON.stringify(Object.keys(specification).sort()) !== JSON.stringify(["schema_version", "units"])) {
 		fail("specification root roster");
 	}
-	if (specification.schema_version !== "countershape/p07b-c-unit-paths/v22") fail("specification version");
+	if (specification.schema_version !== "countershape/p07b-c-unit-paths/v23") fail("specification version");
 	if (!specification.units || typeof specification.units !== "object" || Array.isArray(specification.units) ||
 		JSON.stringify(Object.keys(specification.units)) !== JSON.stringify(unitOrder)) fail("unit roster/order");
 
@@ -629,6 +652,12 @@ export function validateSpecification(specification) {
 			JSON.stringify(entry.exact) !== JSON.stringify(c4iDeclaredMaintenanceContract.exact) ||
 			exactRosterDigest(entry.exact) !== c4iDeclaredMaintenanceContract.exact_roster_sha256)) {
 			fail("C4I: declared maintenance contract");
+		}
+		if (unit === "C4K" && (entry.verification_profile !== c4kDeclaredMaintenanceContract.verification_profile ||
+			JSON.stringify(entry.prefixes) !== JSON.stringify(c4kDeclaredMaintenanceContract.prefixes) ||
+			JSON.stringify(entry.exact) !== JSON.stringify(c4kDeclaredMaintenanceContract.exact) ||
+			exactRosterDigest(entry.exact) !== c4kDeclaredMaintenanceContract.exact_roster_sha256)) {
+			fail("C4K: declared maintenance contract");
 		}
 		if (unit === "C5" && (entry.verification_profile !== c5DeclaredSourceContract.verification_profile ||
 			JSON.stringify(entry.prefixes) !== JSON.stringify(c5DeclaredSourceContract.prefixes) ||
@@ -1646,7 +1675,7 @@ function runIndependentCandidatePhaseSelfTest(specification) {
 		if (!refused) fail(`independent candidate self-test false negative: ${name}`);
 		rejected += 1;
 	}
-	if (accepted.length !== 12 || rejected !== 327) fail(`independent candidate self-test cardinality ${accepted.length}/${rejected}`);
+	if (accepted.length !== 13 || rejected !== 367) fail(`independent candidate self-test cardinality ${accepted.length}/${rejected}`);
 }
 
 function runFutureC6MaterialSelfTest(authority) {
@@ -2096,11 +2125,14 @@ async function runSelfTest() {
 		!exactPathsMatch(specification, "C4H", c4hDeclaredMaintenanceContract.exact.slice(1)),
 		exactPathsMatch(specification, "C4I", c4iDeclaredMaintenanceContract.exact),
 		!exactPathsMatch(specification, "C4I", c4iDeclaredMaintenanceContract.exact.slice(1)),
+		exactPathsMatch(specification, "C4K", c4kDeclaredMaintenanceContract.exact),
+		!exactPathsMatch(specification, "C4K", c4kDeclaredMaintenanceContract.exact.slice(1)),
 		isDeepStrictEqual(specification.units.C5.exact, c5DeclaredSourceContract.exact),
 		isDeepStrictEqual(specification.units.C5.prefixes, c5DeclaredSourceContract.prefixes),
 		unexpectedPaths(specification, "C4", ["tools/verify-runtime-authority.mjs"]).length === 0,
 		unexpectedPaths(specification, "C4H", ["tools/verify-runtime-authority.mjs"])[0] === "tools/verify-runtime-authority.mjs",
 		unexpectedPaths(specification, "C4I", ["tools/verify-runtime-authority.mjs"])[0] === "tools/verify-runtime-authority.mjs",
+		unexpectedPaths(specification, "C4K", ["tools/verify-runtime-authority.mjs"])[0] === "tools/verify-runtime-authority.mjs",
 		unexpectedPaths(specification, "C5", ["tools/verify-runtime-authority.mjs"])[0] === "tools/verify-runtime-authority.mjs",
 		unexpectedPaths(specification, "C4", ["spec/verification/p07b-b-future-surface-authority.json"]).length === 0,
 		unexpectedPaths(specification, "C5", ["spec/verification/p07b-b-future-surface-authority.json"])[0] ===
@@ -2128,6 +2160,7 @@ async function runSelfTest() {
 		exactSourceGateAdmitted(specification, "C4P"),
 		exactSourceGateAdmitted(specification, "C4H"),
 		exactSourceGateAdmitted(specification, "C4I"),
+		exactSourceGateAdmitted(specification, "C4K"),
 		exactSourceGateAdmitted(specification, "C6M"),
 		!exactSourceGateAdmitted(specification, "C2B"),
 		!exactSourceGateAdmitted(specification, "C3B"),
@@ -2143,7 +2176,8 @@ async function runSelfTest() {
 		specification.units.C4P.verification_profile === "SOURCE_FULL" && specification.units.C4P.prefixes.length === 0,
 		specification.units.C4H.verification_profile === "SOURCE_FULL" && specification.units.C4H.prefixes.length === 0,
 		specification.units.C4I.verification_profile === "SOURCE_FULL" && specification.units.C4I.prefixes.length === 0,
-		receiptPhaseRows(specification).length === 24,
+		specification.units.C4K.verification_profile === "SOURCE_FULL" && specification.units.C4K.prefixes.length === 0,
+		receiptPhaseRows(specification).length === 25,
 		receiptPhaseRows(specification).at(-1).boundary === "C6B",
 		receiptPhaseAuthorityDigest(specification) === receiptPhaseAuthoritySHA256,
 		!["C4", "C5", "C6A", "C6M", "C6B"].some((boundary) =>
@@ -2154,6 +2188,7 @@ async function runSelfTest() {
 		specification.units.C4P.exact.includes("spec/verification/p07b-c-unit-paths.json"),
 		specification.units.C4H.exact.includes("spec/verification/p07b-c-unit-paths.json"),
 		specification.units.C4I.exact.includes("spec/verification/p07b-c-unit-paths.json"),
+		specification.units.C4K.exact.includes("spec/verification/p07b-c-unit-paths.json"),
 		exactPathsMatch(specification, "C6M", c6mDeclaredAdapterContract.exact),
 		!specification.units.C6M.exact.includes("docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md"),
 		!specification.units.C6M.exact.includes("docs/status/P07B-C-C6-EVIDENCE.md"),
@@ -2309,11 +2344,29 @@ async function runSelfTest() {
 	requireSpecificationMutationRejected(specification, "C4I receipt state drift", (hostile) => {
 		hostile.units.C4I.receipt_states.C6A = "PRESENT";
 	});
+	requireSpecificationMutationRejected(specification, "C4K profile drift", (hostile) => {
+		hostile.units.C4K.verification_profile = "RECEIPT_RECONCILIATION";
+	});
+	requireSpecificationMutationRejected(specification, "C4K parent drift", (hostile) => {
+		hostile.units.C4K.parent = "C4H";
+	});
+	requireSpecificationMutationRejected(specification, "C4K exact substitution", (hostile) => {
+		hostile.units.C4K.exact[0] = "docs/ADVERSARY.md";
+	});
+	requireSpecificationMutationRejected(specification, "C4K architecture checker removal", (hostile) => {
+		hostile.units.C4K.exact = hostile.units.C4K.exact.filter((path) => path !== "tools/check-p07b-c-architecture.mjs");
+	});
+	requireSpecificationMutationRejected(specification, "C4K architecture self-test removal", (hostile) => {
+		hostile.units.C4K.exact = hostile.units.C4K.exact.filter((path) => path !== "tools/check-p07b-c-architecture-selftest.mjs");
+	});
+	requireSpecificationMutationRejected(specification, "C4K receipt state drift", (hostile) => {
+		hostile.units.C4K.receipt_states.C6A = "PRESENT";
+	});
 	requireSpecificationMutationRejected(specification, "C5 profile drift", (hostile) => {
 		hostile.units.C5.verification_profile = "RECEIPT_RECONCILIATION";
 	});
-	requireSpecificationMutationRejected(specification, "C5 stale C4H parent drift", (hostile) => {
-		hostile.units.C5.parent = "C4H";
+	requireSpecificationMutationRejected(specification, "C5 stale C4I parent drift", (hostile) => {
+		hostile.units.C5.parent = "C4I";
 	});
 	requireSpecificationMutationRejected(specification, "C5 exact substitution", (hostile) => {
 		hostile.units.C5.exact[0] = "docs/ADVERSARY.md";
@@ -2699,7 +2752,7 @@ async function main() {
 	}
 	if (process.argv.length !== 5 || process.argv[2] !== "--unit" ||
 		!(["--staged", "--exact-staged", "--receipt-manifest", "--source-final-gate", "--receipt-final-gate", "--credential-scan", "--source-authority-gate"].includes(process.argv[4]))) {
-		fail("usage: check-p07b-c-unit-scope.mjs --candidate-phase <C3D|C4V|C4M|C4N|C4P|C4|C4H|C4I|C5|C6A|C6M|C6B> | --unit <C0A|C0B|C1|C1M|C1V|C1E|C1B|C2|C2M|C2B|C3P|C3V|C3M|C3PB|C3A|C3L|C3F|C3S|C3|C3R|C3Q|C3T|C3U|C3B|C3D|C4V|C4M|C4N|C4P|C4|C4H|C4I|C5|C6A|C6M|C6B> <--staged|--exact-staged|--receipt-manifest|--source-final-gate|--receipt-final-gate|--credential-scan|--source-authority-gate> | --self-test");
+		fail("usage: check-p07b-c-unit-scope.mjs --candidate-phase <C3D|C4V|C4M|C4N|C4P|C4|C4H|C4I|C4K|C5|C6A|C6M|C6B> | --unit <C0A|C0B|C1|C1M|C1V|C1E|C1B|C2|C2M|C2B|C3P|C3V|C3M|C3PB|C3A|C3L|C3F|C3S|C3|C3R|C3Q|C3T|C3U|C3B|C3D|C4V|C4M|C4N|C4P|C4|C4H|C4I|C4K|C5|C6A|C6M|C6B> <--staged|--exact-staged|--receipt-manifest|--source-final-gate|--receipt-final-gate|--credential-scan|--source-authority-gate> | --self-test");
 	}
 	const specification = await loadSpecification();
 	if (process.argv[4] === "--source-authority-gate") {
