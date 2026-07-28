@@ -380,3 +380,9 @@ The phrases “sandboxed,” “network blocked,” “safe to run untrusted PRs
 Before production use, the owner must commission an independent security review covering every implemented component at that time, including the source parser/materializer and process lifecycle plus the localhost application, artifact permissions, export pipeline, generated harness, dependency/release chain, and platform-specific behavior if and when those later surfaces are built. They must also define vulnerability intake, supported versions, patch SLAs, artifact retention/deletion, release signing, reproducible builds, and maintainer ownership.
 
 This U0 model is a falsifiable boundary for implementation. It is not that review.
+
+## C4J bounded verifier timeout authority
+
+C4J repairs a verifier scheduling ceiling, not a product security boundary. The child runtime remains parent-owned: callers may omit policy or pass one exact frozen ordinary/null-prototype record with the sole own data key `timeoutMS`. Validation rejects inherited keys, accessors, extra string/symbol keys, unfrozen or exotic records, coercion, and every numeric value except the admitted `1800000`; omission preserves the `1200000` default.
+
+The verifier policy is a frozen null-prototype record outside `currentSteps`, looked up with `Object.hasOwn`. Its only keys are `architecture-p07b-c-c5` and `architecture-p07b-c-c5-selftest`. The runtime performs both authority revalidations and exactly one spawn; there is no retry, fallback, clamp, or changed inner deadline. The remaining risk is explicit: 30 minutes may still be insufficient under future load, and successful C4J cumulative runs do not prove C5 behavior.

@@ -11,7 +11,9 @@ import {
 	VerificationError,
 	assertNoDSStore,
 	childArguments,
+	childExecutionPolicyForStepID,
 	currentSteps,
+	currentStepChildResult,
 	executeCurrentPlan,
 	historicalOnly,
 	packageArguments,
@@ -498,6 +500,7 @@ async function inspectChildArguments() {
 		"tool-only arguments changed",
 	);
 	let overriddenArguments;
+	let defaultSpawnOptions;
 	await childResult(
 		{ id: "argument-override", tool: "go", tools: ["go"] },
 		fakeAuthorities(),
@@ -505,8 +508,9 @@ async function inspectChildArguments() {
 		{
 			args: ["test", "example.invalid/package"],
 			revalidate: async () => {},
-			spawn: (_executable, args) => {
+			spawn: (_executable, args, options) => {
 				overriddenArguments = args;
+				defaultSpawnOptions = options;
 				return { status: 0, signal: null, error: null, stdout: "", stderr: "" };
 			},
 		},
@@ -516,6 +520,138 @@ async function inspectChildArguments() {
 		"VERIFY_SELFTEST_CHILD_ARGUMENT_OVERRIDE",
 		JSON.stringify(overriddenArguments),
 	);
+	expect(
+		defaultSpawnOptions.cwd === repositoryRoot && defaultSpawnOptions.encoding === "utf8" &&
+			defaultSpawnOptions.env !== undefined && defaultSpawnOptions.timeout === 1_200_000 &&
+			defaultSpawnOptions.maxBuffer === 64 * 1024 * 1024,
+		"VERIFY_SELFTEST_CHILD_DEFAULT_OPTIONS",
+		JSON.stringify(defaultSpawnOptions),
+	);
+	for (const step of currentSteps) {
+		expect(
+			childExecutionPolicyForStepID(step.id) === undefined,
+			"VERIFY_SELFTEST_DORMANT_TIMEOUT_POLICY_ELEVATION",
+			step.id,
+		);
+	}
+	for (const id of ["constructor", "toString", "__proto__", "architecture-p07b-c-c5-alias", "", null, undefined]) {
+		expect(
+			childExecutionPolicyForStepID(id) === undefined,
+			"VERIFY_SELFTEST_TIMEOUT_POLICY_LOOKUP",
+			String(id),
+		);
+	}
+	for (const id of ["architecture-p07b-c-c5", "architecture-p07b-c-c5-selftest"]) {
+		const policy = childExecutionPolicyForStepID(id);
+		expect(
+			policy !== undefined && Object.isFrozen(policy) &&
+				Object.getPrototypeOf(policy) === null &&
+				JSON.stringify(Object.keys(policy)) === JSON.stringify(["timeoutMS"]) &&
+				policy.timeoutMS === 1_800_000,
+			"VERIFY_SELFTEST_TIMEOUT_POLICY_EXACT",
+			`${id}: ${JSON.stringify(policy)}`,
+		);
+		let extendedSpawnOptions;
+		let extendedSpawns = 0;
+		let extendedRevalidations = 0;
+		await currentStepChildResult(
+			{ id, tool: "node", tools: ["node"] },
+			fakeAuthorities(),
+			{},
+			{
+				revalidate: async () => { extendedRevalidations += 1; },
+				spawn: (_executable, _args, options) => {
+					extendedSpawns += 1;
+					extendedSpawnOptions = options;
+					return { status: 0, signal: null, error: null, stdout: "", stderr: "" };
+				},
+			},
+		);
+		expect(
+			extendedSpawns === 1 && extendedRevalidations === 2 &&
+				extendedSpawnOptions.timeout === 1_800_000 &&
+				extendedSpawnOptions.cwd === repositoryRoot &&
+				extendedSpawnOptions.encoding === "utf8" &&
+				extendedSpawnOptions.maxBuffer === 64 * 1024 * 1024,
+			"VERIFY_SELFTEST_TIMEOUT_POLICY_PROPAGATION",
+			`${id}: spawns=${extendedSpawns} revalidations=${extendedRevalidations} options=${JSON.stringify(extendedSpawnOptions)}`,
+		);
+	}
+	let inertMetadataTimeout;
+	await currentStepChildResult(
+		{ id: "metadata-cannot-elevate", tool: "node", tools: ["node"], timeoutMS: 1_800_000 },
+		fakeAuthorities(),
+		{},
+		{
+			revalidate: async () => {},
+			spawn: (_executable, _args, options) => {
+				inertMetadataTimeout = options.timeout;
+				return { status: 0, signal: null, error: null, stdout: "", stderr: "" };
+			},
+		},
+	);
+	expect(inertMetadataTimeout === 1_200_000, "VERIFY_SELFTEST_STEP_METADATA_ELEVATED", String(inertMetadataTimeout));
+	const exactExtendedPolicy = Object.freeze({ timeoutMS: 1_800_000 });
+	let directExtendedTimeout;
+	await childResult(
+		{ id: "direct-extended", tool: "node", tools: ["node"] },
+		fakeAuthorities(),
+		{},
+		{
+			revalidate: async () => {},
+			spawn: (_executable, _args, options) => {
+				directExtendedTimeout = options.timeout;
+				return { status: 0, signal: null, error: null, stdout: "", stderr: "" };
+			},
+		},
+		exactExtendedPolicy,
+	);
+	expect(directExtendedTimeout === 1_800_000, "VERIFY_SELFTEST_DIRECT_EXTENDED_TIMEOUT", String(directExtendedTimeout));
+	const inheritedPolicy = Object.freeze(Object.create(Object.freeze({ timeoutMS: 1_800_000 })));
+	const accessorPolicy = {};
+	Object.defineProperty(accessorPolicy, "timeoutMS", { enumerable: true, get: () => 1_800_000 });
+	Object.freeze(accessorPolicy);
+	const symbolPolicy = Object.freeze({ timeoutMS: 1_800_000, [Symbol("extra")]: true });
+	for (const [name, policy] of [
+		["explicit-undefined", undefined],
+		["null", null],
+		["array", Object.freeze([1_800_000])],
+		["unfrozen", { timeoutMS: 1_800_000 }],
+		["inherited", inheritedPolicy],
+		["accessor", accessorPolicy],
+		["extra", Object.freeze({ timeoutMS: 1_800_000, extra: true })],
+		["symbol", symbolPolicy],
+		["string", Object.freeze({ timeoutMS: "1800000" })],
+		["fraction", Object.freeze({ timeoutMS: 1_800_000.5 })],
+		["nan", Object.freeze({ timeoutMS: Number.NaN })],
+		["infinity", Object.freeze({ timeoutMS: Number.POSITIVE_INFINITY })],
+		["bigint", Object.freeze({ timeoutMS: 1_800_000n })],
+		["zero", Object.freeze({ timeoutMS: 0 })],
+		["negative", Object.freeze({ timeoutMS: -1 })],
+		["default-explicit", Object.freeze({ timeoutMS: 1_200_000 })],
+		["under", Object.freeze({ timeoutMS: 1_799_999 })],
+		["over", Object.freeze({ timeoutMS: 1_800_001 })],
+	]) {
+		let spawned = false;
+		let revalidated = false;
+		await expectCode(
+			childResult(
+				{ id: `invalid-policy-${name}`, tool: "node", tools: ["node"] },
+				fakeAuthorities(),
+				{},
+				{
+					revalidate: async () => { revalidated = true; },
+					spawn: () => {
+						spawned = true;
+						return { status: 0, signal: null, error: null, stdout: "", stderr: "" };
+					},
+				},
+				policy,
+			),
+			"VERIFY_CHILD_EXECUTION_POLICY_INVALID",
+		);
+		expect(!spawned && !revalidated, "VERIFY_SELFTEST_INVALID_POLICY_USED_AUTHORITY", name);
+	}
 	const authorities = fakeAuthorities();
 	const recordStepTools = async (step, _admitted, events) => {
 		for (const name of step.tools) events.push(name);
@@ -528,6 +664,13 @@ async function inspectChildArguments() {
 		{
 			name: "spawn-error",
 			spawnResult: { status: null, signal: null, error: new Error("injected spawn error"), stdout: "", stderr: "" },
+		},
+		{
+			name: "timeout",
+			spawnResult: Object.assign(
+				{ status: null, signal: "SIGTERM", stdout: "partial-out", stderr: "partial-err" },
+				{ error: Object.assign(new Error("injected timeout"), { code: "ETIMEDOUT" }) },
+			),
 		},
 	]) {
 		const events = [];

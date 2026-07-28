@@ -21,6 +21,11 @@ const modulePath = "github.com/nelsonwerd/countershape";
 const generalJobs = 1;
 const goTestParallelism = 2;
 const authorityNames = Object.freeze(["go", "node", "git", "sh", "cc", "cxx"]);
+const extendedChildTimeoutMS = 30 * 60 * 1000;
+const exactExtendedChildTimeoutStepIDs = Object.freeze([
+	"architecture-p07b-c-c5",
+	"architecture-p07b-c-c5-selftest",
+]);
 
 // Sealed C0 compatibility invariants now enforced by verify-runtime-authority.mjs:
 // GOFLAGS: "-mod=readonly -buildvcs=false -p=1" and review-first VERIFY_STALE_LOCK refusal.
@@ -30,6 +35,45 @@ export class VerificationError extends Error {
 		super(`${code}: ${detail}`);
 		this.code = code;
 	}
+}
+
+function extendedChildTimeoutMSByStepID() {
+	return Object.freeze(Object.assign(Object.create(null), {
+		"architecture-p07b-c-c5": extendedChildTimeoutMS,
+		"architecture-p07b-c-c5-selftest": extendedChildTimeoutMS,
+	}));
+}
+
+function extendedChildExecutionPolicy() {
+	return Object.freeze(Object.assign(Object.create(null), {
+		timeoutMS: extendedChildTimeoutMS,
+	}));
+}
+
+export function childExecutionPolicyForStepID(stepID) {
+	const timeoutMSByStepID = extendedChildTimeoutMSByStepID();
+	const executionPolicy = extendedChildExecutionPolicy();
+	const keys = Object.keys(timeoutMSByStepID);
+	if (!Object.isFrozen(timeoutMSByStepID) ||
+		Object.getPrototypeOf(timeoutMSByStepID) !== null ||
+		JSON.stringify(keys) !== JSON.stringify(exactExtendedChildTimeoutStepIDs) ||
+		keys.some((id) => timeoutMSByStepID[id] !== extendedChildTimeoutMS) ||
+		!Object.isFrozen(executionPolicy) ||
+		Object.getPrototypeOf(executionPolicy) !== null ||
+		Reflect.ownKeys(executionPolicy).length !== 1 ||
+		executionPolicy.timeoutMS !== extendedChildTimeoutMS) {
+		throw new VerificationError("VERIFY_CHILD_TIMEOUT_POLICY_INVALID", keys.join(","));
+	}
+	return typeof stepID === "string" && Object.hasOwn(timeoutMSByStepID, stepID)
+		? executionPolicy
+		: undefined;
+}
+
+export async function currentStepChildResult(step, admitted, childEnvironment, dependencies = {}) {
+	const executionPolicy = childExecutionPolicyForStepID(step?.id);
+	return executionPolicy === undefined
+		? childResult(step, admitted, childEnvironment, dependencies)
+		: childResult(step, admitted, childEnvironment, dependencies, executionPolicy);
 }
 
 const goGeneralCommon = Object.freeze(["-mod=readonly", "-buildvcs=false", `-p=${generalJobs}`]);
@@ -482,7 +526,7 @@ async function main() {
 						return { status: 0, signal: null, error: null, stdout: "workspace contains no .DS_Store artifacts\n", stderr: "" };
 					}
 					if (step.kind === "package-guard") {
-						const result = await childResult(step, admitted, childEnvironment);
+						const result = await currentStepChildResult(step, admitted, childEnvironment);
 						if (result.error || result.signal || result.status !== 0) return result;
 						packagePartition = partitionGoPackages(result.stdout);
 						return {
@@ -492,7 +536,7 @@ async function main() {
 					}
 					if (step.kind === "package-revalidation") {
 						if (!packagePartition) throw new VerificationError("VERIFY_PACKAGE_PARTITION_UNAVAILABLE", step.id);
-						const result = await childResult(step, admitted, childEnvironment);
+						const result = await currentStepChildResult(step, admitted, childEnvironment);
 						if (result.error || result.signal || result.status !== 0) return result;
 						const currentPartition = partitionGoPackages(result.stdout);
 						revalidatePackagePartition(packagePartition, currentPartition);
@@ -510,10 +554,10 @@ async function main() {
 						resourcesFinalized = true;
 						return { status: 0, signal: null, error: null, stdout: `private run root removed and verifier lock released for pid ${lock.pid}\n`, stderr: "" };
 					}
-					if (step.packageClass) return await childResult(step, admitted, childEnvironment, {
+					if (step.packageClass) return await currentStepChildResult(step, admitted, childEnvironment, {
 						args: packageArguments(step, packagePartition),
 					});
-					return await childResult(step, admitted, childEnvironment);
+					return await currentStepChildResult(step, admitted, childEnvironment);
 			},
 		});
 		process.exitCode = status;

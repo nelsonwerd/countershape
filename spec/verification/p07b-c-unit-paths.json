@@ -1,5 +1,5 @@
 {
-  "schema_version": "countershape/p07b-c-unit-paths/v23",
+  "schema_version": "countershape/p07b-c-unit-paths/v24",
   "units": {
     "C0A": {
       "exact": [
@@ -873,6 +873,37 @@
       },
       "verification_profile": "SOURCE_FULL"
     },
+    "C4J": {
+      "exact": [
+        "docs/HANDOFF_MODE_C.md",
+        "docs/PROMPT_PACK.md",
+        "docs/THREAT_MODEL.md",
+        "docs/VERIFICATION.md",
+        "docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md",
+        "docs/status/P07B-C-C4J-C5-VERIFIER-TIMEOUT-MAINTENANCE.md",
+        "research/deep-dive/p07b-c-c5-timeout-maintenance/01-empirical-failure.md",
+        "research/deep-dive/p07b-c-c5-timeout-maintenance/02-runtime-authority.md",
+        "research/deep-dive/p07b-c-c5-timeout-maintenance/03-governance-phase-machine.md",
+        "research/deep-dive/p07b-c-c5-timeout-maintenance/04-receipt-runbook-impact.md",
+        "research/deep-dive/p07b-c-c5-timeout-maintenance/05-synthesis.md",
+        "research/deep-dive/p07b-c-c5-timeout-maintenance/06-red-team.md",
+        "research/deep-dive/p07b-c-c5-timeout-maintenance/07-executive-briefing.md",
+        "spec/verification/p07b-c-unit-paths.json",
+        "tools/check-p07b-c-plan.mjs",
+        "tools/check-p07b-c-unit-scope.mjs",
+        "tools/verify-current-selftest.mjs",
+        "tools/verify-current.mjs",
+        "tools/verify-runtime-authority.mjs"
+      ],
+      "parent": "C4K",
+      "prefixes": [],
+      "receipt_states": {
+        "C3P": "PRESENT",
+        "C3": "PRESENT",
+        "C6A": "ABSENT"
+      },
+      "verification_profile": "SOURCE_FULL"
+    },
     "C5": {
       "exact": [
         "docs/ARCHITECTURE.md",
@@ -888,7 +919,7 @@
         "tools/verify-current-selftest.mjs",
         "tools/verify-current.mjs"
       ],
-      "parent": "C4K",
+      "parent": "C4J",
       "prefixes": [
         "internal/contractexec/http/",
         "internal/contractexec/scope/",

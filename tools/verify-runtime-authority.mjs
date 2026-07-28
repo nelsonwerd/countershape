@@ -12,6 +12,8 @@ export const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "
 
 const maxChildOutput = 64 * 1024 * 1024;
 const childTimeoutMS = 20 * 60 * 1000;
+const defaultChildTimeoutMS = childTimeoutMS;
+const extendedChildTimeoutMS = 30 * 60 * 1000;
 const maxAdmittedToolBytes = 512 * 1024 * 1024;
 const toolReadChunkBytes = 1024 * 1024;
 const lockRecordMaxBytes = 4096;
@@ -510,7 +512,30 @@ function childArguments(step, root = repositoryRoot) {
 	return step.path ? [resolve(root, step.path), ...suffix] : suffix;
 }
 
-export async function childResult(step, admitted, childEnvironment, dependencies = {}) {
+function childTimeoutForExecutionPolicy(executionPolicy, supplied) {
+	if (!supplied) return defaultChildTimeoutMS;
+	if (executionPolicy === null || (typeof executionPolicy !== "object") ||
+		Array.isArray(executionPolicy) || !Object.isFrozen(executionPolicy)) {
+		throw new VerificationRuntimeError("VERIFY_CHILD_EXECUTION_POLICY_INVALID", "exact frozen record required");
+	}
+	const prototype = Object.getPrototypeOf(executionPolicy);
+	const keys = Reflect.ownKeys(executionPolicy);
+	const descriptor = Object.getOwnPropertyDescriptor(executionPolicy, "timeoutMS");
+	if ((prototype !== Object.prototype && prototype !== null) ||
+		keys.length !== 1 || keys[0] !== "timeoutMS" ||
+		descriptor === undefined || !Object.hasOwn(descriptor, "value") ||
+		descriptor.get !== undefined || descriptor.set !== undefined ||
+		!Number.isSafeInteger(descriptor.value) || descriptor.value !== extendedChildTimeoutMS) {
+		throw new VerificationRuntimeError(
+			"VERIFY_CHILD_EXECUTION_POLICY_INVALID",
+			`timeoutMS=${String(descriptor?.value)}`,
+		);
+	}
+	return descriptor.value;
+}
+
+export async function childResult(step, admitted, childEnvironment, dependencies = {}, executionPolicy) {
+	const childTimeoutMS = childTimeoutForExecutionPolicy(executionPolicy, arguments.length >= 5);
 	const args = dependencies.args ?? childArguments(step);
 	const revalidate = dependencies.revalidate ?? revalidateStepTools;
 	const spawn = dependencies.spawn ?? spawnSync;
