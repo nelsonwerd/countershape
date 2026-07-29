@@ -2,8 +2,8 @@
 
 - **Contract version:** U0 / `threat-model-v1`
 - **Target:** single-user, trusted-local, narrowed Darwin reference instrument
-- **Status:** design contract; P07B-C through C4I is sealed and strict-clean, C4K C3 Go-timeout maintenance is active and `UNRECEIPTED`, C4J remains parked, C5 remains blocked, and no security control is validated beyond its exact command/environment receipt
-- **Review trigger:** update before any new source form, adapter, runtime OS, network mode, multi-user surface, or export field
+- **Status:** design contract; P07B-C product authority through sealed C4 and process/verification maintenance through sealed C4J are strict-clean, C4L is the active `SOURCE_FULL` governance bootstrap with no product authority, C5 remains blocked, and no security control is validated beyond its exact command/environment receipt
+- **Review trigger:** update before any new source form, adapter, runtime OS, network mode, multi-user surface, export field, verification profile, or operator-transition authority
 
 The frozen C3-era status phrase “C3 exact-target publication is active” is retained only as historical checker compatibility; the current status immediately above governs.
 
@@ -264,11 +264,11 @@ A copied canonical body, copied C2 relationship file, or complete filesystem cop
 
 ### T16 — Receipt or provenance overstatement
 
-**Threat.** Wake runtime history becomes product state; a didrun grade is parsed or summarized upward; a green command is assigned to another capability or OS; missing evidence is inferred from UI success.
+**Threat.** Wake runtime history becomes product state; a didrun grade is parsed or summarized upward; a green command is assigned to another capability or OS; parent product-byte identity is promoted into inherited verifier success or product correctness; an owner-attributed sentence, same-unit companion file, or predecessor paraphrase is presented as authenticated operator authorization.
 
-**Required controls.** Wake data is restricted to inert candidate provenance. Countershape has no Wake events, effects, epochs, gates, session recovery, replay, fork, or scheduling state. didrun reference fields are opaque strings and round-trip unknown values verbatim. Every claimed OS, Node major, viewport/state, security behavior, and timed metric maps to its own exact receipt. Missing evidence is `UNRECEIPTED`.
+**Required controls.** Wake data is restricted to inert candidate provenance, and didrun fields retain their opaque exact-command ceiling. Unit profiles, product authority, product behavior, product projection, and transition provenance are machine-bound into the phase-authority digest. `NON_PRODUCT_MAINTENANCE` remains dormant grammar/partial scope machinery until a later `SOURCE_FULL` migration predeclares one exact consumer and adds its runbook/preseal/end-to-end tests. Verifier/runtime implementation stays outside its path ceiling. `PARENT_FROZEN` is prospective: that future final gate must reopen the exact sealed parent and prove no tracked change outside the predeclared roster relative to it, while verifier outcomes and product behavior remain `INHERITED_UNREPROVEN`; v25 defines no enumerated product-projection digest. `CITED_UNAUTHENTICATED` requires one literal canonical `OWNER_INSTRUCTION_ARTIFACT` path and raw-byte SHA-256 for exactly one nonempty, at-most-64-KiB valid-UTF-8 mode-`100644` regular blob already present in the direct parent's tree. Otherwise the exact provenance is `UNEVIDENCED` with disclosure `OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT`. A same-unit file and C4J's predecessor `PROSE_ONLY` record do not qualify. All current v25 `OWNER_OUT_OF_BAND` rows are `UNEVIDENCED`; authentication is `NOT_ESTABLISHED` and signed authorization is `NOT_IMPLEMENTED`.
 
-**Residual risk.** Receipts do not validate novelty, comprehension, bias reduction, market adoption, maintainability, or review completeness.
+**Residual risk.** Citation proves only that named bytes existed and were referenced. It does not establish owner identity, authorship, authorization, freshness, revocation state, or signature. Receipts and product-byte identity do not validate novelty, comprehension, bias reduction, product correctness, market adoption, maintainability, or review completeness.
 
 ### T17 — Verifier concurrency and cross-run cache substitution
 
@@ -381,8 +381,14 @@ Before production use, the owner must commission an independent security review 
 
 This U0 model is a falsifiable boundary for implementation. It is not that review.
 
-## C4J bounded verifier timeout authority
+## Sealed C4J bounded verifier timeout authority
 
 C4J repairs a verifier scheduling ceiling, not a product security boundary. The child runtime remains parent-owned: callers may omit policy or pass one exact frozen ordinary/null-prototype record with the sole own data key `timeoutMS`. Validation rejects inherited keys, accessors, extra string/symbol keys, unfrozen or exotic records, coercion, and every numeric value except the admitted `1800000`; omission preserves the `1200000` default.
 
 The verifier policy is a frozen null-prototype record outside `currentSteps`, looked up with `Object.hasOwn`. Its only keys are `architecture-p07b-c-c5` and `architecture-p07b-c-c5-selftest`. The runtime performs both authority revalidations and exactly one spawn; there is no retry, fallback, clamp, or changed inner deadline. The remaining risk is explicit: 30 minutes may still be insufficient under future load, and successful C4J cumulative runs do not prove C5 behavior.
+
+## C4L non-product maintenance and operator-provenance boundary
+
+C4L changes governance/checker and truth-model documentation under `SOURCE_FULL`; it has no product authority and must complete its three cumulative passes. It introduces but cannot consume dormant `NON_PRODUCT_MAINTENANCE` grammar and partial scope primitives. A future narrow child remains unavailable until a later `SOURCE_FULL` migration predeclares the exact coordination/status/prompt/research and boundary-specific maintenance-checker roster, nine claims, exact argv/runbook/preseal contract, and end-to-end fixtures. Verifier/runtime implementation is forbidden. Its future final gate may assert only no tracked change outside the parent-predeclared roster relative to an exact reopened parent, with product behavior `INHERITED_UNREPROVEN`; it cannot claim an enumerated product-projection digest, inherited verifier success, product correctness, unchanged behavior, security, or a reused witness.
+
+C4L's `OWNER_OUT_OF_BAND` authority is `UNEVIDENCED`. A same-unit artifact cannot bootstrap its own provenance; `CITED_UNAUTHENTICATED` requires exactly one literal-path, nonempty, at-most-64-KiB valid-UTF-8 mode-`100644` instruction-artifact blob already present in the direct parent's tree. Citation is not authentication: `NOT_ESTABLISHED` remains the authentication ceiling, `NOT_IMPLEMENTED` remains the signed-authorization state, and a future trust-root/signature protocol remains outside this boundary.

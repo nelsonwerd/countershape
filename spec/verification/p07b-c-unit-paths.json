@@ -1,5 +1,5 @@
 {
-  "schema_version": "countershape/p07b-c-unit-paths/v24",
+  "schema_version": "countershape/p07b-c-unit-paths/v25",
   "units": {
     "C0A": {
       "exact": [
@@ -822,6 +822,19 @@
         "C3": "PRESENT",
         "C6A": "ABSENT"
       },
+      "transition_authority": {
+        "authentication": "NOT_ESTABLISHED",
+        "classification": "OWNER_AUTHORIZED_AUTHORITY_MIGRATION / DEFECT_REPAIR",
+        "predecessor_declaration": {
+          "kind": "NONE"
+        },
+        "provenance": {
+          "disclosure": "OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT",
+          "kind": "UNEVIDENCED"
+        },
+        "signed_authorization": "NOT_IMPLEMENTED",
+        "source": "OWNER_OUT_OF_BAND"
+      },
       "verification_profile": "SOURCE_FULL"
     },
     "C4I": {
@@ -848,6 +861,19 @@
         "C3": "PRESENT",
         "C6A": "ABSENT"
       },
+      "transition_authority": {
+        "authentication": "NOT_ESTABLISHED",
+        "classification": "OWNER_AUTHORIZED_AUTHORITY_MIGRATION / DEFECT_REPAIR",
+        "predecessor_declaration": {
+          "kind": "NONE"
+        },
+        "provenance": {
+          "disclosure": "OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT",
+          "kind": "UNEVIDENCED"
+        },
+        "signed_authorization": "NOT_IMPLEMENTED",
+        "source": "OWNER_OUT_OF_BAND"
+      },
       "verification_profile": "SOURCE_FULL"
     },
     "C4K": {
@@ -870,6 +896,19 @@
         "C3P": "PRESENT",
         "C3": "PRESENT",
         "C6A": "ABSENT"
+      },
+      "transition_authority": {
+        "authentication": "NOT_ESTABLISHED",
+        "classification": "OWNER_AUTHORIZED_AUTHORITY_MIGRATION / DEFECT_REPAIR",
+        "predecessor_declaration": {
+          "kind": "NONE"
+        },
+        "provenance": {
+          "disclosure": "OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT",
+          "kind": "UNEVIDENCED"
+        },
+        "signed_authorization": "NOT_IMPLEMENTED",
+        "source": "OWNER_OUT_OF_BAND"
       },
       "verification_profile": "SOURCE_FULL"
     },
@@ -902,6 +941,61 @@
         "C3": "PRESENT",
         "C6A": "ABSENT"
       },
+      "transition_authority": {
+        "authentication": "NOT_ESTABLISHED",
+        "classification": "OWNER_AUTHORIZED_AUTHORITY_MIGRATION / DEFECT_REPAIR",
+        "predecessor_declaration": {
+          "artifact_path": "docs/status/P07B-C-C4K-C3-GO-TIMEOUT-MAINTENANCE.md",
+          "artifact_role": "PREDECESSOR_RECORD_OF_OWNER_ATTRIBUTED_DIRECTION",
+          "artifact_sha256": "sha256:fc80148ddedddb925962a15dacb20dad8979426aa3f3ef4f8fef12df9c614d6b",
+          "kind": "PROSE_ONLY",
+          "preexistence": "DIRECT_PARENT_TREE"
+        },
+        "provenance": {
+          "disclosure": "OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT",
+          "kind": "UNEVIDENCED"
+        },
+        "signed_authorization": "NOT_IMPLEMENTED",
+        "source": "OWNER_OUT_OF_BAND"
+      },
+      "verification_profile": "SOURCE_FULL"
+    },
+    "C4L": {
+      "exact": [
+        "docs/ARCHITECTURE.md",
+        "docs/CLAIM_VOCABULARY.md",
+        "docs/HANDOFF_MODE_C.md",
+        "docs/PROMPT_PACK.md",
+        "docs/SEMANTICS.md",
+        "docs/STATE_MACHINES.md",
+        "docs/THREAT_MODEL.md",
+        "docs/VERIFICATION.md",
+        "docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md",
+        "docs/status/P07B-C-C4L-NON-PRODUCT-MAINTENANCE-BOOTSTRAP.md",
+        "spec/verification/p07b-c-unit-paths.json",
+        "tools/check-p07b-c-plan.mjs",
+        "tools/check-p07b-c-unit-scope.mjs"
+      ],
+      "parent": "C4J",
+      "prefixes": [],
+      "receipt_states": {
+        "C3P": "PRESENT",
+        "C3": "PRESENT",
+        "C6A": "ABSENT"
+      },
+      "transition_authority": {
+        "authentication": "NOT_ESTABLISHED",
+        "classification": "OWNER_AUTHORIZED_AUTHORITY_MIGRATION / DEFECT_REPAIR",
+        "predecessor_declaration": {
+          "kind": "NONE"
+        },
+        "provenance": {
+          "disclosure": "OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT",
+          "kind": "UNEVIDENCED"
+        },
+        "signed_authorization": "NOT_IMPLEMENTED",
+        "source": "OWNER_OUT_OF_BAND"
+      },
       "verification_profile": "SOURCE_FULL"
     },
     "C5": {
@@ -919,7 +1013,7 @@
         "tools/verify-current-selftest.mjs",
         "tools/verify-current.mjs"
       ],
-      "parent": "C4J",
+      "parent": "C4L",
       "prefixes": [
         "internal/contractexec/http/",
         "internal/contractexec/scope/",

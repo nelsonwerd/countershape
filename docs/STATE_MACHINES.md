@@ -2,10 +2,10 @@
 
 - **Contract version:** U0 / `state-machines-v1`
 - **Target:** narrowed Darwin reference instrument
-- **Status:** normative separation of implemented and future transitions. P07B-C through C4P is sealed and strict-clean. C4 CLI-profile physical-run and classification-publication transitions are active and `UNRECEIPTED`; HTTP completion and C6 remain future.
-- **Historical C3 checkpoint:** C3 exact-target publication is active names the earlier unreceipted transition state; the live state is C4 above.
+- **Status:** normative separation of implemented and future transitions. P07B-C product transitions through sealed C4 and process/verification maintenance through sealed C4J are strict-clean. C4L is the active `SOURCE_FULL` governance bootstrap; HTTP completion and C6 remain future.
+- **Historical C3 checkpoint:** C3 exact-target publication is active names the earlier unreceipted transition state; the live repository boundary is C4L above.
 
-For the active CLI transition, `OfficialTarget.Valid()` is structural only. `ReopenOfficialTarget` repeats the live prerequisite graph; after owner acquisition C4 consumes a fourth fresh reopen on a detached bounded closure context in the exact guarded window immediately before permit consumption and physical `Start`. A conflicting same-attempt target link is first-durable-writer-wins and carries no semantic arbitration.
+For the sealed C4 CLI transition, `OfficialTarget.Valid()` is structural only. `ReopenOfficialTarget` repeats the live prerequisite graph; after owner acquisition C4 consumes a fourth fresh reopen on a detached bounded closure context in the exact guarded window immediately before permit consumption and physical `Start`. A conflicting same-attempt target link is first-durable-writer-wins and carries no semantic arbitration.
 
 Countershape state is a set of immutable semantic artifacts connected by validated transitions. State names are not presentation copy. The Go domain model, JSON schemas, API DTOs, CLI, studio, generated residue, examples, and tests must agree on these names and preconditions.
 
@@ -518,6 +518,25 @@ EMPTY
 
 A crash may leave finalized immutable semantic objects and nonadvancing partial-attempt evidence, but U6 does not publish a `PARTIAL` head or study-status object. It may not resume a candidate process or treat pre-crash executed observations as fresh confirmation. A future successor run may reuse pure canonical transformations of immutable bytes, but every evidentiary attempt must be new.
 
+## Verification-boundary governance state machine
+
+```text
+SEALED_SOURCE_FULL_PARENT
+  -> EXACT_CHILD_ROW_PREDECLARED
+  -> NARROW_CANDIDATE_STAGED
+  -> NINE_CLAIM_PROFILE_COMPLETE
+  -> CHILD_SEALED
+
+UNDECLARED_REQUIRED_REPAIR
+  -> OWNER_OUT_OF_BAND + SOURCE_FULL + UNEVIDENCED_OR_CITED_UNAUTHENTICATED
+  -> AUTHORITY_MIGRATION_SEALED
+  -> FUTURE_EXACT_CHILD_ROW_MAY_BE_PREDECLARED
+```
+
+The first path is the only route to `NON_PRODUCT_MAINTENANCE`, but v25 implements only its grammar and partial scope primitives; a later `SOURCE_FULL` migration must add one concrete consumer plus exact runbook/preseal/end-to-end fixture authority before that path can execute. Its candidate may not edit verifier/runtime implementation, the phase specification, either generic phase/profile checker, the core truth/security/verification contracts, product-authoritative paths, qualification authority, or its own profile grammar. `PARENT_FROZEN` is prospective: the future final gate must reopen the exact sealed parent and prove no tracked change outside the predeclared roster relative to it; v25 binds no enumerated product-projection digest. The child state remains `INHERITED_UNREPROVEN` for verifier outcomes and product behavior. The second path is why C4L itself remains `SOURCE_FULL`: v24 did not predeclare C4L, and the candidate cannot narrow its own proof obligation. C4L introduces no current narrow consumer. The live edge is `C4J → C4L → C5`.
+
+For `OWNER_OUT_OF_BAND`, a cited artifact must already be exactly one nonempty, at-most-64-KiB valid-UTF-8 mode-`100644` `OWNER_INSTRUCTION_ARTIFACT` regular blob at a literal canonical path in the `DIRECT_PARENT_TREE`. A same-unit file, descendant file, session paraphrase, or predecessor's `PROSE_ONLY` record cannot transition provenance to `CITED_UNAUTHENTICATED`. Neither provenance state transitions authentication beyond `NOT_ESTABLISHED`; signed authorization remains `NOT_IMPLEMENTED`. All current v25 owner-out-of-band rows are `UNEVIDENCED`.
+
 ## Legal transition summary
 
 | Transition | Why legal |
@@ -585,6 +604,11 @@ A crash may leave finalized immutable semantic objects and nonadvancing partial-
 | crash -> process resume/replay | no resume; any already-persisted nonadvancing evidence stays inert and a retry allocates a new world | persistence is not an execution runtime and U6 writes no crash-time status object |
 | Wake session/effect/gate -> Countershape state | reject field/object | Wake is inert candidate provenance only |
 | didrun grade -> Countershape classification | round-trip only | external receipt authority is separate |
+| absent sealed-parent row -> `NON_PRODUCT_MAINTENANCE` | profile refusal | a narrow candidate cannot self-insert or self-authorize |
+| narrow child edits verifier/runtime implementation, phase/profile authority, core truth contracts, qualification authority, or product paths | scope refusal | the dormant profile has a closed parent-predeclared path-role ceiling |
+| `PARENT_FROZEN` -> inherited verifier result, product correctness, unchanged behavior, parent grade, or an unimplemented projection digest | claim refusal; retain `INHERITED_UNREPROVEN` | no-outside-roster diff identity is not behavioral, receipt, or enumerated product-projection authority |
+| same-unit file or predecessor paraphrase -> qualifying owner instruction | retain `UNEVIDENCED` | only an exact instruction artifact already in the direct parent's tree may be cited |
+| `CITED_UNAUTHENTICATED` -> authenticated owner | retain `NOT_ESTABLISHED`; signed authorization remains `NOT_IMPLEMENTED` | citation is not authentication |
 
 <!-- countershape-validator: allow-prohibited-terms begin -->
 Additional prohibited transitions include promoting an unqualified `STABLE` label, declaring “compatible worlds,” calling a reduced witness the “smallest behavior,” selecting a “winner” or “best branch,” publishing a “safely shareable” report, accepting symlink support, or treating execution-evidence cache/reuse as fresh evidence.
@@ -606,7 +630,7 @@ Additional prohibited transitions include promoting an unqualified `STABLE` labe
 | U6c / P07B-A2.1 | nontransitioning current-ruling compilation preparation | source/ruling/Choicepoint/confirmation/proof equality and selected-tuple partition gates pass; no head advance or durable currentness after return |
 | U6c / P07B-A2.2 | nontransitioning recoverable bundle compilation and strict Go/Node semantic evaluation | sealed parity, recovery, generated-runtime, and pure-boundary gates pass; no head advance |
 | U6c / P07B-B (complete sealed boundary) | exact `RULING -> RESIDUE` terminal transition plus nonsemantic retryable physical materialization | final handoff, receipt reconciliation, and exact-boundary HTML are sealed and strict-clean; no C execution state is inferred |
-| U6c / P07B-C (through C4P sealed; C4 active) | sealed C1/C2/C3 target and persistence authority plus active C4 CLI mechanics, spawn-adjacent reopen, five-domain CLI closure, exact private manifest, durable release, FCR, and classification publication | C4 remains `UNRECEIPTED` until its 80-claim seal; HTTP/two-profile completion remains C5, the interlock and receipt have no result/absence authority, and study head remains terminal residue |
+| U6c / P07B-C (product through C4 sealed; C4H/C4I/C4K/C4J maintenance sealed; C4L active) | sealed C1/C2/C3 target and persistence authority plus sealed C4 CLI mechanics, spawn-adjacent reopen, five-domain CLI closure, exact private manifest, durable release, FCR, and classification publication; active C4L is a `SOURCE_FULL` governance bootstrap with no product authority | every C4L grade remains `UNRECEIPTED`; HTTP/two-profile completion remains C5 and is blocked until C4L seals, the interlock and receipt have no result/absence authority, and study head remains terminal residue |
 | U7 | complete study lifecycle and both decisive reference lineages | three clean runs preserve semantic bytes while all attempts are new |
 | U8 | authenticated transport and full renderer state matrix | blind leakage, request forgery, presentation obligations, visual/accessibility gates pass |
 | U9 | export/packaging/final claim mapping | exact environment receipts, final strict verify, HTML evidence, honest handoff |

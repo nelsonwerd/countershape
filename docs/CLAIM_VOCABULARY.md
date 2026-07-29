@@ -48,6 +48,14 @@ Countershape stores a didrun reference as opaque data associated with the exact 
 
 When several commands are required, list each command and its verbatim grade. The claim remains unreceipted if a load-bearing part has no qualifying reference.
 
+### Verification-governance terms
+
+`SOURCE_FULL` means the boundary ran its declared full source battery; it does not upgrade that battery into a security, production-readiness, or market claim. `RECEIPT_RECONCILIATION` means the boundary reconciles only previously sealed source evidence. `NON_PRODUCT_MAINTENANCE` names a prospective narrower nine-claim consumer predeclared by a sealed `SOURCE_FULL` parent. The token is dormant in v25, C4L does not consume it, and v25 provides grammar and partial scope primitives rather than an executable runbook/preseal profile. It never follows from a candidate diff or prose assertion.
+
+For that dormant profile, `NONE` is the product-authority value, `PARENT_FROZEN` is a prospective fail-closed eligibility token whose future final gate must reopen the exact sealed parent and prove no tracked change outside the parent-predeclared roster relative to it, and `INHERITED_UNREPROVEN` says product behavior was not re-proved at the child. `PARENT_FROZEN` is not presently an enumerated product-projection digest. None of those tokens transfers a verifier result, didrun event or grade, product correctness, or a behavior claim. A child may claim only the exact narrow command it ran; an inherited grade or cumulative/product label is prohibited.
+
+`OWNER_OUT_OF_BAND` names only why an otherwise unpredeclared repository boundary is admitted. `CITED_UNAUTHENTICATED` requires a literal canonical `OWNER_INSTRUCTION_ARTIFACT` path and raw-byte SHA-256 for exactly one nonempty, at-most-64-KiB valid-UTF-8 mode-`100644` regular blob already present in the direct parent's tree. `UNEVIDENCED` requires the exact disclosure `OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT`. Both retain `authentication: "NOT_ESTABLISHED"` and `signed_authorization: "NOT_IMPLEMENTED"`; citation is not authentication, and a same-unit artifact is not pre-existing authority.
+
 ## Canonical evidence terms
 
 ### Source and world

@@ -11,12 +11,12 @@ import { isDeepStrictEqual } from "node:util";
 export const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const specificationPath = resolve(repositoryRoot, "spec/verification/p07b-c-unit-paths.json");
 const gitStderrPrefixBytes = 256;
-const unitOrder = Object.freeze(["C0A", "C0B", "C1", "C1M", "C1V", "C1E", "C1B", "C2", "C2M", "C2B", "C3P", "C3V", "C3M", "C3PB", "C3A", "C3L", "C3F", "C3S", "C3", "C3R", "C3Q", "C3T", "C3U", "C3B", "C3D", "C4V", "C4M", "C4N", "C4P", "C4", "C4H", "C4I", "C4K", "C4J", "C5", "C6A", "C6M", "C6B"]);
+const unitOrder = Object.freeze(["C0A", "C0B", "C1", "C1M", "C1V", "C1E", "C1B", "C2", "C2M", "C2B", "C3P", "C3V", "C3M", "C3PB", "C3A", "C3L", "C3F", "C3S", "C3", "C3R", "C3Q", "C3T", "C3U", "C3B", "C3D", "C4V", "C4M", "C4N", "C4P", "C4", "C4H", "C4I", "C4K", "C4J", "C4L", "C5", "C6A", "C6M", "C6B"]);
 const receiptPhaseUnitOrder = Object.freeze(unitOrder.slice(unitOrder.indexOf("C3M")));
 const receiptPhaseUnitSet = new Set(receiptPhaseUnitOrder);
 const receiptPhaseKeys = Object.freeze(["C3P", "C3", "C6A"]);
 const receiptPhaseStates = new Set(["ABSENT", "PRESENT"]);
-const receiptPhaseAuthoritySHA256 = "30530a2e05fa6b7fb74983756c24f22a898f4a6da6df75d447df17278b0152db";
+const receiptPhaseAuthoritySHA256 = "189e1fe1a69e3937a769867d2e0d82c7b8b432da1de6c78382e97edd6aa5a796";
 const sealedC4NReceiptPhaseAuthoritySHA256 = "8f237c7d883c212167e5a04e5dd24d6efdacf4a9ce5492215fd06892a8237c4a";
 const sealedC4PReceiptPhaseAuthoritySHA256 = "66f568efb313303c92b23a51b743200f15b47a451a9b3424aaa251e0228e7928";
 const sealedC4HIndependentCandidateRejected = 289;
@@ -69,6 +69,11 @@ const sealedC4KCandidateParent = Object.freeze({
 	commit: "8c1ee2df955055ee40eec1f14f0c4d96f97d5361",
 	tree: "99fe7082d05c96647a144785e0ddc5af1a09f52f",
 });
+const sealedC4JCandidateParent = Object.freeze({
+	commit: "c12c927d94e6c56529a2fb90148674b4b4e731a5",
+	tree: "c99c1f394e02f17f8cf9de6b18f1a949bcaa07a8",
+	phaseAuthoritySHA256: "30530a2e05fa6b7fb74983756c24f22a898f4a6da6df75d447df17278b0152db",
+});
 const candidateSpecificationOwnerContracts = Object.freeze({
 	C4V: Object.freeze({ parent: "C3D", authority: sealedC3DCandidateParent, priorSchema: "countershape/p07b-c-unit-paths/v16" }),
 	C4M: Object.freeze({ parent: "C4V", authority: sealedC4VCandidateParent, priorSchema: "countershape/p07b-c-unit-paths/v17" }),
@@ -78,9 +83,61 @@ const candidateSpecificationOwnerContracts = Object.freeze({
 	C4I: Object.freeze({ parent: "C4H", authority: sealedC4HCandidateParent, priorSchema: "countershape/p07b-c-unit-paths/v21" }),
 	C4K: Object.freeze({ parent: "C4I", authority: sealedC4ICandidateParent, priorSchema: "countershape/p07b-c-unit-paths/v22" }),
 	C4J: Object.freeze({ parent: "C4K", authority: sealedC4KCandidateParent, priorSchema: "countershape/p07b-c-unit-paths/v23" }),
+	C4L: Object.freeze({ parent: "C4J", authority: sealedC4JCandidateParent, priorSchema: "countershape/p07b-c-unit-paths/v24" }),
 });
 const candidateSpecificationOwners = new Set(["C3D", ...Object.keys(candidateSpecificationOwnerContracts)]);
-const verificationProfiles = new Set(["SOURCE_FULL", "RECEIPT_RECONCILIATION"]);
+const verificationProfiles = new Set(["SOURCE_FULL", "RECEIPT_RECONCILIATION", "NON_PRODUCT_MAINTENANCE"]);
+const ownerOutOfBandUnits = new Set(["C4H", "C4I", "C4K", "C4J", "C4L"]);
+const knownOwnerOutOfBandProvenance = Object.freeze({
+	C4H: "UNEVIDENCED",
+	C4I: "UNEVIDENCED",
+	C4K: "UNEVIDENCED",
+	C4J: "UNEVIDENCED",
+	C4L: "UNEVIDENCED",
+});
+const ownerAuthorityDisclosure =
+	"OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT";
+const ownerAuthorityCommonFields = Object.freeze([
+	"authentication", "classification", "predecessor_declaration", "provenance",
+	"signed_authorization", "source",
+]);
+const nonProductMaintenanceClaimRoles = Object.freeze([
+	"CANDIDATE_PHASE",
+	"INDEPENDENT_TRANSITION",
+	"PARENT_PLAN_SELF_TEST",
+	"SEALED_PARENT_ANCESTRY",
+	"PARENT_SCOPE_SELF_TEST",
+	"BOUNDARY_MAINTENANCE_SELF_TEST",
+	"STAGED_SCOPE_PRODUCT_PROJECTION",
+	"CREDENTIAL_SCAN",
+	"PREDECESSOR_CHAIN",
+]);
+const nonProductMaintenanceForbiddenAuthorityPaths = new Set([
+	"docs/ARCHITECTURE.md",
+	"docs/CLAIM_VOCABULARY.md",
+	"docs/CONCEPT_BRIEF.md",
+	"docs/SEMANTICS.md",
+	"docs/STATE_MACHINES.md",
+	"docs/THREAT_MODEL.md",
+	"docs/VERIFICATION.md",
+	"spec/verification/p07b-c-unit-paths.json",
+	"tools/check-p07b-c-plan.mjs",
+	"tools/check-p07b-c-unit-scope.mjs",
+	"tools/verify-current.mjs",
+	"tools/verify-current-selftest.mjs",
+	"tools/verify-runtime-authority.mjs",
+]);
+const nonProductMaintenanceClaimSuffixByRole = Object.freeze({
+	CANDIDATE_PHASE: "candidate phase plan coherence",
+	INDEPENDENT_TRANSITION: "independent candidate transition authority",
+	PARENT_PLAN_SELF_TEST: "parent-sealed plan checker defensive self-test",
+	SEALED_PARENT_ANCESTRY: "sealed-parent Git-note and ancestry compatibility",
+	PARENT_SCOPE_SELF_TEST: "parent-sealed unit-scope defensive self-test",
+	BOUNDARY_MAINTENANCE_SELF_TEST: "boundary-specific maintenance defensive self-test",
+	STAGED_SCOPE_PRODUCT_PROJECTION: "exact staged maintenance scope and no change outside the parent-predeclared roster relative to exact parent",
+	CREDENTIAL_SCAN: "scoped staged credential-pattern scan",
+	PREDECESSOR_CHAIN: "sealed-parent predecessor and preceding didrun chain integrity",
+});
 const receiptClaimTypes = new Set(["tests-pass", "command-succeeded"]);
 function boundedErrorDescriptor(error) {
 	if (error === undefined || error === null) return null;
@@ -343,6 +400,26 @@ const c4jDeclaredMaintenanceContract = Object.freeze({
 	]),
 	exact_roster_sha256: "c0920287c9dc9998f0cae11f8beced9d134c74da786a10f1886b03b2a1a50239",
 });
+const c4lDeclaredMaintenanceContract = Object.freeze({
+	verification_profile: "SOURCE_FULL",
+	prefixes: Object.freeze([]),
+	exact: Object.freeze([
+		"docs/ARCHITECTURE.md",
+		"docs/CLAIM_VOCABULARY.md",
+		"docs/HANDOFF_MODE_C.md",
+		"docs/PROMPT_PACK.md",
+		"docs/SEMANTICS.md",
+		"docs/STATE_MACHINES.md",
+		"docs/THREAT_MODEL.md",
+		"docs/VERIFICATION.md",
+		"docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md",
+		"docs/status/P07B-C-C4L-NON-PRODUCT-MAINTENANCE-BOOTSTRAP.md",
+		"spec/verification/p07b-c-unit-paths.json",
+		"tools/check-p07b-c-plan.mjs",
+		"tools/check-p07b-c-unit-scope.mjs",
+	]),
+	exact_roster_sha256: "76c8ecfba55dd8833333c0f6180bf1df38f1a7cba65373feaea281add963b1b3",
+});
 const c5DeclaredSourceContract = Object.freeze({
 	verification_profile: "SOURCE_FULL",
 	prefixes: Object.freeze([
@@ -556,6 +633,121 @@ function exactRosterDigest(paths) {
 	return createHash("sha256").update(`${paths.join("\n")}\n`, "utf8").digest("hex");
 }
 
+function exactObjectKeys(value, expected) {
+	return value && typeof value === "object" && !Array.isArray(value) &&
+		isDeepStrictEqual(Object.keys(value).sort(), [...expected].sort());
+}
+
+function validSHA256(value) {
+	return typeof value === "string" && /^sha256:[0-9a-f]{64}$/u.test(value) &&
+		!/^sha256:0{64}$/u.test(value);
+}
+
+function validateAuthorityArtifactReference(value, label, expectedRole) {
+	const expectedKeys = ["artifact_path", "artifact_role", "artifact_sha256", "kind", "preexistence"];
+	if (!exactObjectKeys(value, expectedKeys) || value.kind !== "PROSE_ONLY" ||
+		value.artifact_role !== expectedRole || value.preexistence !== "DIRECT_PARENT_TREE" ||
+		!validPath(value.artifact_path) || !validSHA256(value.artifact_sha256)) {
+		fail(`${label}: predecessor artifact reference`);
+	}
+}
+
+function validateTransitionAuthority(unit, authority) {
+	if (!exactObjectKeys(authority, ownerAuthorityCommonFields) ||
+		authority.source !== "OWNER_OUT_OF_BAND" ||
+		authority.classification !== "OWNER_AUTHORIZED_AUTHORITY_MIGRATION / DEFECT_REPAIR" ||
+		authority.authentication !== "NOT_ESTABLISHED" ||
+		authority.signed_authorization !== "NOT_IMPLEMENTED") {
+		fail(`${unit}: transition authority common fields`);
+	}
+	if (unit === "C4J") {
+		validateAuthorityArtifactReference(
+			authority.predecessor_declaration, `${unit} transition authority`,
+			"PREDECESSOR_RECORD_OF_OWNER_ATTRIBUTED_DIRECTION",
+		);
+		if (authority.predecessor_declaration.artifact_path !==
+			"docs/status/P07B-C-C4K-C3-GO-TIMEOUT-MAINTENANCE.md" ||
+			authority.predecessor_declaration.artifact_sha256 !==
+			"sha256:fc80148ddedddb925962a15dacb20dad8979426aa3f3ef4f8fef12df9c614d6b") {
+			fail(`${unit}: exact predecessor prose record`);
+		}
+	} else if (!exactObjectKeys(authority.predecessor_declaration, ["kind"]) ||
+		authority.predecessor_declaration.kind !== "NONE") {
+		fail(`${unit}: predecessor declaration`);
+	}
+	const provenance = authority.provenance;
+	if (provenance?.kind === "UNEVIDENCED") {
+		if (!exactObjectKeys(provenance, ["disclosure", "kind"]) ||
+			provenance.disclosure !== ownerAuthorityDisclosure) {
+			fail(`${unit}: unevidenced owner authority disclosure`);
+		}
+	} else if (provenance?.kind === "CITED_UNAUTHENTICATED") {
+		if (!exactObjectKeys(provenance, [
+			"artifact_path", "artifact_role", "artifact_sha256", "kind", "preexistence",
+		]) || provenance.artifact_role !== "OWNER_INSTRUCTION_ARTIFACT" ||
+			provenance.preexistence !== "DIRECT_PARENT_TREE" ||
+			!validPath(provenance.artifact_path) || !validSHA256(provenance.artifact_sha256)) {
+			fail(`${unit}: cited unauthenticated owner authority`);
+		}
+	} else {
+		fail(`${unit}: owner authority provenance kind`);
+	}
+}
+
+function nonProductMaintenancePath(path) {
+	if (!validPath(path) || nonProductMaintenanceForbiddenAuthorityPaths.has(path) ||
+		/^(?:cmd|examples?|internal|schemas?|testkit|web)\//u.test(path) ||
+		/(?:^|\/)(?:go\.(?:mod|sum)|package(?:-lock)?\.json|pnpm-lock\.yaml|yarn\.lock)$/u.test(path)) {
+		return false;
+	}
+	if (/^(?:docs\/(?:HANDOFF_MODE_C\.md|PROMPT_PACK\.md|prompts\/|status\/)|research\/)/u.test(path)) {
+		return true;
+	}
+	return /^tools\/(?:check|verify)-[a-z0-9-]+-maintenance(?:-selftest)?\.mjs$/u.test(path);
+}
+
+function nonProductMaintenanceClaimLabel(unit, role) {
+	const suffix = nonProductMaintenanceClaimSuffixByRole[role];
+	if (suffix === undefined) fail(`${unit}: unknown non-product maintenance claim role`);
+	return `P07B-C ${unit} ${suffix}`;
+}
+
+function validateMaintenanceClaims(unit, claims) {
+	if (!Array.isArray(claims) || claims.length !== nonProductMaintenanceClaimRoles.length) {
+		fail(`${unit}: non-product maintenance claim count`);
+	}
+	const labels = new Set();
+	for (let index = 0; index < claims.length; index += 1) {
+		const claim = claims[index];
+		if (!exactObjectKeys(claim, ["label", "role", "type"]) ||
+			claim.role !== nonProductMaintenanceClaimRoles[index] ||
+			claim.label !== nonProductMaintenanceClaimLabel(unit, claim.role) || labels.has(claim.label) ||
+			(index < 6 ? claim.type !== "tests-pass" : claim.type !== "command-succeeded")) {
+			fail(`${unit}: non-product maintenance claim ${index}`);
+		}
+		labels.add(claim.label);
+	}
+}
+
+function validateNonProductMaintenanceEntry(unit, entry) {
+	const statusPrefix = `docs/status/P07B-C-${unit}-`;
+	const statusPaths = entry.exact.filter((path) => path.startsWith(statusPrefix) && path.endsWith(".md"));
+	if (entry.product_authority !== "NONE" || entry.product_behavior !== "INHERITED_UNREPROVEN" ||
+		entry.product_projection !== "PARENT_FROZEN" || entry.prefixes.length !== 0 ||
+		entry.exact.some((path) => !nonProductMaintenancePath(path)) ||
+		entry.exact.some((path) => nonProductMaintenanceForbiddenAuthorityPaths.has(path)) ||
+		!entry.exact.includes(receiptPhaseHandoffPath) || statusPaths.length !== 1) {
+		fail(`${unit}: non-product maintenance authority ceiling`);
+	}
+	validateMaintenanceClaims(unit, entry.maintenance_claims);
+}
+
+function validateNonProductMaintenanceParentProfile(row, predecessor) {
+	if (row.profile === "NON_PRODUCT_MAINTENANCE" && predecessor.profile !== "SOURCE_FULL") {
+		fail(`${row.boundary}: non-product maintenance requires a SOURCE_FULL direct parent`);
+	}
+}
+
 export function receiptPhaseAuthorityDigest(specification) {
 	const records = receiptPhaseUnitOrder.map((boundary) => {
 		const entry = specification.units[boundary];
@@ -567,6 +759,11 @@ export function receiptPhaseAuthorityDigest(specification) {
 			prefixes: entry.prefixes,
 			receipts: Object.fromEntries(receiptPhaseKeys.map((key) => [key, entry.receipt_states[key]])),
 			receipt_claims: entry.receipt_claims ?? [],
+			maintenance_claims: entry.maintenance_claims ?? [],
+			product_authority: entry.product_authority ?? null,
+			product_behavior: entry.product_behavior ?? null,
+			product_projection: entry.product_projection ?? null,
+			transition_authority: entry.transition_authority ?? null,
 		};
 	});
 	return createHash("sha256")
@@ -579,7 +776,7 @@ export function validateSpecification(specification) {
 		JSON.stringify(Object.keys(specification).sort()) !== JSON.stringify(["schema_version", "units"])) {
 		fail("specification root roster");
 	}
-	if (specification.schema_version !== "countershape/p07b-c-unit-paths/v24") fail("specification version");
+	if (specification.schema_version !== "countershape/p07b-c-unit-paths/v25") fail("specification version");
 	if (!specification.units || typeof specification.units !== "object" || Array.isArray(specification.units) ||
 		JSON.stringify(Object.keys(specification.units)) !== JSON.stringify(unitOrder)) fail("unit roster/order");
 
@@ -589,9 +786,17 @@ export function validateSpecification(specification) {
 		if (!verificationProfiles.has(entry.verification_profile)) fail(`${unit}: verification profile`);
 		const baseExpectedFields = entry.verification_profile === "RECEIPT_RECONCILIATION"
 			? ["exact", "prefixes", "receipt_claims", "verification_profile"]
-			: ["exact", "prefixes", "verification_profile"];
+			: entry.verification_profile === "NON_PRODUCT_MAINTENANCE"
+				? [
+					"exact", "maintenance_claims", "prefixes", "product_authority", "product_behavior",
+					"product_projection", "verification_profile",
+				]
+				: ["exact", "prefixes", "verification_profile"];
 		const expectedFields = receiptPhaseUnitSet.has(unit)
-			? [...baseExpectedFields, "parent", "receipt_states"].sort()
+			? [
+				...baseExpectedFields, "parent", "receipt_states",
+				...(ownerOutOfBandUnits.has(unit) ? ["transition_authority"] : []),
+			].sort()
 			: baseExpectedFields;
 		if (JSON.stringify(Object.keys(entry).sort()) !== JSON.stringify(expectedFields)) fail(`${unit}: field roster`);
 		if (receiptPhaseUnitSet.has(unit)) {
@@ -606,6 +811,23 @@ export function validateSpecification(specification) {
 		}
 		if (!sortedUnique(entry.exact) || !entry.exact.every((path) => validPath(path))) fail(`${unit}: exact paths`);
 		if (!sortedUnique(entry.prefixes) || !entry.prefixes.every((path) => validPath(path, true))) fail(`${unit}: prefixes`);
+		if (ownerOutOfBandUnits.has(unit)) {
+			validateTransitionAuthority(unit, entry.transition_authority);
+			if (entry.transition_authority.provenance.kind !== knownOwnerOutOfBandProvenance[unit]) {
+				fail(`${unit}: frozen historical owner-authority provenance`);
+			}
+			for (const reference of [
+				entry.transition_authority.predecessor_declaration,
+				entry.transition_authority.provenance,
+			]) {
+				if (typeof reference?.artifact_path === "string" && entry.exact.includes(reference.artifact_path)) {
+					fail(`${unit}: candidate-owned transition-authority artifact`);
+				}
+			}
+		}
+		if (entry.verification_profile === "NON_PRODUCT_MAINTENANCE") {
+			validateNonProductMaintenanceEntry(unit, entry);
+		}
 		if (entry.verification_profile === "RECEIPT_RECONCILIATION" &&
 			(entry.prefixes.length !== 0 || entry.exact.some((path) =>
 				!markdownAuthorityPath(path) && !(/^spec\/verification\/[a-z0-9-]+-receipt\.json$/u.test(path))))) {
@@ -696,6 +918,12 @@ export function validateSpecification(specification) {
 			exactRosterDigest(entry.exact) !== c4jDeclaredMaintenanceContract.exact_roster_sha256)) {
 			fail("C4J: declared maintenance contract");
 		}
+		if (unit === "C4L" && (entry.verification_profile !== c4lDeclaredMaintenanceContract.verification_profile ||
+			JSON.stringify(entry.prefixes) !== JSON.stringify(c4lDeclaredMaintenanceContract.prefixes) ||
+			JSON.stringify(entry.exact) !== JSON.stringify(c4lDeclaredMaintenanceContract.exact) ||
+			exactRosterDigest(entry.exact) !== c4lDeclaredMaintenanceContract.exact_roster_sha256)) {
+			fail("C4L: declared maintenance contract");
+		}
 		if (unit === "C5" && (entry.verification_profile !== c5DeclaredSourceContract.verification_profile ||
 			JSON.stringify(entry.prefixes) !== JSON.stringify(c5DeclaredSourceContract.prefixes) ||
 			JSON.stringify(entry.exact) !== JSON.stringify(c5DeclaredSourceContract.exact) ||
@@ -729,6 +957,7 @@ export function validateSpecification(specification) {
 		signatures.add(signature);
 		if (index === 0) continue;
 		const predecessor = rows[index - 1];
+		validateNonProductMaintenanceParentProfile(row, predecessor);
 		const changed = receiptPhaseKeys.filter((key) => predecessor.receipts[key] !== row.receipts[key]);
 		if (changed.some((key) => predecessor.receipts[key] !== "ABSENT" || row.receipts[key] !== "PRESENT")) {
 			fail(`${row.boundary}: receipt state downgrade`);
@@ -749,6 +978,10 @@ export function receiptPhaseRows(specification) {
 			boundary,
 			parent: entry.parent,
 			profile: entry.verification_profile,
+			product_authority: entry.product_authority ?? null,
+			product_behavior: entry.product_behavior ?? null,
+			product_projection: entry.product_projection ?? null,
+			transition_authority: entry.transition_authority ?? null,
 			receipts: Object.freeze(Object.fromEntries(receiptPhaseKeys.map((key) => [key, entry.receipt_states[key]]))),
 		});
 	}));
@@ -1256,6 +1489,46 @@ function requireCandidateTransitionAuthorityStable(before, after) {
 	}
 }
 
+async function validateDirectParentArtifact(commit, reference, label) {
+	const tree = decodeCandidateGitOID(
+		await gitOutput(["rev-parse", "--verify", `${commit}^{tree}`]), `${label} direct-parent tree`,
+	);
+	const row = await gitOutput(["ls-tree", "-z", tree, "--", `:(literal)${reference.artifact_path}`]);
+	const decoded = row.toString("utf8");
+	const match = /^100644 blob ([0-9a-f]{40}|[0-9a-f]{64})\t([^\0]*)\0$/u.exec(decoded);
+	if (!match || match[2] !== reference.artifact_path ||
+		row.length !== Buffer.byteLength(decoded, "utf8")) {
+		fail(`${label}: cited artifact is not one exact direct-parent mode-100644 blob`);
+	}
+	const bytes = await gitOutput(["cat-file", "blob", match[1]]);
+	if (bytes.length === 0 || bytes.length > 64 * 1024) fail(`${label}: cited artifact byte ceiling`);
+	decodeCandidateUTF8(bytes, `${label} cited artifact`);
+	const digest = `sha256:${createHash("sha256").update(bytes).digest("hex")}`;
+	if (digest !== reference.artifact_sha256) fail(`${label}: cited artifact raw-byte digest`);
+}
+
+async function validateTransitionAuthorityArtifacts(specification, candidateBoundary, candidateParentCommit) {
+	const c4jAuthority = specification.units.C4J.transition_authority;
+	if (c4jAuthority.predecessor_declaration.kind === "PROSE_ONLY") {
+		await validateDirectParentArtifact(
+			sealedC4KCandidateParent.commit,
+			c4jAuthority.predecessor_declaration,
+			"C4J predecessor record",
+		);
+	}
+	const candidateAuthority = specification.units[candidateBoundary]?.transition_authority;
+	if (candidateAuthority?.provenance?.kind === "CITED_UNAUTHENTICATED") {
+		if (typeof candidateParentCommit !== "string") {
+			fail(`${candidateBoundary}: cited authority lacks exact direct-parent commit`);
+		}
+		await validateDirectParentArtifact(
+			candidateParentCommit,
+			candidateAuthority.provenance,
+			`${candidateBoundary} owner instruction`,
+		);
+	}
+}
+
 function validateIndependentCandidateSnapshot(specification, snapshot) {
 	const boundary = snapshot.candidateBoundary;
 	if (!forwardCandidateReceiptPhaseBoundarySet.has(boundary)) fail(`candidate boundary outside forward horizon: ${boundary}`);
@@ -1342,6 +1615,7 @@ export async function runIndependentCandidatePhaseGate(specification, boundary) 
 		parentSpecificationBytes: await gitOutput(["show", `${parentCommit}:${receiptPhaseSpecificationPath}`]),
 	};
 	validateIndependentCandidateSnapshot(specification, snapshot);
+	await validateTransitionAuthorityArtifacts(specification, boundary, snapshot.parentCommit);
 	await validateFutureC6Authority(specification, snapshot);
 	const finalParentCommit = decodeCandidateGitOID(await gitOutput(["rev-parse", "--verify", "HEAD^{commit}"]), "candidate final parent commit");
 	const finalAuthority = {
@@ -1362,6 +1636,15 @@ export function receiptManifest(specification, unit) {
 	const entry = specification.units[unit];
 	if (entry.verification_profile !== "RECEIPT_RECONCILIATION") fail(`${unit}: not a receipt reconciliation profile`);
 	return entry.receipt_claims;
+}
+
+export function maintenanceManifest(specification, unit) {
+	if (!unitOrder.includes(unit)) fail(`unknown unit ${unit}`);
+	const entry = specification.units[unit];
+	if (entry.verification_profile !== "NON_PRODUCT_MAINTENANCE") {
+		fail(`${unit}: not a non-product maintenance profile`);
+	}
+	return entry.maintenance_claims;
 }
 
 export function unexpectedPaths(specification, unit, paths) {
@@ -1554,6 +1837,29 @@ async function requireAdmittedStagedSource(specification, unit) {
 	return paths;
 }
 
+async function requireAdmittedStagedMaintenance(specification, unit) {
+	const entry = specification.units[unit];
+	if (entry?.verification_profile !== "NON_PRODUCT_MAINTENANCE") {
+		fail(`${unit}: not a NON_PRODUCT_MAINTENANCE unit`);
+	}
+	const paths = await stagedPaths();
+	if (paths.length === 0 || !exactPathsMatch(specification, unit, paths)) {
+		fail(`${unit}: exact staged maintenance roster mismatch`);
+	}
+	validateExactIndexModes(unit, paths, await stagedIndexEntries());
+	for (const authorityPath of nonProductMaintenanceForbiddenAuthorityPaths) {
+		const drift = await gitOutput([
+			"diff", "--no-ext-diff", "--no-textconv", "--ignore-submodules=none",
+			"--name-only", "-z", "HEAD", "--", authorityPath,
+		]);
+		if (drift.length !== 0) fail(`${unit}: parent-owned maintenance authority drift: ${authorityPath}`);
+	}
+	if (!isDeepStrictEqual(await stagedPaths(), paths)) {
+		fail("staged inventory changed during maintenance inspection");
+	}
+	return paths;
+}
+
 async function runSourceFinalGate(specification, unit) {
 	const paths = await requireAdmittedStagedSource(specification, unit);
 	await gitOutput(["diff", "--no-ext-diff", "--no-textconv", "--ignore-submodules=none", "--cached", "--check", "--"]);
@@ -1585,6 +1891,22 @@ async function runReceiptFinalGate(specification, unit) {
 	console.log(`P07B-C ${unit} final receipt gate passed: ${paths.length} exact mode-100644 paths, clean staged diff, no unstaged or untracked paths`);
 }
 
+async function runMaintenanceFinalGate(specification, unit) {
+	const paths = await requireAdmittedStagedMaintenance(specification, unit);
+	await gitOutput(["diff", "--no-ext-diff", "--no-textconv", "--ignore-submodules=none", "--cached", "--check", "--"]);
+	if ((await gitOutput([
+		"diff", "--no-ext-diff", "--no-textconv", "--ignore-submodules=none", "--name-only", "-z", "--",
+	])).length !== 0) {
+		fail("unstaged tracked changes are present");
+	}
+	if ((await gitOutput(["ls-files", "--others", "--exclude-standard", "-z", "--"])).length !== 0) {
+		fail("untracked paths are present");
+	}
+	if (!isDeepStrictEqual(await stagedPaths(), paths)) fail("staged inventory changed during maintenance diff-integrity checks");
+	const digest = createHash("sha256").update(`${paths.join("\n")}\n`, "utf8").digest("hex");
+	console.log(`P07B-C ${unit} dormant non-product maintenance scope primitive passed: ${paths.length} exact mode-100644 paths, no tracked change outside the parent-predeclared roster relative to current HEAD, exact sealed-parent binding and PARENT_FROZEN receipt remain unavailable, verifier outcomes and product behavior inherited-unreproven, clean staged diff, sorted-newline sha256:${digest}`);
+}
+
 async function runCredentialScan(specification, unit) {
 	const profile = specification.units[unit]?.verification_profile;
 	let paths;
@@ -1593,6 +1915,8 @@ async function runCredentialScan(specification, unit) {
 		paths = await stagedPaths();
 		if (!exactPathsMatch(specification, unit, paths)) fail(`${unit}: credential receipt roster mismatch`);
 		validateReceiptIndexModes(specification, unit, paths, await stagedIndexEntries());
+	} else if (profile === "NON_PRODUCT_MAINTENANCE") {
+		paths = await requireAdmittedStagedMaintenance(specification, unit);
 	} else fail("credential-scan unit profile");
 	const findings = credentialPatternFindings(await stagedBlobEntries(paths));
 	if (findings.length > 0) fail(`structured credential-pattern findings: ${JSON.stringify(findings)}`);
@@ -1712,7 +2036,7 @@ function runIndependentCandidatePhaseSelfTest(specification) {
 		if (!refused) fail(`independent candidate self-test false negative: ${name}`);
 		rejected += 1;
 	}
-	if (accepted.length !== 14 || rejected !== 409) fail(`independent candidate self-test cardinality ${accepted.length}/${rejected}`);
+	if (accepted.length !== 15 || rejected !== 453) fail(`independent candidate self-test cardinality ${accepted.length}/${rejected}`);
 }
 
 function runFutureC6MaterialSelfTest(authority) {
@@ -2026,11 +2350,193 @@ function runGitOutputDiagnosticSelfTest() {
 	return 11;
 }
 
+async function runAuthorityProfileSelfTest(specification) {
+	const c4lAuthority = structuredClone(specification.units.C4L.transition_authority);
+	validateTransitionAuthority("C4L", c4lAuthority);
+	validateTransitionAuthority("C4J", structuredClone(specification.units.C4J.transition_authority));
+	const cited = structuredClone(c4lAuthority);
+	cited.provenance = {
+		kind: "CITED_UNAUTHENTICATED",
+		artifact_role: "OWNER_INSTRUCTION_ARTIFACT",
+		preexistence: "DIRECT_PARENT_TREE",
+		artifact_path: "docs/status/owner-instruction.md",
+		artifact_sha256: `sha256:${"a".repeat(64)}`,
+	};
+	validateTransitionAuthority("C4L", cited);
+
+	const maintenance = {
+		exact: [
+			"docs/HANDOFF_MODE_C.md",
+			"docs/status/P07B-C-FUTURE-MAINTENANCE.md",
+			"tools/check-future-maintenance.mjs",
+		],
+		maintenance_claims: nonProductMaintenanceClaimRoles.map((role, index) => ({
+			label: nonProductMaintenanceClaimLabel("FUTURE", role),
+			role,
+			type: index < 6 ? "tests-pass" : "command-succeeded",
+		})),
+		prefixes: [],
+		product_authority: "NONE",
+		product_behavior: "INHERITED_UNREPROVEN",
+		product_projection: "PARENT_FROZEN",
+		verification_profile: "NON_PRODUCT_MAINTENANCE",
+	};
+	validateNonProductMaintenanceEntry("FUTURE", maintenance);
+	validateNonProductMaintenanceParentProfile(
+		{ boundary: "FUTURE", profile: "NON_PRODUCT_MAINTENANCE" },
+		{ boundary: "PARENT", profile: "SOURCE_FULL" },
+	);
+
+	let rejected = 0;
+	const refuseAuthority = (name, unit, baseline, mutate) => {
+		const hostile = structuredClone(baseline);
+		mutate(hostile);
+		let failed = false;
+		try { validateTransitionAuthority(unit, hostile); } catch { failed = true; }
+		if (!failed) fail(`transition-authority self-test false negative: ${name}`);
+		rejected += 1;
+	};
+	for (const [name, mutate] of [
+		["missing source", (value) => { delete value.source; }],
+		["extra field", (value) => { value.extra = true; }],
+		["source drift", (value) => { value.source = "PROSE"; }],
+		["classification drift", (value) => { value.classification = "DEFECT_REPAIR"; }],
+		["authentication overclaim", (value) => { value.authentication = "AUTHENTICATED"; }],
+		["signature overclaim", (value) => { value.signed_authorization = "VERIFIED"; }],
+		["missing provenance", (value) => { delete value.provenance; }],
+		["unknown provenance", (value) => { value.provenance = { kind: "TRUSTED" }; }],
+		["unevidenced extra field", (value) => { value.provenance.extra = true; }],
+		["unevidenced disclosure drift", (value) => { value.provenance.disclosure += "_ALTERED"; }],
+		["false predecessor prose", (value) => {
+			value.predecessor_declaration = {
+				kind: "PROSE_ONLY",
+				artifact_role: "PREDECESSOR_RECORD_OF_OWNER_ATTRIBUTED_DIRECTION",
+				preexistence: "DIRECT_PARENT_TREE",
+				artifact_path: "docs/status/foreign.md",
+				artifact_sha256: `sha256:${"a".repeat(64)}`,
+			};
+		}],
+	]) {
+		refuseAuthority(name, "C4L", c4lAuthority, mutate);
+	}
+	for (const [name, mutate] of [
+		["cited mixed disclosure", (value) => { value.provenance.disclosure = ownerAuthorityDisclosure; }],
+		["cited role drift", (value) => { value.provenance.artifact_role = "PREDECESSOR_RECORD_OF_OWNER_ATTRIBUTED_DIRECTION"; }],
+		["cited preexistence drift", (value) => { value.provenance.preexistence = "CURRENT_TREE"; }],
+		["cited absolute path", (value) => { value.provenance.artifact_path = "/tmp/instruction"; }],
+		["cited dot path", (value) => { value.provenance.artifact_path = "./instruction"; }],
+		["cited parent escape", (value) => { value.provenance.artifact_path = "../instruction"; }],
+		["cited backslash path", (value) => { value.provenance.artifact_path = "docs\\instruction"; }],
+		["cited duplicate slash", (value) => { value.provenance.artifact_path = "docs//instruction"; }],
+		["cited control path", (value) => { value.provenance.artifact_path = "docs/instruction\n"; }],
+		["cited digest prefix", (value) => { value.provenance.artifact_sha256 = "SHA256:" + "a".repeat(64); }],
+		["cited digest case", (value) => { value.provenance.artifact_sha256 = `sha256:${"A".repeat(64)}`; }],
+		["cited digest length", (value) => { value.provenance.artifact_sha256 = `sha256:${"a".repeat(63)}`; }],
+		["cited zero digest", (value) => { value.provenance.artifact_sha256 = `sha256:${"0".repeat(64)}`; }],
+	]) {
+		refuseAuthority(name, "C4L", cited, mutate);
+	}
+	for (const [name, mutate] of [
+		["C4J predecessor kind", (value) => { value.predecessor_declaration.kind = "NONE"; }],
+		["C4J predecessor path", (value) => { value.predecessor_declaration.artifact_path = "docs/status/foreign.md"; }],
+		["C4J predecessor role", (value) => { value.predecessor_declaration.artifact_role = "OWNER_INSTRUCTION_ARTIFACT"; }],
+		["C4J predecessor digest", (value) => { value.predecessor_declaration.artifact_sha256 = `sha256:${"a".repeat(64)}`; }],
+	]) {
+		refuseAuthority(name, "C4J", specification.units.C4J.transition_authority, mutate);
+	}
+
+	for (const parentProfile of ["RECEIPT_RECONCILIATION", "NON_PRODUCT_MAINTENANCE"]) {
+		let failed = false;
+		try {
+			validateNonProductMaintenanceParentProfile(
+				{ boundary: "FUTURE", profile: "NON_PRODUCT_MAINTENANCE" },
+				{ boundary: "PARENT", profile: parentProfile },
+			);
+		} catch {
+			failed = true;
+		}
+		if (!failed) fail(`non-product maintenance parent-profile false negative: ${parentProfile}`);
+		rejected += 1;
+	}
+
+	const refuseMaintenance = (name, mutate) => {
+		const hostile = structuredClone(maintenance);
+		mutate(hostile);
+		let failed = false;
+		try { validateNonProductMaintenanceEntry("FUTURE", hostile); } catch { failed = true; }
+		if (!failed) fail(`non-product maintenance self-test false negative: ${name}`);
+		rejected += 1;
+	};
+	for (const [name, mutate] of [
+		["product authority", (value) => { value.product_authority = "SOURCE"; }],
+		["product behavior", (value) => { value.product_behavior = "INHERITED_VERIFIED"; }],
+		["product projection", (value) => { value.product_projection = "RECOMPUTED"; }],
+		["prefix", (value) => { value.prefixes = ["tools/"]; }],
+		["claim removal", (value) => { value.maintenance_claims.pop(); }],
+		["claim role order", (value) => {
+			[value.maintenance_claims[0].role, value.maintenance_claims[1].role] =
+				[value.maintenance_claims[1].role, value.maintenance_claims[0].role];
+		}],
+		["claim type", (value) => { value.maintenance_claims[0].type = "command-succeeded"; }],
+		["claim duplicate", (value) => { value.maintenance_claims[1].label = value.maintenance_claims[0].label; }],
+		["claim cumulative", (value) => { value.maintenance_claims[0].label = "P07B-C FUTURE cumulative verification"; }],
+		["claim security", (value) => { value.maintenance_claims[0].label = "P07B-C FUTURE security proof"; }],
+		["claim grade borrowing", (value) => { value.maintenance_claims[0].label = "P07B-C FUTURE inherited grade"; }],
+		["claim extra field", (value) => { value.maintenance_claims[0].extra = true; }],
+	]) {
+		refuseMaintenance(name, mutate);
+	}
+	for (const path of [
+		...nonProductMaintenanceForbiddenAuthorityPaths,
+		"internal/world/process.go",
+		"testkit/processfixture/main.go",
+		"cmd/countershape/main.go",
+		"spec/schema/v1/contract.schema.json",
+		"spec/verification/p07b-b-future-surface-authority.json",
+		"tools/check-p07b-c-architecture.mjs",
+		"tools/check-p07b-c-architecture-selftest.mjs",
+		"tools/verify-go-test-repetition.mjs",
+		"go.mod",
+		"package.json",
+	]) {
+		refuseMaintenance(`forbidden path ${path}`, (value) => {
+			value.exact = [...value.exact, path].sort();
+		});
+	}
+	const syntheticCited = structuredClone(cited.provenance);
+	syntheticCited.artifact_path = "docs/status/P07B-C-C4K-C3-GO-TIMEOUT-MAINTENANCE.md";
+	syntheticCited.artifact_sha256 =
+		"sha256:fc80148ddedddb925962a15dacb20dad8979426aa3f3ef4f8fef12df9c614d6b";
+	await validateDirectParentArtifact(
+		sealedC4KCandidateParent.commit,
+		syntheticCited,
+		"synthetic cited-authority transport control",
+	);
+	const pathspecHostile = structuredClone(syntheticCited);
+	pathspecHostile.artifact_path = "docs/status/P07B-C-C4K-*-MAINTENANCE.md";
+	let pathspecFailed = false;
+	try {
+		await validateDirectParentArtifact(
+			sealedC4KCandidateParent.commit,
+			pathspecHostile,
+			"synthetic cited-authority literal-path hostile",
+		);
+	} catch {
+		pathspecFailed = true;
+	}
+	if (!pathspecFailed) fail("cited-authority literal-path lookup interpreted pathspec syntax");
+	rejected += 1;
+	await validateTransitionAuthorityArtifacts(specification, "C4L", sealedC4JCandidateParent.commit);
+	console.log(`P07B-C transition-authority and dormant non-product-maintenance profile self-test passed: ${rejected} malformed, self-authorizing, overclaiming, parent-profile, literal-path, and forbidden-scope cases refused; synthetic cited transport plus exact C4J predecessor record reopened from their direct-parent trees`);
+	return rejected;
+}
+
 async function runSelfTest() {
 	const specification = await loadSpecification();
 	const gitDiagnosticCases = runGitOutputDiagnosticSelfTest();
 	runIndependentCandidatePhaseSelfTest(specification);
 	const c6aSourceAuthorityRejections = runC6ASourceAuthoritySelfTest();
+	const authorityProfileRejections = await runAuthorityProfileSelfTest(specification);
 	const cases = [
 		unexpectedPaths(specification, "C0A", ["docs/SEMANTICS.md"]).length === 0,
 		unexpectedPaths(specification, "C0A", ["README.md"])[0] === "README.md",
@@ -2166,6 +2672,8 @@ async function runSelfTest() {
 		!exactPathsMatch(specification, "C4K", c4kDeclaredMaintenanceContract.exact.slice(1)),
 		exactPathsMatch(specification, "C4J", c4jDeclaredMaintenanceContract.exact),
 		!exactPathsMatch(specification, "C4J", c4jDeclaredMaintenanceContract.exact.slice(1)),
+		exactPathsMatch(specification, "C4L", c4lDeclaredMaintenanceContract.exact),
+		!exactPathsMatch(specification, "C4L", c4lDeclaredMaintenanceContract.exact.slice(1)),
 		isDeepStrictEqual(specification.units.C5.exact, c5DeclaredSourceContract.exact),
 		isDeepStrictEqual(specification.units.C5.prefixes, c5DeclaredSourceContract.prefixes),
 		unexpectedPaths(specification, "C4", ["tools/verify-runtime-authority.mjs"]).length === 0,
@@ -2173,6 +2681,7 @@ async function runSelfTest() {
 		unexpectedPaths(specification, "C4I", ["tools/verify-runtime-authority.mjs"])[0] === "tools/verify-runtime-authority.mjs",
 		unexpectedPaths(specification, "C4K", ["tools/verify-runtime-authority.mjs"])[0] === "tools/verify-runtime-authority.mjs",
 		unexpectedPaths(specification, "C4J", ["tools/verify-runtime-authority.mjs"]).length === 0,
+		unexpectedPaths(specification, "C4L", ["tools/verify-runtime-authority.mjs"])[0] === "tools/verify-runtime-authority.mjs",
 		unexpectedPaths(specification, "C5", ["tools/verify-runtime-authority.mjs"])[0] === "tools/verify-runtime-authority.mjs",
 		unexpectedPaths(specification, "C4", ["spec/verification/p07b-b-future-surface-authority.json"]).length === 0,
 		unexpectedPaths(specification, "C5", ["spec/verification/p07b-b-future-surface-authority.json"])[0] ===
@@ -2202,6 +2711,7 @@ async function runSelfTest() {
 		exactSourceGateAdmitted(specification, "C4I"),
 		exactSourceGateAdmitted(specification, "C4K"),
 		exactSourceGateAdmitted(specification, "C4J"),
+		exactSourceGateAdmitted(specification, "C4L"),
 		exactSourceGateAdmitted(specification, "C6M"),
 		!exactSourceGateAdmitted(specification, "C2B"),
 		!exactSourceGateAdmitted(specification, "C3B"),
@@ -2219,7 +2729,8 @@ async function runSelfTest() {
 		specification.units.C4I.verification_profile === "SOURCE_FULL" && specification.units.C4I.prefixes.length === 0,
 		specification.units.C4K.verification_profile === "SOURCE_FULL" && specification.units.C4K.prefixes.length === 0,
 		specification.units.C4J.verification_profile === "SOURCE_FULL" && specification.units.C4J.prefixes.length === 0,
-		receiptPhaseRows(specification).length === 26,
+		specification.units.C4L.verification_profile === "SOURCE_FULL" && specification.units.C4L.prefixes.length === 0,
+		receiptPhaseRows(specification).length === 27,
 		receiptPhaseRows(specification).at(-1).boundary === "C6B",
 		receiptPhaseAuthorityDigest(specification) === receiptPhaseAuthoritySHA256,
 		!["C4", "C5", "C6A", "C6M", "C6B"].some((boundary) =>
@@ -2232,6 +2743,7 @@ async function runSelfTest() {
 		specification.units.C4I.exact.includes("spec/verification/p07b-c-unit-paths.json"),
 		specification.units.C4K.exact.includes("spec/verification/p07b-c-unit-paths.json"),
 		specification.units.C4J.exact.includes("spec/verification/p07b-c-unit-paths.json"),
+		specification.units.C4L.exact.includes("spec/verification/p07b-c-unit-paths.json"),
 		exactPathsMatch(specification, "C6M", c6mDeclaredAdapterContract.exact),
 		!specification.units.C6M.exact.includes("docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md"),
 		!specification.units.C6M.exact.includes("docs/status/P07B-C-C6-EVIDENCE.md"),
@@ -2271,8 +2783,8 @@ async function runSelfTest() {
 			fail(`${boundary} visible-capsule active-boundary pointer self-test`);
 		}
 	}
-	requireSpecificationMutationRejected(specification, "schema v23 downgrade", (hostile) => {
-		hostile.schema_version = "countershape/p07b-c-unit-paths/v23";
+	requireSpecificationMutationRejected(specification, "schema v24 downgrade", (hostile) => {
+		hostile.schema_version = "countershape/p07b-c-unit-paths/v24";
 	});
 	requireSpecificationMutationRejected(specification, "duplicated specification active boundary", (hostile) => {
 		hostile.active_boundary = "C3D";
@@ -2420,11 +2932,46 @@ async function runSelfTest() {
 	requireSpecificationMutationRejected(specification, "C4J receipt state drift", (hostile) => {
 		hostile.units.C4J.receipt_states.C6A = "PRESENT";
 	});
+	requireSpecificationMutationRejected(specification, "C4J transition authority removal", (hostile) => {
+		delete hostile.units.C4J.transition_authority;
+	});
+	requireSpecificationMutationRejected(specification, "C4J owner-instruction overclaim", (hostile) => {
+		hostile.units.C4J.transition_authority.provenance = {
+			kind: "CITED_UNAUTHENTICATED",
+			artifact_role: "OWNER_INSTRUCTION_ARTIFACT",
+			preexistence: "DIRECT_PARENT_TREE",
+			artifact_path: "docs/status/P07B-C-C4K-C3-GO-TIMEOUT-MAINTENANCE.md",
+			artifact_sha256: "sha256:fc80148ddedddb925962a15dacb20dad8979426aa3f3ef4f8fef12df9c614d6b",
+		};
+	});
+	requireSpecificationMutationRejected(specification, "C4L profile self-bootstrap", (hostile) => {
+		hostile.units.C4L.verification_profile = "NON_PRODUCT_MAINTENANCE";
+		hostile.units.C4L.product_authority = "NONE";
+		hostile.units.C4L.product_behavior = "INHERITED_UNREPROVEN";
+		hostile.units.C4L.product_projection = "PARENT_FROZEN";
+		hostile.units.C4L.maintenance_claims = nonProductMaintenanceClaimRoles.map((role, index) => ({
+			label: nonProductMaintenanceClaimLabel("C4L", role),
+			role,
+			type: index < 6 ? "tests-pass" : "command-succeeded",
+		}));
+	});
+	requireSpecificationMutationRejected(specification, "C4L transition authority removal", (hostile) => {
+		delete hostile.units.C4L.transition_authority;
+	});
+	requireSpecificationMutationRejected(specification, "C4L parent drift", (hostile) => {
+		hostile.units.C4L.parent = "C4K";
+	});
+	requireSpecificationMutationRejected(specification, "C4L exact substitution", (hostile) => {
+		hostile.units.C4L.exact[0] = "docs/ADVERSARY.md";
+	});
+	requireSpecificationMutationRejected(specification, "C4L receipt state drift", (hostile) => {
+		hostile.units.C4L.receipt_states.C6A = "PRESENT";
+	});
 	requireSpecificationMutationRejected(specification, "C5 profile drift", (hostile) => {
 		hostile.units.C5.verification_profile = "RECEIPT_RECONCILIATION";
 	});
-	requireSpecificationMutationRejected(specification, "C5 stale C4K parent drift", (hostile) => {
-		hostile.units.C5.parent = "C4K";
+	requireSpecificationMutationRejected(specification, "C5 stale C4J parent drift", (hostile) => {
+		hostile.units.C5.parent = "C4J";
 	});
 	requireSpecificationMutationRejected(specification, "C5 exact substitution", (hostile) => {
 		hostile.units.C5.exact[0] = "docs/ADVERSARY.md";
@@ -2795,12 +3342,16 @@ async function runSelfTest() {
 		}
 		if (!rejected) fail(`unsafe path self-test false negative: ${JSON.stringify(invalid)}`);
 	}
-	console.log(`P07B-C unit scope self-test passed: strict specification plus deletion/rename, directory-boundary, allow/refuse, path-safety, ${gitDiagnosticCases} byte-safe Git result cases, and ${c6aSourceAuthorityRejections} C6A source-authority hostile cases`);
+	console.log(`P07B-C unit scope self-test passed: strict specification plus deletion/rename, directory-boundary, allow/refuse, path-safety, ${gitDiagnosticCases} byte-safe Git result cases, ${authorityProfileRejections} transition/profile hostile cases, and ${c6aSourceAuthorityRejections} C6A source-authority hostile cases`);
 }
 
 async function main() {
 	if (process.argv.length === 3 && process.argv[2] === "--self-test") {
 		await runSelfTest();
+		return;
+	}
+	if (process.argv.length === 3 && process.argv[2] === "--authority-profile-self-test") {
+		await runAuthorityProfileSelfTest(await loadSpecification());
 		return;
 	}
 	if (process.argv.length === 4 && process.argv[2] === "--candidate-phase") {
@@ -2809,8 +3360,8 @@ async function main() {
 		return;
 	}
 	if (process.argv.length !== 5 || process.argv[2] !== "--unit" ||
-		!(["--staged", "--exact-staged", "--receipt-manifest", "--source-final-gate", "--receipt-final-gate", "--credential-scan", "--source-authority-gate"].includes(process.argv[4]))) {
-		fail("usage: check-p07b-c-unit-scope.mjs --candidate-phase <C3D|C4V|C4M|C4N|C4P|C4|C4H|C4I|C4K|C4J|C5|C6A|C6M|C6B> | --unit <C0A|C0B|C1|C1M|C1V|C1E|C1B|C2|C2M|C2B|C3P|C3V|C3M|C3PB|C3A|C3L|C3F|C3S|C3|C3R|C3Q|C3T|C3U|C3B|C3D|C4V|C4M|C4N|C4P|C4|C4H|C4I|C4K|C4J|C5|C6A|C6M|C6B> <--staged|--exact-staged|--receipt-manifest|--source-final-gate|--receipt-final-gate|--credential-scan|--source-authority-gate> | --self-test");
+		!(["--staged", "--exact-staged", "--receipt-manifest", "--maintenance-manifest", "--source-final-gate", "--receipt-final-gate", "--maintenance-final-gate", "--credential-scan", "--source-authority-gate"].includes(process.argv[4]))) {
+		fail("usage: check-p07b-c-unit-scope.mjs --candidate-phase <C3D|C4V|C4M|C4N|C4P|C4|C4H|C4I|C4K|C4J|C4L|C5|C6A|C6M|C6B> | --unit <C0A|C0B|C1|C1M|C1V|C1E|C1B|C2|C2M|C2B|C3P|C3V|C3M|C3PB|C3A|C3L|C3F|C3S|C3|C3R|C3Q|C3T|C3U|C3B|C3D|C4V|C4M|C4N|C4P|C4|C4H|C4I|C4K|C4J|C4L|C5|C6A|C6M|C6B> <--staged|--exact-staged|--receipt-manifest|--maintenance-manifest|--source-final-gate|--receipt-final-gate|--maintenance-final-gate|--credential-scan|--source-authority-gate> | --authority-profile-self-test | --self-test");
 	}
 	const specification = await loadSpecification();
 	if (process.argv[4] === "--source-authority-gate") {
@@ -2825,6 +3376,10 @@ async function main() {
 		await runReceiptFinalGate(specification, process.argv[3]);
 		return;
 	}
+	if (process.argv[4] === "--maintenance-final-gate") {
+		await runMaintenanceFinalGate(specification, process.argv[3]);
+		return;
+	}
 	if (process.argv[4] === "--credential-scan") {
 		await runCredentialScan(specification, process.argv[3]);
 		return;
@@ -2832,6 +3387,11 @@ async function main() {
 	if (process.argv[4] === "--receipt-manifest") {
 		const claims = receiptManifest(specification, process.argv[3]);
 		console.log(`P07B-C ${process.argv[3]} receipt manifest exact: ${JSON.stringify(claims)}`);
+		return;
+	}
+	if (process.argv[4] === "--maintenance-manifest") {
+		const claims = maintenanceManifest(specification, process.argv[3]);
+		console.log(`P07B-C ${process.argv[3]} non-product maintenance manifest exact: ${JSON.stringify(claims)}`);
 		return;
 	}
 	const paths = await stagedPaths();
