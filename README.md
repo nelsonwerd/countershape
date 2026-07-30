@@ -40,8 +40,9 @@ The bet is that generating code got cheap and **deciding which behavior you actu
 | Status | **Still building.** Roughly unit 6 of a 10-unit roadmap |
 | Sealed commits | 66 |
 | Verified claims | 884 (853 clean, 30 stale, 1 failed) |
-| Go | ~123,000 lines |
-| Verification tooling | ~77,000 lines of JavaScript |
+| Go — product code | ~66,000 lines |
+| Go — tests | ~57,000 lines |
+| JavaScript — checkers | ~77,000 lines |
 | **Runnable?** | **No.** No CLI, no UI, no install path |
 
 The core engine exists and is sealed: exact Git materialization, isolated execution worlds, CLI and HTTP observation, a bounded reducer, the decision store, the ruling authority, the standalone-test compiler, publication, and execution classification. What does *not* exist yet is everything a human would touch — the command line, the blind decision screen, and packaging. Those are units 7 through 9 and have not been started.
@@ -77,7 +78,7 @@ Better you hear them here than discover them and assume something was hidden.
 
 **2. One claim is graded `failed` and thirty are `stale`**, all inside two commits from the first 30 hours. They were never deleted, relabeled, or re-sealed. The status documents quote them verbatim and state plainly that none of those claims supports a capability. The other 64 commits are clean.
 
-**3. The verification tooling is larger than the product.** ~77,000 lines of JavaScript exist solely to check the ~66,000 lines of product Go. There is a five-day window in the history where ten milestones sealed and **zero lines of product code were written.** That is not a bug in the log; that is what happened, and it is one of the more interesting things this run has produced.
+**3. There is roughly twice as much checking as there is product.** ~66,000 lines of product Go, against ~57,000 lines of tests and ~77,000 lines of JavaScript that exists solely to check the rest. Put another way: the checker JavaScript alone outweighs the product it verifies. There is also a five-day window in the history where ten milestones sealed and **zero lines of product code were written** — 88% of everything added in that stretch was checker JavaScript. That is not a bug in the log; that is what happened, and it is one of the more interesting things this run has produced.
 
 ---
 
