@@ -4,6 +4,12 @@
 
 The repository is public early because the *process* is the interesting part, and process is only interesting if you can inspect it.
 
+> ### Should you clone this?
+>
+> **Not to run it — not yet.** Nothing works from a clone today: there's no CLI, and two files still hardcode absolute paths from the machine it's being built on. Clone it to *read* — the code, the 46 status documents, and the receipts are all worth a look right now.
+>
+> **When the build finishes**, the hardcoded paths get fixed, the command-line interface and decision screen land, and this README is replaced with real install and usage instructions. Watch the repo if you want to know when that happens.
+
 ---
 
 ## What Countershape is meant to be
@@ -77,7 +83,7 @@ Better you hear them here than discover them and assume something was hidden.
 
 ## Known limitations
 
-- **The verifier will not run from a clone.** Two files hardcode absolute paths from the machine this is being built on (`tools/check-p07b-c-architecture.mjs`, `tools/check-p07b-c-plan.mjs`). This will be fixed once the run finishes; it cannot be safely edited while the build is live.
+- **The verifier will not run from a clone — this is temporary.** Two files hardcode absolute paths from the build machine (`tools/check-p07b-c-architecture.mjs`, `tools/check-p07b-c-plan.mjs`). They can't be touched while the build is live: the run gates on an exact staged-file inventory, so editing anything mid-flight would void the unit currently being sealed. **Both are on the post-run cleanup list**, along with the CLI, packaging, and install instructions. Nothing about this is a design decision — it's the cost of publishing a repository while an agent is still writing to it.
 - **macOS / Apple Silicon only.** Much of the execution substrate is Darwin-specific by design and says so.
 - **It runs trusted code with your user permissions.** The isolated directories are for repeatability, not security. The project is explicit about this and never claims sandboxing.
 - **Absolute paths from the build machine** appear in the docs and receipts. Scrubbing them would require rewriting history, which would orphan all 66 receipts — so they stay.
