@@ -13,15 +13,20 @@ import {
 	collectC2Facts,
 	collectC3Facts,
 	collectC4Facts,
+	collectC5Facts,
 	collectFacts,
 	goJSONArguments,
 	inspectC3DidrunNote,
+	inspectC5PhaseContextFacts,
 	parseC4FinalRunbookClaimMap,
 	parseC4StatusClaimMap,
+	parseC5FinalRunbookClaimMap,
+	parseC5StatusClaimMap,
 	productionStoreOwnerReferenceCount,
 	validateC2Facts,
 	validateC3Facts,
 	validateC4Facts,
+	validateC5Facts,
 	validateFacts,
 	validateGoJSONTranscript,
 } from "./check-p07b-c-architecture.mjs";
@@ -137,6 +142,23 @@ const c4Cases = Object.freeze([
 	Object.freeze({ id: "profile-command", code: "P07B_C4_PROFILE_COMMAND" }),
 ]);
 const expectedC4RosterDigest = "671e79b65d43aec47c3dd14531f3e64180392ac73482c6698e2e809534c51670";
+const c5Cases = Object.freeze([
+	Object.freeze({ id: "inherited-c4", code: "P07B_C5_INHERITED_C4" }),
+	Object.freeze({ id: "owner-extension", code: "P07B_C5_OWNER_EXTENSION" }),
+	Object.freeze({ id: "package-topology", code: "P07B_C5_PACKAGE_TOPOLOGY" }),
+	Object.freeze({ id: "directory-roster", code: "P07B_C5_DIRECTORY_ROSTER" }),
+	Object.freeze({ id: "build-tags", code: "P07B_C5_BUILD_TAG_ROSTER" }),
+	Object.freeze({ id: "exported-surface", code: "P07B_C5_EXPORTED_SURFACE" }),
+	Object.freeze({ id: "importer-closure", code: "P07B_C5_IMPORTER_CLOSURE" }),
+	Object.freeze({ id: "test-file-roster", code: "P07B_C5_TEST_FILE_ROSTER" }),
+	Object.freeze({ id: "execution-chronology", code: "P07B_C5_EXECUTION_CHRONOLOGY" }),
+	Object.freeze({ id: "service-closure", code: "P07B_C5_SERVICE_CLOSURE" }),
+	Object.freeze({ id: "evidence-closure", code: "P07B_C5_EVIDENCE_CLOSURE" }),
+	Object.freeze({ id: "scope-closure", code: "P07B_C5_SCOPE_CLOSURE" }),
+	Object.freeze({ id: "profile-catalog", code: "P07B_C5_PROFILE_CATALOG" }),
+	Object.freeze({ id: "profile-command", code: "P07B_C5_PROFILE_COMMAND" }),
+]);
+const expectedC5RosterDigest = "c885dab31285bd5fd3b8b00c8e76816ca5fdd43df0cf46bf3c8fc4b4d7730dee";
 
 function rosterDigest(roster = cases) {
 	const hash = createHash("sha256");
@@ -145,6 +167,14 @@ function rosterDigest(roster = cases) {
 }
 
 function fail(code, detail) { throw new Error(`${code}: ${detail}`); }
+
+function replaceExactOnce(source, token, replacement, id) {
+	const first = source.indexOf(token);
+	if (first < 0 || source.indexOf(token, first + token.length) >= 0) {
+		fail("P07B_C5_SELFTEST_SOURCE_FIXTURE", id);
+	}
+	return `${source.slice(0, first)}${replacement}${source.slice(first + token.length)}`;
+}
 
 function requireViolation(facts, code, id) {
 	const problems = validateFacts(facts);
@@ -174,6 +204,13 @@ function requireC4Violation(facts, code, id) {
 	}
 }
 
+function requireC5Violation(facts, code, id) {
+	const problems = validateC5Facts(facts);
+	if (!problems.some((problem) => problem.code === code)) {
+		fail("P07B_C5_SELFTEST_FALSE_NEGATIVE", `${id}:${problems.map((problem) => problem.code).join(",")}`);
+	}
+}
+
 function requireC4ParserRefusal(callback, id) {
 	let refused = false;
 	try {
@@ -182,6 +219,16 @@ function requireC4ParserRefusal(callback, id) {
 		refused = error?.code === "P07B_C4_PROFILE_COMMAND";
 	}
 	if (!refused) fail("P07B_C4_SELFTEST_PARSER_FALSE_NEGATIVE", id);
+}
+
+function requireC5ParserRefusal(callback, id) {
+	let refused = false;
+	try {
+		callback();
+	} catch (error) {
+		refused = error?.code === "P07B_C5_PROFILE_COMMAND";
+	}
+	if (!refused) fail("P07B_C5_SELFTEST_PARSER_FALSE_NEGATIVE", id);
 }
 
 function renderC4RunbookSource() {
@@ -198,16 +245,33 @@ function renderC4RunbookSource() {
 	return result.stdout;
 }
 
+function renderC5RunbookSource() {
+	const result = spawnSync(process.execPath, [resolve(root, "tools/check-p07b-c-plan.mjs"), "--print-final-runbook", "C5"], {
+		cwd: root,
+		encoding: "utf8",
+		timeout: 30_000,
+		maxBuffer: 32 * 1024 * 1024,
+		env: process.env,
+	});
+	if (result.error || result.signal || result.status !== 0 || result.stderr !== "") {
+		fail("P07B_C5_SELFTEST_RUNBOOK_SOURCE", `${result.status ?? result.signal}: ${result.stderr || result.stdout || result.error}`);
+	}
+	return result.stdout;
+}
+
 function runCleanChecker(phase = "c1") {
-	const args = phase === "c4" ? [checker, "--c4"] :
+	const args = phase === "c5" ? [checker, "--c5"] :
+		phase === "c4" ? [checker, "--c4"] :
 		phase === "c3" ? [checker, "--c3"] : phase === "c2" ? [checker, "--c2"] : [checker];
-	const marker = phase === "c4" ? "P07B-C C4 cumulative architecture boundary OK" :
+	const marker = phase === "c5" ? "P07B-C C5 cumulative architecture boundary OK" :
+		phase === "c4" ? "P07B-C C4 cumulative architecture boundary OK" :
 		phase === "c3" ? "P07B-C C3 cumulative architecture boundary OK" :
 		phase === "c2" ? "P07B-C C2 cumulative architecture boundary OK" : "P07B-C C1 architecture boundary OK";
 	const result = spawnSync(process.execPath, args, {
 		cwd: root,
 		encoding: "utf8",
-		timeout: phase === "c4" ? 1_800_000 : phase === "c3" ? c3CleanCheckerTimeoutMS : phase === "c2" ? 420_000 : 180_000,
+		timeout: phase === "c5" ? 5_400_000 : phase === "c4" ? 1_800_000 :
+			phase === "c3" ? c3CleanCheckerTimeoutMS : phase === "c2" ? 420_000 : 180_000,
 		maxBuffer: 32 * 1024 * 1024,
 		env: {
 			...process.env,
@@ -217,7 +281,8 @@ function runCleanChecker(phase = "c1") {
 		},
 	});
 	if (result.error || result.signal || result.status !== 0 || result.stderr !== "" || result.stdout.trim() !== marker) {
-		fail(phase === "c4" ? "P07B_C4_SELFTEST_CLEAN_CHECKER" :
+		fail(phase === "c5" ? "P07B_C5_SELFTEST_CLEAN_CHECKER" :
+			phase === "c4" ? "P07B_C4_SELFTEST_CLEAN_CHECKER" :
 			phase === "c3" ? "P07B_C3_SELFTEST_CLEAN_CHECKER" :
 			phase === "c2" ? "P07B_C2_SELFTEST_CLEAN_CHECKER" : "P07B_C1_SELFTEST_CLEAN_CHECKER",
 			`${result.status ?? result.signal}: ${result.stderr || result.stdout || result.error}`);
@@ -464,6 +529,162 @@ const c4ParserProfiles = Object.freeze([
 	}),
 ]);
 
+const c5ParserProfiles = Object.freeze([
+	Object.freeze({
+		name: "c5-http-behavior",
+		race: false,
+		targets: Object.freeze([
+			Object.freeze({
+				packagePath: "github.com/nelsonwerd/countershape/internal/contractexec/http",
+				packageArgument: "./internal/contractexec/http",
+				tests: Object.freeze([
+					"TestC5ProjectionRejectionAgreesWithProcessEvidence",
+					"TestC5ResponseErrorControlMatrix",
+				]),
+			}),
+			Object.freeze({
+				packagePath: "github.com/nelsonwerd/countershape/testkit/contractexec/http",
+				packageArgument: "./testkit/contractexec/http",
+				tests: Object.freeze([
+					"TestHTTPContractExecutionConformingDifferingCustom401AndAllowMany",
+					"TestHTTPResponseControlMatrixRetainsBoundedCapture",
+				]),
+			}),
+		]),
+	}),
+	Object.freeze({
+		name: "c5-readiness-teardown",
+		race: false,
+		targets: Object.freeze([
+			Object.freeze({
+				packagePath: "github.com/nelsonwerd/countershape/internal/contractexec/http",
+				packageArgument: "./internal/contractexec/http",
+				tests: Object.freeze([
+					"TestC5NegativeReadinessRetainsExactRawFrameWithoutCapture",
+					"TestC5WaitAndRuntimeRevalidationFailuresRetainDistinctCauses",
+					"TestC5AwaitExactReadinessControlMatrix",
+					"TestC5TeardownProcessGroupEscalatesAndCleans",
+					"TestHTTPStartErrorClosesDurableRunAndClassificationWithoutChild",
+				]),
+			}),
+			Object.freeze({
+				packagePath: "github.com/nelsonwerd/countershape/testkit/contractexec/http",
+				packageArgument: "./testkit/contractexec/http",
+				tests: Object.freeze([
+					"TestHTTPChildReportedReadinessBindsExactService",
+					"TestHTTPEarlyExitAndTeardownRetainCausalFacts",
+					"TestHTTPDecoyReadinessCannotBecomeEligible",
+					"TestHTTPReadinessControlMatrixClosesExactly",
+				]),
+			}),
+		]),
+	}),
+	Object.freeze({
+		name: "c5-scope-closure",
+		race: false,
+		targets: Object.freeze([
+			Object.freeze({
+				packagePath: "github.com/nelsonwerd/countershape/internal/contractexec/scope",
+				packageArgument: "./internal/contractexec/scope",
+				tests: Object.freeze([
+					"TestC5ScopeDerivesExactFiveDomainCleanClosure",
+					"TestC5ScopeViolationOutranksMissingAcrossForbiddenControls",
+					"TestC5InventoryBindsReferenceFixtureAndRejectsSymlink",
+					"TestC5ProbeMeasuresImportAndServiceCanariesAndCleansIdentity",
+				]),
+			}),
+			Object.freeze({
+				packagePath: "github.com/nelsonwerd/countershape/internal/contractexec/http",
+				packageArgument: "./internal/contractexec/http",
+				tests: Object.freeze([
+					"TestC5StartErrorPreservesEveryViolationOverMissing",
+					"TestC5MissingProbeIsAmbiguous",
+				]),
+			}),
+			Object.freeze({
+				packagePath: "github.com/nelsonwerd/countershape/testkit/contractexec/http",
+				packageArgument: "./testkit/contractexec/http",
+				tests: Object.freeze([
+					"TestHTTPContractExecutionScopePositiveControls",
+					"TestHTTPContractExecutionReceiptEvidenceStates",
+					"TestHTTPParentSentinelsAreOmitted",
+				]),
+			}),
+		]),
+	}),
+	Object.freeze({
+		name: "c5-cross-profile-parity",
+		race: false,
+		targets: Object.freeze([
+			Object.freeze({
+				packagePath: "github.com/nelsonwerd/countershape/testkit/contractexec/http",
+				packageArgument: "./testkit/contractexec/http",
+				tests: Object.freeze(["TestHTTPExactTargetRunJoinsRefuseCrossTargetConfusion"]),
+			}),
+			Object.freeze({
+				packagePath: "github.com/nelsonwerd/countershape/testkit/contractexec/cli",
+				packageArgument: "./testkit/contractexec/cli",
+				tests: Object.freeze([
+					"TestCLIContractExecutionClosesStandaloneScope",
+					"TestCLIContractExecutionForbiddenPositiveControls",
+					"TestCLIContractExecutionChildBindingEvidenceStates",
+					"TestCLIContractExecutionTargetMutationBlocksFinalization",
+				]),
+			}),
+			Object.freeze({
+				packagePath: "github.com/nelsonwerd/countershape/internal/emit/node/parity",
+				packageArgument: "./internal/emit/node/parity",
+				tests: Object.freeze([
+					"FuzzParseContractParityCorpusLine",
+					"TestContractParityCorpus",
+					"TestContractParityCorpusExactSizeBoundaries",
+					"TestContractParityCorpusIsOrderAndOracleIndependent",
+					"TestContractParityCorpusParserRejectsEnvelopeAliases",
+					"TestContractParityCorpusRejectsClosedSchemaDrift",
+					"TestContractParityManifestMatchesCopiedEntrypointParser",
+					"TestContractParityOracleLeakMutantsAreKilledByRequestRoster",
+					"TestDirectResultSelectorExhaustiveGoNodeMatrix",
+					"TestGoAndNodeParityEvaluatorsMatchLiteralOracle",
+					"TestNodeParityRunnerAcceptsExactWholeWireCap",
+					"TestNodeParityRunnerRejectsInvalidFramesAtomically",
+					"TestNodeParityRunnerRejectsMissingFinalLFWithoutStderr",
+					"TestOwnerEligibilitySelectorExhaustiveGoNodeMatrix",
+					"TestParityFramingRejectsExpandedSemanticResultAtomically",
+					"TestParityResponseFramingExactBodyBoundary",
+					"TestResultFrameBytesExactBoundaries",
+				]),
+			}),
+		]),
+	}),
+	Object.freeze({
+		name: "c5-http-authority-race",
+		race: true,
+		targets: Object.freeze([
+			Object.freeze({
+				packagePath: "github.com/nelsonwerd/countershape/internal/contractexec/http",
+				packageArgument: "./internal/contractexec/http",
+				tests: Object.freeze(["TestC5EvidenceCapacityCoversExactMaximalRosterAndWire"]),
+			}),
+			Object.freeze({
+				packagePath: "github.com/nelsonwerd/countershape/internal/contractexec/scope",
+				packageArgument: "./internal/contractexec/scope",
+				tests: Object.freeze([
+					"TestC5ProbeSameSizeModuleRewriteIsIntegrityAmbiguity",
+					"TestC5ProbeForeignResidueIsBoundedAndPreserved",
+				]),
+			}),
+			Object.freeze({
+				packagePath: "github.com/nelsonwerd/countershape/testkit/contractexec/http",
+				packageArgument: "./testkit/contractexec/http",
+				tests: Object.freeze([
+					"TestHTTPClassificationRecoveryConvergesTerminalClosureWithoutRespawn",
+					"TestHTTPConcurrentExecuteAdmitsExactlyOneSubject",
+				]),
+			}),
+		]),
+	}),
+]);
+
 function inspectC3GoJSONTranscriptParser() {
 	const encode = (events) => Buffer.from(`${events.map((event) => JSON.stringify(event)).join("\n")}\n`, "utf8");
 	let count = 0;
@@ -596,6 +817,130 @@ function inspectC4GoJSONArguments() {
 	}
 	if (!rejected) fail("P07B_C4_SELFTEST_GO_JSON_ARGUMENTS", "unknown C4 profile was accepted");
 	return c4ParserProfiles.length + 1;
+}
+
+function inspectC5GoJSONTranscriptParser() {
+	const encode = (events) => Buffer.from(`${events.map((event) => JSON.stringify(event)).join("\n")}\n`, "utf8");
+	let count = 0;
+	for (const profile of c5ParserProfiles) {
+		const clean = profile.targets.flatMap((target) => [
+			{ Action: "start", Package: target.packagePath },
+			...target.tests.flatMap((Test) => [
+				{ Action: "run", Package: target.packagePath, Test },
+				{ Action: "pass", Package: target.packagePath, Test },
+			]),
+			{ Action: "pass", Package: target.packagePath },
+		]);
+		validateGoJSONTranscript(profile.name, encode(clean));
+		count += 1;
+		const firstTarget = profile.targets[0];
+		const secondTarget = profile.targets[1];
+		const lastTarget = profile.targets.at(-1);
+		const first = firstTarget.tests[0];
+		const last = lastTarget.tests.at(-1);
+		const missingPass = clean.filter((event) =>
+			!(event.Package === lastTarget.packagePath && event.Action === "pass" && event.Test === last));
+		const skippedPass = clean.map((event) =>
+			event.Package === firstTarget.packagePath && event.Action === "pass" && event.Test === first
+				? { ...event, Action: "skip" }
+				: event);
+		const unknownTest = [
+			...clean,
+			{ Action: "run", Package: firstTarget.packagePath, Test: "TestC5Unexpected" },
+			{ Action: "pass", Package: firstTarget.packagePath, Test: "TestC5Unexpected" },
+		];
+		const firstPassIndex = clean.findIndex((event) =>
+			event.Package === firstTarget.packagePath && event.Action === "pass" && event.Test === first);
+		const duplicateLifecycle = [
+			...clean.slice(0, firstPassIndex + 1),
+			{ Action: "run", Package: firstTarget.packagePath, Test: first },
+			{ Action: "pass", Package: firstTarget.packagePath, Test: first },
+			...clean.slice(firstPassIndex + 1),
+		];
+		const packageFail = clean.map((event) =>
+			event.Package === lastTarget.packagePath && event.Action === "pass" && !event.Test
+				? { ...event, Action: "fail" }
+				: event);
+		const foreignPackage = clean.map((event, index) =>
+			index === 0 ? { ...event, Package: "example.invalid/foreign" } : event);
+		const movedPair = clean.map((event) =>
+			event.Package === firstTarget.packagePath && event.Test === first
+				? { ...event, Package: secondTarget.packagePath }
+				: event);
+		const missingPackagePass = clean.filter((event) =>
+			!(event.Package === lastTarget.packagePath && event.Action === "pass" && !event.Test));
+		const duplicatePackagePass = [
+			...clean,
+			{ Action: "pass", Package: firstTarget.packagePath },
+		];
+		const terminalBeforeRun = [...clean];
+		const runIndex = terminalBeforeRun.findIndex((event) =>
+			event.Package === firstTarget.packagePath && event.Action === "run" && event.Test === first);
+		const passIndex = terminalBeforeRun.findIndex((event) =>
+			event.Package === firstTarget.packagePath && event.Action === "pass" && event.Test === first);
+		[terminalBeforeRun[runIndex], terminalBeforeRun[passIndex]] =
+			[terminalBeforeRun[passIndex], terminalBeforeRun[runIndex]];
+		const foreignNestedRoot = [
+			...clean,
+			{ Action: "run", Package: firstTarget.packagePath, Test: "TestC5Unexpected/subcase" },
+			{ Action: "pass", Package: firstTarget.packagePath, Test: "TestC5Unexpected/subcase" },
+		];
+		for (const [index, events] of [
+			missingPass, skippedPass, unknownTest, duplicateLifecycle, packageFail,
+			foreignPackage, movedPair, missingPackagePass, duplicatePackagePass,
+			terminalBeforeRun, foreignNestedRoot,
+		].entries()) {
+			let rejected = false;
+			try {
+				validateGoJSONTranscript(profile.name, encode(events));
+			} catch {
+				rejected = true;
+			}
+			if (!rejected) fail("P07B_C5_SELFTEST_GO_JSON_FALSE_NEGATIVE", `${profile.name}:${index + 1}`);
+			count += 1;
+		}
+	}
+	return count;
+}
+
+function inspectC5GoJSONArguments() {
+	const names = c5ParserProfiles.map((profile) => profile.name);
+	const counts = c5ParserProfiles.map((profile) =>
+		profile.targets.reduce((sum, target) => sum + target.tests.length, 0));
+	const races = c5ParserProfiles.map((profile) => profile.race);
+	if (JSON.stringify(names) !== JSON.stringify([
+		"c5-http-behavior", "c5-readiness-teardown", "c5-scope-closure",
+		"c5-cross-profile-parity", "c5-http-authority-race",
+	]) || JSON.stringify(counts) !== JSON.stringify([4, 9, 9, 22, 5]) ||
+		JSON.stringify(races) !== JSON.stringify([false, false, false, false, true])) {
+		fail("P07B_C5_SELFTEST_PROFILE_CATALOG", JSON.stringify({ names, counts, races }));
+	}
+	const pairs = c5ParserProfiles.flatMap((profile) => profile.targets.flatMap((target) =>
+		target.tests.map((test) => `${target.packagePath}\u0000${test}`)));
+	if (pairs.length !== 49 || new Set(pairs).size !== 49) {
+		fail("P07B_C5_SELFTEST_PROFILE_CATALOG", `pairs=${pairs.length}/${new Set(pairs).size}`);
+	}
+	for (const profile of c5ParserProfiles) {
+		const tests = profile.targets.flatMap((target) => target.tests);
+		const expected = [
+			"test", ...(profile.race ? ["-race"] : []),
+			"-mod=readonly", "-buildvcs=false", "-p=1", "-count=1", "-json", "-run",
+			`^(?:${tests.join("|")})$`,
+			...profile.targets.map((target) => target.packageArgument),
+		];
+		const actual = goJSONArguments(profile.name);
+		if (JSON.stringify(actual) !== JSON.stringify(expected)) {
+			fail("P07B_C5_SELFTEST_GO_JSON_ARGUMENTS", `${profile.name}:${JSON.stringify(actual)}`);
+		}
+	}
+	let rejected = false;
+	try {
+		goJSONArguments("c5-unregistered-profile");
+	} catch {
+		rejected = true;
+	}
+	if (!rejected) fail("P07B_C5_SELFTEST_GO_JSON_ARGUMENTS", "unknown C5 profile was accepted");
+	return c5ParserProfiles.length + 1;
 }
 
 function inspectC4OwnerReferenceParser() {
@@ -877,9 +1222,44 @@ async function runC4Selftest() {
 			facts.runner.surface.pop();
 			break;
 		case "admission-adjacency":
-			facts.runner.spawnAdjacentRevalidation = false;
-			facts.runner.soleOwnerAcquirer.push("internal/store/alternate_owner.go:1");
-			break;
+			for (const [id, mutate] of [
+				["foreign-extension", (hostile) => {
+					hostile.runner.soleOwnerAcquirer[0] = "internal/contractexec/foreign/runner.go:1";
+				}],
+				["missing-store", (hostile) => {
+					hostile.runner.soleOwnerAcquirer =
+						hostile.runner.soleOwnerAcquirer.filter((site) =>
+							site !== "internal/store/contract_run_bridge.go:1");
+				}],
+				["duplicate-cli", (hostile) => {
+					hostile.runner.soleOwnerAcquirer.push(
+						"internal/contractexec/runner/runner_darwin.go:1",
+					);
+					hostile.runner.soleOwnerAcquirer.sort();
+				}],
+				["spawn-adjacency", (hostile) => {
+					hostile.runner.spawnAdjacentRevalidation = false;
+				}],
+			]) {
+				const hostile = structuredClone(clean);
+				mutate(hostile);
+				requireC4Violation(hostile, test.code, `${test.id}-${id}`);
+			}
+			{
+				const sealedProjection = structuredClone(clean);
+				sealedProjection.runner.soleOwnerAcquirer = [
+					"internal/contractexec/runner/runner_darwin.go:1",
+					"internal/store/contract_run_bridge.go:1",
+				];
+				const sealedProblems = validateC4Facts(sealedProjection);
+				if (sealedProblems.some((problem) => problem.code === test.code)) {
+					fail(
+						"P07B_C4_SELFTEST_SEALED_OWNER_PROJECTION",
+						sealedProblems.map((problem) => problem.code).join(","),
+					);
+				}
+			}
+			continue;
 		case "execution-chronology":
 			for (const field of [
 				"physicalConforms", "executionChronology", "startErrorChronology", "immutableSourceCacheIsolation",
@@ -972,7 +1352,271 @@ async function runC4Selftest() {
 	process.stdout.write(`P07B-C C4 cumulative architecture defensive self-test OK (${c4Cases.length} metadata cases; ${goJSONCases} Go JSON parser cases; ${argumentCases} command cases; ${ownerReferenceCases} owner-reference parser cases)\n`);
 }
 
+async function runC5Selftest() {
+	const digest = rosterDigest(c5Cases);
+	if (digest !== expectedC5RosterDigest) fail("P07B_C5_SELFTEST_ROSTER_DRIFT", `${digest} != ${expectedC5RosterDigest}`);
+	runCleanChecker("c5");
+	const clean = await collectC5Facts();
+	const cleanProblems = validateC5Facts(clean);
+	if (cleanProblems.length > 0) fail("P07B_C5_SELFTEST_CLEAN_FACTS", cleanProblems.map((problem) => problem.code).join(","));
+	const statusSource = await readFile(resolve(root, "docs/status/P07B-C-C5-HTTP-SCOPE.md"), "utf8");
+	const runbookSource = renderC5RunbookSource();
+	const c5RunnerSource = await readFile(resolve(root, "internal/contractexec/http/runner_darwin.go"), "utf8");
+	const c5RunnerTestSource = await readFile(
+		resolve(root, "internal/contractexec/http/runner_darwin_test.go"),
+		"utf8",
+	);
+	const cleanPhaseContextFacts = inspectC5PhaseContextFacts(c5RunnerSource, c5RunnerTestSource);
+	if (!cleanPhaseContextFacts.detachedClosure || !cleanPhaseContextFacts.phaseLocalContexts) {
+		fail("P07B_C5_SELFTEST_CLEAN_PHASE_CONTEXT", JSON.stringify(cleanPhaseContextFacts));
+	}
+	const requirePhaseSourceViolation = (runnerSource, id, runnerTestSource = c5RunnerTestSource) => {
+		const hostile = structuredClone(clean);
+		Object.assign(hostile.execution, inspectC5PhaseContextFacts(runnerSource, runnerTestSource));
+		requireC5Violation(hostile, "P07B_C5_EXECUTION_CHRONOLOGY", `execution-chronology-source-${id}`);
+	};
+
+	for (const test of c5Cases) {
+		const facts = structuredClone(clean);
+		switch (test.id) {
+		case "inherited-c4": {
+			facts.c4Problems.push({ code: "P07B_C4_SELFTEST_SENTINEL", detail: "forced" });
+			requireC5Violation(facts, test.code, `${test.id}-nonempty`);
+			const missing = structuredClone(clean);
+			delete missing.c4Problems;
+			requireC5Violation(missing, test.code, `${test.id}-missing`);
+			const wrongType = structuredClone(clean);
+			wrongType.c4Problems = "clean";
+			requireC5Violation(wrongType, test.code, `${test.id}-wrong-type`);
+			continue;
+		}
+		case "owner-extension": {
+			const missing = structuredClone(clean);
+			missing.c5OwnerAcquirerExtension.pop();
+			requireC5Violation(missing, test.code, `${test.id}-missing`);
+			const foreign = structuredClone(clean);
+			foreign.c5OwnerAcquirerExtension.push("internal/contractexec/foreign/runner.go:1");
+			requireC5Violation(foreign, test.code, `${test.id}-foreign`);
+			const substituted = structuredClone(clean);
+			substituted.c5OwnerAcquirerExtension[0] = "internal/contractexec/http/copied.go:1";
+			requireC5Violation(substituted, test.code, `${test.id}-substituted`);
+			continue;
+		}
+		case "package-topology":
+			facts.packages["github.com/nelsonwerd/countershape/internal/contractexec/http"].go.pop();
+			break;
+		case "directory-roster":
+			facts.directories["internal/contractexec/http"].push("foreign.go:file");
+			facts.directories["internal/contractexec/http"].sort();
+			break;
+		case "build-tags":
+			facts.buildTags["internal/contractexec/http/runner_darwin.go"] = "darwin && arm64";
+			break;
+		case "exported-surface":
+			facts.surfaces.http.pop();
+			break;
+		case "importer-closure":
+			facts.importers.http.push("github.com/nelsonwerd/countershape/internal/world");
+			break;
+		case "test-file-roster":
+			facts.testFiles["internal/contractexec/http/service_lifecycle_darwin_test.go"].pop();
+			break;
+		case "execution-chronology":
+			for (const field of [
+				"chronology", "startErrorChronology", "persistenceChronology", "classificationOnlyRecovery",
+				"profileBoundRecovery", "detachedClosure", "phaseLocalContexts", "atomicSeedPublication",
+				"serializedHTTPAttempt", "exactFixtureRoster", "preOwnerPreparation",
+			]) {
+				const hostile = structuredClone(clean);
+				hostile.execution[field] = false;
+				requireC5Violation(hostile, test.code, `${test.id}-${field}`);
+			}
+			requirePhaseSourceViolation(replaceExactOnce(
+				c5RunnerSource,
+				"\treturn context.WithTimeout(context.WithoutCancel(parent), budget)",
+				"\tbudget += time.Second\n\treturn context.WithTimeout(context.WithoutCancel(parent), budget)",
+				"phase-budget-anchor",
+			), "post-formula-budget-mutation");
+			requirePhaseSourceViolation(replaceExactOnce(
+				c5RunnerSource,
+				"owner.PersistSpawnObservation(closureContext, spawn)",
+				"owner.PersistSpawnObservation(ctx, spawn)",
+				"closure-context-operation-anchor",
+			), "closure-operation-alternate-context");
+			requirePhaseSourceViolation(replaceExactOnce(
+				c5RunnerSource,
+				"\tif err := owner.PersistSpawnObservation(closureContext, spawn); err != nil {",
+				[
+					"\t_ = owner.PersistSpawnObservation(ctx, spawn)",
+					"\tif err := owner.PersistSpawnObservation(closureContext, spawn); err != nil {",
+				].join("\n"),
+				"additive-alternate-context-anchor",
+			), "additive-alternate-context-operation");
+			requirePhaseSourceViolation(replaceExactOnce(
+				c5RunnerSource,
+				"\tif err := owner.PersistSpawnObservation(closureContext, spawn); err != nil {",
+				[
+					"\t// owner.PersistSpawnObservation(closureContext, spawn)",
+					"\tif err := owner.PersistSpawnObservation(ctx, spawn); err != nil {",
+				].join("\n"),
+				"comment-only-expected-anchor",
+			), "comment-only-expected-anchor");
+			requirePhaseSourceViolation(
+				c5RunnerSource,
+				"comment-only-independence-enrollment",
+				replaceExactOnce(
+					c5RunnerTestSource,
+					'\tt.Run("phase-context-independence", testHTTPPhaseContextIndependence)',
+					'\t// t.Run("phase-context-independence", testHTTPPhaseContextIndependence)',
+					"comment-only-independence-enrollment",
+				),
+			);
+			continue;
+		case "service-closure":
+			for (const field of [
+				"exactReadinessEOF", "oneRawExchange", "terminalTeardown", "causalFactsSeparate",
+				"closeFailureRetention", "controlMatrices",
+			]) {
+				const hostile = structuredClone(clean);
+				hostile.service[field] = false;
+				requireC5Violation(hostile, test.code, `${test.id}-${field}`);
+			}
+			continue;
+		case "evidence-closure":
+			for (const field of [
+				"exactEnvelope", "rawReadinessRetained", "projectionBeforeProcess",
+				"receiptClosure", "exactFiveDomains", "startErrorPreservesViolation",
+			]) {
+				const hostile = structuredClone(clean);
+				hostile.evidence[field] = false;
+				requireC5Violation(hostile, test.code, `${test.id}-${field}`);
+			}
+			continue;
+		case "scope-closure":
+			for (const field of [
+				"attemptPrivateProbe", "shortPrivateAlias", "boundedRoster", "identityCleanup",
+				"hostileResidue", "specialModeRefusal",
+			]) {
+				const hostile = structuredClone(clean);
+				hostile.scope[field] = false;
+				requireC5Violation(hostile, test.code, `${test.id}-${field}`);
+			}
+			continue;
+		case "profile-catalog": {
+			const hostiles = [];
+			const reordered = structuredClone(clean);
+			[reordered.profileCatalog.names[0], reordered.profileCatalog.names[1]] =
+				[reordered.profileCatalog.names[1], reordered.profileCatalog.names[0]];
+			hostiles.push(["order", reordered]);
+			const countDrift = structuredClone(clean);
+			countDrift.profileCatalog.counts[0] += 1;
+			hostiles.push(["count", countDrift]);
+			const raceDrift = structuredClone(clean);
+			raceDrift.profileCatalog.races[0] = true;
+			hostiles.push(["race", raceDrift]);
+			const movedPair = structuredClone(clean);
+			const moved = movedPair.profileCatalog.targets["c5-http-behavior"][0].pass.shift();
+			movedPair.profileCatalog.targets["c5-http-behavior"][1].pass.push(moved);
+			hostiles.push(["moved-pair", movedPair]);
+			const duplicatePair = structuredClone(clean);
+			duplicatePair.profileCatalog.uniquePairCount -= 1;
+			hostiles.push(["duplicate-pair", duplicatePair]);
+			const omittedOwnedTest = structuredClone(clean);
+			omittedOwnedTest.profileCatalog.profiledOwnedTests.pop();
+			hostiles.push(["owned-test-coverage", omittedOwnedTest]);
+			for (const [id, hostile] of hostiles) requireC5Violation(hostile, test.code, `${test.id}-${id}`);
+			continue;
+		}
+		case "profile-command": {
+			const argvHostiles = [];
+			const removeRace = structuredClone(clean);
+			const raceArgs = removeRace.profileCatalog.arguments["c5-http-authority-race"];
+			raceArgs.splice(raceArgs.indexOf("-race"), 1);
+			argvHostiles.push(["remove-race", removeRace]);
+			const addRace = structuredClone(clean);
+			addRace.profileCatalog.arguments["c5-http-behavior"].splice(1, 0, "-race");
+			argvHostiles.push(["add-race", addRace]);
+			const reorderPackages = structuredClone(clean);
+			const reorderArgs = reorderPackages.profileCatalog.arguments["c5-cross-profile-parity"];
+			[reorderArgs[reorderArgs.length - 1], reorderArgs[reorderArgs.length - 2]] =
+				[reorderArgs[reorderArgs.length - 2], reorderArgs[reorderArgs.length - 1]];
+			argvHostiles.push(["reorder-packages", reorderPackages]);
+			const dropPackage = structuredClone(clean);
+			dropPackage.profileCatalog.arguments["c5-scope-closure"].pop();
+			argvHostiles.push(["drop-package", dropPackage]);
+			const substitutePackage = structuredClone(clean);
+			substitutePackage.profileCatalog.arguments["c5-http-behavior"][
+				substitutePackage.profileCatalog.arguments["c5-http-behavior"].length - 1
+			] = "./testkit/contractexec/foreign";
+			argvHostiles.push(["substitute-package", substitutePackage]);
+			const patternDrift = structuredClone(clean);
+			const patternArgs = patternDrift.profileCatalog.arguments["c5-readiness-teardown"];
+			patternArgs[patternArgs.indexOf("-run") + 1] += "x";
+			argvHostiles.push(["pattern", patternDrift]);
+			for (const [id, hostile] of argvHostiles) requireC5Violation(hostile, test.code, `${test.id}-${id}`);
+
+			const firstLabel = clean.claimMap.status[0].label;
+			const driftLabel = `${firstLabel} drift`;
+			const statusLabelToken = `| 1 | \`${firstLabel}\` |`;
+			const statusDriftSource = statusSource.replace(statusLabelToken, `| 1 | \`${driftLabel}\` |`);
+			if (statusDriftSource === statusSource) fail("P07B_C5_SELFTEST_SOURCE_FIXTURE", "status label token");
+			const parsedStatusDrift = parseC5StatusClaimMap(statusDriftSource);
+			const statusSourceHostile = structuredClone(clean);
+			statusSourceHostile.claimMap.status = parsedStatusDrift;
+			requireC5Violation(statusSourceHostile, test.code, `${test.id}-status-source`);
+			requireC5ParserRefusal(() => parseC5StatusClaimMap(statusSource.replace(
+				"| ---: | --- | --- | --- |", "| --- | --- | --- | --- |",
+			)), `${test.id}-status-delimiter`);
+			requireC5ParserRefusal(() => parseC5StatusClaimMap(statusSource.replace(
+				"| `UNRECEIPTED` |", "| `TREE-EXACT` |",
+			)), `${test.id}-status-grade`);
+			const statusSection = statusSource.slice(statusSource.indexOf("## Intended C5 claim map\n"));
+			requireC5ParserRefusal(
+				() => parseC5StatusClaimMap(`${statusSource}\n${statusSection}`),
+				`${test.id}-status-duplicate-section`,
+			);
+
+			const headingToken = `# 1. ${firstLabel}`;
+			const claimToken = `--label '${firstLabel}'`;
+			const runbookDriftSource = runbookSource.replace(headingToken, `# 1. ${driftLabel}`)
+				.replace(claimToken, `--label '${driftLabel}'`);
+			const parsedRunbookDrift = parseC5FinalRunbookClaimMap(runbookDriftSource);
+			const runbookSourceHostile = structuredClone(clean);
+			runbookSourceHostile.claimMap.runbook = parsedRunbookDrift;
+			requireC5Violation(runbookSourceHostile, test.code, `${test.id}-runbook-source`);
+			requireC5ParserRefusal(
+				() => parseC5FinalRunbookClaimMap(runbookSource.replace(headingToken, `# 1. ${driftLabel}`)),
+				`${test.id}-runbook-heading-claim-disagreement`,
+			);
+
+			const normalizedHostile = structuredClone(clean);
+			normalizedHostile.claimMap.status[0].label = driftLabel;
+			requireC5Violation(normalizedHostile, test.code, `${test.id}-normalized-validator`);
+			const typeHostile = structuredClone(clean);
+			typeHostile.claimMap.status[75].type = "command-succeeded";
+			requireC5Violation(typeHostile, test.code, `${test.id}-type`);
+			const orderHostile = structuredClone(clean);
+			[orderHostile.claimMap.status[0], orderHostile.claimMap.status[1]] =
+				[orderHostile.claimMap.status[1], orderHostile.claimMap.status[0]];
+			requireC5Violation(orderHostile, test.code, `${test.id}-order`);
+			continue;
+		}
+		default:
+			fail("P07B_C5_SELFTEST_UNKNOWN_CASE", test.id);
+		}
+		requireC5Violation(facts, test.code, test.id);
+	}
+	const goJSONCases = inspectC5GoJSONTranscriptParser();
+	const argumentCases = inspectC5GoJSONArguments();
+	process.stdout.write(`P07B-C C5 cumulative architecture defensive self-test OK (${c5Cases.length} metadata cases; ${goJSONCases} Go JSON parser cases; ${argumentCases} command cases)\n`);
+}
+
 async function main() {
+	if (process.argv[2] === "--c5") {
+		if (process.argv.length !== 3) fail("P07B_C5_SELFTEST_ARGUMENTS", "--c5 accepts no other arguments");
+		await runC5Selftest();
+		return;
+	}
 	if (process.argv[2] === "--c4") {
 		if (process.argv.length !== 3) fail("P07B_C4_SELFTEST_ARGUMENTS", "--c4 accepts no other arguments");
 		await runC4Selftest();
@@ -1035,6 +1679,14 @@ async function main() {
 			facts.package.nonGoBuildFiles.push("bridge.c");
 			break;
 		case "premature-importer":
+			for (const importer of [
+				"github.com/nelsonwerd/countershape/internal/contractexec/http",
+				"github.com/nelsonwerd/countershape/internal/contractexec/scope",
+			]) {
+				const missing = structuredClone(clean);
+				missing.productionImporters.splice(missing.productionImporters.indexOf(importer), 1);
+				requireViolation(missing, test.code, `${test.id}-missing-${importer.slice(importer.lastIndexOf("/") + 1)}`);
+			}
 			facts.productionImporters.push("github.com/nelsonwerd/countershape/cmd/countershape");
 			break;
 		case "schema-closure":
@@ -1069,7 +1721,12 @@ async function main() {
 			facts.c0.objects.pop();
 			break;
 		case "topology":
-			facts.topology.contractexecEntries.push("http:directory");
+			for (const entry of ["http:directory", "scope:directory"]) {
+				const missing = structuredClone(clean);
+				missing.topology.contractexecEntries.splice(missing.topology.contractexecEntries.indexOf(entry), 1);
+				requireViolation(missing, test.code, `${test.id}-missing-${entry.slice(0, entry.indexOf(":"))}`);
+			}
+			facts.topology.contractexecEntries.push("foreign:directory");
 			facts.topology.contractexecEntries.sort();
 			break;
 		default:

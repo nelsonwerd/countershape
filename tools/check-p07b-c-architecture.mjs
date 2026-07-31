@@ -17,8 +17,12 @@ const hostEpochPackagePath = `${modulePath}/internal/hostepoch`;
 const nodeRuntimePackagePath = `${modulePath}/internal/noderuntime`;
 const processMechanicsPackagePath = `${modulePath}/internal/processmechanics`;
 const contractRunnerPackagePath = `${modulePath}/internal/contractexec/runner`;
+const contractHTTPPackagePath = `${modulePath}/internal/contractexec/http`;
+const contractScopePackagePath = `${modulePath}/internal/contractexec/scope`;
 const storePackagePath = `${modulePath}/internal/store`;
 const contractCLITestPackagePath = `${modulePath}/testkit/contractexec/cli`;
+const contractHTTPTestPackagePath = `${modulePath}/testkit/contractexec/http`;
+const nodeParityPackagePath = `${modulePath}/internal/emit/node/parity`;
 const goExecutable = process.env.COUNTERSHAPE_GO ?? "/opt/homebrew/bin/go";
 
 const expectedC2ProductionFiles = Object.freeze([
@@ -141,6 +145,75 @@ const c4AuthorityRaceTests = Object.freeze([
 	"TestC4SpawnObservationPersistsEveryClosedStartErrorExactly",
 	"TestC4PrivateManifestDerivesRefsGroupsBodiesAndCannotFork",
 	"TestC4StoreRunBridgeExportsOnlyOpaqueTypedAuthority",
+]);
+const c5HTTPBehaviorInternalTests = Object.freeze([
+	"TestC5ProjectionRejectionAgreesWithProcessEvidence",
+	"TestC5ResponseErrorControlMatrix",
+]);
+const c5HTTPBehaviorPublicTests = Object.freeze([
+	"TestHTTPContractExecutionConformingDifferingCustom401AndAllowMany",
+	"TestHTTPResponseControlMatrixRetainsBoundedCapture",
+]);
+const c5ReadinessInternalTests = Object.freeze([
+	"TestC5NegativeReadinessRetainsExactRawFrameWithoutCapture",
+	"TestC5WaitAndRuntimeRevalidationFailuresRetainDistinctCauses",
+	"TestC5AwaitExactReadinessControlMatrix",
+	"TestC5TeardownProcessGroupEscalatesAndCleans",
+	"TestHTTPStartErrorClosesDurableRunAndClassificationWithoutChild",
+]);
+const c5ReadinessPublicTests = Object.freeze([
+	"TestHTTPChildReportedReadinessBindsExactService",
+	"TestHTTPEarlyExitAndTeardownRetainCausalFacts",
+	"TestHTTPDecoyReadinessCannotBecomeEligible",
+	"TestHTTPReadinessControlMatrixClosesExactly",
+]);
+const c5ScopeTests = Object.freeze([
+	"TestC5ScopeDerivesExactFiveDomainCleanClosure",
+	"TestC5ScopeViolationOutranksMissingAcrossForbiddenControls",
+	"TestC5InventoryBindsReferenceFixtureAndRejectsSymlink",
+	"TestC5ProbeMeasuresImportAndServiceCanariesAndCleansIdentity",
+]);
+const c5ScopeHTTPInternalTests = Object.freeze([
+	"TestC5StartErrorPreservesEveryViolationOverMissing",
+	"TestC5MissingProbeIsAmbiguous",
+]);
+const c5ScopePublicTests = Object.freeze([
+	"TestHTTPContractExecutionScopePositiveControls",
+	"TestHTTPContractExecutionReceiptEvidenceStates",
+	"TestHTTPParentSentinelsAreOmitted",
+]);
+const c5CrossTargetTests = Object.freeze([
+	"TestHTTPExactTargetRunJoinsRefuseCrossTargetConfusion",
+]);
+const c5NodeParityTests = Object.freeze([
+	"FuzzParseContractParityCorpusLine",
+	"TestContractParityCorpus",
+	"TestContractParityCorpusExactSizeBoundaries",
+	"TestContractParityCorpusIsOrderAndOracleIndependent",
+	"TestContractParityCorpusParserRejectsEnvelopeAliases",
+	"TestContractParityCorpusRejectsClosedSchemaDrift",
+	"TestContractParityManifestMatchesCopiedEntrypointParser",
+	"TestContractParityOracleLeakMutantsAreKilledByRequestRoster",
+	"TestDirectResultSelectorExhaustiveGoNodeMatrix",
+	"TestGoAndNodeParityEvaluatorsMatchLiteralOracle",
+	"TestNodeParityRunnerAcceptsExactWholeWireCap",
+	"TestNodeParityRunnerRejectsInvalidFramesAtomically",
+	"TestNodeParityRunnerRejectsMissingFinalLFWithoutStderr",
+	"TestOwnerEligibilitySelectorExhaustiveGoNodeMatrix",
+	"TestParityFramingRejectsExpandedSemanticResultAtomically",
+	"TestParityResponseFramingExactBodyBoundary",
+	"TestResultFrameBytesExactBoundaries",
+]);
+const c5AuthorityHTTPInternalTests = Object.freeze([
+	"TestC5EvidenceCapacityCoversExactMaximalRosterAndWire",
+]);
+const c5AuthorityScopeTests = Object.freeze([
+	"TestC5ProbeSameSizeModuleRewriteIsIntegrityAmbiguity",
+	"TestC5ProbeForeignResidueIsBoundedAndPreserved",
+]);
+const c5AuthorityPublicTests = Object.freeze([
+	"TestHTTPClassificationRecoveryConvergesTerminalClosureWithoutRespawn",
+	"TestHTTPConcurrentExecuteAdmitsExactlyOneSubject",
 ]);
 const expectedC2TestSymbols = Object.freeze([
 	...c2NonheadTests, ...c2InterlockTests, ...c2PrivateTests, ...c2PublicTests,
@@ -526,6 +599,14 @@ const expectedC4RunnerSurface = Object.freeze([
 	"CodeRecoveryRefused", "CodeSpawnClosureFailed", "CodeTargetChanged", "CodeUnsupportedProfile", "Error",
 	"Error.Error", "Error.Unwrap", "ExecuteCLI", "IsCode", "ResumeCLIClassification",
 ].sort());
+const expectedC4OwnerAcquirerSites = Object.freeze([
+	"internal/contractexec/runner/runner_darwin.go:1",
+	"internal/store/contract_run_bridge.go:1",
+]);
+const expectedC5OwnerAcquirerSites = Object.freeze([
+	"internal/contractexec/http/runner_darwin.go:1",
+	...expectedC4OwnerAcquirerSites,
+].sort());
 const expectedC4StoreBridgeSurface = Object.freeze([
 	"AcquireContractRunOwner", "ContractExecutionRecord", "ContractExecutionRecord.Digest",
 	"ContractExecutionRecord.Model", "ContractExecutionRecord.Valid", "ContractRunOwner",
@@ -561,6 +642,10 @@ const c4ProfileNames = Object.freeze([
 	"c4-processmechanics-parity", "c4-admission-permit", "c4-cli-closure",
 	"c4-finalized-run-release", "c4-classification-recovery", "c4-authority-race",
 ]);
+const c5ProfileNames = Object.freeze([
+	"c5-http-behavior", "c5-readiness-teardown", "c5-scope-closure",
+	"c5-cross-profile-parity", "c5-http-authority-race",
+]);
 const expectedC4ProfileTests = Object.freeze({
 	"c4-processmechanics-parity": c4ProcessMechanicsTests,
 	"c4-admission-permit": c4AdmissionTests,
@@ -568,6 +653,200 @@ const expectedC4ProfileTests = Object.freeze({
 	"c4-finalized-run-release": c4FinalizedRunTests,
 	"c4-classification-recovery": c4ClassificationTests,
 	"c4-authority-race": c4AuthorityRaceTests,
+});
+const c5ProductionPaths = Object.freeze([
+	"internal/contractexec/http/capture_darwin.go",
+	"internal/contractexec/http/evidence.go",
+	"internal/contractexec/http/evidence_darwin.go",
+	"internal/contractexec/http/receipt_darwin.go",
+	"internal/contractexec/http/runner.go",
+	"internal/contractexec/http/runner_darwin.go",
+	"internal/contractexec/http/runner_unsupported.go",
+	"internal/contractexec/http/service_darwin.go",
+	"internal/contractexec/http/service_lifecycle_darwin.go",
+	"internal/contractexec/http/source_darwin.go",
+	"internal/contractexec/scope/inventory.go",
+	"internal/contractexec/scope/inventory_darwin.go",
+	"internal/contractexec/scope/inventory_unsupported.go",
+	"internal/contractexec/scope/probe_darwin.go",
+	"internal/contractexec/scope/probe_unsupported.go",
+	"internal/contractexec/scope/types.go",
+	"testkit/contractexec/http/fixture_darwin.go",
+]);
+const c5TestPaths = Object.freeze([
+	"internal/contractexec/http/evidence_darwin_test.go",
+	"internal/contractexec/http/runner_darwin_test.go",
+	"internal/contractexec/http/service_lifecycle_darwin_test.go",
+	"internal/contractexec/scope/probe_darwin_test.go",
+	"internal/contractexec/scope/types_test.go",
+	"testkit/contractexec/http/runner_darwin_test.go",
+]);
+const c5PrefixPaths = Object.freeze([...c5ProductionPaths, ...c5TestPaths]);
+const c5ExactOwnedPaths = Object.freeze([
+	"docs/ARCHITECTURE.md",
+	"docs/CLAIM_VOCABULARY.md",
+	"docs/HANDOFF_MODE_C.md",
+	"docs/SEMANTICS.md",
+	"docs/STATE_MACHINES.md",
+	"docs/THREAT_MODEL.md",
+	"docs/VERIFICATION.md",
+	"docs/status/P07B-C-C5-HTTP-SCOPE.md",
+	"tools/check-p07b-c-architecture-selftest.mjs",
+	"tools/check-p07b-c-architecture.mjs",
+	"tools/verify-current-selftest.mjs",
+	"tools/verify-current.mjs",
+]);
+const c5BoundarySnapshotPaths = Object.freeze([
+	...new Set([...c4BoundarySnapshotPaths, ...c5ExactOwnedPaths, ...c5PrefixPaths]),
+]);
+const c5ClaimStatusPath = "docs/status/P07B-C-C5-HTTP-SCOPE.md";
+const expectedC5BuildTags = Object.freeze({
+	"internal/contractexec/http/capture_darwin.go": "darwin",
+	"internal/contractexec/http/evidence.go": "",
+	"internal/contractexec/http/evidence_darwin.go": "darwin",
+	"internal/contractexec/http/evidence_darwin_test.go": "darwin",
+	"internal/contractexec/http/receipt_darwin.go": "darwin",
+	"internal/contractexec/http/runner.go": "",
+	"internal/contractexec/http/runner_darwin.go": "darwin",
+	"internal/contractexec/http/runner_darwin_test.go": "darwin && arm64 && cgo",
+	"internal/contractexec/http/runner_unsupported.go": "!darwin",
+	"internal/contractexec/http/service_darwin.go": "darwin",
+	"internal/contractexec/http/service_lifecycle_darwin.go": "darwin",
+	"internal/contractexec/http/service_lifecycle_darwin_test.go": "darwin",
+	"internal/contractexec/http/source_darwin.go": "darwin",
+	"internal/contractexec/scope/inventory.go": "",
+	"internal/contractexec/scope/inventory_darwin.go": "darwin",
+	"internal/contractexec/scope/inventory_unsupported.go": "!darwin",
+	"internal/contractexec/scope/probe_darwin.go": "darwin",
+	"internal/contractexec/scope/probe_darwin_test.go": "darwin",
+	"internal/contractexec/scope/probe_unsupported.go": "!darwin",
+	"internal/contractexec/scope/types.go": "",
+	"internal/contractexec/scope/types_test.go": "",
+	"testkit/contractexec/http/fixture_darwin.go": "darwin && arm64 && cgo",
+	"testkit/contractexec/http/runner_darwin_test.go": "darwin && arm64 && cgo",
+});
+const expectedC5Packages = Object.freeze({
+	[contractHTTPPackagePath]: Object.freeze({
+		name: "http",
+		go: [
+			"capture_darwin.go", "evidence.go", "evidence_darwin.go", "receipt_darwin.go", "runner.go",
+			"runner_darwin.go", "service_darwin.go", "service_lifecycle_darwin.go", "source_darwin.go",
+		],
+		cgo: [],
+		test: ["evidence_darwin_test.go", "runner_darwin_test.go", "service_lifecycle_darwin_test.go"],
+		xtest: [],
+		ignored: ["runner_unsupported.go"],
+		imports: [
+			"bytes", "context", "crypto/rand", "crypto/sha256", "encoding/binary", "encoding/hex", "errors", "fmt",
+			`${modulePath}/internal/adapters/http`, `${modulePath}/internal/adapters/http/model`,
+			`${modulePath}/internal/canon`, contractPackagePath, packagePath, contractScopePackagePath,
+			`${modulePath}/internal/contractsource`, `${modulePath}/internal/domain`,
+			`${modulePath}/internal/emit/node/model`, hostEpochPackagePath,
+			`${modulePath}/internal/projectiontranslate`, storePackagePath,
+			"io", "math", "net", "os", "os/exec", "path/filepath", "sort", "strconv", "strings", "sync",
+			"syscall", "time",
+		].sort(),
+	}),
+	[contractScopePackagePath]: Object.freeze({
+		name: "scope",
+		go: ["inventory.go", "inventory_darwin.go", "probe_darwin.go", "types.go"],
+		cgo: [],
+		test: ["probe_darwin_test.go", "types_test.go"],
+		xtest: [],
+		ignored: ["inventory_unsupported.go", "probe_unsupported.go"],
+		imports: [
+			"context", "crypto/sha256", "encoding/hex", "errors", packagePath, "io", "net", "os",
+			"path/filepath", "sort", "strings", "sync", "sync/atomic", "syscall", "time",
+		].sort(),
+	}),
+	[contractHTTPTestPackagePath]: Object.freeze({
+		name: "http",
+		go: ["fixture_darwin.go"],
+		cgo: [],
+		test: [],
+		xtest: ["runner_darwin_test.go"],
+		ignored: [],
+		imports: [
+			"bytes", "context", "encoding/json", "errors", "fmt",
+			`${modulePath}/internal/adapters/http`, `${modulePath}/internal/adapters/http/model`,
+			`${modulePath}/internal/canon`, `${modulePath}/internal/choice`,
+			`${modulePath}/internal/choice/promotion`, `${modulePath}/internal/compare`,
+			`${modulePath}/internal/confirmation`, contractPackagePath,
+			`${modulePath}/internal/contractsource`, `${modulePath}/internal/domain`,
+			`${modulePath}/internal/emit/node`, gitPackagePath, `${modulePath}/internal/projectiontranslate`,
+			`${modulePath}/internal/reduce`, `${modulePath}/internal/reduction`, storePackagePath,
+			`${modulePath}/testkit/gitrepo`, `${modulePath}/testkit/httpfixture`,
+			`${modulePath}/testkit/studies/http_invoices`,
+			"os", "path/filepath", "slices", "sync", "testing", "time",
+		].sort(),
+	}),
+});
+const expectedC5DirectoryRosters = Object.freeze({
+	"internal/contractexec/http": Object.freeze([
+		"capture_darwin.go:file", "evidence.go:file", "evidence_darwin.go:file",
+		"evidence_darwin_test.go:file", "receipt_darwin.go:file", "runner.go:file", "runner_darwin.go:file",
+		"runner_darwin_test.go:file", "runner_unsupported.go:file", "service_darwin.go:file",
+		"service_lifecycle_darwin.go:file", "service_lifecycle_darwin_test.go:file", "source_darwin.go:file",
+	].sort()),
+	"internal/contractexec/scope": Object.freeze([
+		"inventory.go:file", "inventory_darwin.go:file", "inventory_unsupported.go:file",
+		"probe_darwin.go:file", "probe_darwin_test.go:file", "probe_unsupported.go:file",
+		"types.go:file", "types_test.go:file",
+	].sort()),
+	"testkit/contractexec/http": Object.freeze([
+		"fixture_darwin.go:file", "runner_darwin_test.go:file",
+	].sort()),
+});
+const expectedC5HTTPSurface = Object.freeze([
+	"CodeAdmissionRefused", "CodeEvidenceClosureFailed", "CodeFixtureRejected", "CodeInvalidRequest",
+	"CodeRecoveryRefused", "CodeSpawnClosureFailed", "CodeTargetChanged", "CodeUnsupportedProfile", "Error",
+	"Error.Error", "Error.Unwrap", "Execute", "IsCode", "ResumeClassification",
+].sort());
+const expectedC5ScopeSurface = Object.freeze([
+	"AssessmentInput", "CodeInventoryChanged", "CodeInventoryIdentity", "CodeInventoryInvalid", "CodeInventoryLimit",
+	"CodeInventoryRead", "CodeInventorySpecial", "CodeProbeAbsent", "CodeProbeCleanup", "CodeProbeIntegrity",
+	"Diagnostic", "Diagnostic.Code", "Diagnostic.Valid", "DiagnosticOf", "Entry", "Error", "Error.Error",
+	"Error.Unwrap", "Evaluate", "Finding", "Finding.Valid", "ImportModuleEnvironment", "ImportSocketEnvironment",
+	"Inventory", "Inventory.Digest", "Inventory.Entries", "Inventory.EntryCount", "Inventory.Equal",
+	"Inventory.ReferenceHTTPFixture", "Inventory.TargetViolation", "Inventory.Valid", "IsParentSentinel",
+	"Measurements", "NewDiagnostic", "NewProbe", "ParentSentinels", "Probe", "Probe.Environment", "Probe.Finish",
+	"ServiceSocketEnvironment", "Snapshot",
+].sort());
+const expectedC5TestsByFile = Object.freeze({
+	"internal/contractexec/http/evidence_darwin_test.go": Object.freeze([
+		...c5HTTPBehaviorInternalTests.filter((name) => name.startsWith("TestC5Projection")),
+		"TestC5NegativeReadinessRetainsExactRawFrameWithoutCapture",
+		"TestC5StartErrorPreservesEveryViolationOverMissing",
+		"TestC5EvidenceCapacityCoversExactMaximalRosterAndWire",
+		"TestC5MissingProbeIsAmbiguous",
+	]),
+	"internal/contractexec/http/runner_darwin_test.go": Object.freeze([
+		"TestHTTPStartErrorClosesDurableRunAndClassificationWithoutChild",
+	]),
+	"internal/contractexec/http/service_lifecycle_darwin_test.go": Object.freeze([
+		"TestC5WaitAndRuntimeRevalidationFailuresRetainDistinctCauses",
+		"TestC5AwaitExactReadinessControlMatrix",
+		"TestC5ResponseErrorControlMatrix",
+		"TestC5TeardownProcessGroupEscalatesAndCleans",
+		"TestC5TeardownHelper",
+	]),
+	"internal/contractexec/scope/probe_darwin_test.go": Object.freeze([
+		"TestC5InventoryBindsReferenceFixtureAndRejectsSymlink",
+		"TestC5ProbeMeasuresImportAndServiceCanariesAndCleansIdentity",
+		"TestC5ProbeSameSizeModuleRewriteIsIntegrityAmbiguity",
+		"TestC5ProbeForeignResidueIsBoundedAndPreserved",
+	]),
+	"internal/contractexec/scope/types_test.go": Object.freeze([
+		"TestC5ScopeDerivesExactFiveDomainCleanClosure",
+		"TestC5ScopeViolationOutranksMissingAcrossForbiddenControls",
+	]),
+	"testkit/contractexec/http/runner_darwin_test.go": Object.freeze([
+		...c5HTTPBehaviorPublicTests,
+		...c5ReadinessPublicTests,
+		...c5ScopePublicTests,
+		...c5CrossTargetTests,
+		...c5AuthorityPublicTests,
+	]),
 });
 function predecessorClaims(rows) {
 	return rows.map(([label, type], index) => ({ index, label, type, grade: "TREE-EXACT" }));
@@ -951,6 +1230,83 @@ const goJSONProfiles = Object.freeze({
 		packagePath: storePackagePath, packageArgument: "./internal/store",
 		pass: c4AuthorityRaceTests, skip: Object.freeze([]), race: true,
 	}),
+	"c5-http-behavior": Object.freeze({
+		race: false,
+		targets: Object.freeze([
+			Object.freeze({
+				packagePath: contractHTTPPackagePath, packageArgument: "./internal/contractexec/http",
+				pass: c5HTTPBehaviorInternalTests, skip: Object.freeze([]),
+			}),
+			Object.freeze({
+				packagePath: contractHTTPTestPackagePath, packageArgument: "./testkit/contractexec/http",
+				pass: c5HTTPBehaviorPublicTests, skip: Object.freeze([]),
+			}),
+		]),
+	}),
+	"c5-readiness-teardown": Object.freeze({
+		race: false,
+		targets: Object.freeze([
+			Object.freeze({
+				packagePath: contractHTTPPackagePath, packageArgument: "./internal/contractexec/http",
+				pass: c5ReadinessInternalTests, skip: Object.freeze([]),
+			}),
+			Object.freeze({
+				packagePath: contractHTTPTestPackagePath, packageArgument: "./testkit/contractexec/http",
+				pass: c5ReadinessPublicTests, skip: Object.freeze([]),
+			}),
+		]),
+	}),
+	"c5-scope-closure": Object.freeze({
+		race: false,
+		targets: Object.freeze([
+			Object.freeze({
+				packagePath: contractScopePackagePath, packageArgument: "./internal/contractexec/scope",
+				pass: c5ScopeTests, skip: Object.freeze([]),
+			}),
+			Object.freeze({
+				packagePath: contractHTTPPackagePath, packageArgument: "./internal/contractexec/http",
+				pass: c5ScopeHTTPInternalTests, skip: Object.freeze([]),
+			}),
+			Object.freeze({
+				packagePath: contractHTTPTestPackagePath, packageArgument: "./testkit/contractexec/http",
+				pass: c5ScopePublicTests, skip: Object.freeze([]),
+			}),
+		]),
+	}),
+	"c5-cross-profile-parity": Object.freeze({
+		race: false,
+		targets: Object.freeze([
+			Object.freeze({
+				packagePath: contractHTTPTestPackagePath, packageArgument: "./testkit/contractexec/http",
+				pass: c5CrossTargetTests, skip: Object.freeze([]),
+			}),
+			Object.freeze({
+				packagePath: contractCLITestPackagePath, packageArgument: "./testkit/contractexec/cli",
+				pass: c4CLITests, skip: Object.freeze([]),
+			}),
+			Object.freeze({
+				packagePath: nodeParityPackagePath, packageArgument: "./internal/emit/node/parity",
+				pass: c5NodeParityTests, skip: Object.freeze([]),
+			}),
+		]),
+	}),
+	"c5-http-authority-race": Object.freeze({
+		race: true,
+		targets: Object.freeze([
+			Object.freeze({
+				packagePath: contractHTTPPackagePath, packageArgument: "./internal/contractexec/http",
+				pass: c5AuthorityHTTPInternalTests, skip: Object.freeze([]),
+			}),
+			Object.freeze({
+				packagePath: contractScopePackagePath, packageArgument: "./internal/contractexec/scope",
+				pass: c5AuthorityScopeTests, skip: Object.freeze([]),
+			}),
+			Object.freeze({
+				packagePath: contractHTTPTestPackagePath, packageArgument: "./testkit/contractexec/http",
+				pass: c5AuthorityPublicTests, skip: Object.freeze([]),
+			}),
+		]),
+	}),
 });
 const expectedLocalDependencies = Object.freeze([
 	`${modulePath}/internal/adapters/cli/model`,
@@ -1201,6 +1557,76 @@ async function collectC4ClaimMapFacts() {
 	return Object.freeze({
 		status: parseC4StatusClaimMap(statusSource),
 		runbook: parseC4FinalRunbookClaimMap(renderC4FinalRunbook()),
+	});
+}
+
+export function parseC5StatusClaimMap(source) {
+	const startToken = "## Intended C5 claim map\n";
+	const endToken = "\n## Nonclaims and next gate";
+	const start = source.indexOf(startToken);
+	const end = start < 0 ? -1 : source.indexOf(endToken, start + startToken.length);
+	if (start < 0 || end < 0 || source.indexOf(startToken, start + startToken.length) !== -1 ||
+		source.indexOf(endToken, end + endToken.length) !== -1) {
+		throw new ArchitectureError("P07B_C5_PROFILE_COMMAND", "C5 status claim-map section framing");
+	}
+	const lines = source.slice(start + startToken.length, end).trim().split(/\r?\n/u);
+	if (lines.length !== 81 || lines[0] !== "| # | Claim | Type | Intended grade |" ||
+		lines[1] !== "| ---: | --- | --- | --- |") {
+		throw new ArchitectureError("P07B_C5_PROFILE_COMMAND", `C5 status claim-map table shape: ${lines.length}`);
+	}
+	return lines.slice(2).map((line, index) => {
+		const match = /^\| ([1-9][0-9]*) \| `([^`\r\n]+)` \| `(tests-pass|command-succeeded)` \| `UNRECEIPTED` \|$/u.exec(line);
+		if (match === null || Number(match[1]) !== index + 1) {
+			throw new ArchitectureError("P07B_C5_PROFILE_COMMAND", `C5 status claim-map row ${index + 1}`);
+		}
+		return Object.freeze({ number: index + 1, label: match[2], type: match[3], grade: "UNRECEIPTED" });
+	});
+}
+
+function renderC5FinalRunbook() {
+	const result = spawnSync(process.execPath, [resolve(repositoryRoot, c4FinalRunbookPath), "--print-final-runbook", "C5"], {
+		cwd: repositoryRoot,
+		encoding: "utf8",
+		timeout: 30_000,
+		maxBuffer: 32 * 1024 * 1024,
+		env: {
+			...process.env,
+			COUNTERSHAPE_GO: goExecutable,
+			GOMAXPROCS: "2",
+			GOFLAGS: "-mod=readonly -buildvcs=false -p=1",
+		},
+	});
+	if (result.error || result.signal || result.status !== 0 || result.stderr !== "") {
+		throw new ArchitectureError(
+			"P07B_C5_PROFILE_COMMAND",
+			`C5 final runbook render failed: ${result.status ?? result.signal}: ${result.stderr || result.stdout || result.error}`,
+		);
+	}
+	return result.stdout;
+}
+
+export function parseC5FinalRunbookClaimMap(source) {
+	const headings = [...source.matchAll(/^# ([1-9][0-9]*)\. ([^\r\n]+)$/gmu)];
+	const claims = [...source.matchAll(/^\/opt\/homebrew\/bin\/didrun claim '(tests-pass|command-succeeded)' --label '([^'\r\n]+)'$/gmu)];
+	if (headings.length !== 79 || claims.length !== 79) {
+		throw new ArchitectureError("P07B_C5_PROFILE_COMMAND", `C5 final runbook claim-map shape: ${headings.length}/${claims.length}`);
+	}
+	return headings.map((heading, index) => {
+		const number = Number(heading[1]);
+		const label = heading[2];
+		const claim = claims[index];
+		if (number !== index + 1 || claim[2] !== label) {
+			throw new ArchitectureError("P07B_C5_PROFILE_COMMAND", `C5 final runbook claim-map row ${index + 1}`);
+		}
+		return Object.freeze({ number, label, type: claim[1], grade: "UNRECEIPTED" });
+	});
+}
+
+async function collectC5ClaimMapFacts() {
+	const statusSource = await readFile(resolve(repositoryRoot, c5ClaimStatusPath), "utf8");
+	return Object.freeze({
+		status: parseC5StatusClaimMap(statusSource),
+		runbook: parseC5FinalRunbookClaimMap(renderC5FinalRunbook()),
 	});
 }
 
@@ -1503,9 +1929,65 @@ function goTestC2Symbols() {
 	return sorted(lines);
 }
 
-export function validateGoJSONTranscript(profileName, bytes) {
+function profileTargets(profileName) {
 	const profile = goJSONProfiles[profileName];
 	if (!profile) throw new ArchitectureError("P07B_C1_GO_JSON_PROFILE", profileName);
+	const hasTargets = Array.isArray(profile.targets);
+	if (hasTargets && (!profileName.startsWith("c5-") ||
+		["packagePath", "packageArgument", "pass", "skip"].some((key) => Object.hasOwn(profile, key)))) {
+		throw new ArchitectureError("P07B_C5_GO_JSON_PROFILE", `${profileName}: mixed or non-C5 target form`);
+	}
+	const targets = hasTargets ? profile.targets : [profile];
+	if (targets.length === 0) {
+		throw new ArchitectureError("P07B_C1_GO_JSON_PROFILE", `${profileName}: empty target roster`);
+	}
+	const packagePaths = new Set();
+	const packageArguments = new Set();
+	const pairs = new Set();
+	const normalized = targets.map((target, index) => {
+		if (!target || typeof target !== "object" || Array.isArray(target) ||
+			typeof target.packagePath !== "string" || target.packagePath.length === 0 ||
+			!Array.isArray(target.pass) || !Array.isArray(target.skip) ||
+			target.pass.length + target.skip.length === 0) {
+			throw new ArchitectureError("P07B_C1_GO_JSON_PROFILE", `${profileName}: malformed target ${index}`);
+		}
+		if (packagePaths.has(target.packagePath)) {
+			throw new ArchitectureError("P07B_C5_GO_JSON_PROFILE", `${profileName}: duplicate package ${target.packagePath}`);
+		}
+		packagePaths.add(target.packagePath);
+		if (profileName.startsWith("c5-")) {
+			if (typeof target.packageArgument !== "string" || !target.packageArgument.startsWith("./") ||
+				packageArguments.has(target.packageArgument)) {
+				throw new ArchitectureError("P07B_C5_GO_JSON_PROFILE", `${profileName}: invalid package argument ${index}`);
+			}
+			packageArguments.add(target.packageArgument);
+		}
+		const pass = [...target.pass];
+		const skip = [...target.skip];
+		const names = [...pass, ...skip];
+		if (names.some((name) => !/^(?:Test|Fuzz)[A-Za-z0-9_]+$/u.test(name)) ||
+			new Set(names).size !== names.length) {
+			throw new ArchitectureError("P07B_C1_GO_JSON_PROFILE", `${profileName}: invalid test roster ${index}`);
+		}
+		for (const name of names) {
+			const key = `${target.packagePath}\u0000${name}`;
+			if (pairs.has(key)) {
+				throw new ArchitectureError("P07B_C5_GO_JSON_PROFILE", `${profileName}: duplicate pair ${target.packagePath}:${name}`);
+			}
+			pairs.add(key);
+		}
+		return Object.freeze({
+			packagePath: target.packagePath,
+			packageArgument: target.packageArgument,
+			pass: Object.freeze(pass),
+			skip: Object.freeze(skip),
+		});
+	});
+	return Object.freeze(normalized);
+}
+
+export function validateGoJSONTranscript(profileName, bytes) {
+	const targets = profileTargets(profileName);
 	if (!Buffer.isBuffer(bytes) || bytes.length === 0 || bytes.length > 64 * 1024 * 1024) {
 		throw new ArchitectureError("P07B_C1_GO_JSON_SIZE", bytes?.length ?? "not-buffer");
 	}
@@ -1526,48 +2008,82 @@ export function validateGoJSONTranscript(profileName, bytes) {
 			throw new ArchitectureError("P07B_C1_GO_JSON_PARSE", `${index + 1}:${error.message}`);
 		}
 	});
-	if (events.some((event) => !event || typeof event !== "object" || Array.isArray(event) || event.Package !== profile.packagePath)) {
+	const targetsByPackage = new Map(targets.map((target) => [target.packagePath, target]));
+	if (events.some((event) => !event || typeof event !== "object" || Array.isArray(event) ||
+		typeof event.Package !== "string" || !targetsByPackage.has(event.Package))) {
 		throw new ArchitectureError("P07B_C1_GO_JSON_PACKAGE", "foreign or malformed event");
 	}
 	if (events.some((event) => event.Action === "fail")) {
 		throw new ArchitectureError("P07B_C1_GO_JSON_FAILURE", "Go reported failure");
 	}
-	const expected = new Set([...profile.pass, ...profile.skip]);
-	const topLevelEvents = events.filter((event) => typeof event.Test === "string" && !event.Test.includes("/"));
-	const observed = new Set(topLevelEvents.map((event) => event.Test));
-	if (!exact(sorted(observed), sorted(expected))) {
-		throw new ArchitectureError("P07B_C1_GO_JSON_TEST_ROSTER", JSON.stringify(sorted(observed)));
-	}
-	for (const name of expected) {
-		const named = topLevelEvents.filter((event) => event.Test === name);
-		const runCount = named.filter((event) => event.Action === "run").length;
-		const passCount = named.filter((event) => event.Action === "pass").length;
-		const skipCount = named.filter((event) => event.Action === "skip").length;
-		const wantsPass = profile.pass.includes(name);
-		if (runCount !== 1 || passCount !== (wantsPass ? 1 : 0) || skipCount !== (wantsPass ? 0 : 1)) {
-			throw new ArchitectureError("P07B_C1_GO_JSON_TEST_RESULT", `${name}:run=${runCount},pass=${passCount},skip=${skipCount}`);
+	let passed = 0;
+	let skipped = 0;
+	for (const target of targets) {
+		const expected = new Set([...target.pass, ...target.skip]);
+		const nestedEvents = events.filter((event) =>
+			event.Package === target.packagePath && typeof event.Test === "string" && event.Test.includes("/"));
+		if (nestedEvents.some((event) => !expected.has(event.Test.slice(0, event.Test.indexOf("/"))))) {
+			throw new ArchitectureError(
+				"P07B_C1_GO_JSON_TEST_ROSTER",
+				`${target.packagePath}:foreign nested root`,
+			);
 		}
+		const topLevelEvents = events.filter((event) =>
+			event.Package === target.packagePath && typeof event.Test === "string" && !event.Test.includes("/"));
+		const observed = new Set(topLevelEvents.map((event) => event.Test));
+		if (!exact(sorted(observed), sorted(expected))) {
+			throw new ArchitectureError(
+				"P07B_C1_GO_JSON_TEST_ROSTER",
+				`${target.packagePath}:${JSON.stringify(sorted(observed))}`,
+			);
+		}
+		for (const name of expected) {
+			const named = topLevelEvents.filter((event) => event.Test === name);
+			const runCount = named.filter((event) => event.Action === "run").length;
+			const passCount = named.filter((event) => event.Action === "pass").length;
+			const skipCount = named.filter((event) => event.Action === "skip").length;
+			const wantsPass = target.pass.includes(name);
+			const runIndex = named.findIndex((event) => event.Action === "run");
+			const terminalIndex = named.findIndex((event) => event.Action === (wantsPass ? "pass" : "skip"));
+			if (runCount !== 1 || passCount !== (wantsPass ? 1 : 0) || skipCount !== (wantsPass ? 0 : 1) ||
+				runIndex < 0 || terminalIndex <= runIndex) {
+				throw new ArchitectureError(
+					"P07B_C1_GO_JSON_TEST_RESULT",
+					`${target.packagePath}:${name}:run=${runCount},pass=${passCount},skip=${skipCount}`,
+				);
+			}
+		}
+		const packagePasses = events.filter((event) =>
+			event.Package === target.packagePath && event.Action === "pass" && !Object.hasOwn(event, "Test"));
+		if (packagePasses.length !== 1) {
+			throw new ArchitectureError(
+				"P07B_C1_GO_JSON_PACKAGE_RESULT",
+				`${target.packagePath}:${packagePasses.length}`,
+			);
+		}
+		passed += target.pass.length;
+		skipped += target.skip.length;
 	}
-	const packagePasses = events.filter((event) => event.Action === "pass" && !Object.hasOwn(event, "Test"));
-	if (packagePasses.length !== 1) {
-		throw new ArchitectureError("P07B_C1_GO_JSON_PACKAGE_RESULT", String(packagePasses.length));
-	}
-	return Object.freeze({ profile: profileName, passed: profile.pass.length, skipped: profile.skip.length });
+	return Object.freeze({ profile: profileName, passed, skipped });
 }
 
 export function goJSONArguments(profileName) {
 	const profile = goJSONProfiles[profileName];
-	if (!profile?.packageArgument || profile.skip.length !== 0 || profile.pass.length === 0 ||
-		profile.pass.some((name) => !/^(?:Test|Fuzz)[A-Za-z0-9_]+$/u.test(name)) ||
-		(profileName.startsWith("c4-") && typeof profile.race !== "boolean")) {
+	const targets = profileTargets(profileName);
+	const names = targets.flatMap((target) => target.pass);
+	if (targets.some((target) => !target.packageArgument || target.skip.length !== 0 || target.pass.length === 0) ||
+		((profileName.startsWith("c4-") || profileName.startsWith("c5-")) && typeof profile?.race !== "boolean") ||
+		(profileName.startsWith("c5-") &&
+			(profile.race !== (profileName === "c5-http-authority-race") || names.length !== new Set(names).size))) {
 		throw new ArchitectureError("P07B_C2_GO_JSON_RUN_PROFILE", profileName);
 	}
-	const pattern = `^(?:${profile.pass.join("|")})$`;
+	const pattern = `^(?:${names.join("|")})$`;
 	return Object.freeze([
 		"test", ...(profile.race === true ? ["-race"] : []),
 		"-mod=readonly", "-buildvcs=false", "-p=1", "-count=1",
 		...(profileName === "c3-official-target" ? ["-timeout=12m"] : []),
-		"-json", "-run", pattern, profile.packageArgument,
+		"-json", "-run", pattern,
+		...targets.map((target) => target.packageArgument),
 	]);
 }
 
@@ -1577,10 +2093,12 @@ export function runGoJSONProfile(profileName) {
 	const output = run(
 		goExecutable,
 		goJSONArguments(profileName),
-		profileName.startsWith("c4-") ? "P07B_C4_GO_JSON_RUN" :
+		profileName.startsWith("c5-") ? "P07B_C5_GO_JSON_RUN" :
+			profileName.startsWith("c4-") ? "P07B_C4_GO_JSON_RUN" :
 			profileName.startsWith("c3-") ? "P07B_C3_GO_JSON_RUN" : "P07B_C2_GO_JSON_RUN",
-		(profileName.startsWith("c3-") || profileName.startsWith("c4-")) ? c3ArchitectureProfileTimeoutMS : 180_000,
-	);
+		profileName.startsWith("c5-") ? 1_800_000 :
+			(profileName.startsWith("c3-") || profileName.startsWith("c4-")) ? c3ArchitectureProfileTimeoutMS : 180_000,
+		);
 	return validateGoJSONTranscript(profileName, Buffer.from(output, "utf8"));
 }
 
@@ -2897,6 +3415,731 @@ export async function collectC4Facts() {
 	});
 }
 
+async function directDirectoryRoster(relativePath) {
+	const absoluteRoot = resolve(repositoryRoot, relativePath);
+	const result = [];
+	for (const entry of await readdir(absoluteRoot, { withFileTypes: true })) {
+		const metadata = await lstat(join(absoluteRoot, entry.name));
+		const kind = metadata.isSymbolicLink() ? "symlink" :
+			metadata.isFile() ? "file" : metadata.isDirectory() ? "directory" : "other";
+		result.push(`${entry.name}:${kind}`);
+	}
+	return sorted(result);
+}
+
+export function inspectC5PhaseContextFacts(runnerSource, internalRunnerTestSource) {
+	const executeBody = goCodeOnly(functionBody(runnerSource, "executeHTTP"));
+	const phaseContextBody = goCodeOnly(functionBody(runnerSource, "detachedHTTPPhaseContext"));
+	const internalRunnerTests = goCodeOnly(internalRunnerTestSource);
+	const phaseContextTestBody = goCodeOnly(
+		functionBody(internalRunnerTestSource, "testHTTPPhaseContextIndependence"),
+	);
+	const startErrorTopTestBody = functionBody(
+		internalRunnerTestSource,
+		"TestHTTPStartErrorClosesDurableRunAndClassificationWithoutChild",
+	);
+	const startErrorTopTestCode = goCodeOnly(startErrorTopTestBody);
+	const phaseContextRegistrationPattern =
+		/t\.Run\s*\(\s*"phase-context-independence"\s*,\s*testHTTPPhaseContextIndependence\s*\)/gu;
+	const phaseContextRegistrationCount = [...startErrorTopTestBody.matchAll(phaseContextRegistrationPattern)]
+		.filter((match) => startErrorTopTestCode.slice(match.index, match.index + 5) === "t.Run")
+		.length;
+	const normalizedPhaseContextBody = phaseContextBody.replace(/\s+/gu, "");
+	const expectedPhaseContextBody = [
+		"budgets:=input.source.Plan().Budgets()",
+		"budget:=time.Duration(budgets.ReadinessMS+budgets.ProbeMS+budgets.TeardownMS)*time.Millisecond+30*time.Second",
+		"returncontext.WithTimeout(context.WithoutCancel(parent),budget)",
+	].join("");
+	const exactExecuteCounts = [
+		count(executeBody, /detachedHTTPPhaseContext\s*\(/gu) === 2,
+		count(executeBody, /contractexec\.ReopenOfficialTarget\s*\(/gu) === 4,
+		count(executeBody, /contractexec\.ReopenOfficialTarget\s*\(\s*ctx\s*,/gu) === 2,
+		count(executeBody, /contractexec\.ReopenOfficialTarget\s*\(\s*revalidationContext\s*,/gu) === 1,
+		count(executeBody, /contractexec\.ReopenOfficialTarget\s*\(\s*closureContext\s*,/gu) === 1,
+		count(executeBody, /consumeAndStartHTTP\s*\(/gu) === 1,
+		count(executeBody, /closeHTTPStartError\s*\(/gu) === 1,
+		count(executeBody, /owner\.PersistSpawnObservation\s*\(/gu) === 1,
+		count(executeBody, /input\.finishProbe\s*\(/gu) === 1,
+		count(executeBody, /inspectAndRetireInvocation\s*\(/gu) === 1,
+		count(executeBody, /persistHTTPRunAndClassification\s*\(/gu) === 1,
+		count(executeBody, /revalidationContext\.Err\s*\(\s*\)/gu) === 1,
+		count(executeBody, /cancelRevalidation\s*\(\s*\)/gu) === 1,
+		count(executeBody, /cancelClosure\s*\(\s*\)/gu) === 1,
+		count(executeBody, /errors\.Join\s*\(\s*reopenErr\s*,\s*revalidationErr\s*\)/gu) === 1,
+		count(executeBody, /\brevalidationContext\b/gu) === 3,
+		count(executeBody, /\bclosureContext\b/gu) === 8,
+		count(executeBody, /\bcancelRevalidation\b/gu) === 2,
+		count(executeBody, /\bcancelClosure\b/gu) === 2,
+	].every(Boolean);
+	return Object.freeze({
+		detachedClosure: normalizedPhaseContextBody === expectedPhaseContextBody,
+		phaseLocalContexts:
+			exactExecuteCounts &&
+			!executeBody.includes("terminalClosureContext") &&
+			!/(?:context\.WithTimeout|context\.WithDeadline|context\.WithCancelCause|time\.AfterFunc)/u
+				.test(executeBody) &&
+			ordered(executeBody, [
+				"store.AcquireContractRunOwner",
+				"revalidationContext, cancelRevalidation := detachedHTTPPhaseContext(ctx, input)",
+				"spawnTarget, reopenErr := contractexec.ReopenOfficialTarget(revalidationContext, input.target)",
+				"closureContext, cancelClosure := detachedHTTPPhaseContext(ctx, input)",
+				"defer cancelClosure()", "revalidationErr := revalidationContext.Err()",
+				"cancelRevalidation()", "if reopenErr != nil || revalidationErr != nil",
+				"_ = spawnTarget.Close()", "errors.Join(reopenErr, revalidationErr)",
+				"samePreparedTarget", "input.target = spawnTarget",
+				"defer func() { _ = spawnTarget.Close() }()", "consumeAndStartHTTP",
+			]) &&
+			ordered(executeBody, [
+				"consumeAndStartHTTP(", "ctx, closureContext, owner",
+				"closeHTTPStartError(closureContext, owner",
+				"owner.PersistSpawnObservation(closureContext, spawn)",
+				"input.finishProbe(closureContext)", "inspectAndRetireInvocation(",
+				"closureContext, input.evidenceRoot",
+				"contractexec.ReopenOfficialTarget(closureContext, input.target)",
+				"persistHTTPRunAndClassification(closureContext, owner",
+			]) &&
+			phaseContextRegistrationCount === 1 &&
+			count(internalRunnerTests, /func\s+testHTTPPhaseContextIndependence\s*\(/gu) === 1 &&
+			ordered(phaseContextTestBody, [
+				"prepareHTTPExecution", "context.WithCancel",
+				"revalidationContext, cancelRevalidation := detachedHTTPPhaseContext",
+				"closureContext, cancelClosure := detachedHTTPPhaseContext",
+				"revalidationContext.Deadline", "closureContext.Deadline",
+				"cancelRevalidation()", "context.Canceled",
+				"closureContext.Err() != nil", "cancelParent()",
+				"closureContext.Err() != nil", "cancelClosure()", "context.Canceled",
+			]),
+	});
+}
+
+export async function collectC5Facts() {
+	const packageValues = goList([
+		"./internal/contractexec/http", "./internal/contractexec/scope", "./testkit/contractexec/http",
+	]);
+	const repositoryPackages = goList(["./..."]);
+	const entries = await Promise.all(c5PrefixPaths.map(readC2Source));
+	const sources = Object.fromEntries(entries.map((entry) => [entry.path, entry.source]));
+	const c4Facts = await collectC4Facts();
+	const c5OwnerAcquirerExtension = [...(c4Facts.runner?.soleOwnerAcquirer ?? [])];
+	const historicalC4Facts = structuredClone(c4Facts);
+	historicalC4Facts.runner.soleOwnerAcquirer = [...expectedC4OwnerAcquirerSites];
+	const claimMap = await collectC5ClaimMapFacts();
+	const packageFacts = Object.fromEntries(packageValues.map((value) => [value.ImportPath, packageBuildFacts(value)]));
+	const directories = Object.fromEntries(await Promise.all(
+		Object.keys(expectedC5DirectoryRosters).map(async (path) => [path, await directDirectoryRoster(path)]),
+	));
+	const testFiles = {};
+	for (const path of Object.keys(expectedC5TestsByFile)) {
+		testFiles[path] = sorted([...sources[path].matchAll(/^func\s+(Test[A-Za-z0-9_]+)\s*\(/gmu)]
+			.map((match) => match[1]).filter((name) => name !== "TestMain"));
+	}
+	const aggregateSurface = (paths) => sorted([...new Set(paths.flatMap((path) => exportedSurface(sources[path])))]);
+	const httpProduction = c5ProductionPaths.filter((path) => path.startsWith("internal/contractexec/http/"));
+	const scopeProduction = c5ProductionPaths.filter((path) => path.startsWith("internal/contractexec/scope/"));
+	const runnerDarwin = sources["internal/contractexec/http/runner_darwin.go"];
+	const executeBody = functionBody(runnerDarwin, "executeHTTP");
+	const phaseContextFacts = inspectC5PhaseContextFacts(
+		runnerDarwin,
+		sources["internal/contractexec/http/runner_darwin_test.go"],
+	);
+	const startErrorBody = functionBody(runnerDarwin, "closeHTTPStartError");
+	const persistBody = functionBody(runnerDarwin, "persistHTTPRunAndClassification");
+	const recoveryBody = functionBody(runnerDarwin, "resumeHTTPClassification");
+	const recoveryProfileGuardMatch = /if\s+_,\s+profileErr\s*:=\s*requireStandaloneHTTPProfile\s*\(\s*bundle\.PortableSource\(\)\s*,\s*bundle\.SourceProfile\(\)\s*,\s*\)\s*;\s*profileErr\s*!=\s*nil\s*\{\s*return\s+store\.ContractExecutionRecord\{\}\s*,\s*profileErr\s*\}/u
+		.exec(recoveryBody);
+	const recoveryProfileGuardEnd = recoveryProfileGuardMatch
+		? recoveryProfileGuardMatch.index + recoveryProfileGuardMatch[0].length
+		: -1;
+	const recoveryTerminalIndex = recoveryBody.indexOf("store.OpenFinalizedRunRecord");
+	const recoveryBeforeProfileGuardEnd = recoveryProfileGuardEnd >= 0
+		? recoveryBody.slice(0, recoveryProfileGuardEnd)
+		: recoveryBody;
+	const sourceDarwin = sources["internal/contractexec/http/source_darwin.go"];
+	const executionPreparationStructBody = balancedBody(
+		sourceDarwin,
+		/^type\s+executionPreparation\s+struct\s*/mu,
+	);
+	const prepareBody = functionBody(sourceDarwin, "prepareHTTPExecution");
+	const closePreparedBody = methodBody(sourceDarwin, "executionInput", "closePrepared");
+	const profileGateBody = functionBody(sourceDarwin, "requireStandaloneHTTPProfile");
+	const seedMaterializeBody = functionBody(sourceDarwin, "materializeHTTPSeeds");
+	const seedLeaseAcquireBody = functionBody(sourceDarwin, "acquireSeedMaterializationLease");
+	const seedLeaseReleaseBody = methodBody(sourceDarwin, "seedMaterializationLease", "release");
+	const seedFixtureRosterBody = functionBody(sourceDarwin, "validateSeedFixtureDirectory");
+	const seedStagingCreateBody = functionBody(sourceDarwin, "createSeedStagingRoot");
+	const seedStagingRetireBody = functionBody(sourceDarwin, "retireSeedStagingRoot");
+	const seedPublishBody = functionBody(sourceDarwin, "createOrValidateSeed");
+	const seedCleanupBody = functionBody(sourceDarwin, "removeExactTemporarySeed");
+	const serviceDarwin = sources["internal/contractexec/http/service_darwin.go"];
+	const descriptorStructBody = balancedBody(
+		serviceDarwin,
+		/^type\s+ownedServiceDescriptor\s+struct\s*/mu,
+	);
+	const preparedServiceStructBody = balancedBody(serviceDarwin, /^type\s+preparedService\s+struct\s*/mu);
+	const runningServiceStructBody = balancedBody(serviceDarwin, /^type\s+runningService\s+struct\s*/mu);
+	const descriptorConstructorBody = functionBody(serviceDarwin, "newOwnedServiceDescriptor");
+	const serviceStartBody = methodBody(serviceDarwin, "preparedService", "Start");
+	const descriptorCloseBody = methodBody(serviceDarwin, "ownedServiceDescriptor", "Close");
+	const descriptorRecordBody = functionBody(serviceDarwin, "recordDescriptorCloseFailure");
+	const descriptorDiagnosticsBody = methodBody(serviceDarwin, "processResult", "descriptorCloseDiagnostics");
+	const serviceLifecycle = sources["internal/contractexec/http/service_lifecycle_darwin.go"];
+	const serviceCloseBody = methodBody(serviceLifecycle, "runningService", "close");
+	const readinessStart = serviceLifecycle.indexOf("func awaitExactReadiness");
+	const readinessEnd = serviceLifecycle.indexOf("func latchReadinessFacts", readinessStart);
+	const readinessBody = readinessStart >= 0 && readinessEnd > readinessStart
+		? serviceLifecycle.slice(readinessStart, readinessEnd)
+		: "";
+	const readinessReadBody = functionBody(serviceLifecycle, "readExactReadiness");
+	const exchangeBody = functionBody(serviceLifecycle, "performOneExchange");
+	const closeProcessBody = methodBody(serviceLifecycle, "runningService", "closeProcess");
+	const stopReadinessBody = functionBody(serviceLifecycle, "stopReadiness");
+	const teardownBody = functionBody(serviceLifecycle, "teardownProcessGroup");
+	const classifyWaitBody = functionBody(serviceLifecycle, "classifyWait");
+	const revalidationBody = functionBody(serviceLifecycle, "recordRuntimeRevalidation");
+	const evidenceDarwin = sources["internal/contractexec/http/evidence_darwin.go"];
+	const childEvidenceBody = functionBody(evidenceDarwin, "buildChildEvidenceDraft");
+	const startEvidenceBody = functionBody(evidenceDarwin, "buildStartErrorEvidenceDraft");
+	const assembleBody = methodBody(evidenceDarwin, "evidenceDraft", "assemble");
+	const capacityBody = functionBody(evidenceDarwin, "preflightEvidenceCapacity");
+	const capacityValidateBody = methodBody(evidenceDarwin, "evidenceCapacity", "validate");
+	const drainEvidenceBody = functionBody(evidenceDarwin, "buildProcessDrainEvidence");
+	const evidenceTests = sources["internal/contractexec/http/evidence_darwin_test.go"];
+	const c5CapacityTestBody = functionBody(
+		evidenceTests,
+		"TestC5EvidenceCapacityCoversExactMaximalRosterAndWire",
+	);
+	const internalRunnerTests = sources["internal/contractexec/http/runner_darwin_test.go"];
+	const serviceTests = sources["internal/contractexec/http/service_lifecycle_darwin_test.go"];
+	const startErrorTopTestBody = functionBody(
+		internalRunnerTests,
+		"TestHTTPStartErrorClosesDurableRunAndClassificationWithoutChild",
+	);
+	const seedLeaseTestBody = functionBody(internalRunnerTests, "testHTTPSeedMaterializationLease");
+	const seedResidueTestBody = functionBody(internalRunnerTests, "testHTTPSeedResidueRefusal");
+	const recoveryProfileTestBody = functionBody(internalRunnerTests, "testHTTPRecoveryProfileGate");
+	const parentWriterTestBody = functionBody(internalRunnerTests, "testHTTPParentWriterCloseFailure");
+	const earlyReadinessTestBody = functionBody(
+		serviceTests,
+		"TestC5AwaitExactReadinessControlMatrix",
+	);
+	const publicTests = sources["testkit/contractexec/http/runner_darwin_test.go"];
+	const authorityRaceTestBody = functionBody(
+		publicTests,
+		"TestHTTPConcurrentExecuteAdmitsExactlyOneSubject",
+	);
+	const receiptDarwin = sources["internal/contractexec/http/receipt_darwin.go"];
+	const receiptInspectBody = functionBody(receiptDarwin, "inspectAndRetireInvocation");
+	const receiptRetireBody = functionBody(receiptDarwin, "retireInvocation");
+	const scopeTypes = sources["internal/contractexec/scope/types.go"];
+	const scopeEvaluateBody = functionBody(scopeTypes, "Evaluate");
+	const scopeProbe = sources["internal/contractexec/scope/probe_darwin.go"];
+	const newProbeBody = functionBody(scopeProbe, "NewProbe");
+	const finishProbeBody = methodBody(scopeProbe, "Probe", "Finish");
+	const shortRootBody = functionBody(scopeProbe, "newShortSocketRoot");
+	const boundedRosterBody = functionBody(scopeProbe, "boundedDirectRoster");
+	const removeLeafBody = functionBody(scopeProbe, "removeRetainedLeaf");
+	const removeDirectoryBody = functionBody(scopeProbe, "removeRetainedEmptyDirectory");
+	const inventoryDarwin = sources["internal/contractexec/scope/inventory_darwin.go"];
+	const inventorySnapshotBody = functionBody(inventoryDarwin, "Snapshot");
+	const inventoryDirectoryBody = functionBody(inventoryDarwin, "readDirectory");
+	const inventoryForbiddenBody = functionBody(inventoryDarwin, "inventoryModeForbidden");
+	const scopeProbeTests = sources["internal/contractexec/scope/probe_darwin_test.go"];
+	const inventorySpecialTestBody = functionBody(
+		scopeProbeTests,
+		"TestC5InventoryBindsReferenceFixtureAndRejectsSymlink",
+	);
+	const referenceInventoryFixtureBody = functionBody(
+		scopeProbeTests,
+		"materializeC5ReferenceInventory",
+	);
+	const specialModesRosterStart = inventorySpecialTestBody.indexOf("specialModes := []struct");
+	const specialLocationsRosterStart = inventorySpecialTestBody.indexOf("locations := []struct");
+	const specialModeLoopsStart = inventorySpecialTestBody.indexOf(
+		"for _, special := range specialModes",
+	);
+	const specialModesRosterBody = specialModesRosterStart >= 0 && specialLocationsRosterStart > specialModesRosterStart
+		? inventorySpecialTestBody.slice(specialModesRosterStart, specialLocationsRosterStart)
+		: "";
+	const specialLocationsRosterBody = specialLocationsRosterStart >= 0 && specialModeLoopsStart > specialLocationsRosterStart
+		? inventorySpecialTestBody.slice(specialLocationsRosterStart, specialModeLoopsStart)
+		: "";
+	const profileTargetsByName = Object.fromEntries(c5ProfileNames.map((name) => [
+		name,
+		profileTargets(name).map((target) => ({
+			packagePath: target.packagePath,
+			packageArgument: target.packageArgument,
+			pass: [...target.pass],
+			skip: [...target.skip],
+		})),
+	]));
+	const profilePairs = c5ProfileNames.flatMap((name) =>
+		profileTargets(name).flatMap((target) =>
+			target.pass.map((test) => `${target.packagePath}\u0000${test}`)));
+	const c5OwnedPackageForFile = (path) => path.startsWith("internal/contractexec/http/")
+		? contractHTTPPackagePath
+		: path.startsWith("internal/contractexec/scope/")
+			? contractScopePackagePath
+			: contractHTTPTestPackagePath;
+	const c5OwnedTests = sorted(Object.entries(testFiles).flatMap(([path, tests]) =>
+		tests.filter((test) => test !== "TestC5TeardownHelper")
+			.map((test) => `${c5OwnedPackageForFile(path)}\u0000${test}`)));
+	const profiledC5OwnedTests = sorted(profilePairs.filter((pair) => {
+		const packagePath = pair.slice(0, pair.indexOf("\u0000"));
+		return packagePath === contractHTTPPackagePath || packagePath === contractScopePackagePath ||
+			packagePath === contractHTTPTestPackagePath;
+	}));
+	return structuredClone({
+		packages: packageFacts,
+		directories,
+		buildTags: Object.fromEntries(Object.keys(expectedC5BuildTags).map((path) => [path, goBuildTag(sources[path])])),
+		testFiles,
+		surfaces: {
+			http: aggregateSurface(httpProduction),
+			scope: aggregateSurface(scopeProduction),
+		},
+		importers: {
+			http: sorted(repositoryPackages
+				.filter((entry) => (entry.Imports ?? []).includes(contractHTTPPackagePath))
+				.map((entry) => entry.ImportPath)),
+			scope: sorted(repositoryPackages
+				.filter((entry) => (entry.Imports ?? []).includes(contractScopePackagePath))
+				.map((entry) => entry.ImportPath)),
+		},
+		c4Problems: validateC4Facts(historicalC4Facts),
+		c5OwnerAcquirerExtension,
+			execution: {
+				chronology: ordered(executeBody, [
+					"contractexec.ReopenOfficialTarget", "prepareHTTPExecution", "contractexec.ReopenOfficialTarget",
+					"input.prepared.Revalidate", "hostepoch.Measure", "store.AcquireContractRunOwner",
+					"revalidationContext, cancelRevalidation := detachedHTTPPhaseContext",
+					"contractexec.ReopenOfficialTarget",
+					"closureContext, cancelClosure := detachedHTTPPhaseContext",
+					"revalidationContext.Err", "cancelRevalidation", "consumeAndStartHTTP",
+					"owner.PersistSpawnObservation", "running.Close()", "input.finishProbe",
+					"inspectAndRetireInvocation", "contractscope.Snapshot", "contractexec.ReopenOfficialTarget",
+					"buildChildEvidenceDraft", "persistHTTPRunAndClassification",
+			]),
+			startErrorChronology: ordered(startErrorBody, [
+				"owner.PersistSpawnObservation", "input.finishProbe", "inspectAndRetireInvocation",
+				"contractscope.Snapshot", "contractexec.ReopenOfficialTarget", "buildStartErrorEvidenceDraft",
+				"persistHTTPRunAndClassification",
+			]),
+			persistenceChronology: ordered(persistBody, [
+				"input.capacity.validate", "owner.PersistPrivateRunManifest", "draft.assemble",
+				"contractmodel.NewFinalizedContractRun", "owner.PersistFinalizedRun", "closure.Release",
+				"closure.FinalizedRun", "contractmodel.DeriveContractExecution",
+				"store.PersistContractExecutionRecord",
+			]),
+			classificationOnlyRecovery: ordered(recoveryBody, [
+				"contractexec.ReopenOfficialTarget", "store.OpenFinalizedRunRecord", "store.OpenTerminalClosure",
+				"closure.Release", "store.OpenFinalizedRunRecord", "contractmodel.DeriveContractExecution",
+				"store.PersistContractExecutionRecord",
+			]) && !/(?:prepareHTTPExecution|AcquireContractRunOwner|consumeAndStartHTTP|PersistSpawnObservation|\.Start\s*\()/u.test(goCodeOnly(recoveryBody)),
+			profileBoundRecovery:
+				recoveryProfileGuardEnd >= 0 && recoveryTerminalIndex >= recoveryProfileGuardEnd &&
+				count(recoveryBody, /requireStandaloneHTTPProfile\s*\(/gu) === 1 &&
+				ordered(recoveryBody, [
+					"fresh, err := contractexec.ReopenOfficialTarget",
+					"bundle := fresh.ContractBundle()", "if !bundle.Valid()", "CodeRecoveryRefused",
+					"if _, profileErr := requireStandaloneHTTPProfile(",
+					"bundle.PortableSource()", "bundle.SourceProfile()", "); profileErr != nil {",
+					"return store.ContractExecutionRecord{}, profileErr",
+					"targetRecord := fresh.TargetRecord()", "store.OpenFinalizedRunRecord",
+				]) &&
+				!/(?:store\.OpenFinalizedRunRecord|store\.OpenTerminalClosure|\.Release\s*\(|store\.PersistContractExecutionRecord)/u
+					.test(recoveryBeforeProfileGuardEnd) &&
+				sha256(profileGateBody) ===
+					"c6568e0c620548a35e231afa5d79421d0ddf18537bad1cf7452e496a2030e228" &&
+				ordered(profileGateBody, [
+				"source.HTTPView", "source.Valid", "profile.ValidFor(source)",
+				"profile.AdapterDomain() != domain.AdapterHTTP", "source.Adapter() != domain.AdapterHTTP",
+				"source.Plan().Adapter().Domain != domain.AdapterHTTP",
+				"source.Plan().ExecutionShape() != domain.OneLoopbackHTTPRequest",
+				"source.StartProfile() != httpmodel.HTTPPortableStartAuthorityV1",
+				"view.Start().Authority() != httpmodel.HTTPPortableStartAuthorityV1",
+				"view.Readiness().Protocol() != httpmodel.PortableReadinessProtocolV1",
+				"len(source.Plan().SetupArgv()) != 0", "len(source.Plan().SecretSlots()) != 0",
+				"source.Entrypoint() != view.Start().Entrypoint()",
+				'view.Start().Executable() != "node"', "CodeUnsupportedProfile",
+				]) &&
+				!/(?:prepareHTTPExecution|materializeHTTPSeeds|scope\.NewProbe|prepareHTTPService|AcquireContractRunOwner|consumeAndStartHTTP|PersistSpawnObservation|OpenFinalizedRunRecord|OpenTerminalClosure|PersistContractExecutionRecord|command\.Start\s*\()/u
+					.test(profileGateBody) &&
+				startErrorTopTestBody.includes('t.Run("profile-gate", testHTTPRecoveryProfileGate)') &&
+				ordered(recoveryProfileTestBody, [
+					"contractfixtures.CLISource", "nodemodel.NewSourceProfile(cliSource)",
+					"requireStandaloneHTTPProfile(cliSource, cliProfile)",
+					"CodeUnsupportedProfile", "CLI source crossed HTTP recovery profile gate",
+					"contractfixtures.HTTPSource", "nodemodel.NewSourceProfile(httpSource)",
+					"requireStandaloneHTTPProfile(httpSource, httpProfile)",
+					"portable HTTP source failed recovery profile gate",
+				]),
+				detachedClosure: phaseContextFacts.detachedClosure,
+				phaseLocalContexts: phaseContextFacts.phaseLocalContexts,
+				atomicSeedPublication: ordered(seedPublishBody, [
+				"os.CreateTemp(stagingRoot", "writeExact", "file.Chmod", "file.Sync", "file.Stat", "file.Close",
+				"os.Link", "removeExactTemporarySeed", "syncSeedParent", "validateSeed",
+			]) && ordered(seedCleanupBody, ["os.Lstat", "os.SameFile", "os.Remove"]) &&
+				!seedPublishBody.includes("os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL"),
+			serializedHTTPAttempt:
+				executionPreparationStructBody.includes("seedLease      seedMaterializationLease") &&
+				ordered(seedMaterializeBody, [
+					"buildSeedTopology", "acquireSeedMaterializationLease", "releaseOnReturn := true",
+					"ownedLease.release",
+					"validateSeedFixtureRoster", "createSeedStagingRoot", "retireSeedStagingRoot",
+					"validateSeedFixtureRoster", "releaseOnReturn = false", "return ownedLease, nil",
+				]) &&
+				ordered(seedLeaseAcquireBody, [
+					"syscall.Open", "darwinOpenNoFollowAny", "root.Stat", "os.Lstat(temporaryRoot)",
+					"syscall.Flock(fd, syscall.LOCK_EX|syscall.LOCK_NB)",
+					"errSeedMaterializationBusy", "locked = true", "root.Stat",
+					"os.Lstat(temporaryRoot)", "seedMaterializationLease{root: root}",
+				]) &&
+				ordered(seedLeaseReleaseBody, [
+					"lease.root = nil", "syscall.Flock(int(root.Fd()), syscall.LOCK_UN)", "root.Close",
+				]) &&
+				count(seedLeaseAcquireBody, /syscall\.LOCK_EX\|syscall\.LOCK_NB/gu) === 1 &&
+				count(seedLeaseAcquireBody, /syscall\.LOCK_UN/gu) === 1 &&
+				count(seedLeaseReleaseBody, /syscall\.LOCK_UN/gu) === 1 &&
+				count(seedMaterializeBody, /ownedLease\.release\s*\(/gu) === 1 &&
+				ordered(prepareBody, [
+					"seedLease, err := materializeHTTPSeeds",
+					"errors.Is(err, errSeedMaterializationBusy)",
+					"CodeAdmissionRefused", "CodeFixtureRejected", "transferSeedLease := false",
+					"seedLease.release", "preflightInvocationEvidence",
+					"preparation = executionPreparation", "seedLease: seedLease",
+					"transferSeedLease = true", "return preparation, nil",
+				]) &&
+				count(prepareBody, /seedLease\.release\s*\(/gu) === 1 &&
+				ordered(closePreparedBody, [
+					"input.prepared.Close", "input.probe.Finish", "input.seedLease.release",
+				]) &&
+				count(closePreparedBody, /seedLease\.release\s*\(/gu) === 1 &&
+				ordered(executeBody, [
+					"prepareHTTPExecution", "input := executionInput",
+					"defer func() { _ = input.closePrepared() }()",
+					"store.AcquireContractRunOwner", "inspectAndRetireInvocation",
+					"persistHTTPRunAndClassification",
+				]) &&
+				startErrorTopTestBody.includes(
+					't.Run("seed-materialization-lease", testHTTPSeedMaterializationLease)',
+				) &&
+				ordered(seedLeaseTestBody, [
+					"httpfixture.NewReferenceTarget", "acquireSeedMaterializationLease",
+					"prepareHTTPExecution", "CodeAdmissionRefused",
+					"live seed-materialization contention crossed preparation",
+					"os.ReadDir(roots.FixtureRoot())", "seedStagingDirectory",
+					"live seed-materialization refusal mutated roots", "assertInternalMarkerOnly",
+					"lease.release", "heldPreparation, prepareErr := prepareHTTPExecution",
+					"activeReceiptPath", "os.WriteFile(activeReceiptPath",
+					"contendedPreparation, contendedErr := prepareHTTPExecution",
+					"CodeAdmissionRefused",
+					"held execution-attempt lease did not dominate live receipt interpretation",
+					"heldInput.closePrepared",
+					"residuePreparation, residueErr := prepareHTTPExecution",
+					"CodeFixtureRejected",
+					"unowned invocation residue did not retain fixture classification",
+					"os.Remove(activeReceiptPath)",
+					"recoveredPreparation, prepareErr := prepareHTTPExecution",
+					"recoveredInput.closePrepared",
+				]) &&
+					ordered(authorityRaceTestBody, [
+						"ready.Add(2)", "close(start)", "for range 2",
+						"outcomes = append(outcomes, <-results)", "for _, result := range outcomes",
+						"result.err == nil && result.record.Valid()",
+						"contracthttp.CodeAdmissionRefused", "losers++",
+						"if unexpected", "diagnosticErrorChain(outcomes[0].err)",
+						"diagnosticErrorChain(outcomes[1].err)",
+						"losers != 1", "contracthttp.ResumeClassification",
+					]),
+			exactFixtureRoster: ordered(seedMaterializeBody, [
+				"buildSeedTopology", "acquireSeedMaterializationLease",
+				"validateSeedFixtureRoster", "false",
+				"createSeedStagingRoot", "createOrValidateSeed", "retireSeedStagingRoot",
+				"validateSeedFixtureRoster(fixtureRoot, fixtureInfo, topology, true)",
+				"releaseOnReturn = false", "return ownedLease, nil",
+			]) && count(seedMaterializeBody, /validateSeedFixtureRoster\s*\(/gu) === 2 &&
+				count(seedMaterializeBody, /createSeedStagingRoot\s*\(/gu) === 1 &&
+				!seedMaterializeBody.includes("len(seeds) == 0") &&
+				ordered(seedStagingCreateBody, [
+					"os.Mkdir(stagingRoot, 0o700)", "os.Lstat(stagingRoot)",
+					"syncSeedParent(temporaryRoot)", "os.SameFile(retainedTemporary, afterTemporary)",
+				]) && ordered(seedStagingRetireBody, [
+					"os.Lstat(stagingRoot)", "syscall.Open", "handle.ReadDir(1)", "handle.Stat",
+					"handle.Close", "os.Remove(stagingRoot)", "os.Lstat(stagingRoot)",
+					"syncSeedParent(temporaryRoot)", "os.SameFile(retainedTemporary, afterTemporary)",
+				]) && ordered(seedFixtureRosterBody, [
+					"os.Lstat(path)", "syscall.Open", "handle.Stat",
+					"handle.ReadDir(len(expectedChildren) + 1 - len(entries))",
+					"len(entries) > len(expectedChildren)", "expectedChildren[name]",
+					"listed.Info()", "os.Lstat(entryPath)", "validateSeed(entryPath, expected.contents)",
+					"handle.Stat", "handle.Close", "os.Lstat(path)",
+					]) && !/(?:filepath\.Walk|os\.RemoveAll)/u.test(sourceDarwin) && [
+					"crash-left staging residue crossed preparation",
+					"legacy fixture residue crossed preparation",
+					"declared seed was written before foreign-roster refusal",
+					"assertInternalMarkerOnly(t, fixture)",
+				].every((anchor) => seedResidueTestBody.includes(anchor)) &&
+				startErrorTopTestBody.includes('t.Run("seed-residue-refusal", testHTTPSeedResidueRefusal)') &&
+				count(seedResidueTestBody, /materializeHTTPSeeds\s*\(\s*emptyFixture,\s*emptyTemporary,\s*nil\s*,?\s*\)/gu) === 2 &&
+				ordered(seedResidueTestBody, [
+					'os.Mkdir(emptyStaging, 0o700)', "if _, emptyErr := materializeHTTPSeeds(",
+					"emptyFixture", "emptyTemporary", "nil", "); emptyErr == nil",
+					"empty seed roster ignored crash-left staging residue", "os.SameFile(emptyStagingInfo, afterEmptyStaging)",
+					"os.Remove(emptyLeaf)", "os.Remove(emptyStaging)",
+					"emptyLease, err := materializeHTTPSeeds(emptyFixture, emptyTemporary, nil)",
+					"empty seed roster did not retire clean staging", "emptyLease.release",
+					"os.Lstat(emptyStaging)",
+					"httpfixture.NewReferenceTarget",
+				]),
+			preOwnerPreparation: ordered(prepareBody, [
+				"materializeHTTPSeeds", "preflightInvocationEvidence", "newRuntimeAttemptID", "scope.NewProbe",
+				"buildHTTPEnvironment", "scope.Snapshot", "preflightEvidenceCapacity", "prepareHTTPService",
+			]) && ordered(executeBody, ["prepareHTTPExecution", "store.AcquireContractRunOwner"]),
+		},
+		service: {
+			exactReadinessEOF: ordered(readinessBody, [
+				"contract.PortableFrameProfile", "readExactReadiness", "latchReadinessFacts",
+				"httpmodel.ParseHTTPReadyPortFrame", "observed.err", "observed.eof", "frame.Valid",
+			]) && ordered(readinessReadBody, [
+				"reader.Read", "result.bytes = append", "len(result.bytes) >= limit", "errors.Is(err, io.EOF)",
+				"result.eof = true",
+			]),
+			oneRawExchange: count(serviceCloseBody, /performOneExchange\s*\(/gu) === 1 &&
+				ordered(exchangeBody, [
+					"context.WithTimeout", 'DialContext(probeContext, "tcp4", endpoint)',
+					"connection.SetDeadline", "connection.Write", "tcp.CloseWrite", "io.LimitedReader",
+					"io.ReadAll", "result.overflow",
+				]),
+			terminalTeardown: ordered(closeProcessBody, [
+				"waitForChild", "teardownProcessGroup", "waitForChild", "collectDrains",
+				"waitForGroupAbsence", "validateExecutable",
+			]) && ordered(teardownBody, [
+				"resolvePreTermProbe", "syscall.Kill(-result.processGroupID, syscall.SIGTERM)",
+				"waitForGroupAbsence", "syscall.Kill(-result.processGroupID, syscall.SIGKILL)",
+			]),
+			causalFactsSeparate: revalidationBody.includes("runtimeRevalidationError = err.Error()") &&
+				revalidationBody.includes("TOOL_CHANGED_AFTER_HTTP_EXECUTION") &&
+				classifyWaitBody.includes("result.waitError = waited.err.Error()") &&
+				classifyWaitBody.includes("WAIT_FAILED") &&
+				["runtime changed exactly", "wait failed exactly", 'diagnosticCode != "WAIT_FAILED"']
+					.every((anchor) => serviceTests.includes(anchor)),
+			closeFailureRetention:
+				/\bonce\s+sync\.Once\b/u.test(descriptorStructBody) &&
+				/^func\s+newOwnedServiceDescriptor\s*\(\s*file\s+\*os\.File\s*\)\s+\*ownedServiceDescriptor\s*\{/mu
+					.test(serviceDarwin) &&
+				descriptorConstructorBody.includes("return &ownedServiceDescriptor") &&
+				[
+					"readinessReader", "readinessWriter", "stdoutReader",
+					"stdoutWriter", "stderrReader", "stderrWriter",
+				].every((field) => new RegExp(`\\b${field}\\s+\\*ownedServiceDescriptor\\b`, "u")
+					.test(preparedServiceStructBody)) &&
+				["readiness", "stdout", "stderr"].every((field) =>
+					new RegExp(`\\b${field}\\s+\\*ownedServiceDescriptor\\b`, "u")
+						.test(runningServiceStructBody)) &&
+				ordered(descriptorCloseBody, [
+					"owned.once.Do", "owned.closeErr = owned.closeFn(owned.file)", "return owned.closeErr",
+				]) && descriptorRecordBody.includes("result.teardownError = true") &&
+				descriptorRecordBody.includes("result.descriptorCloseFailures |= phase") &&
+				!descriptorRecordBody.includes("orphanRisk") &&
+				ordered(serviceStartBody, [
+					"prepared.command.Start()",
+					"prepared.readinessWriter.Close()", "prepared.stdoutWriter.Close()",
+					"prepared.stderrWriter.Close()", "prepared.readinessReader.Close()",
+					"prepared.stdoutReader.Close()", "prepared.stderrReader.Close()",
+					"closeFailureStartError", '"HTTP_SPAWN_FAILED"', "recordDescriptorCloseFailure(",
+					"closeFailureParentWriters", "prepared.readinessWriter.Close()",
+					"prepared.stdoutWriter.Close()", "prepared.stderrWriter.Close()",
+					"base.process.started = true",
+				]) &&
+				count(serviceStartBody, /prepared\.readinessWriter\.Close\(\)/gu) === 2 &&
+				count(serviceStartBody, /prepared\.stdoutWriter\.Close\(\)/gu) === 2 &&
+				count(serviceStartBody, /prepared\.stderrWriter\.Close\(\)/gu) === 2 &&
+				count(serviceStartBody, /prepared\.readinessReader\.Close\(\)/gu) === 1 &&
+				count(serviceStartBody, /prepared\.stdoutReader\.Close\(\)/gu) === 1 &&
+				count(serviceStartBody, /prepared\.stderrReader\.Close\(\)/gu) === 1 &&
+				ordered(closeProcessBody, [
+					"recordDescriptorCloseFailure(", "closeFailureTerminalReaders", "errors.Join(",
+					"running.readiness.Close()", "running.stdout.Close()", "running.stderr.Close()",
+				]) &&
+				count(closeProcessBody, /running\.readiness\.Close\(\)/gu) === 1 &&
+				count(closeProcessBody, /running\.stdout\.Close\(\)/gu) === 2 &&
+				count(closeProcessBody, /running\.stderr\.Close\(\)/gu) === 2 &&
+				ordered(stopReadinessBody, [
+					"if observed != nil", "_ = reader.Close()",
+					"time.NewTimer(ownerDrainBudget)",
+				]) &&
+				ordered(earlyReadinessTestBody, [
+					't.Run("early-close-error-retained-without-retry"',
+					"awaitExactReadiness(", "if closeCalls != 1",
+					"stopReadiness did not perform the first close exactly once",
+					"cachedCloseErr := owned.Close()", "!errors.Is(cachedCloseErr, closeErr)",
+					"terminal readiness close did not reuse the first close result",
+					"recordDescriptorCloseFailure(", "cachedCloseErr",
+				]) && [
+					"HTTP_START_ERROR_DESCRIPTOR_CLOSE_FAILED",
+					"HTTP_PARENT_WRITER_CLOSE_FAILED",
+					"HTTP_TERMINAL_READER_CLOSE_FAILED",
+				].every((anchor) => descriptorDiagnosticsBody.includes(anchor)) &&
+				childEvidenceBody.includes(
+					'"descriptor_close_diagnostics": result.process.descriptorCloseDiagnostics(),',
+				) &&
+				startEvidenceBody.includes(
+					'"descriptor_close_diagnostics": result.process.descriptorCloseDiagnostics(),',
+				) &&
+				ordered(parentWriterTestBody, [
+					"injected parent writer close failure", "input.prepared.readinessWriter.closeFn",
+					"input.prepared.Start", "terminalCloseCalls := make([]int, 3)",
+					"running.readiness", "running.stdout", "running.stderr",
+					"terminalCloseCalls[index]++", "result := running.Close()",
+					"HTTP_PARENT_WRITER_CLOSE_FAILED,HTTP_TERMINAL_READER_CLOSE_FAILED",
+					"terminalCloseCalls[0] != 1", "terminalCloseCalls[1] != 1",
+					"terminalCloseCalls[2] != 1",
+				]) && [
+					"early-close-error-retained-without-retry",
+					"successful start erased writer-close failure",
+					"start failure did not separate spawn and descriptor causes",
+				].every((anchor) => serviceTests.includes(anchor) || internalRunnerTests.includes(anchor)),
+			controlMatrices: [
+				"TestC5AwaitExactReadinessControlMatrix", "TestC5ResponseErrorControlMatrix",
+				"TestC5TeardownProcessGroupEscalatesAndCleans",
+			].every((name) => functionBody(serviceTests, name).length > 0),
+		},
+		evidence: {
+				exactEnvelope: /\bevidenceMaximumBodyCount\s*=\s*15\b/u.test(evidenceDarwin) &&
+					/\bevidenceFramedBodyCount\s*=\s*3\b/u.test(evidenceDarwin) &&
+					/\bevidenceCanonicalBodyCount\s*=\s*evidenceMaximumBodyCount\s*-\s*evidenceFramedBodyCount\b/u.test(evidenceDarwin) &&
+				["evidenceCanonicalBodyCount != 12",
+					"evidenceFramedBodyCount+evidenceCanonicalBodyCount != evidenceMaximumBodyCount"]
+					.every((anchor) => evidenceTests.includes(anchor)) &&
+				ordered(capacityBody, [
+					"budgets.StdoutBytes", "budgets.StderrBytes", "view.Capture().OwnerResponseReadLimit()",
+						"maximumRequestBytes", "maximumReadinessBytes", "evidenceProjectionMaxBytes",
+						"evidenceCanonicalBodyCount * evidenceSummaryMaxBytes", "2 * evidenceFrameOverhead",
+						"evidenceStoreMaxBytes",
+					]) && capacityValidateBody.includes("len(bodies) > evidenceMaximumBodyCount") &&
+					ordered(c5CapacityTestBody, [
+						"contractfixtures.HTTPSource", "os.WriteFile", "contractscope.Snapshot",
+						"preflightEvidenceCapacity", "capacity.maximumUniqueBytes != expectedMaximum",
+						'frameEvidence(', '"PROCESS_DRAINS"', '"RAW_HTTP_EXCHANGE"', '"HTTP_PROJECTION"',
+						"canonicalEvidence", "sha256.Sum256", "capacity.validate(bodies)",
+						"tooSmall.maximumUniqueBytes = aggregate - 1",
+						"under-admitted evidence envelope accepted the maximal roster",
+						"EvidencePrivateManifest", "sixteenth private body escaped the C5 roster",
+					]) &&
+					count(c5CapacityTestBody, /\bframeEvidence\s*\(/gu) === 3 &&
+					c5CapacityTestBody.includes(
+						"canonicalPaddingBytes := int(evidenceSummaryMaxBytes - (8 << 10))",
+					),
+			rawReadinessRetained: drainEvidenceBody.includes('evidenceSegment{name: "readiness_frame"') &&
+				["readiness := []byte{0xff, 0x00, 'N', 'O', '\\n'}", '"readiness_frame": readiness']
+					.every((anchor) => evidenceTests.includes(anchor)),
+			projectionBeforeProcess: ordered(childEvidenceBody, [
+				"resolveHTTPProjection", "EvidenceProjectionResult", "EvidenceProcessResult",
+			]) && functionBody(evidenceTests, "TestC5ProjectionRejectionAgreesWithProcessEvidence")
+				.includes("process evidence disagrees with projection control"),
+			receiptClosure: ordered(receiptInspectBody, [
+				"validateEvidenceRoster", "os.Lstat(markerPath)", "readInvocation", "retireInvocation",
+			]) && ordered(receiptRetireBody, [
+				"os.Lstat(path)", "os.SameFile", "os.Remove(path)", "directory.Sync",
+				"validateEvidenceRoster", "os.Lstat(markerPath)",
+			]),
+			exactFiveDomains: ordered(scopeEvaluateBody, [
+				"contractmodel.ScopeTargetInventory", "contractmodel.ScopeChildBindings",
+				"contractmodel.ScopeImportResolution", "contractmodel.ScopeServiceBindings",
+				"contractmodel.ScopeSentinelInheritance",
+			]) && scopeEvaluateBody.includes("make([]Finding, 0, 5)") &&
+				assembleBody.includes("len(draft.scope) != 5"),
+			startErrorPreservesViolation: startEvidenceBody.includes("conservativeStartErrorFindings") &&
+				["for hostile := range domains", "ScopeCheckViolated", "ScopeCheckMissing"]
+					.every((anchor) => functionBody(evidenceTests, "TestC5StartErrorPreservesEveryViolationOverMissing").includes(anchor)),
+		},
+		scope: {
+			attemptPrivateProbe: ordered(newProbeBody, [
+				"privateTemporaryRoot", "os.Lstat", "parentInfo.Mode().Perm()&0o077",
+				"os.MkdirTemp(privateTemporaryRoot, \"scope-\")", "os.Chmod(root, 0o700)",
+				"newShortSocketRoot", "newCanary", "outside-candidate.mjs",
+			]),
+			shortPrivateAlias: /\bshortSocketParent\s*=\s*"\/private\/tmp"/u.test(scopeProbe) &&
+				/\bmaxDarwinUnixSocketPathBytes\s*=\s*103\b/u.test(scopeProbe) && [
+				"os.MkdirTemp(shortSocketParent, \"cs5-\")", "os.Chmod(root, 0o700)",
+				"os.Symlink(attemptPrivateRoot, alias)", "filepath.EvalSymlinks(alias)",
+			].every((anchor) => scopeProbe.includes(anchor)) &&
+				ordered(shortRootBody, ["os.Lstat(shortSocketParent)", "parentStat.Uid != 0", "os.MkdirTemp", "os.Symlink"]),
+			boundedRoster: ordered(boundedRosterBody, [
+				"os.Lstat(root)", "syscall.Open", "syscall.O_DIRECTORY", "darwinNoFollowAny",
+				"handle.Stat", "handle.ReadDir", "len(observed) > len(want)", "handle.Close", "os.Lstat(root)",
+			]) && !/(?:os\.ReadDir|filepath\.WalkDir)/u.test(boundedRosterBody),
+			identityCleanup: ordered(finishProbeBody, [
+				"boundedDirectRoster", "digestFile", "os.Readlink", "probe.importCanary.close",
+				"probe.serviceCanary.close", "removeRetainedLeaf", "removeRetainedEmptyDirectory",
+			]) && ordered(removeLeafBody, ["os.Lstat", "os.SameFile", "os.Remove", "os.Lstat"]) &&
+				ordered(removeDirectoryBody, ["boundedDirectRoster", "os.Remove", "os.Lstat"]) &&
+				!finishProbeBody.includes("os.RemoveAll"),
+			hostileResidue: [
+				"same-size rewrite did not fail closed",
+				"independently exact short alias shell survived ambiguity",
+				"foreign residue did not fail closed",
+				"retained payload leaf was deleted after foreign roster",
+			].every((anchor) => scopeProbeTests.includes(anchor)),
+				specialModeRefusal:
+					inventoryDarwin.includes(
+						"inventoryForbiddenMode = os.ModeSetuid | os.ModeSetgid | os.ModeSticky",
+					) &&
+					ordered(referenceInventoryFixtureBody, [
+						"os.WriteFile(path, file.Content, mode)", "os.Chmod(path, mode)",
+						"os.Lstat(path)", "info.Mode().Perm() != mode",
+						"reference inventory file mode=",
+					]) &&
+					/^\s*return\s+mode&inventoryForbiddenMode\s*!=\s*0\s*$/u.test(inventoryForbiddenBody) &&
+				ordered(inventorySnapshotBody, [
+					"os.Lstat(root)", "inventoryModeForbidden(rootInfo.Mode())",
+					"CodeInventoryIdentity",
+				]) &&
+				ordered(inventoryDirectoryBody, [
+					"inventoryModeForbidden(before.Mode())", "CodeInventorySpecial",
+					"inventoryModeForbidden(listedInfo.Mode())", "inventoryModeForbidden(info.Mode())",
+					"CodeInventorySpecial", "entry := Entry",
+				]) &&
+				ordered(inventoryDirectoryBody, ["entry := Entry", "default:", "CodeInventorySpecial"]) &&
+				count(inventoryDirectoryBody, /inventoryModeForbidden\s*\(/gu) === 3 &&
+				count(inventoryDirectoryBody, /CodeInventorySpecial/gu) === 3 &&
+				count(specialModesRosterBody, /\{[^{}]*\}/gu) === 4 &&
+				count(specialModesRosterBody, /\bname:\s*"/gu) === 3 &&
+				count(specialLocationsRosterBody, /\{[^{}]*\}/gu) === 4 &&
+				count(specialLocationsRosterBody, /\bname:\s*"/gu) === 3 &&
+				ordered(inventorySpecialTestBody, [
+					'specialModes := []struct', '{name: "setuid", mode: os.ModeSetuid}',
+					'{name: "setgid", mode: os.ModeSetgid}', '{name: "sticky", mode: os.ModeSticky}',
+					'locations := []struct', '{name: "root", code: CodeInventoryIdentity}',
+					'{name: "nested-directory", relative: "fixture", code: CodeInventorySpecial}',
+					'name:     "nested-regular-file"', "code:     CodeInventorySpecial",
+					"for _, special := range specialModes", "for _, location := range locations",
+					"materializeC5ReferenceInventory", "hostilePath := hostileRoot",
+					'if location.relative != ""',
+					"hostilePath = filepath.Join(hostileRoot, filepath.FromSlash(location.relative))",
+					"os.Chmod(hostilePath, before.Mode().Perm()|special.mode)",
+					"after.Mode()&special.mode == 0", "Snapshot(hostileRoot)",
+					"diagnostic.Code() != location.code",
+				]) &&
+				count(inventorySpecialTestBody, /for _, special := range specialModes/gu) === 1 &&
+				count(inventorySpecialTestBody, /for _, location := range locations/gu) === 1,
+		},
+		profileCatalog: {
+			names: [...c5ProfileNames],
+			counts: c5ProfileNames.map((name) =>
+				profileTargets(name).reduce((sum, target) => sum + target.pass.length, 0)),
+			races: c5ProfileNames.map((name) => goJSONProfiles[name].race),
+			targets: profileTargetsByName,
+			pairCount: profilePairs.length,
+			uniquePairCount: new Set(profilePairs).size,
+			ownedTests: c5OwnedTests,
+			profiledOwnedTests: profiledC5OwnedTests,
+			arguments: Object.fromEntries(c5ProfileNames.map((name) => [name, goJSONArguments(name)])),
+		},
+		claimMap,
+	});
+}
+
 function violation(code, detail) { return Object.freeze({ code, detail }); }
 
 export function validateC2Facts(facts) {
@@ -3119,10 +4362,11 @@ export function validateC4Facts(facts) {
 	if (!exact(facts.runner?.surface, expectedC4RunnerSurface) || !facts.runner?.closedEntrypoints) {
 		add("P07B_C4_RUNNER_SURFACE", JSON.stringify(facts.runner));
 	}
+	const ownerAcquirerProjectionValid =
+		exact(facts.runner?.soleOwnerAcquirer, expectedC4OwnerAcquirerSites) ||
+		exact(facts.runner?.soleOwnerAcquirer, expectedC5OwnerAcquirerSites);
 	if (!facts.runner?.permitAdjacent || !facts.runner?.spawnAdjacentRevalidation ||
-		!exact(facts.runner?.soleOwnerAcquirer, [
-			"internal/contractexec/runner/runner_darwin.go:1", "internal/store/contract_run_bridge.go:1",
-		]) ||
+		!ownerAcquirerProjectionValid ||
 		!facts.runner?.detachedBoundedClosure) {
 		add("P07B_C4_ADMISSION_ADJACENCY", JSON.stringify(facts.runner));
 	}
@@ -3175,6 +4419,127 @@ export function validateC4Facts(facts) {
 	return problems;
 }
 
+export function validateC5Facts(facts) {
+	const problems = [];
+	const add = (code, detail) => problems.push(violation(code, detail));
+	if (!Array.isArray(facts.c4Problems) || facts.c4Problems.length !== 0) {
+		add("P07B_C5_INHERITED_C4", JSON.stringify(facts.c4Problems));
+	}
+	if (!exact(facts.c5OwnerAcquirerExtension, expectedC5OwnerAcquirerSites)) {
+		add("P07B_C5_OWNER_EXTENSION", JSON.stringify(facts.c5OwnerAcquirerExtension));
+	}
+	for (const [importPath, expected] of Object.entries(expectedC5Packages)) {
+		const actual = facts.packages?.[importPath];
+		if (actual?.name !== expected.name || actual?.modulePath !== modulePath || actual?.moduleMain !== true ||
+			!exact(actual?.go, expected.go) || !exact(actual?.cgo, expected.cgo) ||
+			!exact(actual?.test, expected.test) || !exact(actual?.xtest, expected.xtest) ||
+			!exact(actual?.ignored, expected.ignored) || (actual?.invalid ?? []).length !== 0 ||
+			!exact(actual?.imports, expected.imports)) {
+			add("P07B_C5_PACKAGE_TOPOLOGY", `${importPath}:${JSON.stringify(actual)}`);
+		}
+	}
+	if (!exact(facts.directories, expectedC5DirectoryRosters)) {
+		add("P07B_C5_DIRECTORY_ROSTER", JSON.stringify(facts.directories));
+	}
+	if (!exact(facts.buildTags, expectedC5BuildTags)) {
+		add("P07B_C5_BUILD_TAG_ROSTER", JSON.stringify(facts.buildTags));
+	}
+	if (!exact(facts.surfaces?.http, expectedC5HTTPSurface) ||
+		!exact(facts.surfaces?.scope, expectedC5ScopeSurface)) {
+		add("P07B_C5_EXPORTED_SURFACE", JSON.stringify(facts.surfaces));
+	}
+	if (!exact(facts.importers?.http, []) ||
+		!exact(facts.importers?.scope, [contractHTTPPackagePath])) {
+		add("P07B_C5_IMPORTER_CLOSURE", JSON.stringify(facts.importers));
+	}
+	for (const [path, expected] of Object.entries(expectedC5TestsByFile)) {
+		if (!exact(facts.testFiles?.[path], sorted(expected))) {
+			add("P07B_C5_TEST_FILE_ROSTER", `${path}:${JSON.stringify(facts.testFiles?.[path])}`);
+		}
+	}
+		if (!facts.execution?.chronology || !facts.execution?.startErrorChronology ||
+			!facts.execution?.persistenceChronology || !facts.execution?.classificationOnlyRecovery ||
+			!facts.execution?.profileBoundRecovery || !facts.execution?.detachedClosure ||
+			!facts.execution?.phaseLocalContexts ||
+			!facts.execution?.atomicSeedPublication || !facts.execution?.serializedHTTPAttempt ||
+		!facts.execution?.exactFixtureRoster ||
+		!facts.execution?.preOwnerPreparation) {
+		add("P07B_C5_EXECUTION_CHRONOLOGY", JSON.stringify(facts.execution));
+	}
+	if (!facts.service?.exactReadinessEOF || !facts.service?.oneRawExchange ||
+		!facts.service?.terminalTeardown || !facts.service?.causalFactsSeparate ||
+		!facts.service?.closeFailureRetention || !facts.service?.controlMatrices) {
+		add("P07B_C5_SERVICE_CLOSURE", JSON.stringify(facts.service));
+	}
+	if (!facts.evidence?.exactEnvelope || !facts.evidence?.rawReadinessRetained ||
+		!facts.evidence?.projectionBeforeProcess || !facts.evidence?.receiptClosure ||
+		!facts.evidence?.exactFiveDomains || !facts.evidence?.startErrorPreservesViolation) {
+		add("P07B_C5_EVIDENCE_CLOSURE", JSON.stringify(facts.evidence));
+	}
+	if (!facts.scope?.attemptPrivateProbe || !facts.scope?.shortPrivateAlias ||
+		!facts.scope?.boundedRoster || !facts.scope?.identityCleanup ||
+		!facts.scope?.hostileResidue || !facts.scope?.specialModeRefusal) {
+		add("P07B_C5_SCOPE_CLOSURE", JSON.stringify(facts.scope));
+	}
+	const expectedTargets = {
+		"c5-http-behavior": [
+			{ packagePath: contractHTTPPackagePath, packageArgument: "./internal/contractexec/http", pass: [...c5HTTPBehaviorInternalTests], skip: [] },
+			{ packagePath: contractHTTPTestPackagePath, packageArgument: "./testkit/contractexec/http", pass: [...c5HTTPBehaviorPublicTests], skip: [] },
+		],
+		"c5-readiness-teardown": [
+			{ packagePath: contractHTTPPackagePath, packageArgument: "./internal/contractexec/http", pass: [...c5ReadinessInternalTests], skip: [] },
+			{ packagePath: contractHTTPTestPackagePath, packageArgument: "./testkit/contractexec/http", pass: [...c5ReadinessPublicTests], skip: [] },
+		],
+		"c5-scope-closure": [
+			{ packagePath: contractScopePackagePath, packageArgument: "./internal/contractexec/scope", pass: [...c5ScopeTests], skip: [] },
+			{ packagePath: contractHTTPPackagePath, packageArgument: "./internal/contractexec/http", pass: [...c5ScopeHTTPInternalTests], skip: [] },
+			{ packagePath: contractHTTPTestPackagePath, packageArgument: "./testkit/contractexec/http", pass: [...c5ScopePublicTests], skip: [] },
+		],
+		"c5-cross-profile-parity": [
+			{ packagePath: contractHTTPTestPackagePath, packageArgument: "./testkit/contractexec/http", pass: [...c5CrossTargetTests], skip: [] },
+			{ packagePath: contractCLITestPackagePath, packageArgument: "./testkit/contractexec/cli", pass: [...c4CLITests], skip: [] },
+			{ packagePath: nodeParityPackagePath, packageArgument: "./internal/emit/node/parity", pass: [...c5NodeParityTests], skip: [] },
+		],
+		"c5-http-authority-race": [
+			{ packagePath: contractHTTPPackagePath, packageArgument: "./internal/contractexec/http", pass: [...c5AuthorityHTTPInternalTests], skip: [] },
+			{ packagePath: contractScopePackagePath, packageArgument: "./internal/contractexec/scope", pass: [...c5AuthorityScopeTests], skip: [] },
+			{ packagePath: contractHTTPTestPackagePath, packageArgument: "./testkit/contractexec/http", pass: [...c5AuthorityPublicTests], skip: [] },
+		],
+	};
+	if (!exact(facts.profileCatalog?.names, [...c5ProfileNames]) ||
+		!exact(facts.profileCatalog?.counts, [4, 9, 9, 22, 5]) ||
+		!exact(facts.profileCatalog?.races, [false, false, false, false, true]) ||
+		!exact(facts.profileCatalog?.targets, expectedTargets) ||
+		facts.profileCatalog?.pairCount !== 49 || facts.profileCatalog?.uniquePairCount !== 49 ||
+		facts.profileCatalog?.ownedTests?.length !== 28 ||
+		!exact(facts.profileCatalog?.ownedTests, facts.profileCatalog?.profiledOwnedTests)) {
+		add("P07B_C5_PROFILE_CATALOG", JSON.stringify(facts.profileCatalog));
+	} else {
+		for (const profileName of c5ProfileNames) {
+			const targets = expectedTargets[profileName];
+			const names = targets.flatMap((target) => target.pass);
+			const expectedArguments = [
+				"test", ...(profileName === "c5-http-authority-race" ? ["-race"] : []),
+				"-mod=readonly", "-buildvcs=false", "-p=1", "-count=1", "-json", "-run",
+				`^(?:${names.join("|")})$`,
+				...targets.map((target) => target.packageArgument),
+			];
+			if (!exact(facts.profileCatalog.arguments?.[profileName], expectedArguments)) {
+				add("P07B_C5_PROFILE_COMMAND", `${profileName}:${JSON.stringify(facts.profileCatalog.arguments?.[profileName])}`);
+			}
+		}
+	}
+	if (!Array.isArray(facts.claimMap?.status) || !Array.isArray(facts.claimMap?.runbook) ||
+		facts.claimMap.status.length !== 79 || facts.claimMap.runbook.length !== 79 ||
+		!exact(facts.claimMap.status, facts.claimMap.runbook) ||
+		facts.claimMap.status.some((row, index) =>
+			row.number !== index + 1 || row.grade !== "UNRECEIPTED" ||
+			row.type !== (index < 76 ? "tests-pass" : "command-succeeded"))) {
+		add("P07B_C5_PROFILE_COMMAND", JSON.stringify(facts.claimMap));
+	}
+	return problems;
+}
+
 export function validateFacts(facts) {
 	const problems = [];
 	const add = (code, detail) => problems.push(violation(code, detail));
@@ -3191,7 +4556,8 @@ export function validateFacts(facts) {
 		add("P07B_C1_TEST_TOPOLOGY", JSON.stringify({ test: facts.package?.testFiles, xTest: facts.package?.xTestFiles }));
 	}
 	if (!exact(facts.topology?.contractexecEntries, [
-		"model:directory", "runner:directory", "target.go:file", "target_test.go:file",
+		"http:directory", "model:directory", "runner:directory", "scope:directory",
+		"target.go:file", "target_test.go:file",
 	])) {
 		add("P07B_C1_PRODUCTION_TOPOLOGY", JSON.stringify(facts.topology?.contractexecEntries));
 	}
@@ -3216,7 +4582,8 @@ export function validateFacts(facts) {
 		add("P07B_C1_DEPENDENCY_CLOSURE", JSON.stringify({ local: facts.localDependencies, external: facts.externalDependencies }));
 	}
 	if (!exact(facts.productionImporters, [
-		contractPackagePath, contractRunnerPackagePath, storePackagePath, contractCLITestPackagePath,
+		contractPackagePath, contractHTTPPackagePath, contractRunnerPackagePath, contractScopePackagePath,
+		storePackagePath, contractCLITestPackagePath,
 	])) {
 		add("P07B_C1_IMPORTER_ROSTER", JSON.stringify(facts.productionImporters));
 	}
@@ -3381,23 +4748,46 @@ async function runC4Boundary() {
 	process.stdout.write("P07B-C C4 cumulative architecture boundary OK\n");
 }
 
+async function runC5Boundary() {
+	const before = await snapshot(c5BoundarySnapshotPaths);
+	runInheritedB();
+	const facts = await collectC5Facts();
+	const problems = validateC5Facts(facts);
+	if (problems.length > 0) {
+		for (const problem of problems) process.stderr.write(`${problem.code}: ${problem.detail}\n`);
+		process.exitCode = 1;
+		return;
+	}
+	for (const profile of c5ProfileNames) runGoJSONProfile(profile);
+	const after = await snapshot(c5BoundarySnapshotPaths);
+	const directoriesAfter = Object.fromEntries(await Promise.all(
+		Object.keys(expectedC5DirectoryRosters).map(async (path) => [path, await directDirectoryRoster(path)]),
+	));
+	if (!exact(before, after) || !exact(facts.directories, directoriesAfter)) {
+		throw new ArchitectureError("P07B_C5_SNAPSHOT_CHANGED", "C5 reviewed inputs or direct directory rosters changed during cumulative checks");
+	}
+	process.stdout.write("P07B-C C5 cumulative architecture boundary OK\n");
+}
+
 async function main() {
 	if (process.argv[2] === "--assert-go-json") {
 		if (process.argv.length !== 4) {
 			throw new ArchitectureError("P07B_C1_ARGUMENTS", "--assert-go-json requires one exact profile");
 		}
 		const result = validateGoJSONTranscript(process.argv[3], await readStandardInput());
-		const phase = result.profile.startsWith("c4-") ? "C4" :
+		const phase = result.profile.startsWith("c5-") ? "C5" :
+			result.profile.startsWith("c4-") ? "C4" :
 			result.profile.startsWith("c3-") ? "C3" : result.profile.startsWith("c2-") ? "C2" : "C1";
 		process.stdout.write(`P07B-C ${phase} Go JSON target execution OK (${result.profile}: ${result.passed} passed, ${result.skipped} skipped)\n`);
 		return;
 	}
 	if (process.argv[2] === "--run-go-json") {
-		if (process.argv.length !== 4 || !/^c[234]-/u.test(process.argv[3])) {
-			throw new ArchitectureError("P07B_C_GO_JSON_ARGUMENTS", "--run-go-json requires one exact C2, C3, or C4 profile");
+		if (process.argv.length !== 4 || !/^c[2345]-/u.test(process.argv[3])) {
+			throw new ArchitectureError("P07B_C_GO_JSON_ARGUMENTS", "--run-go-json requires one exact C2, C3, C4, or C5 profile");
 		}
 		const result = runGoJSONProfile(process.argv[3]);
-		const phase = result.profile.startsWith("c4-") ? "C4" : result.profile.startsWith("c3-") ? "C3" : "C2";
+		const phase = result.profile.startsWith("c5-") ? "C5" :
+			result.profile.startsWith("c4-") ? "C4" : result.profile.startsWith("c3-") ? "C3" : "C2";
 		process.stdout.write(`P07B-C ${phase} Go JSON target execution OK (${result.profile}: ${result.passed} passed, ${result.skipped} skipped)\n`);
 		return;
 	}
@@ -3414,6 +4804,11 @@ async function main() {
 	if (process.argv[2] === "--c4") {
 		if (process.argv.length !== 3) throw new ArchitectureError("P07B_C4_ARGUMENTS", "--c4 accepts no other arguments");
 		await runC4Boundary();
+		return;
+	}
+	if (process.argv[2] === "--c5") {
+		if (process.argv.length !== 3) throw new ArchitectureError("P07B_C5_ARGUMENTS", "--c5 accepts no other arguments");
+		await runC5Boundary();
 		return;
 	}
 	if (process.argv.length !== 2) throw new ArchitectureError("P07B_C1_ARGUMENTS", "no arguments accepted");

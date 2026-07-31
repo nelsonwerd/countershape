@@ -91,6 +91,12 @@ export const sensitiveGoPackages = Object.freeze([
 	`${modulePath}/testkit/studies/http_invoices`,
 ]);
 
+export const c5SensitiveGoPackages = Object.freeze([
+	`${modulePath}/internal/contractexec/http`,
+	`${modulePath}/internal/contractexec/scope`,
+	`${modulePath}/testkit/contractexec/http`,
+]);
+
 export const currentSteps = Object.freeze([
 	Object.freeze({ id: "workspace-no-ds-store", kind: "guard" }),
 	Object.freeze({
@@ -105,6 +111,10 @@ export const currentSteps = Object.freeze([
 	}),
 	Object.freeze({
 		id: "go-test-sensitive-serial", tool: "go", tools: Object.freeze(["go", "node", "git", "sh", "cc", "cxx"]), packageClass: "sensitive",
+		args: Object.freeze(["test", goSerialCommon[0], goSerialCommon[1], goSerialCommon[2], `-parallel=${goTestParallelism}`, "-count=1", "-timeout=20m"]),
+	}),
+	Object.freeze({
+		id: "go-test-sensitive-c5-serial", tool: "go", tools: Object.freeze(["go", "node", "git", "sh", "cc", "cxx"]), packageClass: "c5Sensitive",
 		args: Object.freeze(["test", goSerialCommon[0], goSerialCommon[1], goSerialCommon[2], `-parallel=${goTestParallelism}`, "-count=1", "-timeout=20m"]),
 	}),
 	Object.freeze({
@@ -259,6 +269,41 @@ export const currentSteps = Object.freeze([
 		marker: "P07B-C C4 Go JSON target execution OK (c4-authority-race: 4 passed, 0 skipped)",
 	}),
 	Object.freeze({
+		id: "architecture-p07b-c-c5", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
+		path: "tools/check-p07b-c-architecture.mjs", args: Object.freeze(["--c5"]),
+		marker: "P07B-C C5 cumulative architecture boundary OK",
+	}),
+	Object.freeze({
+		id: "architecture-p07b-c-c5-selftest", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
+		path: "tools/check-p07b-c-architecture-selftest.mjs", args: Object.freeze(["--c5"]),
+		marker: "P07B-C C5 cumulative architecture defensive self-test OK (14 metadata cases; 60 Go JSON parser cases; 6 command cases)",
+	}),
+	Object.freeze({
+		id: "go-json-p07b-c-c5-http-behavior", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
+		path: "tools/check-p07b-c-architecture.mjs", args: Object.freeze(["--run-go-json", "c5-http-behavior"]),
+		marker: "P07B-C C5 Go JSON target execution OK (c5-http-behavior: 4 passed, 0 skipped)",
+	}),
+	Object.freeze({
+		id: "go-json-p07b-c-c5-readiness-teardown", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
+		path: "tools/check-p07b-c-architecture.mjs", args: Object.freeze(["--run-go-json", "c5-readiness-teardown"]),
+		marker: "P07B-C C5 Go JSON target execution OK (c5-readiness-teardown: 9 passed, 0 skipped)",
+	}),
+	Object.freeze({
+		id: "go-json-p07b-c-c5-scope-closure", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
+		path: "tools/check-p07b-c-architecture.mjs", args: Object.freeze(["--run-go-json", "c5-scope-closure"]),
+		marker: "P07B-C C5 Go JSON target execution OK (c5-scope-closure: 9 passed, 0 skipped)",
+	}),
+	Object.freeze({
+		id: "go-json-p07b-c-c5-cross-profile-parity", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
+		path: "tools/check-p07b-c-architecture.mjs", args: Object.freeze(["--run-go-json", "c5-cross-profile-parity"]),
+		marker: "P07B-C C5 Go JSON target execution OK (c5-cross-profile-parity: 22 passed, 0 skipped)",
+	}),
+	Object.freeze({
+		id: "go-json-p07b-c-c5-http-authority-race", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
+		path: "tools/check-p07b-c-architecture.mjs", args: Object.freeze(["--run-go-json", "c5-http-authority-race"]),
+		marker: "P07B-C C5 Go JSON target execution OK (c5-http-authority-race: 5 passed, 0 skipped)",
+	}),
+	Object.freeze({
 		id: "architecture-p07b-c-plan-selftest", tool: "node", tools: Object.freeze(["node", "git"]), path: "tools/check-p07b-c-plan.mjs",
 		args: Object.freeze(["--self-test"]), marker: "P07B-C evolved plan checker self-test passed:",
 	}),
@@ -390,7 +435,11 @@ export function childArguments(step, root = repositoryRoot) {
 	return step.path ? [resolve(root, step.path), ...suffix] : suffix;
 }
 
-export function partitionGoPackages(stdout, sensitive = sensitiveGoPackages) {
+export function partitionGoPackages(
+	stdout,
+	sensitive = sensitiveGoPackages,
+	c5Sensitive = c5SensitiveGoPackages,
+) {
 	if (typeof stdout !== "string" || !stdout.endsWith("\n") || stdout.includes("\r") || stdout.includes("\0")) {
 		throw new VerificationError("VERIFY_PACKAGE_LIST_INVALID", "go list framing");
 	}
@@ -401,27 +450,55 @@ export function partitionGoPackages(stdout, sensitive = sensitiveGoPackages) {
 		throw new VerificationError("VERIFY_PACKAGE_LIST_INVALID", "go list package roster");
 	}
 	const sortedPackages = [...packages].sort();
+	if (!Array.isArray(sensitive)) {
+		throw new VerificationError("VERIFY_SENSITIVE_PACKAGE_ROSTER_INVALID", String(sensitive));
+	}
+	if (!Array.isArray(c5Sensitive)) {
+		throw new VerificationError("VERIFY_C5_SENSITIVE_PACKAGE_ROSTER_INVALID", String(c5Sensitive));
+	}
 	const sortedSensitive = [...sensitive].sort();
-	if (JSON.stringify(sortedSensitive) !== JSON.stringify(sensitive) || new Set(sensitive).size !== sensitive.length ||
+	const sortedC5Sensitive = [...c5Sensitive].sort();
+	if (JSON.stringify(sortedSensitive) !== JSON.stringify(sensitive) ||
+		new Set(sensitive).size !== sensitive.length ||
 		sensitive.some((path) => !sortedPackages.includes(path))) {
 		throw new VerificationError("VERIFY_SENSITIVE_PACKAGE_ROSTER_INVALID", sensitive.join(","));
 	}
-	const sensitiveSet = new Set(sensitive);
+	if (JSON.stringify(sortedC5Sensitive) !== JSON.stringify(c5Sensitive) ||
+		new Set(c5Sensitive).size !== c5Sensitive.length ||
+		c5Sensitive.some((path) => !sortedPackages.includes(path))) {
+		throw new VerificationError("VERIFY_C5_SENSITIVE_PACKAGE_ROSTER_INVALID", c5Sensitive.join(","));
+	}
+	const completeSensitive = [...sensitive, ...c5Sensitive];
+	const sensitiveSet = new Set(completeSensitive);
+	if (sensitiveSet.size !== completeSensitive.length) {
+		throw new VerificationError("VERIFY_SENSITIVE_PACKAGE_GROUPS_OVERLAP", completeSensitive.join(","));
+	}
+	if (JSON.stringify(sensitive) !== JSON.stringify(sensitiveGoPackages)) {
+		throw new VerificationError("VERIFY_SENSITIVE_PACKAGE_ROSTER_INVALID", sensitive.join(","));
+	}
+	if (JSON.stringify(c5Sensitive) !== JSON.stringify(c5SensitiveGoPackages)) {
+		throw new VerificationError("VERIFY_C5_SENSITIVE_PACKAGE_ROSTER_INVALID", c5Sensitive.join(","));
+	}
 	const general = sortedPackages.filter((path) => !sensitiveSet.has(path));
-	if (general.length === 0 || general.length + sensitive.length !== sortedPackages.length ||
-		new Set([...general, ...sensitive]).size !== sortedPackages.length) {
-		throw new VerificationError("VERIFY_PACKAGE_PARTITION_INVALID", `general=${general.length} sensitive=${sensitive.length} all=${sortedPackages.length}`);
+	if (general.length === 0 || general.length + completeSensitive.length !== sortedPackages.length ||
+		new Set([...general, ...completeSensitive]).size !== sortedPackages.length) {
+		throw new VerificationError(
+			"VERIFY_PACKAGE_PARTITION_INVALID",
+			`general=${general.length} sensitive=${sensitive.length} c5Sensitive=${c5Sensitive.length} all=${sortedPackages.length}`,
+		);
 	}
 	return Object.freeze({
 		all: Object.freeze(sortedPackages),
 		general: Object.freeze(general),
 		sensitive: Object.freeze([...sensitive]),
+		c5Sensitive: Object.freeze([...c5Sensitive]),
 	});
 }
 
 export function packageArguments(step, partition) {
 	if (!step?.packageClass) return childArguments(step);
-	if (!partition || !Object.hasOwn(partition, step.packageClass) || !["general", "sensitive"].includes(step.packageClass)) {
+	if (!partition || !Object.hasOwn(partition, step.packageClass) ||
+		!["general", "sensitive", "c5Sensitive"].includes(step.packageClass)) {
 		throw new VerificationError("VERIFY_PACKAGE_PARTITION_UNAVAILABLE", step?.id ?? "unnamed step");
 	}
 	const packages = partition[step.packageClass];
@@ -432,7 +509,7 @@ export function packageArguments(step, partition) {
 }
 
 export function revalidatePackagePartition(initial, current) {
-	for (const name of ["all", "general", "sensitive"]) {
+	for (const name of ["all", "general", "sensitive", "c5Sensitive"]) {
 		if (!initial || !current || JSON.stringify(initial[name]) !== JSON.stringify(current[name])) {
 			throw new VerificationError("VERIFY_PACKAGE_PARTITION_CHANGED", name);
 		}
@@ -531,7 +608,7 @@ async function main() {
 						packagePartition = partitionGoPackages(result.stdout);
 						return {
 							...result,
-							stdout: `${result.stdout}PACKAGE_PARTITION exact general=${packagePartition.general.length} sensitive=${packagePartition.sensitive.length} total=${packagePartition.all.length}\n`,
+							stdout: `${result.stdout}PACKAGE_PARTITION exact general=${packagePartition.general.length} sensitive=${packagePartition.sensitive.length} c5_sensitive=${packagePartition.c5Sensitive.length} total=${packagePartition.all.length}\n`,
 						};
 					}
 					if (step.kind === "package-revalidation") {
@@ -542,7 +619,7 @@ async function main() {
 						revalidatePackagePartition(packagePartition, currentPartition);
 						return {
 							...result,
-							stdout: `${result.stdout}PACKAGE_PARTITION_REVALIDATED exact general=${currentPartition.general.length} sensitive=${currentPartition.sensitive.length} total=${currentPartition.all.length}\n`,
+							stdout: `${result.stdout}PACKAGE_PARTITION_REVALIDATED exact general=${currentPartition.general.length} sensitive=${currentPartition.sensitive.length} c5_sensitive=${currentPartition.c5Sensitive.length} total=${currentPartition.all.length}\n`,
 						};
 					}
 					if (step.kind === "authority-guard") {
