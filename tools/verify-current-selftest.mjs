@@ -10,10 +10,12 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import {
 	VerificationError,
 	assertNoDSStore,
+	c5SensitiveGoPackages,
 	childArguments,
 	childExecutionPolicyForStepID,
 	currentSteps,
 	currentStepChildResult,
+	dispatchCurrentStep,
 	executeCurrentPlan,
 	historicalOnly,
 	packageArguments,
@@ -42,8 +44,39 @@ const selftestPath = fileURLToPath(import.meta.url);
 const verifierPath = resolve(dirname(selftestPath), "verify-current.mjs");
 const runtimePath = resolve(dirname(selftestPath), "verify-runtime-authority.mjs");
 const authorityNames = Object.freeze(["go", "node", "git", "sh", "cc", "cxx"]);
-const sealedC4VParentRosterDigest = "7cf294fcbe8247e7a4de2d8996fb6b960780a35d018a8d00069af15940f0efb8";
-const expectedRosterDigest = "0fab61318d55314e3accaeabbaf56cc049aae5755f3c3f41d6a36eba1a6c7af5";
+const sealedC4VHistoricalRosterDigest = "7cf294fcbe8247e7a4de2d8996fb6b960780a35d018a8d00069af15940f0efb8";
+const sealedC4HParentRosterDigest = "0fab61318d55314e3accaeabbaf56cc049aae5755f3c3f41d6a36eba1a6c7af5";
+const sealedCombinedC5RosterDigest = "3821722f937f647ec98f03170cf9efb1e9a51a98e63d361d38dae58ade9ffaed";
+const expectedRosterDigest = "9d9e308358e33c2c399646a047f676c47f634ef5e1e9900e34174466e8ae4c4a";
+const exactC5StepIDs = Object.freeze([
+	"architecture-p07b-c-c5",
+	"architecture-p07b-c-c5-selftest",
+	"go-json-p07b-c-c5-http-behavior",
+	"go-json-p07b-c-c5-readiness-teardown",
+	"go-json-p07b-c-c5-scope-closure",
+	"go-json-p07b-c-c5-cross-profile-parity",
+	"go-json-p07b-c-c5-http-authority-race",
+]);
+const exactExtendedChildTimeoutStepIDs = Object.freeze([
+	"architecture-p07b-c-c5",
+	"architecture-p07b-c-c5-selftest",
+]);
+const exactInheritedSensitivePackages = Object.freeze([
+	"github.com/nelsonwerd/countershape/internal/contractexec/runner",
+	"github.com/nelsonwerd/countershape/internal/emit/node/compiler",
+	"github.com/nelsonwerd/countershape/internal/emit/node/program/v1",
+	"github.com/nelsonwerd/countershape/internal/processmechanics",
+	"github.com/nelsonwerd/countershape/internal/store",
+	"github.com/nelsonwerd/countershape/internal/world",
+	"github.com/nelsonwerd/countershape/testkit/contractexec/cli",
+	"github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
+	"github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
+]);
+const exactC5SensitivePackages = Object.freeze([
+	"github.com/nelsonwerd/countershape/internal/contractexec/http",
+	"github.com/nelsonwerd/countershape/internal/contractexec/scope",
+	"github.com/nelsonwerd/countershape/testkit/contractexec/http",
+]);
 
 function fail(code, detail) {
 	throw new Error(`${code}: ${detail}`);
@@ -51,6 +84,69 @@ function fail(code, detail) {
 
 function expect(condition, code, detail) {
 	if (!condition) fail(code, detail);
+}
+
+function expectPlainCode(invoke, code) {
+	try {
+		invoke();
+	} catch (error) {
+		expect(
+			typeof error?.message === "string" && error.message.startsWith(`${code}:`),
+			"VERIFY_SELFTEST_WRONG_PLAIN_ERROR",
+			`${code}: ${error?.stack ?? error}`,
+		);
+		return;
+	}
+	fail("VERIFY_SELFTEST_FALSE_NEGATIVE", code);
+}
+
+function assertC5Roster(ids, sensitive, c5Sensitive) {
+	if (exactC5StepIDs.some((id) => !ids.includes(id))) {
+		fail("VERIFY_SELFTEST_C5_BLOCK_OMISSION", ids.join(","));
+	}
+	const c5Set = new Set(exactC5StepIDs);
+	const actualC5Order = ids.filter((id) => c5Set.has(id));
+	if (JSON.stringify(actualC5Order) !== JSON.stringify(exactC5StepIDs)) {
+		fail("VERIFY_SELFTEST_C5_BLOCK_ORDER", actualC5Order.join(","));
+	}
+	const start = ids.indexOf(exactC5StepIDs[0]);
+	const positions = exactC5StepIDs.map((id) => ids.indexOf(id));
+	if (start !== ids.indexOf("go-json-p07b-c-c4-authority-race") + 1 ||
+		positions.some((position, index) => position !== start + index) ||
+		ids[start + exactC5StepIDs.length] !== "architecture-p07b-c-plan-selftest") {
+		fail("VERIFY_SELFTEST_C5_BLOCK_CONTIGUITY", ids.join(","));
+	}
+	if (JSON.stringify(sensitive) !== JSON.stringify(exactInheritedSensitivePackages)) {
+		fail("VERIFY_SELFTEST_INHERITED_SENSITIVE_ROSTER", sensitive.join(","));
+	}
+	if (JSON.stringify(c5Sensitive) !== JSON.stringify(exactC5SensitivePackages)) {
+		fail("VERIFY_SELFTEST_C5_SENSITIVE_ROSTER", c5Sensitive.join(","));
+	}
+	const inheritedSensitiveRow = ids.indexOf("go-test-sensitive-serial");
+	const c5SensitiveRow = ids.indexOf("go-test-sensitive-c5-serial");
+	if (inheritedSensitiveRow < 0 || c5SensitiveRow !== inheritedSensitiveRow + 1 ||
+		ids[c5SensitiveRow + 1] !== "go-package-partition-revalidation") {
+		fail("VERIFY_SELFTEST_SENSITIVE_ROW_ADJACENCY", ids.join(","));
+	}
+	if (ids.length !== 63) fail("VERIFY_SELFTEST_CURRENT_STEP_COUNT", String(ids.length));
+}
+
+function assertFinderGuardRoster(ids) {
+	const exactGuardIDs = ["workspace-no-ds-store", "workspace-no-ds-store-terminal"];
+	const actualGuardIDs = ids.filter((id) => exactGuardIDs.includes(id));
+	if (actualGuardIDs.length !== exactGuardIDs.length ||
+		new Set(actualGuardIDs).size !== exactGuardIDs.length) {
+		fail("VERIFY_SELFTEST_FINDER_GUARD_CARDINALITY", actualGuardIDs.join(","));
+	}
+	if (JSON.stringify(actualGuardIDs) !== JSON.stringify(exactGuardIDs)) {
+		fail("VERIFY_SELFTEST_FINDER_GUARD_ORDER", actualGuardIDs.join(","));
+	}
+	if (ids[0] !== exactGuardIDs[0] ||
+		ids.at(-3) !== exactGuardIDs[1] ||
+		ids.at(-2) !== "authority-revalidation" ||
+		ids.at(-1) !== "verification-resource-finalization") {
+		fail("VERIFY_SELFTEST_FINDER_GUARD_PLACEMENT", ids.join(","));
+	}
 }
 
 async function expectCode(promise, code) {
@@ -160,9 +256,101 @@ function fakeAuthorities() {
 async function inspectRosters() {
 	const digest = rosterDigest();
 	expect(digest === expectedRosterDigest, "VERIFY_SELFTEST_ROSTER_DRIFT", `${digest} != ${expectedRosterDigest}`);
-	expect(digest !== sealedC4VParentRosterDigest, "VERIFY_SELFTEST_C4_ROSTER_NOT_EVOLVED", digest);
+	expect(digest !== sealedC4VHistoricalRosterDigest, "VERIFY_SELFTEST_C4V_ROSTER_NOT_EVOLVED", digest);
+	expect(digest !== sealedC4HParentRosterDigest, "VERIFY_SELFTEST_C5_ROSTER_NOT_EVOLVED", digest);
+	expect(digest !== sealedCombinedC5RosterDigest, "VERIFY_SELFTEST_C5_SENSITIVE_SPLIT_NOT_EVOLVED", digest);
 	const currentIDs = currentSteps.map((step) => step.id);
 	expect(new Set(currentIDs).size === currentIDs.length, "VERIFY_SELFTEST_DUPLICATE_CURRENT", currentIDs.join(","));
+	assertC5Roster(currentIDs, sensitiveGoPackages, c5SensitiveGoPackages);
+	assertFinderGuardRoster(currentIDs);
+	expectPlainCode(
+		() => assertC5Roster(
+			currentIDs.filter((id) => id !== "go-json-p07b-c-c5-scope-closure"),
+			sensitiveGoPackages,
+			c5SensitiveGoPackages,
+		),
+		"VERIFY_SELFTEST_C5_BLOCK_OMISSION",
+	);
+	const reorderedC5 = [...currentIDs];
+	const readinessIndex = reorderedC5.indexOf("go-json-p07b-c-c5-readiness-teardown");
+	const scopeIndex = reorderedC5.indexOf("go-json-p07b-c-c5-scope-closure");
+	[reorderedC5[readinessIndex], reorderedC5[scopeIndex]] =
+		[reorderedC5[scopeIndex], reorderedC5[readinessIndex]];
+	expectPlainCode(
+		() => assertC5Roster(reorderedC5, sensitiveGoPackages, c5SensitiveGoPackages),
+		"VERIFY_SELFTEST_C5_BLOCK_ORDER",
+	);
+	const interposedC5 = [...currentIDs];
+	const interposedIndex = interposedC5.indexOf("architecture-p07b-c-unit-scope-selftest");
+	const [interposed] = interposedC5.splice(interposedIndex, 1);
+	interposedC5.splice(interposedC5.indexOf("go-json-p07b-c-c5-scope-closure"), 0, interposed);
+	expectPlainCode(
+		() => assertC5Roster(interposedC5, sensitiveGoPackages, c5SensitiveGoPackages),
+		"VERIFY_SELFTEST_C5_BLOCK_CONTIGUITY",
+	);
+	expectPlainCode(
+		() => assertC5Roster(currentIDs, sensitiveGoPackages.slice(1), c5SensitiveGoPackages),
+		"VERIFY_SELFTEST_INHERITED_SENSITIVE_ROSTER",
+	);
+	const reorderedSensitive = [...sensitiveGoPackages];
+	[reorderedSensitive[0], reorderedSensitive[1]] = [reorderedSensitive[1], reorderedSensitive[0]];
+	expectPlainCode(
+		() => assertC5Roster(currentIDs, reorderedSensitive, c5SensitiveGoPackages),
+		"VERIFY_SELFTEST_INHERITED_SENSITIVE_ROSTER",
+	);
+	expectPlainCode(
+		() => assertC5Roster(currentIDs, sensitiveGoPackages, c5SensitiveGoPackages.slice(1)),
+		"VERIFY_SELFTEST_C5_SENSITIVE_ROSTER",
+	);
+	const reorderedC5Sensitive = [...c5SensitiveGoPackages];
+	[reorderedC5Sensitive[0], reorderedC5Sensitive[1]] =
+		[reorderedC5Sensitive[1], reorderedC5Sensitive[0]];
+	expectPlainCode(
+		() => assertC5Roster(currentIDs, sensitiveGoPackages, reorderedC5Sensitive),
+		"VERIFY_SELFTEST_C5_SENSITIVE_ROSTER",
+	);
+	expectPlainCode(
+		() => assertC5Roster(
+			currentIDs.filter((id) => id !== "go-test-sensitive-c5-serial"),
+			sensitiveGoPackages,
+			c5SensitiveGoPackages,
+		),
+		"VERIFY_SELFTEST_SENSITIVE_ROW_ADJACENCY",
+	);
+	const interposedSensitiveRows = [...currentIDs];
+	const generalRow = interposedSensitiveRows.splice(interposedSensitiveRows.indexOf("go-test-general"), 1)[0];
+	interposedSensitiveRows.splice(interposedSensitiveRows.indexOf("go-test-sensitive-c5-serial"), 0, generalRow);
+	expectPlainCode(
+		() => assertC5Roster(interposedSensitiveRows, sensitiveGoPackages, c5SensitiveGoPackages),
+		"VERIFY_SELFTEST_SENSITIVE_ROW_ADJACENCY",
+	);
+	expectPlainCode(
+		() => assertFinderGuardRoster(currentIDs.filter((id) => id !== "workspace-no-ds-store-terminal")),
+		"VERIFY_SELFTEST_FINDER_GUARD_CARDINALITY",
+	);
+	const reorderedFinderGuards = [...currentIDs];
+	const openingFinderIndex = reorderedFinderGuards.indexOf("workspace-no-ds-store");
+	const terminalFinderIndex = reorderedFinderGuards.indexOf("workspace-no-ds-store-terminal");
+	[reorderedFinderGuards[openingFinderIndex], reorderedFinderGuards[terminalFinderIndex]] =
+		[reorderedFinderGuards[terminalFinderIndex], reorderedFinderGuards[openingFinderIndex]];
+	expectPlainCode(
+		() => assertFinderGuardRoster(reorderedFinderGuards),
+		"VERIFY_SELFTEST_FINDER_GUARD_ORDER",
+	);
+	expectPlainCode(
+		() => assertFinderGuardRoster([...currentIDs, "workspace-no-ds-store-terminal"]),
+		"VERIFY_SELFTEST_FINDER_GUARD_CARDINALITY",
+	);
+	const interposedFinderGuard = [...currentIDs];
+	const interposedFinderRow = interposedFinderGuard.splice(
+		interposedFinderGuard.indexOf("architecture-p07b-c-c3p-receipt-selftest"),
+		1,
+	)[0];
+	interposedFinderGuard.splice(interposedFinderGuard.indexOf("authority-revalidation"), 0, interposedFinderRow);
+	expectPlainCode(
+		() => assertFinderGuardRoster(interposedFinderGuard),
+		"VERIFY_SELFTEST_FINDER_GUARD_PLACEMENT",
+	);
 	const finalizationSteps = currentSteps.filter((step) => step.kind === "finalization-guard");
 	expect(
 		finalizationSteps.length === 1 && currentSteps.at(-1) === finalizationSteps[0],
@@ -174,6 +362,14 @@ async function inspectRosters() {
 		authoritySteps.length === 1 && currentSteps.at(-2) === authoritySteps[0],
 		"VERIFY_SELFTEST_AUTHORITY_NOT_UNIQUE_PENULTIMATE",
 		currentIDs.join(","),
+	);
+	const artifactGuardSteps = currentSteps.filter((step) => step.kind === "guard");
+	expect(
+		artifactGuardSteps.length === 2 &&
+			artifactGuardSteps[0].id === "workspace-no-ds-store" &&
+			artifactGuardSteps[1].id === "workspace-no-ds-store-terminal",
+		"VERIFY_SELFTEST_FINDER_GUARD_KIND_DRIFT",
+		artifactGuardSteps.map((step) => step.id).join(","),
 	);
 	const historicalIDs = historicalOnly.map((row) => row.id);
 	expect(new Set(historicalIDs).size === historicalIDs.length, "VERIFY_SELFTEST_DUPLICATE_HISTORICAL", historicalIDs.join(","));
@@ -221,6 +417,12 @@ async function inspectRosters() {
 		packageClass: "sensitive",
 		args: ["test", "-mod=readonly", "-buildvcs=false", "-p=1", "-parallel=2", "-count=1", "-timeout=20m"],
 	});
+	exactStep("go-test-sensitive-c5-serial", {
+		tool: "go",
+		tools: ["go", "node", "git", "sh", "cc", "cxx"],
+		packageClass: "c5Sensitive",
+		args: ["test", "-mod=readonly", "-buildvcs=false", "-p=1", "-parallel=2", "-count=1", "-timeout=20m"],
+	});
 	exactStep("go-package-partition-revalidation", {
 		kind: "package-revalidation",
 		tool: "go",
@@ -247,6 +449,11 @@ async function inspectRosters() {
 		"github.com/nelsonwerd/countershape/testkit/studies/cli_precedence",
 		"github.com/nelsonwerd/countershape/testkit/studies/http_invoices",
 	]), "VERIFY_SELFTEST_SENSITIVE_PACKAGE_ROSTER", sensitiveGoPackages.join(","));
+	expect(JSON.stringify(c5SensitiveGoPackages) === JSON.stringify([
+		"github.com/nelsonwerd/countershape/internal/contractexec/http",
+		"github.com/nelsonwerd/countershape/internal/contractexec/scope",
+		"github.com/nelsonwerd/countershape/testkit/contractexec/http",
+	]), "VERIFY_SELFTEST_C5_SENSITIVE_PACKAGE_ROSTER", c5SensitiveGoPackages.join(","));
 	exactStep("planning-example-p07b-a2-2", {
 		tool: "node",
 		tools: ["node", "go"],
@@ -342,6 +549,35 @@ async function inspectRosters() {
 			marker: `P07B-C C4 Go JSON target execution OK (${profile}: ${count} passed, 0 skipped)`,
 		});
 	}
+	exactStep("architecture-p07b-c-c5", {
+		tool: "node",
+		tools: ["node", "go", "git", "sh", "cc", "cxx"],
+		path: "tools/check-p07b-c-architecture.mjs",
+		args: ["--c5"],
+		marker: "P07B-C C5 cumulative architecture boundary OK",
+	});
+	exactStep("architecture-p07b-c-c5-selftest", {
+		tool: "node",
+		tools: ["node", "go", "git", "sh", "cc", "cxx"],
+		path: "tools/check-p07b-c-architecture-selftest.mjs",
+		args: ["--c5"],
+		marker: "P07B-C C5 cumulative architecture defensive self-test OK (14 metadata cases; 60 Go JSON parser cases; 6 command cases)",
+	});
+	for (const [id, profile, count] of [
+		["go-json-p07b-c-c5-http-behavior", "c5-http-behavior", 4],
+		["go-json-p07b-c-c5-readiness-teardown", "c5-readiness-teardown", 9],
+		["go-json-p07b-c-c5-scope-closure", "c5-scope-closure", 9],
+		["go-json-p07b-c-c5-cross-profile-parity", "c5-cross-profile-parity", 22],
+		["go-json-p07b-c-c5-http-authority-race", "c5-http-authority-race", 5],
+	]) {
+		exactStep(id, {
+			tool: "node",
+			tools: ["node", "go", "git", "sh", "cc", "cxx"],
+			path: "tools/check-p07b-c-architecture.mjs",
+			args: ["--run-go-json", profile],
+			marker: `P07B-C C5 Go JSON target execution OK (${profile}: ${count} passed, 0 skipped)`,
+		});
+	}
 	exactStep("architecture-p07b-c-c3", {
 		tool: "node",
 		tools: ["node", "go", "git", "sh", "cc", "cxx"],
@@ -434,17 +670,27 @@ function inspectEnvironment() {
 
 async function inspectPackagePartition() {
 	const general = "github.com/nelsonwerd/countershape/internal/canon";
-	const shuffled = [sensitiveGoPackages[3], general, ...sensitiveGoPackages.slice(0, 3), ...sensitiveGoPackages.slice(4)];
+	const completeSensitive = [...sensitiveGoPackages, ...c5SensitiveGoPackages].sort();
+	const shuffled = [
+		c5SensitiveGoPackages[1],
+		sensitiveGoPackages[3],
+		general,
+		...completeSensitive.filter((path) =>
+			path !== c5SensitiveGoPackages[1] && path !== sensitiveGoPackages[3]),
+	];
 	const partition = partitionGoPackages(`${shuffled.join("\n")}\n`);
 	expect(partition.general.length === 1 && partition.general[0] === general, "VERIFY_SELFTEST_PACKAGE_GENERAL", partition.general.join(","));
 	expect(
 		JSON.stringify(partition.sensitive) === JSON.stringify(sensitiveGoPackages) &&
-			partition.all.length === sensitiveGoPackages.length + 1,
+			JSON.stringify(partition.c5Sensitive) === JSON.stringify(c5SensitiveGoPackages) &&
+			partition.all.length === completeSensitive.length + 1 &&
+			new Set([...partition.general, ...partition.sensitive, ...partition.c5Sensitive]).size === partition.all.length,
 		"VERIFY_SELFTEST_PACKAGE_EXACT_UNION",
 		JSON.stringify(partition),
 	);
 	const generalStep = currentSteps.find((step) => step.id === "go-test-general");
 	const sensitiveStep = currentSteps.find((step) => step.id === "go-test-sensitive-serial");
+	const c5SensitiveStep = currentSteps.find((step) => step.id === "go-test-sensitive-c5-serial");
 	expect(
 		JSON.stringify(packageArguments(generalStep, partition)) === JSON.stringify([...generalStep.args, general]),
 		"VERIFY_SELFTEST_GENERAL_PACKAGE_DISPATCH",
@@ -456,11 +702,20 @@ async function inspectPackagePartition() {
 		JSON.stringify(packageArguments(sensitiveStep, partition)),
 	);
 	expect(
+		JSON.stringify(packageArguments(c5SensitiveStep, partition)) ===
+			JSON.stringify([...c5SensitiveStep.args, ...c5SensitiveGoPackages]),
+		"VERIFY_SELFTEST_C5_SENSITIVE_PACKAGE_DISPATCH",
+		JSON.stringify(packageArguments(c5SensitiveStep, partition)),
+	);
+	expect(
 		JSON.stringify(packageArguments({ args: ["list", "./..."] }, partition)) === JSON.stringify(["list", "./..."]),
 		"VERIFY_SELFTEST_NONPARTITION_ARGUMENT_DISPATCH",
 		"non-partition step changed",
 	);
-	revalidatePackagePartition(partition, partitionGoPackages(`${[general, ...sensitiveGoPackages].join("\n")}\n`));
+	revalidatePackagePartition(
+		partition,
+		partitionGoPackages(`${[general, ...completeSensitive].join("\n")}\n`),
+	);
 	await expectCode(
 		Promise.resolve().then(() => packageArguments({ id: "missing", packageClass: "general", args: ["test"] })),
 		"VERIFY_PACKAGE_PARTITION_UNAVAILABLE",
@@ -469,18 +724,109 @@ async function inspectPackagePartition() {
 		Promise.resolve().then(() => packageArguments({ id: "unknown", packageClass: "all", args: ["test"] }, partition)),
 		"VERIFY_PACKAGE_PARTITION_UNAVAILABLE",
 	);
-	await expectCode(
-		Promise.resolve().then(() => revalidatePackagePartition(partition, {
-			...partition,
-			all: [...partition.all, "github.com/nelsonwerd/countershape/new-package"],
-		})),
-		"VERIFY_PACKAGE_PARTITION_CHANGED",
-	);
+	for (const [name, changed] of [
+		["all", [...partition.all, "github.com/nelsonwerd/countershape/new-package"]],
+		["general", [...partition.general, "github.com/nelsonwerd/countershape/new-package"]],
+		["sensitive", sensitiveGoPackages.slice(1)],
+		["c5Sensitive", c5SensitiveGoPackages.slice(1)],
+	]) {
+		await expectCode(
+			Promise.resolve().then(() => revalidatePackagePartition(partition, {
+				...partition,
+				[name]: changed,
+			})),
+			"VERIFY_PACKAGE_PARTITION_CHANGED",
+		);
+	}
+	const reorderedSensitive = [...sensitiveGoPackages];
+	[reorderedSensitive[0], reorderedSensitive[1]] =
+		[reorderedSensitive[1], reorderedSensitive[0]];
+	const reorderedC5Sensitive = [...c5SensitiveGoPackages];
+	[reorderedC5Sensitive[0], reorderedC5Sensitive[1]] =
+		[reorderedC5Sensitive[1], reorderedC5Sensitive[0]];
+	const swappedSensitive = [...sensitiveGoPackages];
+	const swappedC5Sensitive = [...c5SensitiveGoPackages];
+	[swappedSensitive[0], swappedC5Sensitive[0]] =
+		[swappedC5Sensitive[0], swappedSensitive[0]];
+	swappedSensitive.sort();
+	swappedC5Sensitive.sort();
+	const overlappingC5Sensitive = [
+		c5SensitiveGoPackages[0],
+		sensitiveGoPackages[0],
+		c5SensitiveGoPackages[1],
+	].sort();
 	for (const [name, invoke, code] of [
-		["missing-sensitive", () => partitionGoPackages(`${[general, ...sensitiveGoPackages.slice(1)].join("\n")}\n`), "VERIFY_SENSITIVE_PACKAGE_ROSTER_INVALID"],
-		["duplicate", () => partitionGoPackages(`${[general, general, ...sensitiveGoPackages].join("\n")}\n`), "VERIFY_PACKAGE_LIST_INVALID"],
-		["foreign", () => partitionGoPackages(`${[general, ...sensitiveGoPackages, "example.invalid/foreign"].join("\n")}\n`), "VERIFY_PACKAGE_LIST_INVALID"],
-		["missing-final-lf", () => partitionGoPackages([general, ...sensitiveGoPackages].join("\n")), "VERIFY_PACKAGE_LIST_INVALID"],
+		[
+			"missing-inherited-package",
+			() => partitionGoPackages(`${[general, ...completeSensitive.filter((path) => path !== sensitiveGoPackages[0])].join("\n")}\n`),
+			"VERIFY_SENSITIVE_PACKAGE_ROSTER_INVALID",
+		],
+		[
+			"missing-c5-package",
+			() => partitionGoPackages(`${[general, ...completeSensitive.filter((path) => path !== c5SensitiveGoPackages[0])].join("\n")}\n`),
+			"VERIFY_C5_SENSITIVE_PACKAGE_ROSTER_INVALID",
+		],
+		[
+			"reordered-inherited",
+			() => partitionGoPackages(`${[general, ...completeSensitive].join("\n")}\n`, reorderedSensitive, c5SensitiveGoPackages),
+			"VERIFY_SENSITIVE_PACKAGE_ROSTER_INVALID",
+		],
+		[
+			"reordered-c5",
+			() => partitionGoPackages(`${[general, ...completeSensitive].join("\n")}\n`, sensitiveGoPackages, reorderedC5Sensitive),
+			"VERIFY_C5_SENSITIVE_PACKAGE_ROSTER_INVALID",
+		],
+		[
+			"duplicate-inherited",
+			() => partitionGoPackages(
+				`${[general, ...completeSensitive].join("\n")}\n`,
+				[sensitiveGoPackages[0], ...sensitiveGoPackages.slice(0, -1)].sort(),
+				c5SensitiveGoPackages,
+			),
+			"VERIFY_SENSITIVE_PACKAGE_ROSTER_INVALID",
+		],
+		[
+			"duplicate-c5",
+			() => partitionGoPackages(
+				`${[general, ...completeSensitive].join("\n")}\n`,
+				sensitiveGoPackages,
+				[c5SensitiveGoPackages[0], c5SensitiveGoPackages[0], c5SensitiveGoPackages[1]].sort(),
+			),
+			"VERIFY_C5_SENSITIVE_PACKAGE_ROSTER_INVALID",
+		],
+		[
+			"swapped-subgroups",
+			() => partitionGoPackages(
+				`${[general, ...completeSensitive].join("\n")}\n`,
+				swappedSensitive,
+				swappedC5Sensitive,
+			),
+			"VERIFY_SENSITIVE_PACKAGE_ROSTER_INVALID",
+		],
+		[
+			"overlapping-subgroups",
+			() => partitionGoPackages(
+				`${[general, ...completeSensitive].join("\n")}\n`,
+				sensitiveGoPackages,
+				overlappingC5Sensitive,
+			),
+			"VERIFY_SENSITIVE_PACKAGE_GROUPS_OVERLAP",
+		],
+		[
+			"foreign",
+			() => partitionGoPackages(`${[general, ...completeSensitive, "example.invalid/foreign"].join("\n")}\n`),
+			"VERIFY_PACKAGE_LIST_INVALID",
+		],
+		[
+			"duplicate-go-list",
+			() => partitionGoPackages(`${[general, general, ...completeSensitive].join("\n")}\n`),
+			"VERIFY_PACKAGE_LIST_INVALID",
+		],
+		[
+			"missing-final-lf",
+			() => partitionGoPackages([general, ...completeSensitive].join("\n")),
+			"VERIFY_PACKAGE_LIST_INVALID",
+		],
 	]) {
 		await expectCode(Promise.resolve().then(invoke), code);
 		expect(name.length > 0, "VERIFY_SELFTEST_PACKAGE_CASE_NAME", name);
@@ -527,11 +873,13 @@ async function inspectChildArguments() {
 		"VERIFY_SELFTEST_CHILD_DEFAULT_OPTIONS",
 		JSON.stringify(defaultSpawnOptions),
 	);
+	const exactExtendedChildTimeoutStepIDSet = new Set(exactExtendedChildTimeoutStepIDs);
 	for (const step of currentSteps) {
+		const policy = childExecutionPolicyForStepID(step.id);
 		expect(
-			childExecutionPolicyForStepID(step.id) === undefined,
-			"VERIFY_SELFTEST_DORMANT_TIMEOUT_POLICY_ELEVATION",
-			step.id,
+			(policy !== undefined) === exactExtendedChildTimeoutStepIDSet.has(step.id),
+			"VERIFY_SELFTEST_CURRENT_TIMEOUT_POLICY_SELECTION",
+			`${step.id}: ${JSON.stringify(policy)}`,
 		);
 	}
 	for (const id of ["constructor", "toString", "__proto__", "architecture-p07b-c-c5-alias", "", null, undefined]) {
@@ -541,7 +889,7 @@ async function inspectChildArguments() {
 			String(id),
 		);
 	}
-	for (const id of ["architecture-p07b-c-c5", "architecture-p07b-c-c5-selftest"]) {
+	for (const id of exactExtendedChildTimeoutStepIDs) {
 		const policy = childExecutionPolicyForStepID(id);
 		expect(
 			policy !== undefined && Object.isFrozen(policy) &&
@@ -827,15 +1175,81 @@ async function inspectFilesystemGuards() {
 	try {
 		await chmod(fixture, 0o700);
 		await mkdir(join(fixture, "nested"), { mode: 0o700 });
+
+		await writeFile(join(fixture, ".DS_Store"), "finder", { mode: 0o600 });
+		await expectCode(assertNoDSStore(fixture), "VERIFY_FINDER_ARTIFACT_PRESENT");
+		await unlink(join(fixture, ".DS_Store"));
+
 		await writeFile(join(fixture, "nested/.DS_Store"), "finder", { mode: 0o600 });
 		await expectCode(assertNoDSStore(fixture), "VERIFY_FINDER_ARTIFACT_PRESENT");
-		await rm(join(fixture, "nested/.DS_Store"));
+		await unlink(join(fixture, "nested/.DS_Store"));
+
+		await mkdir(join(fixture, "nested/.DS_Store"), { mode: 0o700 });
+		await expectCode(assertNoDSStore(fixture), "VERIFY_FINDER_ARTIFACT_PRESENT");
+		await rm(join(fixture, "nested/.DS_Store"), { recursive: true });
+
+		await symlink("absent-finder-target", join(fixture, "nested/.DS_Store"));
+		await expectCode(assertNoDSStore(fixture), "VERIFY_FINDER_ARTIFACT_PRESENT");
+		await unlink(join(fixture, "nested/.DS_Store"));
+
+		outside = await realpath(await mkdtemp(join(tmpdir(), "countershape-verify-selftest-outside-")));
+		await writeFile(join(outside, ".DS_Store"), "outside finder", { mode: 0o600 });
+		await symlink(outside, join(fixture, "nested/external-directory"));
 		await assertNoDSStore(fixture);
+		await unlink(join(fixture, "nested/external-directory"));
+
+		for (const ignoredRoot of [".git", ".didrun", ".didrun-history", ".countershape", "node_modules"]) {
+			await mkdir(join(fixture, ignoredRoot), { mode: 0o700 });
+			await writeFile(join(fixture, ignoredRoot, ".DS_Store"), "ignored private artifact", { mode: 0o600 });
+		}
+		await assertNoDSStore(fixture);
+		for (const ignoredRoot of [".git", ".didrun", ".didrun-history", ".countershape", "node_modules"]) {
+			await rm(join(fixture, ignoredRoot), { recursive: true });
+		}
+
+		await mkdir(join(fixture, "nested/.countershape"), { mode: 0o700 });
+		await writeFile(join(fixture, "nested/.countershape/.DS_Store"), "nested finder", { mode: 0o600 });
+		await expectCode(assertNoDSStore(fixture), "VERIFY_FINDER_ARTIFACT_PRESENT");
+		await rm(join(fixture, "nested/.countershape"), { recursive: true });
+
+		const guardState = { finderRoot: fixture };
+		const openingGuard = await dispatchCurrentStep(currentSteps[0], guardState);
+		expect(
+			openingGuard.status === 0 && openingGuard.stdout === "workspace contains no .DS_Store artifacts\n",
+			"VERIFY_SELFTEST_FINDER_DISPATCH_OPENING",
+			JSON.stringify(openingGuard),
+		);
+		await writeFile(join(fixture, "nested/.DS_Store"), "terminal mutation", { mode: 0o600 });
+		await expectCode(
+			dispatchCurrentStep(currentSteps.at(-3), guardState),
+			"VERIFY_FINDER_ARTIFACT_PRESENT",
+		);
+		await unlink(join(fixture, "nested/.DS_Store"));
+		const terminalGuard = await dispatchCurrentStep(currentSteps.at(-3), guardState);
+		expect(
+			terminalGuard.status === 0 && terminalGuard.stdout === "workspace contains no .DS_Store artifacts\n",
+			"VERIFY_SELFTEST_FINDER_DISPATCH_TERMINAL",
+			JSON.stringify(terminalGuard),
+		);
+
+		await expectCode(assertNoDSStore(fixture, {
+			maxDepth: 0, maxEntries: 250_000, maxRelativePathBytes: 4096,
+		}), "VERIFY_FINDER_SCAN_DEPTH_LIMIT");
+		await writeFile(join(fixture, "entry-limit-control"), "entry\n", { mode: 0o600 });
+		await expectCode(assertNoDSStore(fixture, {
+			maxDepth: 128, maxEntries: 1, maxRelativePathBytes: 4096,
+		}), "VERIFY_FINDER_SCAN_ENTRY_LIMIT");
+		await unlink(join(fixture, "entry-limit-control"));
+		await expectCode(assertNoDSStore(fixture, {
+			maxDepth: 128, maxEntries: 250_000, maxRelativePathBytes: 5,
+		}), "VERIFY_FINDER_SCAN_PATH_LIMIT");
+		await expectCode(assertNoDSStore(fixture, {
+			maxDepth: -1, maxEntries: 250_000, maxRelativePathBytes: 4096,
+		}), "VERIFY_FINDER_SCAN_LIMIT_INVALID");
 
 		await mkdir(join(fixture, "tools"), { mode: 0o700 });
 		await writeFile(join(fixture, "tools/verify-current.mjs"), "// fixture verifier\n", { mode: 0o600 });
 		await expectCode(validateRepositoryPlan(fixture, [], []), "VERIFY_PLAN_FILE_MISSING");
-		outside = await realpath(await mkdtemp(join(tmpdir(), "countershape-verify-selftest-outside-")));
 		await writeFile(join(outside, "runtime.mjs"), "// outside runtime\n", { mode: 0o600 });
 		const runtimeFixturePath = join(fixture, "tools/verify-runtime-authority.mjs");
 		await symlink(join(outside, "runtime.mjs"), runtimeFixturePath);
@@ -1291,7 +1705,7 @@ async function main() {
 		.update(await readFile(verifierPath))
 		.update(await readFile(runtimePath))
 		.digest("hex");
-	process.stdout.write(`verification runner self-test passed: exact C4 rosters/env/package partition, fail-closed status/signal/error/marker, bounded tool admission, framed child output, canonical plan/tool paths, private root isolation, exclusive lock integrity plus real subprocess contention/stale recovery, inert verifier imports, noncanonical-entry refusal, cleanup aggregation, historical nonexecution, and artifact refusal (sources sha256:${sourceDigest})\n`);
+	process.stdout.write(`verification runner self-test passed: exact C5 rosters/env/package partition, fail-closed status/signal/error/marker, bounded tool admission, framed child output, canonical plan/tool paths, private root isolation, exclusive lock integrity plus real subprocess contention/stale recovery, inert verifier imports, noncanonical-entry refusal, cleanup aggregation, historical nonexecution, and artifact refusal (sources sha256:${sourceDigest})\n`);
 }
 
 main().catch((error) => {
