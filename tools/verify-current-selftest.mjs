@@ -15,6 +15,7 @@ import {
 	childExecutionPolicyForStepID,
 	currentSteps,
 	currentStepChildResult,
+	dispatchCurrentStep,
 	executeCurrentPlan,
 	historicalOnly,
 	packageArguments,
@@ -46,7 +47,7 @@ const authorityNames = Object.freeze(["go", "node", "git", "sh", "cc", "cxx"]);
 const sealedC4VHistoricalRosterDigest = "7cf294fcbe8247e7a4de2d8996fb6b960780a35d018a8d00069af15940f0efb8";
 const sealedC4HParentRosterDigest = "0fab61318d55314e3accaeabbaf56cc049aae5755f3c3f41d6a36eba1a6c7af5";
 const sealedCombinedC5RosterDigest = "3821722f937f647ec98f03170cf9efb1e9a51a98e63d361d38dae58ade9ffaed";
-const expectedRosterDigest = "6663b184a3fa9227ed89e74024a780e4be71612c1fd1f61755b2ea32e380246f";
+const expectedRosterDigest = "9d9e308358e33c2c399646a047f676c47f634ef5e1e9900e34174466e8ae4c4a";
 const exactC5StepIDs = Object.freeze([
 	"architecture-p07b-c-c5",
 	"architecture-p07b-c-c5-selftest",
@@ -127,7 +128,25 @@ function assertC5Roster(ids, sensitive, c5Sensitive) {
 		ids[c5SensitiveRow + 1] !== "go-package-partition-revalidation") {
 		fail("VERIFY_SELFTEST_SENSITIVE_ROW_ADJACENCY", ids.join(","));
 	}
-	if (ids.length !== 62) fail("VERIFY_SELFTEST_CURRENT_STEP_COUNT", String(ids.length));
+	if (ids.length !== 63) fail("VERIFY_SELFTEST_CURRENT_STEP_COUNT", String(ids.length));
+}
+
+function assertFinderGuardRoster(ids) {
+	const exactGuardIDs = ["workspace-no-ds-store", "workspace-no-ds-store-terminal"];
+	const actualGuardIDs = ids.filter((id) => exactGuardIDs.includes(id));
+	if (actualGuardIDs.length !== exactGuardIDs.length ||
+		new Set(actualGuardIDs).size !== exactGuardIDs.length) {
+		fail("VERIFY_SELFTEST_FINDER_GUARD_CARDINALITY", actualGuardIDs.join(","));
+	}
+	if (JSON.stringify(actualGuardIDs) !== JSON.stringify(exactGuardIDs)) {
+		fail("VERIFY_SELFTEST_FINDER_GUARD_ORDER", actualGuardIDs.join(","));
+	}
+	if (ids[0] !== exactGuardIDs[0] ||
+		ids.at(-3) !== exactGuardIDs[1] ||
+		ids.at(-2) !== "authority-revalidation" ||
+		ids.at(-1) !== "verification-resource-finalization") {
+		fail("VERIFY_SELFTEST_FINDER_GUARD_PLACEMENT", ids.join(","));
+	}
 }
 
 async function expectCode(promise, code) {
@@ -243,6 +262,7 @@ async function inspectRosters() {
 	const currentIDs = currentSteps.map((step) => step.id);
 	expect(new Set(currentIDs).size === currentIDs.length, "VERIFY_SELFTEST_DUPLICATE_CURRENT", currentIDs.join(","));
 	assertC5Roster(currentIDs, sensitiveGoPackages, c5SensitiveGoPackages);
+	assertFinderGuardRoster(currentIDs);
 	expectPlainCode(
 		() => assertC5Roster(
 			currentIDs.filter((id) => id !== "go-json-p07b-c-c5-scope-closure"),
@@ -304,6 +324,33 @@ async function inspectRosters() {
 		() => assertC5Roster(interposedSensitiveRows, sensitiveGoPackages, c5SensitiveGoPackages),
 		"VERIFY_SELFTEST_SENSITIVE_ROW_ADJACENCY",
 	);
+	expectPlainCode(
+		() => assertFinderGuardRoster(currentIDs.filter((id) => id !== "workspace-no-ds-store-terminal")),
+		"VERIFY_SELFTEST_FINDER_GUARD_CARDINALITY",
+	);
+	const reorderedFinderGuards = [...currentIDs];
+	const openingFinderIndex = reorderedFinderGuards.indexOf("workspace-no-ds-store");
+	const terminalFinderIndex = reorderedFinderGuards.indexOf("workspace-no-ds-store-terminal");
+	[reorderedFinderGuards[openingFinderIndex], reorderedFinderGuards[terminalFinderIndex]] =
+		[reorderedFinderGuards[terminalFinderIndex], reorderedFinderGuards[openingFinderIndex]];
+	expectPlainCode(
+		() => assertFinderGuardRoster(reorderedFinderGuards),
+		"VERIFY_SELFTEST_FINDER_GUARD_ORDER",
+	);
+	expectPlainCode(
+		() => assertFinderGuardRoster([...currentIDs, "workspace-no-ds-store-terminal"]),
+		"VERIFY_SELFTEST_FINDER_GUARD_CARDINALITY",
+	);
+	const interposedFinderGuard = [...currentIDs];
+	const interposedFinderRow = interposedFinderGuard.splice(
+		interposedFinderGuard.indexOf("architecture-p07b-c-c3p-receipt-selftest"),
+		1,
+	)[0];
+	interposedFinderGuard.splice(interposedFinderGuard.indexOf("authority-revalidation"), 0, interposedFinderRow);
+	expectPlainCode(
+		() => assertFinderGuardRoster(interposedFinderGuard),
+		"VERIFY_SELFTEST_FINDER_GUARD_PLACEMENT",
+	);
 	const finalizationSteps = currentSteps.filter((step) => step.kind === "finalization-guard");
 	expect(
 		finalizationSteps.length === 1 && currentSteps.at(-1) === finalizationSteps[0],
@@ -315,6 +362,14 @@ async function inspectRosters() {
 		authoritySteps.length === 1 && currentSteps.at(-2) === authoritySteps[0],
 		"VERIFY_SELFTEST_AUTHORITY_NOT_UNIQUE_PENULTIMATE",
 		currentIDs.join(","),
+	);
+	const artifactGuardSteps = currentSteps.filter((step) => step.kind === "guard");
+	expect(
+		artifactGuardSteps.length === 2 &&
+			artifactGuardSteps[0].id === "workspace-no-ds-store" &&
+			artifactGuardSteps[1].id === "workspace-no-ds-store-terminal",
+		"VERIFY_SELFTEST_FINDER_GUARD_KIND_DRIFT",
+		artifactGuardSteps.map((step) => step.id).join(","),
 	);
 	const historicalIDs = historicalOnly.map((row) => row.id);
 	expect(new Set(historicalIDs).size === historicalIDs.length, "VERIFY_SELFTEST_DUPLICATE_HISTORICAL", historicalIDs.join(","));
@@ -1120,15 +1175,81 @@ async function inspectFilesystemGuards() {
 	try {
 		await chmod(fixture, 0o700);
 		await mkdir(join(fixture, "nested"), { mode: 0o700 });
+
+		await writeFile(join(fixture, ".DS_Store"), "finder", { mode: 0o600 });
+		await expectCode(assertNoDSStore(fixture), "VERIFY_FINDER_ARTIFACT_PRESENT");
+		await unlink(join(fixture, ".DS_Store"));
+
 		await writeFile(join(fixture, "nested/.DS_Store"), "finder", { mode: 0o600 });
 		await expectCode(assertNoDSStore(fixture), "VERIFY_FINDER_ARTIFACT_PRESENT");
-		await rm(join(fixture, "nested/.DS_Store"));
+		await unlink(join(fixture, "nested/.DS_Store"));
+
+		await mkdir(join(fixture, "nested/.DS_Store"), { mode: 0o700 });
+		await expectCode(assertNoDSStore(fixture), "VERIFY_FINDER_ARTIFACT_PRESENT");
+		await rm(join(fixture, "nested/.DS_Store"), { recursive: true });
+
+		await symlink("absent-finder-target", join(fixture, "nested/.DS_Store"));
+		await expectCode(assertNoDSStore(fixture), "VERIFY_FINDER_ARTIFACT_PRESENT");
+		await unlink(join(fixture, "nested/.DS_Store"));
+
+		outside = await realpath(await mkdtemp(join(tmpdir(), "countershape-verify-selftest-outside-")));
+		await writeFile(join(outside, ".DS_Store"), "outside finder", { mode: 0o600 });
+		await symlink(outside, join(fixture, "nested/external-directory"));
 		await assertNoDSStore(fixture);
+		await unlink(join(fixture, "nested/external-directory"));
+
+		for (const ignoredRoot of [".git", ".didrun", ".didrun-history", ".countershape", "node_modules"]) {
+			await mkdir(join(fixture, ignoredRoot), { mode: 0o700 });
+			await writeFile(join(fixture, ignoredRoot, ".DS_Store"), "ignored private artifact", { mode: 0o600 });
+		}
+		await assertNoDSStore(fixture);
+		for (const ignoredRoot of [".git", ".didrun", ".didrun-history", ".countershape", "node_modules"]) {
+			await rm(join(fixture, ignoredRoot), { recursive: true });
+		}
+
+		await mkdir(join(fixture, "nested/.countershape"), { mode: 0o700 });
+		await writeFile(join(fixture, "nested/.countershape/.DS_Store"), "nested finder", { mode: 0o600 });
+		await expectCode(assertNoDSStore(fixture), "VERIFY_FINDER_ARTIFACT_PRESENT");
+		await rm(join(fixture, "nested/.countershape"), { recursive: true });
+
+		const guardState = { finderRoot: fixture };
+		const openingGuard = await dispatchCurrentStep(currentSteps[0], guardState);
+		expect(
+			openingGuard.status === 0 && openingGuard.stdout === "workspace contains no .DS_Store artifacts\n",
+			"VERIFY_SELFTEST_FINDER_DISPATCH_OPENING",
+			JSON.stringify(openingGuard),
+		);
+		await writeFile(join(fixture, "nested/.DS_Store"), "terminal mutation", { mode: 0o600 });
+		await expectCode(
+			dispatchCurrentStep(currentSteps.at(-3), guardState),
+			"VERIFY_FINDER_ARTIFACT_PRESENT",
+		);
+		await unlink(join(fixture, "nested/.DS_Store"));
+		const terminalGuard = await dispatchCurrentStep(currentSteps.at(-3), guardState);
+		expect(
+			terminalGuard.status === 0 && terminalGuard.stdout === "workspace contains no .DS_Store artifacts\n",
+			"VERIFY_SELFTEST_FINDER_DISPATCH_TERMINAL",
+			JSON.stringify(terminalGuard),
+		);
+
+		await expectCode(assertNoDSStore(fixture, {
+			maxDepth: 0, maxEntries: 250_000, maxRelativePathBytes: 4096,
+		}), "VERIFY_FINDER_SCAN_DEPTH_LIMIT");
+		await writeFile(join(fixture, "entry-limit-control"), "entry\n", { mode: 0o600 });
+		await expectCode(assertNoDSStore(fixture, {
+			maxDepth: 128, maxEntries: 1, maxRelativePathBytes: 4096,
+		}), "VERIFY_FINDER_SCAN_ENTRY_LIMIT");
+		await unlink(join(fixture, "entry-limit-control"));
+		await expectCode(assertNoDSStore(fixture, {
+			maxDepth: 128, maxEntries: 250_000, maxRelativePathBytes: 5,
+		}), "VERIFY_FINDER_SCAN_PATH_LIMIT");
+		await expectCode(assertNoDSStore(fixture, {
+			maxDepth: -1, maxEntries: 250_000, maxRelativePathBytes: 4096,
+		}), "VERIFY_FINDER_SCAN_LIMIT_INVALID");
 
 		await mkdir(join(fixture, "tools"), { mode: 0o700 });
 		await writeFile(join(fixture, "tools/verify-current.mjs"), "// fixture verifier\n", { mode: 0o600 });
 		await expectCode(validateRepositoryPlan(fixture, [], []), "VERIFY_PLAN_FILE_MISSING");
-		outside = await realpath(await mkdtemp(join(tmpdir(), "countershape-verify-selftest-outside-")));
 		await writeFile(join(outside, "runtime.mjs"), "// outside runtime\n", { mode: 0o600 });
 		const runtimeFixturePath = join(fixture, "tools/verify-runtime-authority.mjs");
 		await symlink(join(outside, "runtime.mjs"), runtimeFixturePath);

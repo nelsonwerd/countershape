@@ -319,6 +319,7 @@ export const currentSteps = Object.freeze([
 		id: "architecture-p07b-c-c3p-receipt-selftest", tool: "node", tools: Object.freeze(["node", "git"]), path: "tools/check-p07b-c-c3p-receipt.mjs",
 		args: Object.freeze(["--self-test"]), marker: "P07B-C C3P receipt checker self-test passed:",
 	}),
+	Object.freeze({ id: "workspace-no-ds-store-terminal", kind: "guard" }),
 	Object.freeze({ id: "authority-revalidation", kind: "authority-guard" }),
 	Object.freeze({ id: "verification-resource-finalization", kind: "finalization-guard" }),
 ]);
@@ -410,21 +411,43 @@ export async function validateRepositoryPlan(root = repositoryRoot, steps = curr
 }
 
 const ignoredArtifactRoots = new Set([".git", ".didrun", ".didrun-history", ".countershape", "node_modules"]);
+const artifactScanLimits = Object.freeze({
+	maxDepth: 128,
+	maxEntries: 250_000,
+	maxRelativePathBytes: 4096,
+});
 
-export async function assertNoDSStore(root = repositoryRoot) {
+export async function assertNoDSStore(root = repositoryRoot, limits = artifactScanLimits) {
+	for (const [name, minimum] of [["maxDepth", 0], ["maxEntries", 1], ["maxRelativePathBytes", 1]]) {
+		if (!Number.isSafeInteger(limits?.[name]) || limits[name] < minimum) {
+			throw new VerificationError("VERIFY_FINDER_SCAN_LIMIT_INVALID", name);
+		}
+	}
 	const findings = [];
-	async function walk(directory, relativeDirectory) {
+	let inspectedEntries = 0;
+	async function walk(directory, relativeDirectory, depth) {
+		if (depth > limits.maxDepth) {
+			throw new VerificationError("VERIFY_FINDER_SCAN_DEPTH_LIMIT", slash(relativeDirectory));
+		}
 		const entries = await readdir(directory, { withFileTypes: true });
 		entries.sort((left, right) => left.name.localeCompare(right.name, "en"));
 		for (const entry of entries) {
 			const relativePath = relativeDirectory ? `${relativeDirectory}/${entry.name}` : entry.name;
+			inspectedEntries += 1;
+			if (inspectedEntries > limits.maxEntries) {
+				throw new VerificationError("VERIFY_FINDER_SCAN_ENTRY_LIMIT", String(inspectedEntries));
+			}
+			if (Buffer.byteLength(relativePath, "utf8") > limits.maxRelativePathBytes) {
+				throw new VerificationError("VERIFY_FINDER_SCAN_PATH_LIMIT", slash(relativePath));
+			}
+			const status = await lstat(join(directory, entry.name));
 			if (entry.name === ".DS_Store") findings.push(relativePath);
-			if (entry.isDirectory() && !(relativeDirectory === "" && ignoredArtifactRoots.has(entry.name))) {
-				await walk(join(directory, entry.name), relativePath);
+			if (status.isDirectory() && !(relativeDirectory === "" && ignoredArtifactRoots.has(entry.name))) {
+				await walk(join(directory, entry.name), relativePath, depth + 1);
 			}
 		}
 	}
-	await walk(root, "");
+	await walk(root, "", 0);
 	if (findings.length > 0) {
 		throw new VerificationError("VERIFY_FINDER_ARTIFACT_PRESENT", findings.map(slash).join(","));
 	}
@@ -577,6 +600,54 @@ export async function executeCurrentPlan({
 	return 0;
 }
 
+export async function dispatchCurrentStep(step, state) {
+	if (!state || typeof state !== "object") {
+		throw new VerificationError("VERIFY_EXECUTOR_STATE_REQUIRED", step?.id ?? "unnamed step");
+	}
+	if (step.kind === "guard") {
+		await assertNoDSStore(state.finderRoot ?? repositoryRoot);
+		return { status: 0, signal: null, error: null, stdout: "workspace contains no .DS_Store artifacts\n", stderr: "" };
+	}
+	if (step.kind === "package-guard") {
+		const result = await currentStepChildResult(step, state.admitted, state.childEnvironment);
+		if (result.error || result.signal || result.status !== 0) return result;
+		state.packagePartition = partitionGoPackages(result.stdout);
+		return {
+			...result,
+			stdout: `${result.stdout}PACKAGE_PARTITION exact general=${state.packagePartition.general.length} sensitive=${state.packagePartition.sensitive.length} c5_sensitive=${state.packagePartition.c5Sensitive.length} total=${state.packagePartition.all.length}\n`,
+		};
+	}
+	if (step.kind === "package-revalidation") {
+		if (!state.packagePartition) throw new VerificationError("VERIFY_PACKAGE_PARTITION_UNAVAILABLE", step.id);
+		const result = await currentStepChildResult(step, state.admitted, state.childEnvironment);
+		if (result.error || result.signal || result.status !== 0) return result;
+		const currentPartition = partitionGoPackages(result.stdout);
+		revalidatePackagePartition(state.packagePartition, currentPartition);
+		return {
+			...result,
+			stdout: `${result.stdout}PACKAGE_PARTITION_REVALIDATED exact general=${currentPartition.general.length} sensitive=${currentPartition.sensitive.length} c5_sensitive=${currentPartition.c5Sensitive.length} total=${currentPartition.all.length}\n`,
+		};
+	}
+	if (step.kind === "authority-guard") {
+		await admitTools(process.env, state.admitted);
+		return { status: 0, signal: null, error: null, stdout: "all admitted tool authorities revalidated\n", stderr: "" };
+	}
+	if (step.kind === "finalization-guard") {
+		await finalizeVerificationResources(state.lock, state.roots.runRoot);
+		state.resourcesFinalized = true;
+		return {
+			status: 0, signal: null, error: null,
+			stdout: `private run root removed and verifier lock released for pid ${state.lock.pid}\n`, stderr: "",
+		};
+	}
+	if (step.packageClass) {
+		return await currentStepChildResult(step, state.admitted, state.childEnvironment, {
+			args: packageArguments(step, state.packagePartition),
+		});
+	}
+	return await currentStepChildResult(step, state.admitted, state.childEnvironment);
+}
+
 async function main() {
 	if (process.argv.length !== 2) {
 		throw new VerificationError("VERIFY_ARGUMENTS", "no arguments are accepted");
@@ -586,56 +657,21 @@ async function main() {
 	}
 	const lock = await acquireVerificationLock();
 	let primaryFailure;
-	let resourcesFinalized = false;
+	let executionState;
 	let roots;
 	try {
 		await validateRepositoryPlan();
 		const admitted = await admitTools();
 		roots = await createPrivateRoots(repositoryRoot, admitted);
 		const childEnvironment = buildChildEnvironment(admitted, roots);
-		let packagePartition;
+		executionState = {
+			admitted, childEnvironment, finderRoot: repositoryRoot, lock, packagePartition: undefined,
+			resourcesFinalized: false, roots,
+		};
 		const status = await executeCurrentPlan({
 			admitted,
 			childEnvironment,
-			executor: async (step) => {
-					if (step.kind === "guard") {
-						await assertNoDSStore();
-						return { status: 0, signal: null, error: null, stdout: "workspace contains no .DS_Store artifacts\n", stderr: "" };
-					}
-					if (step.kind === "package-guard") {
-						const result = await currentStepChildResult(step, admitted, childEnvironment);
-						if (result.error || result.signal || result.status !== 0) return result;
-						packagePartition = partitionGoPackages(result.stdout);
-						return {
-							...result,
-							stdout: `${result.stdout}PACKAGE_PARTITION exact general=${packagePartition.general.length} sensitive=${packagePartition.sensitive.length} c5_sensitive=${packagePartition.c5Sensitive.length} total=${packagePartition.all.length}\n`,
-						};
-					}
-					if (step.kind === "package-revalidation") {
-						if (!packagePartition) throw new VerificationError("VERIFY_PACKAGE_PARTITION_UNAVAILABLE", step.id);
-						const result = await currentStepChildResult(step, admitted, childEnvironment);
-						if (result.error || result.signal || result.status !== 0) return result;
-						const currentPartition = partitionGoPackages(result.stdout);
-						revalidatePackagePartition(packagePartition, currentPartition);
-						return {
-							...result,
-							stdout: `${result.stdout}PACKAGE_PARTITION_REVALIDATED exact general=${currentPartition.general.length} sensitive=${currentPartition.sensitive.length} c5_sensitive=${currentPartition.c5Sensitive.length} total=${currentPartition.all.length}\n`,
-						};
-					}
-					if (step.kind === "authority-guard") {
-						await admitTools(process.env, admitted);
-						return { status: 0, signal: null, error: null, stdout: "all admitted tool authorities revalidated\n", stderr: "" };
-					}
-					if (step.kind === "finalization-guard") {
-						await finalizeVerificationResources(lock, roots.runRoot);
-						resourcesFinalized = true;
-						return { status: 0, signal: null, error: null, stdout: `private run root removed and verifier lock released for pid ${lock.pid}\n`, stderr: "" };
-					}
-					if (step.packageClass) return await currentStepChildResult(step, admitted, childEnvironment, {
-						args: packageArguments(step, packagePartition),
-					});
-					return await currentStepChildResult(step, admitted, childEnvironment);
-			},
+			executor: async (step) => dispatchCurrentStep(step, executionState),
 		});
 		process.exitCode = status;
 	} catch (error) {
@@ -643,7 +679,7 @@ async function main() {
 		throw error;
 	} finally {
 		try {
-			if (!resourcesFinalized) await cleanupVerificationResources(lock, roots);
+			if (!executionState?.resourcesFinalized) await cleanupVerificationResources(lock, roots);
 		} catch (cleanupFailure) {
 			if (primaryFailure) throw new AggregateError([primaryFailure, cleanupFailure], "verification and cleanup both failed");
 			throw cleanupFailure;
