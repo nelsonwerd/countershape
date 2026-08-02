@@ -37,13 +37,14 @@ The bet is that generating code got cheap and **deciding which behavior you actu
 | | |
 |---|---|
 | Started | 2026-07-14 |
-| Status | **Still building.** Roughly unit 6 of a 10-unit roadmap |
-| Sealed commits | 66 |
-| Verified claims | 884 (853 clean, 30 stale, 1 failed) |
+| Status | **Still building.** Roughly unit 6 of a 10-unit roadmap, now in its final-evidence phase (C6) |
+| Sealed commits | 69 |
+| Verified claims | 986 (955 clean, 30 stale, 1 failed) |
 | Go — product code | ~66,000 lines |
 | Go — tests | ~57,000 lines |
 | JavaScript — checkers | ~77,000 lines |
 | **Runnable?** | **No.** No CLI, no UI, no install path |
+| Stats as of | 2026-08-03 (line counts from the 2026-07-29 survey) |
 
 The core engine exists and is sealed: exact Git materialization, isolated execution worlds, CLI and HTTP observation, a bounded reducer, the decision store, the ruling authority, the standalone-test compiler, publication, and execution classification. What does *not* exist yet is everything a human would touch — the command line, the blind decision screen, and packaging. Those are units 7 through 9 and have not been started.
 
