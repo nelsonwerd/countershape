@@ -6,7 +6,7 @@ The repository is public early because the *process* is the interesting part, an
 
 > ### Should you clone this?
 >
-> **Not to run it — not yet.** Nothing works from a clone today: there's no CLI, and two files still hardcode absolute paths from the machine it's being built on. Clone it to *read* — the code, the 46 status documents, and the receipts are all worth a look right now.
+> **Not to run it — not yet.** Nothing works from a clone today: there's no CLI, and two files still hardcode absolute paths from the machine it's being built on. Clone it to *read* — the code, the 49 status documents, and the receipts are all worth a look right now.
 >
 > **When the build finishes**, the hardcoded paths get fixed, the command-line interface and decision screen land, and this README is replaced with real install and usage instructions. Watch the repo if you want to know when that happens.
 
@@ -75,9 +75,9 @@ Receipts are produced by [didrun](https://github.com/nelsonwerd/didrun), a separ
 
 Better you hear them here than discover them and assume something was hidden.
 
-**1. 65 of 66 seals record `secrets_override: true`.** This looks like the credential scanner was bypassed 65 times. It was — and every single firing was a false positive from one string. The scanner's OpenAI-key pattern is `/sk-(?:proj-)?[A-Za-z0-9_-]{20,}/`, unanchored, with the hyphen inside the character class. A diagnostic directory named `...c4-umask-diagnosis-red-<digest>` contains the substring `sk-diagnosis-red-...` — because **the word "umask" ends in "sk."** An independent audit replayed the exact regex over all 1,978 objects in the repository's history and found exactly two matches, both from that one directory name, and zero real credentials anywhere.
+**1. 68 of 69 seals record `secrets_override: true`.** This looks like the credential scanner was bypassed 68 times. It was — and every single firing was a false positive from one string. The scanner's OpenAI-key pattern is `/sk-(?:proj-)?[A-Za-z0-9_-]{20,}/`, unanchored, with the hyphen inside the character class. A diagnostic directory named `...c4-umask-diagnosis-red-<digest>` contains the substring `sk-diagnosis-red-...` — because **the word "umask" ends in "sk."** An independent audit replayed the exact regex over all 1,978 objects in the repository's history and found exactly two matches, both from that one directory name, and zero real credentials anywhere.
 
-**2. One claim is graded `failed` and thirty are `stale`**, all inside two commits from the first 30 hours. They were never deleted, relabeled, or re-sealed. The status documents quote them verbatim and state plainly that none of those claims supports a capability. The other 64 commits are clean.
+**2. One claim is graded `failed` and thirty are `stale`**, all inside two commits from the first 30 hours. They were never deleted, relabeled, or re-sealed. The status documents quote them verbatim and state plainly that none of those claims supports a capability. The other 67 commits are clean.
 
 **3. There is roughly twice as much checking as there is product.** ~66,000 lines of product Go, against ~57,000 lines of tests and ~77,000 lines of JavaScript that exists solely to check the rest. Put another way: the checker JavaScript alone outweighs the product it verifies. There is also a five-day window in the history where ten milestones sealed and **zero lines of product code were written** — 88% of everything added in that stretch was checker JavaScript. That is not a bug in the log; that is what happened, and it is one of the more interesting things this run has produced.
 
@@ -88,7 +88,7 @@ Better you hear them here than discover them and assume something was hidden.
 - **The verifier will not run from a clone — this is temporary.** Two files hardcode absolute paths from the build machine (`tools/check-p07b-c-architecture.mjs`, `tools/check-p07b-c-plan.mjs`). They can't be touched while the build is live: the run gates on an exact staged-file inventory, so editing anything mid-flight would void the unit currently being sealed. **Both are on the post-run cleanup list**, along with the CLI, packaging, and install instructions. Nothing about this is a design decision — it's the cost of publishing a repository while an agent is still writing to it.
 - **macOS / Apple Silicon only.** Much of the execution substrate is Darwin-specific by design and says so.
 - **It runs trusted code with your user permissions.** The isolated directories are for repeatability, not security. The project is explicit about this and never claims sandboxing.
-- **Absolute paths from the build machine** appear in the docs and receipts. Scrubbing them would require rewriting history, which would orphan all 66 receipts — so they stay.
+- **Absolute paths from the build machine** appear in the docs and receipts. Scrubbing them would require rewriting history, which would orphan every sealed receipt — so they stay.
 
 ---
 
@@ -98,7 +98,7 @@ One prompt, then no human steering. The build is driven by [idea-to-ship](https:
 
 Verification runs through [didrun](https://github.com/nelsonwerd/didrun).
 
-The `docs/status/` directory contains a status document for every sealed milestone — 46 of them — each declaring exactly what it claims and what it explicitly does not. `docs/HANDOFF_MODE_C.md` is the live cursor showing where the run currently is.
+The `docs/status/` directory contains a status document for every sealed milestone — 49 of them — each declaring exactly what it claims and what it explicitly does not. `docs/HANDOFF_MODE_C.md` is the live cursor showing where the run currently is.
 
 ---
 
