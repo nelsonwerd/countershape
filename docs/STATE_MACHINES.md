@@ -2,8 +2,16 @@
 
 - **Contract version:** U0 / `state-machines-v1`
 - **Target:** narrowed Darwin reference instrument
-- **Status:** normative separation of implemented and future transitions. P07B-C product transitions through C4 and process/verification maintenance through C4L are sealed and strict-clean. C5 HTTP-profile physical-run, full-scope, and classification-publication transitions are active and `UNRECEIPTED`; C6 remains future.
-- **Historical C3 checkpoint:** C3 exact-target publication is active names the frozen C3 transition tree; the live repository boundary is C5 above.
+- **Status:** normative separation of implemented and future transitions, frozen at the C6A source-candidate epoch. P07B-C product transitions through C5 and verifier-preflight maintenance through C5V are sealed and strict-clean. The C6A receipt is absent; product state is unchanged.
+- **Historical C3 checkpoint:** C3 exact-target publication is active names the frozen C3 transition tree; the C6A document epoch below controls this file's repository-boundary statements.
+
+<!-- P07B-C-C6A-DOC-EPOCH:START -->
+- **Product boundary:** `C5_SEALED`
+- **Verifier-maintenance boundary:** `C5V_SEALED`
+- **Document epoch:** `C6A_SOURCE_CANDIDATE`
+- **C6A receipt at this epoch:** `ABSENT`
+- **Operational cursor:** `HANDOFF_RECEIPT_PHASE_CAPSULE`
+<!-- P07B-C-C6A-DOC-EPOCH:END -->
 
 For the sealed C4 CLI transition, `OfficialTarget.Valid()` is structural only. `ReopenOfficialTarget` repeats the live prerequisite graph; after owner acquisition C4 consumes a fourth fresh reopen on a detached bounded closure context in the exact guarded window immediately before permit consumption and physical `Start`. A conflicting same-attempt target link is first-durable-writer-wins and carries no semantic arbitration.
 
@@ -23,6 +31,25 @@ Every semantic transition follows the same rules:
 8. **Do not upgrade external evidence.** didrun grades are opaque references. They do not cause a Countershape state transition.
 
 `CANCELLED` and `PARTIAL` are honest nonadvancing dispositions. They retain completed evidence but never satisfy a missing precondition. A new run allocates fresh attempts; it does not resume a candidate process.
+
+## C6 repository-evidence lifecycle
+
+This lifecycle governs repository evidence and receipts only. It is not part of the semantic study head or the target/run/execution graph:
+
+```text
+C5V_SEALED
+  -> C6A_SOURCE_CANDIDATE
+  -> C6A_SEALED
+  -> C6M_SOURCE_AUTHORITY_BOUND
+  -> C6B_RECEIPT_RECONCILED
+```
+
+- `C5V_SEALED -> C6A_SOURCE_CANDIDATE` requires the exact predeclared C6A row, direct sealed C5V parent, `SOURCE_FULL` profile, exact 14-path-plus-three-prefix scope, and absent C6A source receipt.
+- `C6A_SOURCE_CANDIDATE -> C6A_SEALED` requires the exact eleven-event ledger, commit, note publication, strict exit `0`, exact HTML, and retained ledger. Development events and generated captures do not satisfy this edge.
+- `C6A_SEALED -> C6M_SOURCE_AUTHORITY_BOUND` requires a separate source-authority unit that reopens the exact sealed C6A identity and transports it canonically. C6M may edit exactly `docs/HANDOFF_MODE_C.md`, `docs/PROMPT_PACK.md`, `docs/VERIFICATION.md`, `docs/status/P07B-C-C6M-RECEIPT-ADAPTER-MAINTENANCE.md`, and `spec/verification/p07b-c-c6a-source-authority.json`; it may not edit C6 capture/evidence artifacts, product source, any checker or verifier implementation, or the phase table.
+- `C6M_SOURCE_AUTHORITY_BOUND -> C6B_RECEIPT_RECONCILED` requires a separate five-path receipt unit that projects exactly the already-bound authority into status/handoff receipts, seals, note-checks, and verifies strictly.
+
+C6A source contains no C6A receipt projection; C6M source authority is not itself the final receipt projection; C6B does not re-run or rewrite the product evidence. A blind critic is a nonauthoritative side observation outside this machine: it may motivate source edits before C6A freezes, but never guards or authorizes an edge.
 
 ## Full-product immutable artifact lineage target
 
@@ -677,7 +704,7 @@ Additional prohibited transitions include promoting an unqualified `STABLE` labe
 | U6c / P07B-A2.1 | nontransitioning current-ruling compilation preparation | source/ruling/Choicepoint/confirmation/proof equality and selected-tuple partition gates pass; no head advance or durable currentness after return |
 | U6c / P07B-A2.2 | nontransitioning recoverable bundle compilation and strict Go/Node semantic evaluation | sealed parity, recovery, generated-runtime, and pure-boundary gates pass; no head advance |
 | U6c / P07B-B (complete sealed boundary) | exact `RULING -> RESIDUE` terminal transition plus nonsemantic retryable physical materialization | final handoff, receipt reconciliation, and exact-boundary HTML are sealed and strict-clean; no C execution state is inferred |
-| U6c / P07B-C (product through C4 and maintenance through C4L sealed; C5 active) | sealed C1/C2/C3/C4 CLI authority plus sealed C4H/C4I/C4K/C4J/C4L process-verification authority and active C5 HTTP mechanics, exact fixture staging/rosters, profile-bound recovery, exact readiness and one raw exchange, six-pipe phase-level close diagnostics, five-domain HTTP closure, exact private manifest, durable release, and FCR | sealed boundaries retain their exact grades and ceilings; C5 remains `UNRECEIPTED` until its 79-claim seal; the interlock and receipt have no result/absence authority, and study head remains terminal residue |
+| U6c / P07B-C (product through C5 and verifier maintenance through C5V sealed; C6A source-era candidate) | sealed C1/C2/C3/C4/C5 CLI-and-HTTP authority plus sealed process/verifier maintenance through C5V, with exact fixture staging/rosters, profile-bound recovery, exact readiness and one raw exchange, six-pipe phase-level close diagnostics, five-domain HTTP closure, exact private manifest, durable release, FCR, and the C6A cumulative-evidence candidate | sealed product and maintenance boundaries retain their exact grades and ceilings; at this document epoch C6A remains `UNRECEIPTED` and cannot receipt itself; the interlock and receipt have no result/absence authority, and study head remains terminal residue |
 | U7 | complete study lifecycle and both decisive reference lineages | three clean runs preserve semantic bytes while all attempts are new |
 | U8 | authenticated transport and full renderer state matrix | blind leakage, request forgery, presentation obligations, visual/accessibility gates pass |
 | U9 | export/packaging/final claim mapping | exact environment receipts, final strict verify, HTML evidence, honest handoff |

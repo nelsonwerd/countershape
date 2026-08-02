@@ -14,6 +14,7 @@ import {
 	collectC3Facts,
 	collectC4Facts,
 	collectC5Facts,
+	collectC6Facts,
 	collectFacts,
 	goJSONArguments,
 	inspectC3DidrunNote,
@@ -22,11 +23,14 @@ import {
 	parseC4StatusClaimMap,
 	parseC5FinalRunbookClaimMap,
 	parseC5StatusClaimMap,
+	parseC6FinalRunbookClaimMap,
+	parseC6StatusClaimMap,
 	productionStoreOwnerReferenceCount,
 	validateC2Facts,
 	validateC3Facts,
 	validateC4Facts,
 	validateC5Facts,
+	validateC6Facts,
 	validateFacts,
 	validateGoJSONTranscript,
 } from "./check-p07b-c-architecture.mjs";
@@ -159,6 +163,20 @@ const c5Cases = Object.freeze([
 	Object.freeze({ id: "profile-command", code: "P07B_C5_PROFILE_COMMAND" }),
 ]);
 const expectedC5RosterDigest = "c885dab31285bd5fd3b8b00c8e76816ca5fdd43df0cf46bf3c8fc4b4d7730dee";
+const c6Cases = Object.freeze([
+	Object.freeze({ id: "inherited-c1", code: "P07B_C6_INHERITED_C1" }),
+	Object.freeze({ id: "inherited-c5", code: "P07B_C6_INHERITED_C5" }),
+	Object.freeze({ id: "directory-roster", code: "P07B_C6_DIRECTORY_ROSTER" }),
+	Object.freeze({ id: "frozen-c5v-testkit-inputs", code: "P07B_C6_FROZEN_C5V_TESTKIT_INPUT" }),
+	Object.freeze({ id: "document-authority", code: "P07B_C6_DOCUMENT_AUTHORITY" }),
+	Object.freeze({ id: "library-authority", code: "P07B_C6_LIBRARY_AUTHORITY" }),
+	Object.freeze({ id: "evidence-document", code: "P07B_C6_EVIDENCE_DOCUMENT" }),
+	Object.freeze({ id: "summary-document", code: "P07B_C6_SUMMARY_DOCUMENT" }),
+	Object.freeze({ id: "status", code: "P07B_C6_STATUS" }),
+	Object.freeze({ id: "tool-topology", code: "P07B_C6_TOOL_TOPOLOGY" }),
+	Object.freeze({ id: "claim-map", code: "P07B_C6_CLAIM_MAP" }),
+]);
+const expectedC6RosterDigest = "e9927921744db4d2586df1493143d2550a63a663a4450402e674c1cb89895bf6";
 
 function rosterDigest(roster = cases) {
 	const hash = createHash("sha256");
@@ -211,6 +229,13 @@ function requireC5Violation(facts, code, id) {
 	}
 }
 
+function requireC6Violation(facts, code, id) {
+	const problems = validateC6Facts(facts);
+	if (!problems.some((problem) => problem.code === code)) {
+		fail("P07B_C6_SELFTEST_FALSE_NEGATIVE", `${id}:${problems.map((problem) => problem.code).join(",")}`);
+	}
+}
+
 function requireC4ParserRefusal(callback, id) {
 	let refused = false;
 	try {
@@ -229,6 +254,16 @@ function requireC5ParserRefusal(callback, id) {
 		refused = error?.code === "P07B_C5_PROFILE_COMMAND";
 	}
 	if (!refused) fail("P07B_C5_SELFTEST_PARSER_FALSE_NEGATIVE", id);
+}
+
+function requireC6ParserRefusal(callback, id) {
+	let refused = false;
+	try {
+		callback();
+	} catch (error) {
+		refused = error?.code === "P07B_C6_CLAIM_MAP";
+	}
+	if (!refused) fail("P07B_C6_SELFTEST_PARSER_FALSE_NEGATIVE", id);
 }
 
 function renderC4RunbookSource() {
@@ -259,18 +294,37 @@ function renderC5RunbookSource() {
 	return result.stdout;
 }
 
+function renderC6RunbookSource() {
+	const result = spawnSync(process.execPath, [resolve(root, "tools/check-p07b-c-plan.mjs"), "--print-final-runbook", "C6A"], {
+		cwd: root,
+		encoding: "utf8",
+		timeout: 30_000,
+		maxBuffer: 32 * 1024 * 1024,
+		env: process.env,
+	});
+	if (result.error || result.signal || result.status !== 0 || result.stderr !== "") {
+		fail("P07B_C6_SELFTEST_RUNBOOK_SOURCE", `${result.status ?? result.signal}: ${result.stderr || result.stdout || result.error}`);
+	}
+	return result.stdout;
+}
+
 function runCleanChecker(phase = "c1") {
-	const args = phase === "c5" ? [checker, "--c5"] :
+	const args = phase === "c6" ? [checker, "--c6"] :
+		phase === "c6-compat" ? [checker] :
+		phase === "c5" ? [checker, "--c5"] :
 		phase === "c4" ? [checker, "--c4"] :
-		phase === "c3" ? [checker, "--c3"] : phase === "c2" ? [checker, "--c2"] : [checker];
-	const marker = phase === "c5" ? "P07B-C C5 cumulative architecture boundary OK" :
+		phase === "c3" ? [checker, "--c3"] : phase === "c2" ? [checker, "--c2"] : [checker, "--c1"];
+	const marker = phase === "c6" ? "P07B-C C6 cumulative architecture boundary OK" :
+		phase === "c6-compat" ? "P07B-C C1 architecture boundary OK" :
+		phase === "c5" ? "P07B-C C5 cumulative architecture boundary OK" :
 		phase === "c4" ? "P07B-C C4 cumulative architecture boundary OK" :
 		phase === "c3" ? "P07B-C C3 cumulative architecture boundary OK" :
 		phase === "c2" ? "P07B-C C2 cumulative architecture boundary OK" : "P07B-C C1 architecture boundary OK";
 	const result = spawnSync(process.execPath, args, {
 		cwd: root,
 		encoding: "utf8",
-		timeout: phase === "c5" ? 5_400_000 : phase === "c4" ? 1_800_000 :
+		timeout: phase === "c6" || phase === "c6-compat" ? 1_800_000 :
+			phase === "c5" ? 5_400_000 : phase === "c4" ? 1_800_000 :
 			phase === "c3" ? c3CleanCheckerTimeoutMS : phase === "c2" ? 420_000 : 180_000,
 		maxBuffer: 32 * 1024 * 1024,
 		env: {
@@ -281,7 +335,8 @@ function runCleanChecker(phase = "c1") {
 		},
 	});
 	if (result.error || result.signal || result.status !== 0 || result.stderr !== "" || result.stdout.trim() !== marker) {
-		fail(phase === "c5" ? "P07B_C5_SELFTEST_CLEAN_CHECKER" :
+		fail(phase === "c6" || phase === "c6-compat" ? "P07B_C6_SELFTEST_CLEAN_CHECKER" :
+			phase === "c5" ? "P07B_C5_SELFTEST_CLEAN_CHECKER" :
 			phase === "c4" ? "P07B_C4_SELFTEST_CLEAN_CHECKER" :
 			phase === "c3" ? "P07B_C3_SELFTEST_CLEAN_CHECKER" :
 			phase === "c2" ? "P07B_C2_SELFTEST_CLEAN_CHECKER" : "P07B_C1_SELFTEST_CLEAN_CHECKER",
@@ -901,6 +956,121 @@ function inspectC5GoJSONTranscriptParser() {
 		}
 	}
 	return count;
+}
+
+function inspectC6GoJSONTranscriptLifecycle() {
+	const profile = c5ParserProfiles.find((candidate) => candidate.name === "c5-http-behavior");
+	if (profile === undefined) fail("P07B_C6_SELFTEST_GO_JSON_FIXTURE", "missing selected profile");
+	const clean = profile.targets.flatMap((target) => [
+		{ Action: "start", Package: target.packagePath },
+		...target.tests.flatMap((Test) => [
+			{ Action: "run", Package: target.packagePath, Test },
+			{ Action: "pass", Package: target.packagePath, Test },
+		]),
+		{ Action: "pass", Package: target.packagePath },
+	]);
+	const encode = (events) => Buffer.from(`${events.map((event) => JSON.stringify(event)).join("\n")}\n`, "utf8");
+	const cleanBytes = encode(clean);
+	validateGoJSONTranscript(profile.name, cleanBytes);
+	const firstPackage = profile.targets[0].packagePath;
+	const firstTest = profile.targets[0].tests[0];
+	const cleanNested = structuredClone(clean);
+	const firstParentPass = cleanNested.findIndex((event) =>
+		event.Package === firstPackage && event.Action === "pass" && event.Test === firstTest);
+	// One t.Run name may itself contain slashes. There is intentionally no
+	// separately emitted `${firstTest}/branch` lifecycle in this clean control.
+	const nestedTest = `${firstTest}/branch/leaf`;
+	cleanNested.splice(firstParentPass, 0,
+		{ Action: "run", Package: firstPackage, Test: nestedTest },
+		{ Action: "output", Output: "nested output\n", Package: firstPackage, Test: nestedTest },
+		{ Action: "pass", Package: firstPackage, Test: nestedTest });
+	validateGoJSONTranscript(profile.name, encode(cleanNested));
+	const firstPackagePass = clean.findIndex((event) =>
+		event.Package === firstPackage && event.Action === "pass" && !Object.hasOwn(event, "Test"));
+	const packageTerminalFirst = [
+		clean[firstPackagePass],
+		...clean.slice(0, firstPackagePass),
+		...clean.slice(firstPackagePass + 1),
+	];
+	const unknownAction = structuredClone(clean);
+	unknownAction[1].Action = "unknown";
+	const startHasTest = structuredClone(clean);
+	startHasTest[0].Test = firstTest;
+	const packagePause = structuredClone(clean);
+	packagePause.splice(firstPackagePass, 0, { Action: "pause", Package: firstPackage });
+	const duplicateStart = structuredClone(clean);
+	duplicateStart.splice(1, 0, { Action: "start", Package: firstPackage });
+	const afterTerminal = [
+		...clean,
+		{ Action: "output", Output: "late\n", Package: firstPackage },
+	];
+	const rootAfterTerminal = structuredClone(clean);
+	const firstTestPass = rootAfterTerminal.findIndex((event) =>
+		event.Package === firstPackage && event.Action === "pass" && event.Test === firstTest);
+	rootAfterTerminal.splice(firstTestPass + 1, 0, {
+		Action: "output",
+		Output: "late test output\n",
+		Package: firstPackage,
+		Test: firstTest,
+	});
+	const nestedSkip = structuredClone(cleanNested);
+	nestedSkip.find((event) => event.Test === nestedTest && event.Action === "pass").Action = "skip";
+	const childBeforeParent = structuredClone(cleanNested);
+	const parentRun = childBeforeParent.findIndex((event) =>
+		event.Package === firstPackage && event.Test === firstTest && event.Action === "run");
+	const childRun = childBeforeParent.findIndex((event) => event.Test === nestedTest && event.Action === "run");
+	[childBeforeParent[parentRun], childBeforeParent[childRun]] = [childBeforeParent[childRun], childBeforeParent[parentRun]];
+	const parentBeforeChildTerminal = structuredClone(cleanNested);
+	const parentPass = parentBeforeChildTerminal.findIndex((event) =>
+		event.Package === firstPackage && event.Test === firstTest && event.Action === "pass");
+	const childPass = parentBeforeChildTerminal.findIndex((event) => event.Test === nestedTest && event.Action === "pass");
+	[parentBeforeChildTerminal[parentPass], parentBeforeChildTerminal[childPass]] =
+		[parentBeforeChildTerminal[childPass], parentBeforeChildTerminal[parentPass]];
+	const nestedAfterParentTerminal = structuredClone(clean);
+	const terminalParentPass = nestedAfterParentTerminal.findIndex((event) =>
+		event.Package === firstPackage && event.Test === firstTest && event.Action === "pass");
+	nestedAfterParentTerminal.splice(terminalParentPass + 1, 0,
+		{ Action: "run", Package: firstPackage, Test: `${firstTest}/late/child` },
+		{ Action: "pass", Package: firstPackage, Test: `${firstTest}/late/child` });
+	const nestedOutputAfterTerminal = structuredClone(cleanNested);
+	const nestedTerminal = nestedOutputAfterTerminal.findIndex((event) => event.Test === nestedTest && event.Action === "pass");
+	nestedOutputAfterTerminal.splice(nestedTerminal + 1, 0,
+		{ Action: "output", Output: "late nested output\n", Package: firstPackage, Test: nestedTest });
+	const nestedPauseWithoutContinue = structuredClone(cleanNested);
+	const nestedRun = nestedPauseWithoutContinue.findIndex((event) => event.Test === nestedTest && event.Action === "run");
+	nestedPauseWithoutContinue.splice(nestedRun + 1, 0, { Action: "pause", Package: firstPackage, Test: nestedTest });
+	const hostile = [
+		["missing-package-start", encode(clean.slice(1))],
+		["package-terminal-before-tests", encode(packageTerminalFirst)],
+		["unknown-action", encode(unknownAction)],
+		["invalid-utf8", Buffer.from([0xff, 0x0a])],
+		["missing-final-lf", cleanBytes.subarray(0, cleanBytes.length - 1)],
+		["crlf-envelope", Buffer.from(cleanBytes.toString("utf8").replace(/\n/gu, "\r\n"), "utf8")],
+		["nul-envelope", Buffer.concat([cleanBytes.subarray(0, -1), Buffer.from([0x00, 0x0a])])],
+		["event-after-package-terminal", encode(afterTerminal)],
+		["package-start-names-test", encode(startHasTest)],
+		["package-level-pause", encode(packagePause)],
+		["duplicate-package-start", encode(duplicateStart)],
+		["test-output-after-terminal", encode(rootAfterTerminal)],
+		["nested-skip", encode(nestedSkip)],
+		["nested-run-before-parent", encode(childBeforeParent)],
+		["parent-terminal-before-child", encode(parentBeforeChildTerminal)],
+		["nested-run-after-parent-terminal", encode(nestedAfterParentTerminal)],
+		["nested-output-after-terminal", encode(nestedOutputAfterTerminal)],
+		["nested-pause-without-continue", encode(nestedPauseWithoutContinue)],
+		["blank-jsonl-frame", Buffer.from(`${cleanBytes.toString("utf8")}\n`, "utf8")],
+		["malformed-jsonl-frame", Buffer.from("{\n", "utf8")],
+	];
+	for (const [id, bytes] of hostile) {
+		let rejected = false;
+		try {
+			validateGoJSONTranscript(profile.name, bytes);
+		} catch {
+			rejected = true;
+		}
+		if (!rejected) fail("P07B_C6_SELFTEST_GO_JSON_FALSE_NEGATIVE", id);
+	}
+	return hostile.length + 2;
 }
 
 function inspectC5GoJSONArguments() {
@@ -1611,28 +1781,306 @@ async function runC5Selftest() {
 	process.stdout.write(`P07B-C C5 cumulative architecture defensive self-test OK (${c5Cases.length} metadata cases; ${goJSONCases} Go JSON parser cases; ${argumentCases} command cases)\n`);
 }
 
-async function main() {
-	if (process.argv[2] === "--c5") {
-		if (process.argv.length !== 3) fail("P07B_C5_SELFTEST_ARGUMENTS", "--c5 accepts no other arguments");
-		await runC5Selftest();
-		return;
+async function runC6Selftest({ checkerPhase, successLine }) {
+	const digest = rosterDigest(c6Cases);
+	if (digest !== expectedC6RosterDigest) fail("P07B_C6_SELFTEST_ROSTER_DRIFT", `${digest} != ${expectedC6RosterDigest}`);
+	runCleanChecker(checkerPhase);
+	const clean = await collectC6Facts();
+	const cleanProblems = validateC6Facts(clean);
+	if (cleanProblems.length > 0) fail("P07B_C6_SELFTEST_CLEAN_FACTS", cleanProblems.map((problem) => problem.code).join(","));
+	const statusSource = await readFile(resolve(root, "docs/status/P07B-C-C6-EVIDENCE.md"), "utf8");
+	const runbookSource = renderC6RunbookSource();
+
+	for (const test of c6Cases) {
+		switch (test.id) {
+		case "inherited-c1": {
+			const nonempty = structuredClone(clean);
+			nonempty.c1Problems.push({ code: "P07B_C1_SELFTEST_SENTINEL", detail: "forced" });
+			requireC6Violation(nonempty, test.code, `${test.id}-nonempty`);
+			const missing = structuredClone(clean);
+			delete missing.c1Problems;
+			requireC6Violation(missing, test.code, `${test.id}-missing`);
+			const wrongType = structuredClone(clean);
+			wrongType.c1Problems = "clean";
+			requireC6Violation(wrongType, test.code, `${test.id}-wrong-type`);
+			continue;
+		}
+		case "inherited-c5": {
+			const nonempty = structuredClone(clean);
+			nonempty.c5Problems.push({ code: "P07B_C5_SELFTEST_SENTINEL", detail: "forced" });
+			requireC6Violation(nonempty, test.code, `${test.id}-nonempty`);
+			const missing = structuredClone(clean);
+			delete missing.c5Problems;
+			requireC6Violation(missing, test.code, `${test.id}-missing`);
+			const wrongType = structuredClone(clean);
+			wrongType.c5Problems = "clean";
+			requireC6Violation(wrongType, test.code, `${test.id}-wrong-type`);
+			continue;
+		}
+		case "directory-roster": {
+			for (const path of Object.keys(clean.directories)) {
+				const hostile = structuredClone(clean);
+				hostile.directories[path].push("foreign-entry:file");
+				hostile.directories[path].sort();
+				requireC6Violation(hostile, test.code, `${test.id}-${path}`);
+			}
+			const extraDirectory = structuredClone(clean);
+			extraDirectory.directories["docs/captures/p07b-c-extra"] = [];
+			requireC6Violation(extraDirectory, test.code, `${test.id}-extra-directory`);
+			continue;
+		}
+		case "frozen-c5v-testkit-inputs": {
+			for (let index = 0; index < clean.frozenC5VTestkitInputs.length; index += 1) {
+				for (const field of ["byte_equal", "current_bytes", "current_mode", "current_sha256", "parent_blob", "parent_sha256"]) {
+					const hostile = structuredClone(clean);
+					if (field === "byte_equal") hostile.frozenC5VTestkitInputs[index][field] = false;
+					else if (field === "current_bytes") hostile.frozenC5VTestkitInputs[index][field] += 1;
+					else if (field === "current_mode") hostile.frozenC5VTestkitInputs[index][field] = "100755";
+					else if (field === "parent_blob") hostile.frozenC5VTestkitInputs[index][field] = "0".repeat(40);
+					else hostile.frozenC5VTestkitInputs[index][field] = "0".repeat(64);
+					requireC6Violation(hostile, test.code, `${test.id}-${index}-${field}`);
+				}
+			}
+			const missing = structuredClone(clean);
+			missing.frozenC5VTestkitInputs.pop();
+			requireC6Violation(missing, test.code, `${test.id}-missing`);
+			continue;
+		}
+		case "document-authority": {
+			for (let index = 0; index < clean.documentEpochs.length; index += 1) {
+				for (const field of [
+					"c6a_receipt", "document_epoch", "operational_cursor", "path", "product_boundary",
+					"verifier_maintenance_boundary",
+				]) {
+					const hostile = structuredClone(clean);
+					hostile.documentEpochs[index][field] += "_ALTERED";
+					requireC6Violation(hostile, test.code, `${test.id}-${index}-${field}`);
+				}
+			}
+			const reordered = structuredClone(clean);
+			[reordered.documentEpochs[0], reordered.documentEpochs[1]] =
+				[reordered.documentEpochs[1], reordered.documentEpochs[0]];
+			requireC6Violation(reordered, test.code, `${test.id}-order`);
+			continue;
+		}
+		case "library-authority": {
+			const hostiles = [];
+			const artifactPath = structuredClone(clean);
+			artifactPath.libraryAuthority.artifactPaths.evidence += ".altered";
+			hostiles.push(["artifact-path", artifactPath]);
+			const absentSource = structuredClone(clean);
+			absentSource.libraryAuthority.absentSourceInputs.push("foreign.sum");
+			hostiles.push(["absent-source-input", absentSource]);
+			const evidenceSchema = structuredClone(clean);
+			evidenceSchema.libraryAuthority.evidenceSchema += ".altered";
+			hostiles.push(["evidence-schema", evidenceSchema]);
+			const environmentContract = structuredClone(clean);
+			environmentContract.libraryAuthority.environmentContract.base = "INHERITED";
+			hostiles.push(["environment-contract", environmentContract]);
+			const goListArguments = structuredClone(clean);
+			goListArguments.libraryAuthority.goListArguments.pop();
+			hostiles.push(["go-list-arguments", goListArguments]);
+			const parentAuthority = structuredClone(clean);
+			parentAuthority.libraryAuthority.parent.commit = "0".repeat(40);
+			hostiles.push(["parent-authority", parentAuthority]);
+			const profileDescriptors = structuredClone(clean);
+			profileDescriptors.libraryAuthority.profileDescriptors[0].targets[0].pass[0] = "TestValidButForeignName";
+			hostiles.push(["profile-descriptor", profileDescriptors]);
+			const selectedProfiles = structuredClone(clean);
+			selectedProfiles.libraryAuthority.selectedProfiles.reverse();
+			hostiles.push(["selected-profile-order", selectedProfiles]);
+			const sourceInputs = structuredClone(clean);
+			sourceInputs.libraryAuthority.sourceInputs.pop();
+			hostiles.push(["source-input-roster", sourceInputs]);
+			const sourceInputComputedDigest = structuredClone(clean);
+			sourceInputComputedDigest.libraryAuthority.sourceInputComputedDigest = `sha256:${"0".repeat(64)}`;
+			hostiles.push(["source-input-computed-digest", sourceInputComputedDigest]);
+			const sourceInputPathDigest = structuredClone(clean);
+			sourceInputPathDigest.libraryAuthority.sourceInputPathDigest = `sha256:${"0".repeat(64)}`;
+			hostiles.push(["source-input-declared-digest", sourceInputPathDigest]);
+			const summarySchema = structuredClone(clean);
+			summarySchema.libraryAuthority.summarySchema += ".altered";
+			hostiles.push(["summary-schema", summarySchema]);
+			const widths = structuredClone(clean);
+			widths.libraryAuthority.widths.reverse();
+			hostiles.push(["width-order", widths]);
+			for (const [id, hostile] of hostiles) requireC6Violation(hostile, test.code, `${test.id}-${id}`);
+			continue;
+		}
+		case "evidence-document": {
+			const hostiles = [];
+			const readFailure = structuredClone(clean);
+			readFailure.evidenceError = "forced read failure";
+			hostiles.push(["read-failure", readFailure]);
+			const missing = structuredClone(clean);
+			missing.evidence = null;
+			hostiles.push(["missing", missing]);
+			const schema = structuredClone(clean);
+			schema.evidence.schema_version += ".altered";
+			hostiles.push(["schema", schema]);
+			const state = structuredClone(clean);
+			state.evidence.artifact_state.state = "TREE-EXACT";
+			hostiles.push(["source-state", state]);
+			const parent = structuredClone(clean);
+			parent.evidence.parent_evidence.commit = "0".repeat(40);
+			hostiles.push(["parent", parent]);
+			const admission = structuredClone(clean);
+			admission.evidence.admission_sha256 = "0".repeat(64);
+			hostiles.push(["admission", admission]);
+			const executionAuthority = structuredClone(clean);
+			executionAuthority.evidence.execution_authority.tools[0].sha256 = "0".repeat(64);
+			hostiles.push(["execution-authority", executionAuthority]);
+			const executionScope = structuredClone(clean);
+			executionScope.evidence.execution_authority.authority_scope = "COMPLETE_HOST_TOOLCHAIN";
+			hostiles.push(["execution-authority-scope", executionScope]);
+			const didrunFinding = structuredClone(clean);
+			delete didrunFinding.evidence.didrun_findings[0].effect;
+			hostiles.push(["didrun-finding", didrunFinding]);
+			const sourceClosure = structuredClone(clean);
+			sourceClosure.evidence.source_closure.path_count += 1;
+			hostiles.push(["source-closure", sourceClosure]);
+			const absentClosure = structuredClone(clean);
+			absentClosure.evidence.source_closure.absent_paths = [];
+			hostiles.push(["source-closure-absence", absentClosure]);
+			const profile = structuredClone(clean);
+			profile.evidence.profile_runs[0].passed -= 1;
+			hostiles.push(["profile-result", profile]);
+			const invocation = structuredClone(clean);
+			invocation.evidence.profile_runs[0].invocation.pop();
+			hostiles.push(["profile-invocation", invocation]);
+			const replayPolicy = structuredClone(clean);
+			replayPolicy.evidence.profile_runs[0].replay_policy.copy_paste_safe = true;
+			hostiles.push(["profile-replay-policy", replayPolicy]);
+			const sourceInput = structuredClone(clean);
+			sourceInput.evidence.source_inputs[0].mode = "100755";
+			hostiles.push(["source-input", sourceInput]);
+			const sourceByte = structuredClone(clean);
+			sourceByte.evidence.source_inputs[0].sha256 = "f".repeat(64);
+			hostiles.push(["source-byte-admission", sourceByte]);
+			const surface = structuredClone(clean);
+			surface.evidence.surfaces[0].test_count += 1;
+			hostiles.push(["surface", surface]);
+			const documentation = structuredClone(clean);
+			documentation.evidence.documentation.widths.reverse();
+			hostiles.push(["documentation", documentation]);
+			const descriptor = structuredClone(clean);
+			descriptor.evidenceDescriptors[0].path += ".altered";
+			hostiles.push(["descriptor-binding", descriptor]);
+			for (const [id, hostile] of hostiles) requireC6Violation(hostile, test.code, `${test.id}-${id}`);
+			continue;
+		}
+		case "summary-document": {
+			const hostiles = [];
+			const schema = structuredClone(clean);
+			schema.summary.schema_version += ".altered";
+			hostiles.push(["schema", schema]);
+			const nonclaim = structuredClone(clean);
+			nonclaim.summary.nonclaims.pop();
+			hostiles.push(["nonclaim-roster", nonclaim]);
+			const bugStatus = structuredClone(clean);
+			bugStatus.summary.didrun_bugs[0].status = "CLOSED";
+			hostiles.push(["bug-status", bugStatus]);
+			const privateEvidence = structuredClone(clean);
+			privateEvidence.summary.private_evidence.availability = "AVAILABLE";
+			hostiles.push(["private-evidence", privateEvidence]);
+			const sourceState = structuredClone(clean);
+			sourceState.summary.private_evidence.note = "C6A declares no dedicated private capture blobs.";
+			hostiles.push(["source-state", sourceState]);
+			const timing = structuredClone(clean);
+			timing.summary.timings[0].label += ".altered";
+			hostiles.push(["timing", timing]);
+			for (const [id, hostile] of hostiles) requireC6Violation(hostile, test.code, `${test.id}-${id}`);
+			continue;
+		}
+		case "status":
+			for (const field of Object.keys(clean.status)) {
+				const hostile = structuredClone(clean);
+				hostile.status[field] = false;
+				requireC6Violation(hostile, test.code, `${test.id}-${field}`);
+			}
+			continue;
+		case "tool-topology":
+			for (const field of Object.keys(clean.toolTopology)) {
+				const hostile = structuredClone(clean);
+				hostile.toolTopology[field] = false;
+				requireC6Violation(hostile, test.code, `${test.id}-${field}`);
+			}
+			continue;
+		case "claim-map": {
+			const firstLabel = clean.claimMap.status[0].label;
+			const driftLabel = `${firstLabel} drift`;
+			const statusLabelToken = `| 1 | \`${firstLabel}\` |`;
+			const statusDriftSource = statusSource.replace(statusLabelToken, `| 1 | \`${driftLabel}\` |`);
+			if (statusDriftSource === statusSource) fail("P07B_C6_SELFTEST_SOURCE_FIXTURE", "status label token");
+			const statusSourceHostile = structuredClone(clean);
+			statusSourceHostile.claimMap.status = parseC6StatusClaimMap(statusDriftSource);
+			requireC6Violation(statusSourceHostile, test.code, `${test.id}-status-source`);
+			requireC6ParserRefusal(() => parseC6StatusClaimMap(statusSource.replace(
+				"| ---: | --- | --- | --- |", "| --- | --- | --- | --- |",
+			)), `${test.id}-status-delimiter`);
+			requireC6ParserRefusal(() => parseC6StatusClaimMap(statusSource.replace(
+				"| `UNRECEIPTED` |", "| `TREE-EXACT` |",
+			)), `${test.id}-status-grade`);
+			const statusSection = statusSource.slice(statusSource.indexOf("## Intended C6A claim map\n"));
+			requireC6ParserRefusal(
+				() => parseC6StatusClaimMap(`${statusSource}\n${statusSection}`),
+				`${test.id}-status-duplicate-section`,
+			);
+
+			const headingToken = `# 1. ${firstLabel}`;
+			const claimToken = `--label '${firstLabel}'`;
+			const runbookDriftSource = runbookSource.replace(headingToken, `# 1. ${driftLabel}`)
+				.replace(claimToken, `--label '${driftLabel}'`);
+			const runbookSourceHostile = structuredClone(clean);
+			runbookSourceHostile.claimMap.runbook = parseC6FinalRunbookClaimMap(runbookDriftSource);
+			requireC6Violation(runbookSourceHostile, test.code, `${test.id}-runbook-source`);
+			requireC6ParserRefusal(
+				() => parseC6FinalRunbookClaimMap(runbookSource.replace(headingToken, `# 1. ${driftLabel}`)),
+				`${test.id}-runbook-heading-claim-disagreement`,
+			);
+			const firstCommand = /^\/opt\/homebrew\/bin\/didrun run -- [^\r\n]+$/mu.exec(runbookSource)?.[0];
+			const firstClaim = /^\/opt\/homebrew\/bin\/didrun claim '[^'\r\n]+' --label '[^'\r\n]+'$/mu.exec(runbookSource)?.[0];
+			if (firstCommand === undefined || firstClaim === undefined || !runbookSource.includes(`${firstCommand}\n${firstClaim}`)) {
+				fail("P07B_C6_SELFTEST_SOURCE_FIXTURE", `${test.id}-runbook-immediate-pair`);
+			}
+			requireC6ParserRefusal(
+				() => parseC6FinalRunbookClaimMap(runbookSource.replace(
+					`${firstCommand}\n${firstClaim}`, `${firstCommand}\n/bin/true\n${firstClaim}`,
+				)),
+				`${test.id}-runbook-nonimmediate-claim`,
+			);
+			requireC6ParserRefusal(
+				() => parseC6FinalRunbookClaimMap(runbookSource.replace(firstCommand, `${firstCommand}\n${firstCommand}`)),
+				`${test.id}-runbook-duplicate-command`,
+			);
+
+			const normalized = structuredClone(clean);
+			normalized.claimMap.status[0].label = driftLabel;
+			requireC6Violation(normalized, test.code, `${test.id}-normalized-label`);
+			const type = structuredClone(clean);
+			type.claimMap.status[7].type = "command-succeeded";
+			requireC6Violation(type, test.code, `${test.id}-normalized-type`);
+			const order = structuredClone(clean);
+			[order.claimMap.status[0], order.claimMap.status[1]] =
+				[order.claimMap.status[1], order.claimMap.status[0]];
+			requireC6Violation(order, test.code, `${test.id}-normalized-order`);
+			continue;
+		}
+		default:
+			fail("P07B_C6_SELFTEST_UNKNOWN_CASE", test.id);
+		}
 	}
-	if (process.argv[2] === "--c4") {
-		if (process.argv.length !== 3) fail("P07B_C4_SELFTEST_ARGUMENTS", "--c4 accepts no other arguments");
-		await runC4Selftest();
-		return;
+	const goJSONCases = inspectC6GoJSONTranscriptLifecycle();
+	const expectedC6Success = `P07B-C C6 cumulative architecture defensive self-test OK (${c6Cases.length} metadata cases; ${goJSONCases} Go JSON lifecycle cases)`;
+	const expectedLegacySuccess = "P07B-C C1 architecture defensive self-test OK (22 metadata cases; 7 Go JSON parser cases)";
+	if ((checkerPhase === "c6" && successLine !== expectedC6Success) ||
+		(checkerPhase === "c6-compat" && successLine !== expectedLegacySuccess)) {
+		fail("P07B_C6_SELFTEST_MARKER_DRIFT", successLine);
 	}
-	if (process.argv[2] === "--c3") {
-		if (process.argv.length !== 3) fail("P07B_C3_SELFTEST_ARGUMENTS", "--c3 accepts no other arguments");
-		await runC3Selftest();
-		return;
-	}
-	if (process.argv[2] === "--c2") {
-		if (process.argv.length !== 3) fail("P07B_C2_SELFTEST_ARGUMENTS", "--c2 accepts no other arguments");
-		await runC2Selftest();
-		return;
-	}
-	if (process.argv.length !== 2) fail("P07B_C1_SELFTEST_ARGUMENTS", "no arguments accepted");
+	process.stdout.write(`${successLine}\n`);
+}
+
+async function runC1Selftest(marker = "P07B-C C1 architecture defensive self-test OK") {
 	const digest = rosterDigest();
 	if (digest !== expectedRosterDigest) fail("P07B_C1_SELFTEST_ROSTER_DRIFT", `${digest} != ${expectedRosterDigest}`);
 	runCleanChecker();
@@ -1735,7 +2183,48 @@ async function main() {
 		requireViolation(facts, test.code, test.id);
 	}
 	const goJSONCases = inspectGoJSONTranscriptParser();
-	process.stdout.write(`P07B-C C1 architecture defensive self-test OK (${cases.length} metadata cases; ${goJSONCases} Go JSON parser cases)\n`);
+	process.stdout.write(`${marker} (${cases.length} metadata cases; ${goJSONCases} Go JSON parser cases)\n`);
+}
+
+async function main() {
+	if (process.argv[2] === "--c6") {
+		if (process.argv.length !== 3) fail("P07B_C6_SELFTEST_ARGUMENTS", "--c6 accepts no other arguments");
+		await runC6Selftest({
+			checkerPhase: "c6",
+			successLine: "P07B-C C6 cumulative architecture defensive self-test OK (11 metadata cases; 22 Go JSON lifecycle cases)",
+		});
+		return;
+	}
+	if (process.argv[2] === "--c5") {
+		if (process.argv.length !== 3) fail("P07B_C5_SELFTEST_ARGUMENTS", "--c5 accepts no other arguments");
+		await runC5Selftest();
+		return;
+	}
+	if (process.argv[2] === "--c4") {
+		if (process.argv.length !== 3) fail("P07B_C4_SELFTEST_ARGUMENTS", "--c4 accepts no other arguments");
+		await runC4Selftest();
+		return;
+	}
+	if (process.argv[2] === "--c3") {
+		if (process.argv.length !== 3) fail("P07B_C3_SELFTEST_ARGUMENTS", "--c3 accepts no other arguments");
+		await runC3Selftest();
+		return;
+	}
+	if (process.argv[2] === "--c2") {
+		if (process.argv.length !== 3) fail("P07B_C2_SELFTEST_ARGUMENTS", "--c2 accepts no other arguments");
+		await runC2Selftest();
+		return;
+	}
+	if (process.argv[2] === "--c1") {
+		if (process.argv.length !== 3) fail("P07B_C1_SELFTEST_ARGUMENTS", "--c1 accepts no other arguments");
+		await runC1Selftest();
+		return;
+	}
+	if (process.argv.length !== 2) fail("P07B_C6_SELFTEST_ARGUMENTS", "no arguments or one exact phase flag required");
+	await runC6Selftest({
+		checkerPhase: "c6-compat",
+		successLine: "P07B-C C1 architecture defensive self-test OK (22 metadata cases; 7 Go JSON parser cases)",
+	});
 }
 
 main().catch((error) => {

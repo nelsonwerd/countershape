@@ -161,8 +161,8 @@ export const currentSteps = Object.freeze([
 	Object.freeze({ id: "architecture-p07b-a2-2-selftest", tool: "node", tools: Object.freeze(["node", "go", "cc", "cxx"]), path: "tools/check-p07b-a2-architecture-selftest.mjs", marker: "P07B A2.2 architecture defensive self-test OK" }),
 	Object.freeze({ id: "architecture-p07b-b", tool: "node", tools: Object.freeze(["node", "go", "cc", "cxx"]), path: "tools/check-p07b-b-architecture.mjs", marker: "P07B B architecture boundary OK" }),
 	Object.freeze({ id: "architecture-p07b-b-selftest", tool: "node", tools: Object.freeze(["node", "go", "cc", "cxx"]), path: "tools/check-p07b-b-architecture-selftest.mjs", marker: "P07B B architecture defensive self-test OK" }),
-	Object.freeze({ id: "architecture-p07b-c-c1", tool: "node", tools: Object.freeze(["node", "go"]), path: "tools/check-p07b-c-architecture.mjs", marker: "P07B-C C1 architecture boundary OK" }),
-	Object.freeze({ id: "architecture-p07b-c-c1-selftest", tool: "node", tools: Object.freeze(["node", "go"]), path: "tools/check-p07b-c-architecture-selftest.mjs", marker: "P07B-C C1 architecture defensive self-test OK" }),
+	Object.freeze({ id: "architecture-p07b-c-c1", tool: "node", tools: Object.freeze(["node", "go"]), path: "tools/check-p07b-c-architecture.mjs", args: Object.freeze(["--c1"]), marker: "P07B-C C1 architecture boundary OK" }),
+	Object.freeze({ id: "architecture-p07b-c-c1-selftest", tool: "node", tools: Object.freeze(["node", "go"]), path: "tools/check-p07b-c-architecture-selftest.mjs", args: Object.freeze(["--c1"]), marker: "P07B-C C1 architecture defensive self-test OK" }),
 	Object.freeze({
 		id: "architecture-p07b-c-c2", tool: "node", tools: Object.freeze(["node", "go", "cc", "cxx"]),
 		path: "tools/check-p07b-c-architecture.mjs", args: Object.freeze(["--c2"]),
@@ -302,6 +302,16 @@ export const currentSteps = Object.freeze([
 		id: "go-json-p07b-c-c5-http-authority-race", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
 		path: "tools/check-p07b-c-architecture.mjs", args: Object.freeze(["--run-go-json", "c5-http-authority-race"]),
 		marker: "P07B-C C5 Go JSON target execution OK (c5-http-authority-race: 5 passed, 0 skipped)",
+	}),
+	Object.freeze({
+		id: "architecture-p07b-c-c6", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
+		path: "tools/check-p07b-c-architecture.mjs", args: Object.freeze(["--c6"]),
+		marker: "P07B-C C6 cumulative architecture boundary OK",
+	}),
+	Object.freeze({
+		id: "architecture-p07b-c-c6-selftest", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
+		path: "tools/check-p07b-c-architecture-selftest.mjs", args: Object.freeze(["--c6"]),
+		marker: "P07B-C C6 cumulative architecture defensive self-test OK (11 metadata cases; 22 Go JSON lifecycle cases)",
 	}),
 	Object.freeze({
 		id: "architecture-p07b-c-plan-selftest", tool: "node", tools: Object.freeze(["node", "git"]), path: "tools/check-p07b-c-plan.mjs",

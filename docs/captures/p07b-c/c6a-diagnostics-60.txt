@@ -1,0 +1,159 @@
+COUNTERSHAPE C6A EVIDENCE
+=========================
+
+STATE: UNRECEIPTED
+
+This source candidate closes evidence over exact sealed C5V.
+It adds no Countershape product command, product package, or
+external service call.
+
+EVIDENCE BOUNDARY
+-----------------
+- UNRECEIPTED source candidate; do not treat this capture as
+  standalone proof.
+- 6 didrun findings are OPEN; dedicated private capture is
+  UNAVAILABLE.
+- Retained negative C5V_FINAL_ATTEMPT_OPERATOR_TERMINATED:
+  one C5V final attempt was operator-terminated (exit -15),
+  and its failed ledger remains permanent history.
+Execution authority covers measured front-door executables
+and the declared Go environment only. Security review,
+hostile containment, confidentiality, adoption,
+maintainership, production hardening, and human
+comprehension are not established.
+
+SEALED PARENT
+-------------
+- Commit e7f51c0a8fbd; tree 65bdfc39b48c.
+- 12 of 12 claims are projected verbatim as TREE-EXACT from
+  the sealed note.
+- Local HTML 1e7f90f4a9bb has 8540 bytes; the ignored
+  archive has 13 events.
+
+EXERCISED SURFACES
+------------------
+- CLI: 4 exact tests through c5-cross-profile-parity.
+  Result: PHYSICAL_CLI_CLOSURE_EXERCISED
+- HTTP: 5 exact tests through
+  c5-http-behavior+c5-cross-profile-parity.
+  Result: PHYSICAL_HTTP_BEHAVIOR_AND_PARITY_EXERCISED
+- NODE: 17 exact tests through c5-cross-profile-parity.
+  Result: GENERATED_NODE_PARITY_EXERCISED
+
+EXACT PROFILE RUNS
+------------------
+- c5-cross-profile-parity: 22 passed; 0 skipped.
+  Scope: 22 exact tests across 3 package targets.
+  Runtime: /opt/homebrew/Cellar/go/1.26.5/libexec/bin/go
+  Context: repository-root; empty base, fixed values,
+           private run directories, and admitted-tool
+           bindings.
+  Replay: Not a copy/paste command. Exact argv is
+          machine-readable in c6a-expert-evidence.json and
+          intentionally omitted from this terminal
+          diagnostic.
+  Proof: Exact roster; invocation digest 0dc96be9d404.
+- c5-http-behavior: 4 passed; 0 skipped.
+  Scope: 4 exact tests across 2 package targets.
+  Runtime: /opt/homebrew/Cellar/go/1.26.5/libexec/bin/go
+  Context: repository-root; empty base, fixed values,
+           private run directories, and admitted-tool
+           bindings.
+  Replay: Not a copy/paste command. Exact argv is
+          machine-readable in c6a-expert-evidence.json and
+          intentionally omitted from this terminal
+          diagnostic.
+  Proof: Exact roster; invocation digest 64eb25983743.
+
+EXECUTION ADMISSION
+-------------------
+- Admission 7128ced6a854 binds 6 measured tools to 313
+  source inputs.
+- Closure: hermetic Go dependency/test inventory plus
+  explicit runtime inputs; the exact derivation identifier
+  is in c6a-expert-evidence.json.
+Execution authority covers the measured front-door
+executables and declared Go environment only; complete Go
+toolchain, SDK, dynamic-library, and host provenance are not
+established.
+
+SEALED C5V VERIFIER TIMES
+-------------------------
+- Pass 1: 2h 50m 55.601s (10255601 ms).
+- Pass 2: 2h 48m 40.348s (10120348 ms).
+- Pass 3: 2h 28m 49.605s (8929605 ms).
+
+EVIDENCE HEALTH
+---------------
+- S6-01 OPEN, severity UNASSESSED; scope: concurrent session
+  append and chain integrity.
+  Summary: Tail read and append are not protected by an
+           interprocess lock.
+  Effect: Concurrent writers can fork the ledger, invalidate
+          claim addressing, and leave the session unusable
+          as evidence.
+  Detail: See S6-01 in docs/status/DIDRUN_BUGS.md.
+- S6-02 OPEN, severity UNASSESSED; scope: wrapped command
+  output and operator liveness.
+  Summary: The CLI retains wrapped output but does not
+           expose it or stream bounded progress.
+  Effect: Recorded failures require direct immutable-blob
+          inspection, while long commands provide no bounded
+          progress signal.
+  Detail: See S6-02 in docs/status/DIDRUN_BUGS.md.
+- S6-06 OPEN, severity UNASSESSED; scope: entropy scanning
+  and redacted evidence export.
+  Summary: High-entropy findings have high false-positive
+           pressure and expose only an aggregate count.
+  Effect: Ordinary digests and fixtures cause aggregate
+          secret warnings without enough locality for
+          precise classification.
+  Detail: See S6-06 in docs/status/DIDRUN_BUGS.md.
+- S6-07 OPEN, severity UNASSESSED; scope: claim addressing
+  and strict verification on forked ledgers.
+  Summary: Claims use unstable physical offsets and sealing
+           does not first reject a forked session chain.
+  Effect: Duplicate stored indices can misbind claims, and
+          strict verification can fail open unless chain
+          integrity is checked separately.
+  Detail: See S6-07 in docs/status/DIDRUN_BUGS.md.
+- S6-10 OPEN, severity UNASSESSED; scope: Git-note
+  publication and local seal state.
+  Summary: Seal publication is not atomic or fail-closed
+           across local state and the Git note.
+  Effect: A denied note write can return success and advance
+          the local seal watermark despite absent
+          commit-bound evidence.
+  Detail: See S6-10 in docs/status/DIDRUN_BUGS.md.
+- S6-13 OPEN, severity UNASSESSED; scope: portable strict
+  verification of archived ledgers.
+  Summary: Strict verification cannot select an archived
+           witness ledger and the Git note is not
+           self-sufficient.
+  Effect: A sealed commit becomes UNKNOWN when its matching
+          ignored ledger moves, even though its Git note
+          remains present.
+  Detail: See S6-13 in docs/status/DIDRUN_BUGS.md.
+- Retained permanent negative:
+  C5V_FINAL_ATTEMPT_OPERATOR_TERMINATED; operator-terminated
+  C5V final attempt, exit -15.
+- Dedicated private capture: UNAVAILABLE; 0 blobs, 0 bytes.
+Tracked captures are sanitized; confidentiality is not
+established.
+
+The sealed parent's secrets_override=true records use of
+didrun's redacted-export override after scoped review. It
+does not establish secret absence, confidentiality, or
+permission to publish.
+
+SOURCE-EVIDENCE LIMITS
+----------------------
+- Not claimed: adoption or market demand.
+- Not claimed: human comprehension or taste.
+- Not claimed: maintainership.
+- Not claimed: production hardening or cross-platform
+  support.
+- Not claimed: security review or hostile containment.
+The deterministic commands and bytes may receive didrun
+receipts. A blind critic's qualitative judgment remains
+UNRECEIPTED and has no Countershape semantic authority.
