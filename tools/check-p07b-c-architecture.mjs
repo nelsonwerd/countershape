@@ -7,6 +7,23 @@ import { dirname, isAbsolute, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { TextDecoder } from "node:util";
 
+import {
+	assertProfileRunsMatchDescriptors,
+	c5vAuthority,
+	c6AbsentSourceInputPaths,
+	c6ArtifactPaths,
+	c6EvidenceSchema,
+	c6ExecutionEnvironmentContract,
+	c6GoListArguments,
+	c6ProfileDescriptors,
+	c6SelectedProfiles,
+	c6SourceInputPaths,
+	c6SummarySchema,
+	c6Widths,
+	readTrackedEvidence,
+} from "./p07b-c/final-evidence-lib.mjs";
+import { c6SourceInputPathDigest } from "./p07b-c/source-closure.mjs";
+
 const checkerPath = fileURLToPath(import.meta.url);
 const repositoryRoot = resolve(dirname(checkerPath), "..");
 const modulePath = "github.com/nelsonwerd/countershape";
@@ -848,6 +865,150 @@ const expectedC5TestsByFile = Object.freeze({
 		...c5AuthorityPublicTests,
 	]),
 });
+const c6ExactOwnedPaths = Object.freeze([
+	"docs/ARCHITECTURE.md",
+	"docs/CLAIM_VOCABULARY.md",
+	"docs/CONCEPT_BRIEF.md",
+	"docs/HANDOFF_MODE_C.md",
+	"docs/SEMANTICS.md",
+	"docs/STATE_MACHINES.md",
+	"docs/THREAT_MODEL.md",
+	"docs/VERIFICATION.md",
+	"docs/status/DIDRUN_BUGS.md",
+	"docs/status/P07B-C-C6-EVIDENCE.md",
+	"tools/check-p07b-c-architecture-selftest.mjs",
+	"tools/check-p07b-c-architecture.mjs",
+	"tools/verify-current-selftest.mjs",
+	"tools/verify-current.mjs",
+]);
+const expectedC6ArtifactPaths = Object.freeze({
+	evidence: "docs/captures/p07b-c/c6a-expert-evidence.json",
+	summary: "docs/captures/p07b-c/c6a-evidence-summary.json",
+	render60: "docs/captures/p07b-c/c6a-diagnostics-60.txt",
+	render80: "docs/captures/p07b-c/c6a-diagnostics-80.txt",
+	render120: "docs/captures/p07b-c/c6a-diagnostics-120.txt",
+});
+const expectedC6SourceInputPaths = c6SourceInputPaths;
+const expectedC6SourceInputPathDigest = "sha256:ad1db151fe9940e88dad9265318e2ac3ff6ff669da4a3b9c1d5fb3c91474b018";
+const c6FrozenC5VTestkitInputs = Object.freeze([
+	Object.freeze({
+		blob: "7d343897effa00487d1bc933beddad640ce3803a",
+		path: "testkit/contractexec/cli/fixture_darwin.go",
+	}),
+	Object.freeze({
+		blob: "d2eceb78f0689879dcc6f050086c854ec7f8a5d1",
+		path: "testkit/contractexec/cli/runner_darwin_test.go",
+	}),
+	Object.freeze({
+		blob: "a9270406df58f6522e7827f6d4d3793560774e7c",
+		path: "testkit/contractexec/http/fixture_darwin.go",
+	}),
+	Object.freeze({
+		blob: "448c746b6802d2eb72265f48025671ce90ecf4cc",
+		path: "testkit/contractexec/http/runner_darwin_test.go",
+	}),
+]);
+const expectedC6DirectoryRosters = Object.freeze({
+	"docs/captures/p07b-c": Object.freeze([
+		"c6a-diagnostics-120.txt:file", "c6a-diagnostics-60.txt:file", "c6a-diagnostics-80.txt:file",
+		"c6a-evidence-summary.json:file", "c6a-expert-evidence.json:file",
+	].sort()),
+	"testkit/contractexec": Object.freeze(["cli:directory", "http:directory"]),
+	"testkit/contractexec/cli": Object.freeze(["fixture_darwin.go:file", "runner_darwin_test.go:file"]),
+	"testkit/contractexec/http": Object.freeze(["fixture_darwin.go:file", "runner_darwin_test.go:file"]),
+	"tools/p07b-c": Object.freeze([
+		"check-final-evidence.mjs:file", "final-evidence-lib.mjs:file", "profile-authority.mjs:file",
+		"source-closure.mjs:file",
+	]),
+});
+const c6PrefixPaths = Object.freeze([
+	...Object.values(expectedC6ArtifactPaths),
+	"testkit/contractexec/cli/fixture_darwin.go",
+	"testkit/contractexec/cli/runner_darwin_test.go",
+	"testkit/contractexec/http/fixture_darwin.go",
+	"testkit/contractexec/http/runner_darwin_test.go",
+	"tools/p07b-c/check-final-evidence.mjs",
+	"tools/p07b-c/final-evidence-lib.mjs",
+	"tools/p07b-c/profile-authority.mjs",
+	"tools/p07b-c/source-closure.mjs",
+]);
+const c6BoundarySnapshotPaths = Object.freeze([
+	...new Set([...c5BoundarySnapshotPaths, ...c6ExactOwnedPaths, ...c6PrefixPaths]),
+]);
+const c6ClaimStatusPath = "docs/status/P07B-C-C6-EVIDENCE.md";
+const c6DocumentEpochPaths = Object.freeze([
+	"docs/ARCHITECTURE.md",
+	"docs/CLAIM_VOCABULARY.md",
+	"docs/CONCEPT_BRIEF.md",
+	"docs/SEMANTICS.md",
+	"docs/STATE_MACHINES.md",
+	"docs/THREAT_MODEL.md",
+]);
+const c6DidrunBugIDs = Object.freeze(["S6-01", "S6-02", "S6-06", "S6-07", "S6-10", "S6-13"]);
+const c6DocumentEpochBlock = [
+	"<!-- P07B-C-C6A-DOC-EPOCH:START -->",
+	"- **Product boundary:** `C5_SEALED`",
+	"- **Verifier-maintenance boundary:** `C5V_SEALED`",
+	"- **Document epoch:** `C6A_SOURCE_CANDIDATE`",
+	"- **C6A receipt at this epoch:** `ABSENT`",
+	"- **Operational cursor:** `HANDOFF_RECEIPT_PHASE_CAPSULE`",
+	"<!-- P07B-C-C6A-DOC-EPOCH:END -->",
+].join("\n");
+const expectedC6EvidenceSchema = "countershape/p07b-c-c6a-expert-evidence/v4";
+const expectedC6SummarySchema = "countershape/p07b-c-c6a-evidence-summary/v1";
+const expectedC6RenderGrammar = "countershape/p07b-c-c6a-terminal-evidence/v2";
+const expectedC6SelectedProfiles = Object.freeze(["c5-cross-profile-parity", "c5-http-behavior"]);
+const expectedC6SourceClosurePackages = Object.freeze([
+	"./internal/contractexec/http",
+	"./internal/emit/node/parity",
+	"./testkit/contractexec/cli",
+	"./testkit/contractexec/http",
+]);
+const expectedC6Widths = Object.freeze([60, 80, 120]);
+const expectedC6ParentEvidence = Object.freeze({
+	archive_file_count: 18,
+	archive_manifest_sha256: "8b314f001b6f2b714008d246ef6ed6e850bd1c78213a858e13ccba9c0de5d949",
+	archive_object_count: 14,
+	archive_session_event_count: 13,
+	archive_total_bytes: 176_204,
+	commit: "e7f51c0a8fbd2d6fbe8eacb4a7f0d46f010af7ba",
+	html_bytes: 8540,
+	html_path: ".countershape/evidence/p07b-c-c5v-final-e7f51c0a8fbd.html",
+	html_sha256: "1e7f90f4a9bb8d2dc809967d5152b60eb901606d492ee558df53e2c720b6915d",
+	ledger_path: ".didrun-history/p07b-c-c5v-final-e7f51c0a8fbd/.didrun",
+	note_blob: "a6631221b39f1fa6c5d9d5d9042f93bde67a7be1",
+	note_body_sha256: "1bccdece04834c104e4a70c4ba832a24ad40a1baf5d0d911fb0456809f37f3a2",
+	parent: "240060f018d5b0e86914bd27361c5899ac9ba1c0",
+	subject: "fix: harden final verification hygiene",
+	tree: "65bdfc39b48c3b9b1b832a12cc9be5e0083ea5c4",
+});
+const expectedC6ParentClaims = Object.freeze([
+	["P07B-C C5V candidate phase plan coherence", "tests-pass"],
+	["P07B-C C5V independent candidate transition authority", "tests-pass"],
+	["P07B-C C5V plan checker defensive self-test", "tests-pass"],
+	["P07B-C C5V sealed-C5 Git-note and lower ancestry compatibility", "tests-pass"],
+	["P07B-C C5V unit-scope defensive self-test", "tests-pass"],
+	["P07B-C C5V cumulative verifier defensive self-test", "tests-pass"],
+	["P07B-C C5V cumulative verification pass 1", "tests-pass"],
+	["P07B-C C5V cumulative verification pass 2", "tests-pass"],
+	["P07B-C C5V cumulative verification pass 3", "tests-pass"],
+	["P07B-C C5V exact nine-path staged scope and diff integrity", "command-succeeded"],
+	["P07B-C C5V scoped staged credential-pattern scan", "command-succeeded"],
+	["P07B-C C5V sealed-C5 predecessor and preceding didrun chain integrity", "command-succeeded"],
+]);
+const expectedC6Claims = Object.freeze([
+	["P07B-C C6A candidate phase plan coherence", "tests-pass"],
+	["P07B-C C6A independent candidate transition authority", "tests-pass"],
+	["P07B-C C6A architecture conformance", "tests-pass"],
+	["P07B-C C6A architecture defensive self-test", "tests-pass"],
+	["P07B-C C6A cumulative verifier self-test", "tests-pass"],
+	["P07B-C C6A cumulative verification", "tests-pass"],
+	["P07B-C C6A final evidence defensive self-test", "tests-pass"],
+	["P07B-C C6A exact CLI HTTP Node and documentation evidence closure", "tests-pass"],
+	["P07B-C C6A exact staged scope and diff integrity", "command-succeeded"],
+	["P07B-C C6A scoped staged credential-pattern scan", "command-succeeded"],
+	["P07B-C C6A declared C5V parent edge and preceding didrun chain integrity", "command-succeeded"],
+]);
 function predecessorClaims(rows) {
 	return rows.map(([label, type], index) => ({ index, label, type, grade: "TREE-EXACT" }));
 }
@@ -1490,6 +1651,27 @@ function run(executable, args, code, timeout = 180_000) {
 	return result.stdout;
 }
 
+function runBuffer(executable, args, code, timeout = 180_000) {
+	const result = spawnSync(executable, args, {
+		cwd: repositoryRoot,
+		encoding: null,
+		timeout,
+		maxBuffer: 64 * 1024 * 1024,
+		env: {
+			...process.env,
+			COUNTERSHAPE_GO: goExecutable,
+			GOMAXPROCS: "2",
+			GOFLAGS: "-mod=readonly -buildvcs=false -p=1",
+		},
+	});
+	if (result.error || result.signal || result.status !== 0) {
+		const diagnostic = Buffer.isBuffer(result.stderr) && result.stderr.length > 0 ? result.stderr :
+			Buffer.isBuffer(result.stdout) && result.stdout.length > 0 ? result.stdout : Buffer.from(String(result.error ?? ""));
+		throw new ArchitectureError(code, `${result.status ?? result.signal ?? "spawn"}: ${diagnostic.subarray(0, 32 * 1024).toString("utf8")}`);
+	}
+	return result.stdout;
+}
+
 export function parseC4StatusClaimMap(source) {
 	const startToken = "## Intended C4 claim map\n";
 	const endToken = "\n## Nonclaims and next gate";
@@ -1627,6 +1809,83 @@ async function collectC5ClaimMapFacts() {
 	return Object.freeze({
 		status: parseC5StatusClaimMap(statusSource),
 		runbook: parseC5FinalRunbookClaimMap(renderC5FinalRunbook()),
+	});
+}
+
+export function parseC6StatusClaimMap(source) {
+	const startToken = "## Intended C6A claim map\n";
+	const endToken = "\n## Generated final-runbook authority";
+	const start = source.indexOf(startToken);
+	const end = start < 0 ? -1 : source.indexOf(endToken, start + startToken.length);
+	if (start < 0 || end < 0 || source.indexOf(startToken, start + startToken.length) !== -1 ||
+		source.indexOf(endToken, end + endToken.length) !== -1) {
+		throw new ArchitectureError("P07B_C6_CLAIM_MAP", "C6A status claim-map section framing");
+	}
+	const lines = source.slice(start + startToken.length, end).trim().split(/\r?\n/u);
+	if (lines.length !== 13 || lines[0] !== "| # | Claim | Type | Intended grade |" ||
+		lines[1] !== "| ---: | --- | --- | --- |") {
+		throw new ArchitectureError("P07B_C6_CLAIM_MAP", `C6A status claim-map table shape: ${lines.length}`);
+	}
+	return lines.slice(2).map((line, index) => {
+		const match = /^\| ([1-9][0-9]*) \| `([^`\r\n]+)` \| `(tests-pass|command-succeeded)` \| `UNRECEIPTED` \|$/u.exec(line);
+		if (match === null || Number(match[1]) !== index + 1) {
+			throw new ArchitectureError("P07B_C6_CLAIM_MAP", `C6A status claim-map row ${index + 1}`);
+		}
+		return Object.freeze({ number: index + 1, label: match[2], type: match[3], grade: "UNRECEIPTED" });
+	});
+}
+
+function renderC6FinalRunbook() {
+	const result = spawnSync(process.execPath, [resolve(repositoryRoot, c4FinalRunbookPath), "--print-final-runbook", "C6A"], {
+		cwd: repositoryRoot,
+		encoding: "utf8",
+		timeout: 30_000,
+		maxBuffer: 32 * 1024 * 1024,
+		env: {
+			...process.env,
+			COUNTERSHAPE_GO: goExecutable,
+			GOMAXPROCS: "2",
+			GOFLAGS: "-mod=readonly -buildvcs=false -p=1",
+		},
+	});
+	if (result.error || result.signal || result.status !== 0 || result.stderr !== "") {
+		throw new ArchitectureError(
+			"P07B_C6_CLAIM_MAP",
+			`C6A final runbook render failed: ${result.status ?? result.signal}: ${result.stderr || result.stdout || result.error}`,
+		);
+	}
+	return result.stdout;
+}
+
+export function parseC6FinalRunbookClaimMap(source) {
+	const headings = [...source.matchAll(/^# ([1-9][0-9]*)\. ([^\r\n]+)$/gmu)];
+	const finalSection = source.indexOf("\n## Commit, seal, inspect, verify, and archive\n");
+	if (headings.length !== 11 || finalSection < 0 || headings.at(-1).index >= finalSection) {
+		throw new ArchitectureError("P07B_C6_CLAIM_MAP", `C6A final runbook claim-map shape: ${headings.length}/${finalSection}`);
+	}
+	return headings.map((heading, index) => {
+		const number = Number(heading[1]);
+		const label = heading[2];
+		const end = index + 1 < headings.length ? headings[index + 1].index : finalSection;
+		const block = source.slice(heading.index, end);
+		const commands = [...block.matchAll(/^\/opt\/homebrew\/bin\/didrun run -- [^\r\n]+$/gmu)];
+		const claims = [...block.matchAll(/^\/opt\/homebrew\/bin\/didrun claim '(tests-pass|command-succeeded)' --label '([^'\r\n]+)'$/gmu)];
+		const command = commands[0];
+		const claim = claims[0];
+		const immediate = command !== undefined && claim !== undefined &&
+			claim.index === command.index + command[0].length + 1;
+		if (number !== index + 1 || commands.length !== 1 || claims.length !== 1 || !immediate || claim[2] !== label) {
+			throw new ArchitectureError("P07B_C6_CLAIM_MAP", `C6A final runbook claim-map row ${index + 1}`);
+		}
+		return Object.freeze({ number, label, type: claim[1], grade: "UNRECEIPTED" });
+	});
+}
+
+async function collectC6ClaimMapFacts() {
+	const statusSource = await readFile(resolve(repositoryRoot, c6ClaimStatusPath), "utf8");
+	return Object.freeze({
+		status: parseC6StatusClaimMap(statusSource),
+		runbook: parseC6FinalRunbookClaimMap(renderC6FinalRunbook()),
 	});
 }
 
@@ -1988,7 +2247,8 @@ function profileTargets(profileName) {
 
 export function validateGoJSONTranscript(profileName, bytes) {
 	const targets = profileTargets(profileName);
-	if (!Buffer.isBuffer(bytes) || bytes.length === 0 || bytes.length > 64 * 1024 * 1024) {
+	if (!Buffer.isBuffer(bytes) || bytes.length === 0 || bytes.length > 64 * 1024 * 1024 ||
+		bytes.at(-1) !== 0x0a || bytes.includes(0x0d) || bytes.includes(0x00)) {
 		throw new ArchitectureError("P07B_C1_GO_JSON_SIZE", bytes?.length ?? "not-buffer");
 	}
 	let source;
@@ -1997,7 +2257,7 @@ export function validateGoJSONTranscript(profileName, bytes) {
 	} catch (error) {
 		throw new ArchitectureError("P07B_C1_GO_JSON_UTF8", error.message);
 	}
-	const lines = source.trimEnd().split(/\r?\n/u);
+	const lines = source.slice(0, -1).split("\n");
 	if (lines.some((line) => line.length === 0 || Buffer.byteLength(line, "utf8") > 1024 * 1024)) {
 		throw new ArchitectureError("P07B_C1_GO_JSON_FRAME", "blank or oversized line");
 	}
@@ -2010,8 +2270,14 @@ export function validateGoJSONTranscript(profileName, bytes) {
 	});
 	const targetsByPackage = new Map(targets.map((target) => [target.packagePath, target]));
 	if (events.some((event) => !event || typeof event !== "object" || Array.isArray(event) ||
-		typeof event.Package !== "string" || !targetsByPackage.has(event.Package))) {
+		typeof event.Package !== "string" || !targetsByPackage.has(event.Package) || typeof event.Action !== "string")) {
 		throw new ArchitectureError("P07B_C1_GO_JSON_PACKAGE", "foreign or malformed event");
+	}
+	const admittedActions = new Set(["cont", "output", "pass", "pause", "run", "skip", "start"]);
+	if (events.some((event) => !admittedActions.has(event.Action) ||
+		(event.Action === "output" && typeof event.Output !== "string") ||
+		(Object.hasOwn(event, "Test") && typeof event.Test !== "string"))) {
+		throw new ArchitectureError("P07B_C1_GO_JSON_ACTION", "foreign action or malformed action payload");
 	}
 	if (events.some((event) => event.Action === "fail")) {
 		throw new ArchitectureError("P07B_C1_GO_JSON_FAILURE", "Go reported failure");
@@ -2019,47 +2285,80 @@ export function validateGoJSONTranscript(profileName, bytes) {
 	let passed = 0;
 	let skipped = 0;
 	for (const target of targets) {
+		const packageEvents = events.map((event, index) => ({ event, index })).filter((row) =>
+			row.event.Package === target.packagePath);
+		const packageStarts = packageEvents.filter((row) => row.event.Action === "start" && !Object.hasOwn(row.event, "Test"));
+		const packagePasses = packageEvents.filter((row) => row.event.Action === "pass" && !Object.hasOwn(row.event, "Test"));
+		if (packageStarts.length !== 1 || packagePasses.length !== 1 || packageEvents[0]?.index !== packageStarts[0]?.index ||
+			packageEvents.at(-1)?.index !== packagePasses[0]?.index || packageEvents.some((row) =>
+				!Object.hasOwn(row.event, "Test") && !["output", "pass", "start"].includes(row.event.Action)) ||
+			packageEvents.some((row) => Object.hasOwn(row.event, "Test") && row.event.Action === "start")) {
+			throw new ArchitectureError("P07B_C1_GO_JSON_PACKAGE_LIFECYCLE", target.packagePath);
+		}
 		const expected = new Set([...target.pass, ...target.skip]);
-		const nestedEvents = events.filter((event) =>
-			event.Package === target.packagePath && typeof event.Test === "string" && event.Test.includes("/"));
-		if (nestedEvents.some((event) => !expected.has(event.Test.slice(0, event.Test.indexOf("/"))))) {
+		const testEvents = packageEvents.filter((row) => typeof row.event.Test === "string");
+		const nestedEvents = testEvents.filter((row) => row.event.Test.includes("/"));
+		if (nestedEvents.some((row) => !expected.has(row.event.Test.slice(0, row.event.Test.indexOf("/"))))) {
 			throw new ArchitectureError(
 				"P07B_C1_GO_JSON_TEST_ROSTER",
 				`${target.packagePath}:foreign nested root`,
 			);
 		}
-		const topLevelEvents = events.filter((event) =>
-			event.Package === target.packagePath && typeof event.Test === "string" && !event.Test.includes("/"));
-		const observed = new Set(topLevelEvents.map((event) => event.Test));
+		const topLevelEvents = testEvents.filter((row) => !row.event.Test.includes("/"));
+		const observed = new Set(topLevelEvents.map((row) => row.event.Test));
 		if (!exact(sorted(observed), sorted(expected))) {
 			throw new ArchitectureError(
 				"P07B_C1_GO_JSON_TEST_ROSTER",
 				`${target.packagePath}:${JSON.stringify(sorted(observed))}`,
 			);
 		}
-		for (const name of expected) {
-			const named = topLevelEvents.filter((event) => event.Test === name);
-			const runCount = named.filter((event) => event.Action === "run").length;
-			const passCount = named.filter((event) => event.Action === "pass").length;
-			const skipCount = named.filter((event) => event.Action === "skip").length;
-			const wantsPass = target.pass.includes(name);
-			const runIndex = named.findIndex((event) => event.Action === "run");
-			const terminalIndex = named.findIndex((event) => event.Action === (wantsPass ? "pass" : "skip"));
-			if (runCount !== 1 || passCount !== (wantsPass ? 1 : 0) || skipCount !== (wantsPass ? 0 : 1) ||
-				runIndex < 0 || terminalIndex <= runIndex) {
+		const observedNames = sorted(new Set(testEvents.map((row) => row.event.Test)));
+		const lifecycles = new Map();
+		for (const name of observedNames) {
+			const named = testEvents.filter((row) => row.event.Test === name);
+			const runCount = named.filter((row) => row.event.Action === "run").length;
+			const passCount = named.filter((row) => row.event.Action === "pass").length;
+			const skipCount = named.filter((row) => row.event.Action === "skip").length;
+			const topLevel = !name.includes("/");
+			const wantsPass = topLevel ? target.pass.includes(name) : true;
+			const runRow = named.find((row) => row.event.Action === "run");
+			const terminalRows = named.filter((row) => row.event.Action === "pass" || row.event.Action === "skip");
+			const terminalRow = terminalRows[0];
+			const pauseRows = named.filter((row) => row.event.Action === "pause");
+			const contRows = named.filter((row) => row.event.Action === "cont");
+			const outputRows = named.filter((row) => row.event.Action === "output");
+			const parallelValid = (pauseRows.length === 0 && contRows.length === 0) ||
+				(pauseRows.length === 1 && contRows.length === 1 && runRow !== undefined && terminalRow !== undefined &&
+					runRow.index < pauseRows[0].index && pauseRows[0].index < contRows[0].index &&
+					contRows[0].index < terminalRow.index);
+			const outputValid = runRow !== undefined && terminalRow !== undefined &&
+				outputRows.every((row) => row.index > runRow.index && row.index < terminalRow.index);
+			if (runCount !== 1 || terminalRows.length !== 1 || passCount !== (wantsPass ? 1 : 0) ||
+				skipCount !== (wantsPass ? 0 : 1) || runRow === undefined || terminalRow === undefined ||
+				terminalRow.index <= runRow.index || named.at(-1).index !== terminalRow.index || !parallelValid || !outputValid ||
+				terminalRow.index >= packagePasses[0].index) {
 				throw new ArchitectureError(
 					"P07B_C1_GO_JSON_TEST_RESULT",
 					`${target.packagePath}:${name}:run=${runCount},pass=${passCount},skip=${skipCount}`,
 				);
 			}
+			lifecycles.set(name, Object.freeze({ run: runRow.index, terminal: terminalRow.index }));
 		}
-		const packagePasses = events.filter((event) =>
-			event.Package === target.packagePath && event.Action === "pass" && !Object.hasOwn(event, "Test"));
-		if (packagePasses.length !== 1) {
-			throw new ArchitectureError(
-				"P07B_C1_GO_JSON_PACKAGE_RESULT",
-				`${target.packagePath}:${packagePasses.length}`,
-			);
+		for (const name of observedNames.filter((candidate) => candidate.includes("/"))) {
+			const childLifecycle = lifecycles.get(name);
+			if (childLifecycle === undefined) {
+				throw new ArchitectureError("P07B_C1_GO_JSON_TEST_RESULT", `${target.packagePath}:${name}:missing lifecycle`);
+			}
+			const rootName = name.slice(0, name.indexOf("/"));
+			const rootLifecycle = lifecycles.get(rootName);
+			// Go preserves slashes supplied inside one t.Run name, so every textual
+			// path prefix is not necessarily a separately emitted lifecycle and the
+			// stream carries no parent id. Require the unambiguous admitted top-level
+			// root lifecycle to enclose the complete nested lifecycle instead.
+			if (rootLifecycle === undefined || rootLifecycle.run >= childLifecycle.run ||
+				childLifecycle.terminal >= rootLifecycle.terminal) {
+				throw new ArchitectureError("P07B_C1_GO_JSON_TEST_RESULT", `${target.packagePath}:${name}:parent lifecycle`);
+			}
 		}
 		passed += target.pass.length;
 		skipped += target.skip.length;
@@ -2087,10 +2386,24 @@ export function goJSONArguments(profileName) {
 	]);
 }
 
+export function goJSONProfileDescriptor(profileName) {
+	const targets = profileTargets(profileName).map((target) => Object.freeze({
+		packageArgument: target.packageArgument,
+		packagePath: target.packagePath,
+		pass: Object.freeze([...target.pass]),
+		skip: Object.freeze([...target.skip]),
+	}));
+	return Object.freeze({
+		arguments: Object.freeze([...goJSONArguments(profileName)]),
+		name: profileName,
+		targets: Object.freeze(targets),
+	});
+}
+
 export const c3ArchitectureProfileTimeoutMS = 15 * 60 * 1000;
 
 export function runGoJSONProfile(profileName) {
-	const output = run(
+	const output = runBuffer(
 		goExecutable,
 		goJSONArguments(profileName),
 		profileName.startsWith("c5-") ? "P07B_C5_GO_JSON_RUN" :
@@ -2099,7 +2412,7 @@ export function runGoJSONProfile(profileName) {
 		profileName.startsWith("c5-") ? 1_800_000 :
 			(profileName.startsWith("c3-") || profileName.startsWith("c4-")) ? c3ArchitectureProfileTimeoutMS : 180_000,
 		);
-	return validateGoJSONTranscript(profileName, Buffer.from(output, "utf8"));
+	return validateGoJSONTranscript(profileName, output);
 }
 
 async function readStandardInput() {
@@ -2312,6 +2625,27 @@ function balancedBody(source, expression) {
 
 function functionBody(source, name) {
 	return balancedBody(source, new RegExp(`^func\\s+(?:\\([^)]*\\)\\s+)?${name}\\s*\\(`, "mu"));
+}
+
+function javascriptFunctionBody(source, name) {
+	return balancedBody(source, new RegExp(`^(?:export\\s+)?(?:async\\s+)?function\\s+${name}\\s*\\(`, "mu"));
+}
+
+function javascriptStaticImportSources(source) {
+	const imports = [];
+	const lines = source.split("\n");
+	for (let index = 0; index < lines.length; index += 1) {
+		if (!lines[index].startsWith("import ")) continue;
+		let statement = lines[index];
+		while (!statement.endsWith(";") && index + 1 < lines.length) {
+			index += 1;
+			statement += `\n${lines[index]}`;
+		}
+		const match = /(?:^import\s+|\sfrom\s+)["']([^"']+)["'];$/u.exec(statement);
+		if (match === null) throw new ArchitectureError("P07B_C1_SOURCE_PARSE", "static import statement");
+		imports.push(match[1]);
+	}
+	return imports;
 }
 
 function methodBody(source, receiver, name) {
@@ -4140,6 +4474,243 @@ export async function collectC5Facts() {
 	});
 }
 
+async function readC6RegularNoFollow(relativePath) {
+	const components = relativePath.split("/");
+	if (components.length === 0 || components.some((component) =>
+		component.length === 0 || component === "." || component === "..")) {
+		throw new ArchitectureError("P07B_C6_FROZEN_C5V_TESTKIT_INPUT", `invalid path ${relativePath}`);
+	}
+	const rootInfo = await lstat(repositoryRoot);
+	if (!rootInfo.isDirectory() || rootInfo.isSymbolicLink()) {
+		throw new ArchitectureError("P07B_C6_FROZEN_C5V_TESTKIT_INPUT", "repository root is non-directory or symlink");
+	}
+	let absolute = repositoryRoot;
+	for (let index = 0; index < components.length; index += 1) {
+		absolute = join(absolute, components[index]);
+		const info = await lstat(absolute);
+		const final = index === components.length - 1;
+		if (info.isSymbolicLink() || (!final && !info.isDirectory()) || (final && !info.isFile())) {
+			throw new ArchitectureError("P07B_C6_FROZEN_C5V_TESTKIT_INPUT", `nonregular no-follow path ${relativePath}`);
+		}
+	}
+	const before = await lstat(absolute);
+	if (!before.isFile() || before.isSymbolicLink() || before.nlink !== 1 || (before.mode & 0o777) !== 0o644) {
+		throw new ArchitectureError("P07B_C6_FROZEN_C5V_TESTKIT_INPUT", `current mode ${relativePath}`);
+	}
+	const bytes = await readFile(absolute);
+	const after = await lstat(absolute);
+	if (!after.isFile() || after.isSymbolicLink() || before.dev !== after.dev || before.ino !== after.ino ||
+		before.size !== after.size || before.mtimeMs !== after.mtimeMs || before.mode !== after.mode) {
+		throw new ArchitectureError("P07B_C6_FROZEN_C5V_TESTKIT_INPUT", `current path changed ${relativePath}`);
+	}
+	return Object.freeze({ bytes, mode: "100644", sha256: sha256(bytes) });
+}
+
+async function collectC6FrozenC5VTestkitInputs() {
+	const rows = [];
+	for (const expected of c6FrozenC5VTestkitInputs) {
+		const treeEntry = runC3Git(["ls-tree", "-z", expectedC6ParentEvidence.tree, "--", expected.path]).stdout;
+		const expectedEntry = Buffer.from(`100644 blob ${expected.blob}\t${expected.path}\0`, "utf8");
+		if (!treeEntry.equals(expectedEntry)) {
+			throw new ArchitectureError("P07B_C6_FROZEN_C5V_TESTKIT_INPUT", `parent tree entry ${expected.path}`);
+		}
+		const parentBytes = runC3Git(["cat-file", "blob", expected.blob]).stdout;
+		const current = await readC6RegularNoFollow(expected.path);
+		rows.push(Object.freeze({
+			byte_equal: parentBytes.equals(current.bytes),
+			current_bytes: current.bytes.length,
+			current_mode: current.mode,
+			current_sha256: current.sha256,
+			parent_blob: expected.blob,
+			parent_bytes: parentBytes.length,
+			parent_mode: "100644",
+			parent_sha256: sha256(parentBytes),
+			path: expected.path,
+		}));
+	}
+	return Object.freeze(rows);
+}
+
+function parseC6DocumentEpoch(path, source) {
+	const first = source.indexOf(c6DocumentEpochBlock);
+	if (first < 0 || source.indexOf(c6DocumentEpochBlock, first + c6DocumentEpochBlock.length) >= 0) {
+		throw new ArchitectureError("P07B_C6_DOCUMENT_AUTHORITY", `document epoch block ${path}`);
+	}
+	const header = source.slice(0, first);
+	if (/\b(?:active C6A|current repository boundary is C6A|live repository boundary is C6A|C5V is the live)\b/iu.test(header)) {
+		throw new ArchitectureError("P07B_C6_DOCUMENT_AUTHORITY", `stale document header ${path}`);
+	}
+	return Object.freeze({
+		c6a_receipt: "ABSENT",
+		document_epoch: "C6A_SOURCE_CANDIDATE",
+		operational_cursor: "HANDOFF_RECEIPT_PHASE_CAPSULE",
+		path,
+		product_boundary: "C5_SEALED",
+		verifier_maintenance_boundary: "C5V_SEALED",
+	});
+}
+
+export async function collectC6Facts({ c1Facts = null, c5Facts = null } = {}) {
+	const inheritedC1 = c1Facts ?? await collectFacts();
+	const inheritedC5 = c5Facts ?? await collectC5Facts();
+	const sourcePaths = [
+		"docs/ARCHITECTURE.md",
+		"docs/CLAIM_VOCABULARY.md",
+		"docs/CONCEPT_BRIEF.md",
+		"docs/HANDOFF_MODE_C.md",
+		"docs/SEMANTICS.md",
+		"docs/STATE_MACHINES.md",
+		"docs/THREAT_MODEL.md",
+		"docs/VERIFICATION.md",
+		"docs/status/DIDRUN_BUGS.md",
+		"docs/status/P07B-C-C6-EVIDENCE.md",
+		"tools/check-p07b-c-architecture.mjs",
+		"tools/check-p07b-c-architecture-selftest.mjs",
+		"tools/p07b-c/check-final-evidence.mjs",
+		"tools/p07b-c/final-evidence-lib.mjs",
+		"tools/p07b-c/profile-authority.mjs",
+		"tools/p07b-c/source-closure.mjs",
+		"tools/verify-current.mjs",
+		"tools/verify-current-selftest.mjs",
+	];
+	const entries = await Promise.all(sourcePaths.map(readC2Source));
+	const sources = Object.fromEntries(entries.map((entry) => [entry.path, entry.source]));
+	const documentEpochs = c6DocumentEpochPaths.map((path) => parseC6DocumentEpoch(path, sources[path]));
+	const directories = Object.fromEntries(await Promise.all(
+		Object.keys(expectedC6DirectoryRosters).map(async (path) => [path, await directDirectoryRoster(path)]),
+	));
+	const frozenC5VTestkitInputs = await collectC6FrozenC5VTestkitInputs();
+	const claimMap = await collectC6ClaimMapFacts();
+	let tracked = null;
+	let evidenceError = null;
+	try {
+		tracked = await readTrackedEvidence(repositoryRoot);
+		assertProfileRunsMatchDescriptors(
+			tracked.evidence.profile_runs,
+			expectedC6SelectedProfiles.map(goJSONProfileDescriptor),
+		);
+	} catch (error) {
+		evidenceError = error?.message ?? String(error);
+	}
+	const architectureSource = sources["tools/check-p07b-c-architecture.mjs"];
+	const evidenceToolSource = sources["tools/p07b-c/check-final-evidence.mjs"];
+	const evidenceLibrarySource = sources["tools/p07b-c/final-evidence-lib.mjs"];
+	const profileAuthoritySource = sources["tools/p07b-c/profile-authority.mjs"];
+	const c6BoundaryBody = javascriptFunctionBody(architectureSource, "runC6Boundary");
+	const runBufferBody = javascriptFunctionBody(architectureSource, "runBuffer");
+	const runProfileBody = javascriptFunctionBody(architectureSource, "runGoJSONProfile");
+	const architectureImports = javascriptStaticImportSources(architectureSource);
+	const evidenceEntryImports = javascriptStaticImportSources(evidenceToolSource);
+	const evidenceLibraryImports = javascriptStaticImportSources(evidenceLibrarySource);
+	const profileAuthorityImports = javascriptStaticImportSources(profileAuthoritySource);
+	return structuredClone({
+		c1Problems: validateFacts(inheritedC1),
+		c5Problems: validateC5Facts(inheritedC5),
+		directories,
+		documentEpochs,
+		frozenC5VTestkitInputs,
+		evidence: tracked?.evidence ?? null,
+		evidenceDescriptors: tracked?.descriptors ?? null,
+		evidenceError,
+		summary: tracked?.summary ?? null,
+		claimMap,
+		libraryAuthority: {
+			artifactPaths: c6ArtifactPaths,
+			absentSourceInputs: c6AbsentSourceInputPaths,
+			environmentContract: c6ExecutionEnvironmentContract,
+			evidenceSchema: c6EvidenceSchema,
+			goListArguments: c6GoListArguments,
+			parent: c5vAuthority,
+			profileDescriptors: c6ProfileDescriptors,
+			selectedProfiles: c6SelectedProfiles,
+			sourceInputComputedDigest: `sha256:${sha256(Buffer.from(`${JSON.stringify(c6SourceInputPaths)}\n`, "utf8"))}`,
+			sourceInputPathDigest: c6SourceInputPathDigest,
+			sourceInputs: c6SourceInputPaths,
+			summarySchema: c6SummarySchema,
+			widths: c6Widths,
+		},
+		status: {
+			artifacts: Object.values(expectedC6ArtifactPaths).every((path) =>
+				sources["docs/status/P07B-C-C6-EVIDENCE.md"].includes(`\`${path}\``)),
+			boundary: sources["docs/status/P07B-C-C6-EVIDENCE.md"].includes("frozen pre-seal source-era status for the `C6A_SOURCE_CANDIDATE`") &&
+				sources["docs/status/P07B-C-C6-EVIDENCE.md"].includes(expectedC6ParentEvidence.commit),
+			bugs: c6DidrunBugIDs.every((id) => {
+				const source = sources["docs/status/DIDRUN_BUGS.md"];
+				const start = source.indexOf(`## ${id} —`);
+				const end = source.indexOf("\n## ", start + 4);
+				return start >= 0 && source.slice(start, end < 0 ? source.length : end).includes("- **C6A machine status:** `OPEN`");
+			}),
+			handoff: sources["docs/HANDOFF_MODE_C.md"].includes([
+				"<!-- P07B-C-RECEIPT-PHASE:START -->",
+				"### Active P07B-C phase contract",
+				"",
+				"- **Boundary:** `C6A`",
+				"- **Parent:** `C5V`",
+				"- **Verification profile:** `SOURCE_FULL`",
+				"- **Receipt C3P:** `PRESENT`",
+				"- **Receipt C3:** `PRESENT`",
+				"- **Receipt C6A:** `ABSENT`",
+				"<!-- P07B-C-RECEIPT-PHASE:END -->",
+			].join("\n")) && sources["docs/HANDOFF_MODE_C.md"].includes(expectedC6ParentEvidence.note_body_sha256),
+			nonclaims: [
+				"adoption or market demand", "human comprehension or taste", "maintainership",
+				"production hardening or cross-platform support", "security review or hostile containment",
+			].every((value) => sources["docs/status/P07B-C-C6-EVIDENCE.md"].includes(value)),
+			runbookAuthority: sources["docs/status/P07B-C-C6-EVIDENCE.md"].includes("The sole command-order authority is the generated artifact") &&
+				sources["docs/status/P07B-C-C6-EVIDENCE.md"].includes("This status deliberately does not duplicate the generated argv roster.") &&
+				!/^1\. `\/opt\/homebrew\/bin\/node tools\/check-p07b-c-plan\.mjs/mu.test(sources["docs/status/P07B-C-C6-EVIDENCE.md"]),
+			schemas: sources["docs/status/P07B-C-C6-EVIDENCE.md"].includes(expectedC6EvidenceSchema) &&
+				sources["docs/status/P07B-C-C6-EVIDENCE.md"].includes(expectedC6SummarySchema),
+			stateMachine: [
+				"docs/HANDOFF_MODE_C.md", "docs/PROMPT_PACK.md", "docs/VERIFICATION.md",
+				"docs/status/P07B-C-C6M-RECEIPT-ADAPTER-MAINTENANCE.md",
+				"spec/verification/p07b-c-c6a-source-authority.json",
+			].every((path) => sources["docs/STATE_MACHINES.md"].includes(`\`${path}\``)) &&
+				sources["docs/STATE_MACHINES.md"].includes("may not edit C6 capture/evidence artifacts"),
+			verification: sources["docs/VERIFICATION.md"].includes("Exactly two intentional callers use the no-argument checker") &&
+				sources["docs/VERIFICATION.md"].includes("The current roster is exactly 65 stages") &&
+				sources["docs/VERIFICATION.md"].includes("C6A contains neither receipt projection nor self-grade"),
+		},
+		toolTopology: {
+			architectureImportsLibrary: architectureImports.includes("./p07b-c/final-evidence-lib.mjs") &&
+				!architectureImports.includes("./p07b-c/check-final-evidence.mjs"),
+			byteExactProfileOutput: runBufferBody.includes("encoding: null") &&
+				runProfileBody.includes("const output = runBuffer(") &&
+				runProfileBody.includes("validateGoJSONTranscript(profileName, output)"),
+			evidenceEntryImportsBoth: evidenceEntryImports.includes("../check-p07b-c-architecture.mjs") &&
+				evidenceEntryImports.includes("./final-evidence-lib.mjs"),
+			gitReplaceSafe: evidenceToolSource.includes('["--no-replace-objects", ...args]') &&
+				evidenceToolSource.includes('GIT_NO_REPLACE_OBJECTS: "1"'),
+			libraryIsPure: !evidenceLibraryImports.includes("../check-p07b-c-architecture.mjs") &&
+				!evidenceLibraryImports.includes("./check-final-evidence.mjs"),
+			nonrecursiveC6: c6BoundaryBody.length > 0 && !c6BoundaryBody.includes("runInheritedB") &&
+				c6BoundaryBody.includes("collectC6Facts") && c6BoundaryBody.includes("runIntersection"),
+			profileAuthorityIsPure: profileAuthorityImports.length === 0 &&
+				evidenceLibraryImports.includes("./profile-authority.mjs"),
+			transactionalArtifacts: evidenceToolSource.includes("artifactTransactionSchema") &&
+				evidenceToolSource.includes("acquireArtifactLock(capturesRoot, root)") &&
+				evidenceToolSource.includes('new_generation: transaction.newGeneration') &&
+				evidenceToolSource.includes("artifactCleanupPaths(capturesRoot, journal)") &&
+				evidenceToolSource.includes("requireNoForeignTransactionResidue(capturesRoot, journal, cleanup)") &&
+				evidenceToolSource.includes('P07B_C6_ARTIFACT_TRANSACTION_RESIDUE') &&
+				evidenceToolSource.includes('".p07b-c.stage-foreign-", ".p07b-c.backup-foreign-"') &&
+				evidenceToolSource.includes("removeArtifactGenerationResumable(") &&
+				evidenceToolSource.includes('artifactJournalRecord("prepared", transaction)') &&
+				evidenceToolSource.includes('artifactJournalRecord("backed_up", transaction)') &&
+				evidenceToolSource.includes('artifactJournalRecord("activated", transaction)') &&
+				evidenceToolSource.includes('artifactJournalRecord("committed", transaction)') &&
+				evidenceToolSource.includes("recoverArtifactTransaction(capturesRoot)") &&
+				evidenceToolSource.includes("await beforeActivate()") &&
+				evidenceToolSource.includes('stage, newGeneration, "P07B_C6_ARTIFACT_STAGE_PREACTIVATION"') &&
+				evidenceToolSource.includes('captureRoot, newGeneration, "P07B_C6_ARTIFACT_ACTIVE_POSTACTIVATION"') &&
+				evidenceToolSource.includes('join(root, "no-prior-generation")') &&
+				evidenceToolSource.includes('P07B_C6_SELFTEST_FIRST_GENERATION_RETAINED') &&
+				evidenceToolSource.includes("await validateActive()") &&
+				evidenceToolSource.includes("await syncPath(capturesRoot)"),
+		},
+	});
+}
+
 function violation(code, detail) { return Object.freeze({ code, detail }); }
 
 export function validateC2Facts(facts) {
@@ -4540,6 +5111,287 @@ export function validateC5Facts(facts) {
 	return problems;
 }
 
+export function validateC6Facts(facts) {
+	const problems = [];
+	const add = (code, detail) => problems.push(violation(code, detail));
+	const exactKeys = (value, keys) => value && typeof value === "object" && !Array.isArray(value) &&
+		exact(Object.keys(value).sort(), [...keys].sort());
+
+	if (!Array.isArray(facts.c1Problems) || facts.c1Problems.length !== 0) {
+		add("P07B_C6_INHERITED_C1", JSON.stringify(facts.c1Problems));
+	}
+	if (!Array.isArray(facts.c5Problems) || facts.c5Problems.length !== 0) {
+		add("P07B_C6_INHERITED_C5", JSON.stringify(facts.c5Problems));
+	}
+	if (!exact(facts.directories, expectedC6DirectoryRosters)) {
+		add("P07B_C6_DIRECTORY_ROSTER", JSON.stringify(facts.directories));
+	}
+	const frozenTestkitValid = Array.isArray(facts.frozenC5VTestkitInputs) &&
+		facts.frozenC5VTestkitInputs.length === c6FrozenC5VTestkitInputs.length &&
+		facts.frozenC5VTestkitInputs.every((row, index) => {
+			const expected = c6FrozenC5VTestkitInputs[index];
+			return exactKeys(row, [
+				"byte_equal", "current_bytes", "current_mode", "current_sha256", "parent_blob", "parent_bytes",
+				"parent_mode", "parent_sha256", "path",
+			]) && row.path === expected.path && row.parent_blob === expected.blob && row.parent_mode === "100644" &&
+				row.current_mode === "100644" && row.byte_equal === true && Number.isSafeInteger(row.parent_bytes) &&
+				row.parent_bytes > 0 && row.current_bytes === row.parent_bytes && row.current_sha256 === row.parent_sha256 &&
+				/^[0-9a-f]{64}$/u.test(row.parent_sha256);
+		});
+	if (!frozenTestkitValid) {
+		add("P07B_C6_FROZEN_C5V_TESTKIT_INPUT", JSON.stringify(facts.frozenC5VTestkitInputs));
+	}
+	const expectedDocumentEpochs = c6DocumentEpochPaths.map((path) => ({
+		c6a_receipt: "ABSENT",
+		document_epoch: "C6A_SOURCE_CANDIDATE",
+		operational_cursor: "HANDOFF_RECEIPT_PHASE_CAPSULE",
+		path,
+		product_boundary: "C5_SEALED",
+		verifier_maintenance_boundary: "C5V_SEALED",
+	}));
+	if (!exact(facts.documentEpochs, expectedDocumentEpochs)) {
+		add("P07B_C6_DOCUMENT_AUTHORITY", JSON.stringify(facts.documentEpochs));
+	}
+	const expectedLibraryAuthority = {
+		artifactPaths: expectedC6ArtifactPaths,
+		absentSourceInputs: c6AbsentSourceInputPaths,
+		environmentContract: c6ExecutionEnvironmentContract,
+		evidenceSchema: expectedC6EvidenceSchema,
+		goListArguments: c6GoListArguments,
+		parent: expectedC6ParentEvidence,
+		profileDescriptors: c6ProfileDescriptors,
+		selectedProfiles: expectedC6SelectedProfiles,
+		sourceInputComputedDigest: expectedC6SourceInputPathDigest,
+		sourceInputPathDigest: expectedC6SourceInputPathDigest,
+		sourceInputs: expectedC6SourceInputPaths,
+		summarySchema: expectedC6SummarySchema,
+		widths: expectedC6Widths,
+	};
+	if (!exact(facts.libraryAuthority, expectedLibraryAuthority)) {
+		add("P07B_C6_LIBRARY_AUTHORITY", JSON.stringify(facts.libraryAuthority));
+	}
+
+	let evidenceValid = facts.evidenceError === null && exactKeys(facts.evidence, [
+		"admission_sha256", "artifact_state", "boundary", "didrun_findings", "documentation", "execution_authority",
+		"parent_evidence", "profile_runs", "schema_version", "source_closure", "source_inputs", "surfaces",
+	]) && facts.evidence.schema_version === expectedC6EvidenceSchema && facts.evidence.boundary === "C6A" &&
+		exact(facts.evidence.artifact_state, {
+			boundary: "C6A",
+			document_epoch: "C6A_SOURCE_CANDIDATE",
+			receipt: "ABSENT",
+			state: "UNRECEIPTED",
+		});
+	const evidence = facts.evidence;
+	if (evidenceValid) {
+		evidenceValid = Array.isArray(evidence.didrun_findings) &&
+			evidence.didrun_findings.length === c6DidrunBugIDs.length &&
+			exact(evidence.didrun_findings.map((entry) => entry?.id), c6DidrunBugIDs) &&
+			evidence.didrun_findings.every((entry) => exactKeys(entry, [
+				"effect", "id", "reference", "scope", "severity", "status", "summary",
+			]) && entry.status === "OPEN" && entry.severity === "UNASSESSED" &&
+				[entry.effect, entry.scope, entry.summary].every((value) => typeof value === "string" &&
+					value.length > 0 && value.length <= 512 && !/[\u0000-\u001f\u007f]/u.test(value)) &&
+				entry.reference.startsWith(`docs/status/DIDRUN_BUGS.md#${entry.id.toLowerCase()}--`));
+	}
+	if (evidenceValid) {
+		evidenceValid = exact(evidence.documentation, {
+			render_grammar: expectedC6RenderGrammar,
+			source: "canonical expert evidence plus derived C6A summary",
+			widths: expectedC6Widths,
+		});
+	}
+	const parentEvidence = evidence?.parent_evidence;
+	if (evidenceValid) {
+			evidenceValid = exactKeys(parentEvidence, [
+				"archive", "claims", "commit", "html", "note_blob", "note_body_sha256", "parent", "secrets_override",
+				"strict_grade_projection", "subject", "tree",
+		]) && exact(parentEvidence.archive, {
+			file_count: expectedC6ParentEvidence.archive_file_count,
+			manifest_sha256: expectedC6ParentEvidence.archive_manifest_sha256,
+			object_count: expectedC6ParentEvidence.archive_object_count,
+			path: expectedC6ParentEvidence.ledger_path,
+			session_event_count: expectedC6ParentEvidence.archive_session_event_count,
+			total_bytes: expectedC6ParentEvidence.archive_total_bytes,
+		}) && exact(parentEvidence.html, {
+			bytes: expectedC6ParentEvidence.html_bytes,
+			path: expectedC6ParentEvidence.html_path,
+			sha256: expectedC6ParentEvidence.html_sha256,
+		}) && parentEvidence.commit === expectedC6ParentEvidence.commit &&
+			parentEvidence.note_blob === expectedC6ParentEvidence.note_blob &&
+			parentEvidence.note_body_sha256 === expectedC6ParentEvidence.note_body_sha256 &&
+			parentEvidence.parent === expectedC6ParentEvidence.parent &&
+			parentEvidence.subject === expectedC6ParentEvidence.subject &&
+			parentEvidence.tree === expectedC6ParentEvidence.tree &&
+				parentEvidence.secrets_override === true &&
+				parentEvidence.strict_grade_projection === "ALL_TREE_EXACT_FROM_SEALED_NOTE" &&
+			Array.isArray(parentEvidence.claims) && parentEvidence.claims.length === expectedC6ParentClaims.length &&
+			parentEvidence.claims.every((claim, index) => exact(claim, {
+				grade: "TREE-EXACT",
+				label: expectedC6ParentClaims[index][0],
+				supporting_event_index: index,
+				type: expectedC6ParentClaims[index][1],
+			}));
+	}
+	const executionAuthority = evidence?.execution_authority;
+	const authorityTools = executionAuthority?.tools;
+	if (evidenceValid) {
+		evidenceValid = exactKeys(executionAuthority, ["authority_scope", "environment_contract", "go_env", "tools", "version_output"]) &&
+			executionAuthority.authority_scope === "FRONT_DOOR_EXECUTABLES_AND_DECLARED_GO_ENVIRONMENT_ONLY" &&
+			exact(executionAuthority.environment_contract, c6ExecutionEnvironmentContract) &&
+			exactKeys(executionAuthority.go_env, ["goarch", "goos", "goroot", "goversion"]) &&
+			executionAuthority.go_env.goarch === "arm64" && executionAuthority.go_env.goos === "darwin" &&
+			typeof executionAuthority.go_env.goroot === "string" && isAbsolute(executionAuthority.go_env.goroot) &&
+			/^go1\.[0-9]+(?:\.[0-9]+)?(?:[a-z0-9.-]+)?$/u.test(executionAuthority.go_env.goversion) &&
+			executionAuthority.version_output ===
+				`go version ${executionAuthority.go_env.goversion} darwin/arm64` &&
+			Array.isArray(authorityTools) && exact(authorityTools.map((tool) => tool?.name), ["cc", "cxx", "git", "go", "node", "sh"]) &&
+			authorityTools.every((tool) => exactKeys(tool, ["bytes", "name", "path", "sha256"]) &&
+				Number.isSafeInteger(tool.bytes) && tool.bytes > 0 && typeof tool.path === "string" &&
+				isAbsolute(tool.path) && /^[0-9a-f]{64}$/u.test(tool.sha256));
+	}
+	const sourceClosure = evidence?.source_closure;
+	if (evidenceValid) {
+		evidenceValid = exact(sourceClosure, {
+			absent_paths: ["go.sum"],
+			derivation: "hermetic-go-list-deps-test-json-plus-explicit-runtime-inputs/v1",
+			go_list_arguments: [...c6GoListArguments],
+			packages: [...expectedC6SourceClosurePackages],
+			path_count: expectedC6SourceInputPaths.length,
+			paths_sha256: expectedC6SourceInputPathDigest,
+		}) && evidence.admission_sha256 === sha256(Buffer.from(`${JSON.stringify({
+			execution_authority: executionAuthority,
+			parent_evidence: parentEvidence,
+			profile_descriptors: c6ProfileDescriptors,
+			source_closure: sourceClosure,
+			source_inputs: evidence.source_inputs,
+		})}\n`, "utf8"));
+	}
+	const expectedProfileDescriptors = expectedC6SelectedProfiles.map(goJSONProfileDescriptor);
+	if (evidenceValid) {
+		const goTool = authorityTools.find((tool) => tool.name === "go");
+		evidenceValid = Array.isArray(evidence.profile_runs) &&
+			exact(expectedProfileDescriptors, c6ProfileDescriptors) &&
+			evidence.profile_runs.length === expectedProfileDescriptors.length &&
+			evidence.profile_runs.every((profile, index) => {
+				const descriptor = expectedProfileDescriptors[index];
+				if (!exactKeys(profile, [
+					"arguments", "arguments_sha256", "environment_contract", "executable", "invocation", "invocation_sha256",
+					"passed", "profile", "replay_policy", "result", "skipped", "targets", "working_directory",
+				]) || profile.profile !== descriptor.name || !exact(profile.arguments, descriptor.arguments) ||
+					profile.arguments_sha256 !== sha256(Buffer.from(`${JSON.stringify(profile.arguments)}\n`, "utf8")) ||
+					profile.executable !== goTool.path || !exact(profile.invocation, [profile.executable, ...profile.arguments]) ||
+					profile.invocation_sha256 !== sha256(Buffer.from(`${JSON.stringify(profile.invocation)}\n`, "utf8")) ||
+					!exact(profile.environment_contract, c6ExecutionEnvironmentContract) ||
+					profile.working_directory !== "repository-root" ||
+					!exact(profile.replay_policy, {
+						copy_paste_safe: false,
+						requires_environment_contract: true,
+						standalone_argv: false,
+					}) ||
+					profile.passed !== descriptor.targets.reduce((sum, target) => sum + target.pass.length, 0) ||
+					profile.skipped !== 0 || profile.result !== "PASSED_EXACT_ROSTER" ||
+					!Array.isArray(profile.targets) || profile.targets.length !== descriptor.targets.length) return false;
+				return profile.targets.every((target, targetIndex) => {
+					const expectedTarget = descriptor.targets[targetIndex];
+					const adapter = expectedTarget.packageArgument === "./testkit/contractexec/cli" ? "CLI" :
+						expectedTarget.packageArgument === "./internal/emit/node/parity" ? "NODE" : "HTTP";
+					return exact(target, {
+						adapter,
+						package_argument: expectedTarget.packageArgument,
+						package_path: expectedTarget.packagePath,
+						tests: sorted(expectedTarget.pass),
+					});
+				});
+			});
+	}
+	if (evidenceValid) {
+		evidenceValid = Array.isArray(evidence.source_inputs) &&
+			exact(evidence.source_inputs.map((entry) => entry?.path), expectedC6SourceInputPaths) &&
+			evidence.source_inputs.every((entry) => exactKeys(entry, ["bytes", "mode", "path", "sha256"]) &&
+				Number.isSafeInteger(entry.bytes) && entry.bytes > 0 && entry.bytes <= 32 * 1024 * 1024 &&
+				entry.mode === "100644" && /^[0-9a-f]{64}$/u.test(entry.sha256));
+	}
+	if (evidenceValid) {
+		evidenceValid = facts.frozenC5VTestkitInputs.every((frozen) => {
+			const descriptor = evidence.source_inputs.find((entry) => entry.path === frozen.path);
+			return descriptor !== undefined && exact(descriptor, {
+				bytes: frozen.parent_bytes,
+				mode: frozen.parent_mode,
+				path: frozen.path,
+				sha256: frozen.parent_sha256,
+			});
+		});
+	}
+	const expectedSurfaces = [
+		{ adapter: "CLI", conclusion: "PHYSICAL_CLI_CLOSURE_EXERCISED", profile: "c5-cross-profile-parity", test_count: 4 },
+		{ adapter: "HTTP", conclusion: "PHYSICAL_HTTP_BEHAVIOR_AND_PARITY_EXERCISED", profile: "c5-http-behavior+c5-cross-profile-parity", test_count: 5 },
+		{ adapter: "NODE", conclusion: "GENERATED_NODE_PARITY_EXERCISED", profile: "c5-cross-profile-parity", test_count: 17 },
+	];
+	if (evidenceValid) evidenceValid = exact(evidence.surfaces, expectedSurfaces);
+	const expectedArtifactRoster = Object.values(expectedC6ArtifactPaths);
+	if (evidenceValid) {
+		evidenceValid = Array.isArray(facts.evidenceDescriptors) &&
+			exact(facts.evidenceDescriptors.map((entry) => entry?.path), expectedArtifactRoster) &&
+			facts.evidenceDescriptors.every((entry) => exactKeys(entry, ["bytes", "path", "sha256"]) &&
+				Number.isSafeInteger(entry.bytes) && entry.bytes > 0 && /^[0-9a-f]{64}$/u.test(entry.sha256));
+	}
+	if (!evidenceValid) {
+		add("P07B_C6_EVIDENCE_DOCUMENT", facts.evidenceError ?? JSON.stringify({
+			boundary: evidence?.boundary,
+			descriptors: facts.evidenceDescriptors,
+			schema_version: evidence?.schema_version,
+		}));
+	}
+
+	const summary = facts.summary;
+	const expectedNonclaims = [
+		"adoption or market demand", "human comprehension or taste", "maintainership",
+		"production hardening or cross-platform support", "security review or hostile containment",
+	];
+	const summaryValid = exactKeys(summary, [
+		"didrun_bugs", "nonclaims", "permanent_negatives", "private_evidence", "schema_version", "timings",
+	]) && summary.schema_version === expectedC6SummarySchema && exact(summary.nonclaims, expectedNonclaims) &&
+		Array.isArray(summary.didrun_bugs) && summary.didrun_bugs.length === c6DidrunBugIDs.length &&
+		exact(summary.didrun_bugs.map((entry) => entry?.id), c6DidrunBugIDs) &&
+		summary.didrun_bugs.every((entry) => exactKeys(entry, ["id", "status"]) && entry.status === "OPEN") &&
+		exact(summary.permanent_negatives, [{
+			evidence: ".didrun-history/p07b-c-c5v-final-failed-20260731-operator-terminated/session.log retains event 2 with exit -15",
+			id: "C5V_FINAL_ATTEMPT_OPERATOR_TERMINATED",
+		}]) && exact(summary.private_evidence, {
+			availability: "UNAVAILABLE",
+			declared_blobs: 0,
+			declared_bytes: 0,
+			note: "C6A source-era state is UNRECEIPTED. It declares no dedicated private capture blobs; tracked captures are sanitized and confidentiality is not established.",
+		}) && Array.isArray(summary.timings) && summary.timings.length === 3 &&
+		exact(summary.timings.map((entry) => entry?.label), [
+			"sealed-c5v/cumulative-verification/pass-1",
+			"sealed-c5v/cumulative-verification/pass-2",
+			"sealed-c5v/cumulative-verification/pass-3",
+		]) && summary.timings.every((entry) => exactKeys(entry, ["elapsed_ms", "label"]) &&
+			Number.isSafeInteger(entry.elapsed_ms) && entry.elapsed_ms > 0 && entry.elapsed_ms <= 86_400_000);
+	if (!summaryValid) add("P07B_C6_SUMMARY_DOCUMENT", JSON.stringify(summary));
+
+	if (!exact(Object.keys(facts.status ?? {}).sort(), [
+		"artifacts", "boundary", "bugs", "handoff", "nonclaims", "runbookAuthority", "schemas", "stateMachine", "verification",
+	]) ||
+		!Object.values(facts.status).every((value) => value === true)) {
+		add("P07B_C6_STATUS", JSON.stringify(facts.status));
+	}
+	if (!exact(Object.keys(facts.toolTopology ?? {}).sort(), [
+		"architectureImportsLibrary", "byteExactProfileOutput", "evidenceEntryImportsBoth", "gitReplaceSafe",
+		"libraryIsPure", "nonrecursiveC6", "profileAuthorityIsPure", "transactionalArtifacts",
+	]) || !Object.values(facts.toolTopology).every((value) => value === true)) {
+		add("P07B_C6_TOOL_TOPOLOGY", JSON.stringify(facts.toolTopology));
+	}
+	const expectedClaimMap = expectedC6Claims.map(([label, type], index) => ({
+		number: index + 1, label, type, grade: "UNRECEIPTED",
+	}));
+	if (!exact(facts.claimMap?.status, expectedClaimMap) || !exact(facts.claimMap?.runbook, expectedClaimMap)) {
+		add("P07B_C6_CLAIM_MAP", JSON.stringify(facts.claimMap));
+	}
+	return problems;
+}
+
 export function validateFacts(facts) {
 	const problems = [];
 	const add = (code, detail) => problems.push(violation(code, detail));
@@ -4671,6 +5523,18 @@ async function runIntersection(facts) {
 	if (!exact(before, after)) throw new ArchitectureError("P07B_C1_SNAPSHOT_CHANGED", "model/schema/example inputs changed during read-only checks");
 }
 
+async function runC1Boundary(marker = "P07B-C C1 architecture boundary OK") {
+	const facts = await collectFacts();
+	const problems = validateFacts(facts);
+	if (problems.length > 0) {
+		for (const problem of problems) process.stderr.write(`${problem.code}: ${problem.detail}\n`);
+		process.exitCode = 1;
+		return;
+	}
+	await runIntersection(facts);
+	process.stdout.write(`${marker}\n`);
+}
+
 function runInheritedB() {
 	const result = spawnSync(process.execPath, [resolve(repositoryRoot, "tools/check-p07b-b-architecture.mjs")], {
 		cwd: repositoryRoot,
@@ -4769,6 +5633,37 @@ async function runC5Boundary() {
 	process.stdout.write("P07B-C C5 cumulative architecture boundary OK\n");
 }
 
+async function runC6Boundary(marker = "P07B-C C6 cumulative architecture boundary OK") {
+	const before = await snapshot(c6BoundarySnapshotPaths);
+	const c1Facts = await collectFacts();
+	const c1Problems = validateFacts(c1Facts);
+	if (c1Problems.length > 0) {
+		for (const problem of c1Problems) process.stderr.write(`${problem.code}: ${problem.detail}\n`);
+		process.exitCode = 1;
+		return;
+	}
+	await runIntersection(c1Facts);
+	const c5Facts = await collectC5Facts();
+	const facts = await collectC6Facts({ c1Facts, c5Facts });
+	const problems = validateC6Facts(facts);
+	if (problems.length > 0) {
+		for (const problem of problems) process.stderr.write(`${problem.code}: ${problem.detail}\n`);
+		process.exitCode = 1;
+		return;
+	}
+	const after = await snapshot(c6BoundarySnapshotPaths);
+	const directoriesAfter = Object.fromEntries(await Promise.all(
+		Object.keys(expectedC6DirectoryRosters).map(async (path) => [path, await directDirectoryRoster(path)]),
+	));
+	if (!exact(before, after) || !exact(facts.directories, directoriesAfter)) {
+		throw new ArchitectureError(
+			"P07B_C6_SNAPSHOT_CHANGED",
+			"C6 reviewed inputs or direct directory rosters changed during cumulative checks",
+		);
+	}
+	process.stdout.write(`${marker}\n`);
+}
+
 async function main() {
 	if (process.argv[2] === "--assert-go-json") {
 		if (process.argv.length !== 4) {
@@ -4791,6 +5686,11 @@ async function main() {
 		process.stdout.write(`P07B-C ${phase} Go JSON target execution OK (${result.profile}: ${result.passed} passed, ${result.skipped} skipped)\n`);
 		return;
 	}
+	if (process.argv[2] === "--c1") {
+		if (process.argv.length !== 3) throw new ArchitectureError("P07B_C1_ARGUMENTS", "--c1 accepts no other arguments");
+		await runC1Boundary();
+		return;
+	}
 	if (process.argv[2] === "--c2") {
 		if (process.argv.length !== 3) throw new ArchitectureError("P07B_C2_ARGUMENTS", "--c2 accepts no other arguments");
 		await runC2Boundary();
@@ -4811,16 +5711,13 @@ async function main() {
 		await runC5Boundary();
 		return;
 	}
-	if (process.argv.length !== 2) throw new ArchitectureError("P07B_C1_ARGUMENTS", "no arguments accepted");
-	const facts = await collectFacts();
-	const problems = validateFacts(facts);
-	if (problems.length > 0) {
-		for (const problem of problems) process.stderr.write(`${problem.code}: ${problem.detail}\n`);
-		process.exitCode = 1;
+	if (process.argv[2] === "--c6") {
+		if (process.argv.length !== 3) throw new ArchitectureError("P07B_C6_ARGUMENTS", "--c6 accepts no other arguments");
+		await runC6Boundary();
 		return;
 	}
-	await runIntersection(facts);
-	process.stdout.write("P07B-C C1 architecture boundary OK\n");
+	if (process.argv.length !== 2) throw new ArchitectureError("P07B_C1_ARGUMENTS", "no arguments accepted");
+	await runC6Boundary("P07B-C C1 architecture boundary OK");
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === checkerPath) {

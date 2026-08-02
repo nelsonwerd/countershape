@@ -2,11 +2,19 @@
 
 - **Working name:** Countershape (package, domain, trademark, and legal clearance not performed)
 - **Mode:** open-source-first experimental infrastructure
-- **State:** deep dive and adversarial red team complete; P07B-C through C3S is sealed and strict-clean; C3 exact-target publication is active and remains `UNRECEIPTED`
-- **Last updated:** 2026-07-19
+- **State:** deep dive and adversarial red team complete; this brief is frozen at the C6A source-candidate epoch, with P07B-C product capability through C5 and verifier-preflight maintenance through C5V sealed and strict-clean and the C6A receipt absent
+- **Last updated:** 2026-07-31
 - **Founder persona:** Soren Vale
 - **Confidence:** 8/10 in the truth kernel; 6/10 in the bounded reference instrument; 3/10 in review compression; 3/10 in adoption
 - **Semantic authority:** `docs/SEMANTICS.md` and `docs/PROJECTION_ALGEBRA.md` control structural identity, measurement/admission, and preservation semantics
+
+<!-- P07B-C-C6A-DOC-EPOCH:START -->
+- **Product boundary:** `C5_SEALED`
+- **Verifier-maintenance boundary:** `C5V_SEALED`
+- **Document epoch:** `C6A_SOURCE_CANDIDATE`
+- **C6A receipt at this epoch:** `ABSENT`
+- **Operational cursor:** `HANDOFF_RECEIPT_PHASE_CAPSULE`
+<!-- P07B-C-C6A-DOC-EPOCH:END -->
 
 ## Locked concept
 
@@ -56,6 +64,12 @@ On a named Darwin reference machine, each checked-in dependency-free study must 
 14. current conformance that distinguishes eligible contradiction from an ineligible harness execution without advancing the terminal study head.
 
 The 15-minute metric applies only to the two reference studies. Imported repositories receive explicit trial, wall, byte, and setup budgets and no latency, comparability, or success guarantee.
+
+### Locked C6A evidence pass bar
+
+C6A is a heavy evidence/DX boundary over the implemented C1–C5 system, not another product expansion. It must close an exact nonrecursive cumulative architecture checker, a 65-stage current verifier, canonical expert evidence plus a canonical summary, and deterministic ASCII diagnostics at 60, 80, and 120 columns. The evidence must independently bind the exact sealed C5V commit/tree/note/report/ledger, the fixed source-input roster, and 26 exact tests across the selected CLI, HTTP, and generated-Node profiles.
+
+Before C6A can seal, the diagnostic and JSON surfaces require three distinct build/see/exercise/critique/rebuild passes and a blind different-model review over sanitized captures. Every Medium-or-higher critic finding must be repaired or explicitly dispositioned. Deterministic commands may receive didrun receipts; model judgment remains `UNRECEIPTED` and carries no semantic authority. C6A adds no product CLI ABI, external-provider call, P08 surface, product Go package, or self-receipt.
 
 ### Human success metric—unvalidated
 
@@ -439,7 +453,7 @@ Each unit is separately verified, claimed, committed, sealed, and gated on `NO_C
 10. **U6c/P07B-A2.1 — compilation authority (sealed):** current-revalidated ruling snapshot, exact source/Choicepoint/confirmation/proof joins, selected-tuple partition revalidation, and one sealed preparation with a private authority-narrowed input; no generated files or store writes.
 11. **U6c/P07B-A2.2 — recoverable compiler (sealed):** deterministic recoverable six-file bundle, strict parser, fixed Node-core runtime assets, Go/Node raw-wire corpus, physical generated-contract evidence, and bounded recovery/fuzz/architecture gates; no residue or product materializer.
 12. **U6c/P07B-B — terminal publication/materialization (sealed source):** opaque node-issued publication, stale-safe terminal residue, full predecessor restart, and retryable exact Darwin/arm64/cgo six-file publication; no execution target or classification.
-13. **U6c/P07B-C — standalone execution (through C3S sealed; C3 exact-target publication active):** strict three-object semantics; exact UUID-profile prerequisite and separately receipted typed nonhead publication; a private boot-session interlock plus intent-only serialized cooperative at-most-once spawn admission; direct single-target Git and Node authority; bounded finalized run with separate process and five-domain standalone axes; classifier-profile-bound immutable execution; no semantic execution head or process resume.
+13. **U6c/P07B-C — standalone execution and cumulative evidence (frozen historical wording: through C3S sealed; C3 exact-target publication active; current C5/C5V sealed; C6A source-era candidate):** strict three-object semantics; exact UUID-profile prerequisite and separately receipted typed nonhead publication; a private boot-session interlock plus intent-only serialized cooperative at-most-once spawn admission; direct single-target Git and Node authority; bounded finalized run with separate process and five-domain standalone axes; classifier-profile-bound immutable execution; and nonrecursive deterministic evidence over exact CLI, HTTP, generated-Node, architecture, and documentation surfaces. No semantic execution head, process resume, product CLI ABI, or C6A self-receipt.
 14. **U7 — complete CLI and reference studies:** safe next actions, both end-to-end proofs, allow-many, custom none-conforms, reject/defer, three clean reproductions, named-machine timings.
 15. **U8 — secure decision bench:** authenticated loopback API, complete state renderer, 1440/375 flows, at least three full visual passes, Playwright/axe/manual checks, and a real different-model screenshot critic.
 16. **U9 — local export, packaging, and hardening:** minimized evidence export, embedded assets/single binary, docs/license/contributor path, adversarial suite, performance/limitations ledger, final strict verify, didrun HTML evidence, receipts handoff.
@@ -502,10 +516,12 @@ didrun references remain opaque verbatim receipt grades associated with their ex
 - Regular/executable Git-object materialization and fresh Darwin fixture attempts have sealed U2 receipts for the named platform and fixtures.
 - The shared typed truth kernel has sealed CLI and HTTP adapter receipts from U3 and U4 without HTTP coercion into generic comparison semantics.
 - Sealed A1/A2 receipts cover byte-complete source reconstruction, exact current-ruling/source/confirmation joins, a deterministic recoverable six-file bundle, and Go/Node agreement for the exercised semantic corpus and runtime matrix.
+- Sealed C4 and C5 receipts cover the exact curated CLI and HTTP physical execution slices; sealed C5V receipts cover verifier-preflight hygiene. Those named-tree results do not promote the system to production readiness or arbitrary-repository support.
 
 ### Strong engineering inferences still to test
 
-- C3 can rejoin the sealed inert C1/C2 semantics to exact direct Git materialization, fresh attempt, normalized Darwin boot-session UUID, and admitted Node runtime without creating an alternate authority path; the required C3P source and receipt descendant are already sealed, while C3 itself remains an unreceipted engineering inference.
+- Frozen historical anchor: C3 can rejoin the sealed inert C1/C2 semantics to exact direct Git materialization, fresh attempt, normalized Darwin boot-session UUID, and admitted Node runtime without creating an alternate authority path. C3 has since sealed; the sentence is retained as the earlier pre-seal inference, not current state.
+- C6A's deterministic evidence architecture can make the exact named implementation surface easier to audit without becoming a product CLI or allowing documentation, generated captures, or critic judgment to author product semantics. This remains `UNRECEIPTED` until C6A seals and later receipt boundaries reconcile it.
 - A designed human-facing blind-first selected-field UX can make the now-implemented semantic session comprehensible without leaking candidate identity.
 
 ### Unvalidated technical/product/market bets
@@ -524,3 +540,5 @@ didrun references remain opaque verbatim receipt grades associated with their ex
 ## Handoff state
 
 **U0–U6, P07A, P07B-A1, P07B-A2.1, accepted corrected P07B-A2.2, the complete P07B-B boundary, both P07B-C C0 receipt boundaries, and P07B-C C1 source are sealed and strict-clean.** A1 source commit `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3` remains the source/process prerequisite; accepted A2.2 source is `6bf33350944dcdd56a4ceaa70f1d0836203ffb1f`, followed by receipt-document boundary `8f7663e2d29b63b1bb3ddca0a18bd5cfcf0fe4b1` at tree `e30957e807c9e8145a286cbb97f7cec309f7897c`. P07B-B source is `eb06bdcf18f8e14db1257e73733afdc05cac045e`, tree `d95c907754f3347bae885a64c98b30ad1ea00256`, with `16/16` source claims; final handoff commit `464e47adbf7f4497dfafa89938a9539239ffd41b` is independently strict-clean with its matching live ledger and exact HTML. P07B-C C0a source commit `1c6d9fdef339314bfcb99d7d53f3a7c5040e5020`, tree `97574c4ef3f967a1194b2ebdeed246a77efabfc7`, is reconciled by strict-clean C0b commit `47044e95f405b7252959415adb1aa0dbea8045ab`, tree `d0b30300c6dd80eea95583e9b97cd819a6481f4a`. C1 source commit `2fceacecbacb89fd7650f1570b2af33e6ea25ed3`, tree `573fcd0b5548f9f7368493afe801a4bbd2cc9a34`, is note-present and strict-clean; C2 admission requires a separately sealed C1B boundary that binds that existing source without naming or grading itself. No C1 fact implies store, runtime, process, or product authority. `REFINE` remains a valid semantic noncompilable DecisionRecord but durable promotion refuses it without object publication or head mutation.
+
+**C6A source-era handoff snapshot:** at this document epoch, the complete P07B-C lineage through product boundary C5 and verifier-preflight child C5V is sealed and strict-clean. Exact C5V is commit `e7f51c0a8fbd2d6fbe8eacb4a7f0d46f010af7ba`, tree `65bdfc39b48c3b9b1b832a12cc9be5e0083ea5c4`, with 12/12 `TREE-EXACT` claims and strict exit `0`. C6A is its uncommitted `SOURCE_FULL` source candidate with subject `test: close P07B-C cumulative evidence`; its receipt state is `ABSENT` and every C6A grade is `UNRECEIPTED`. The locked scope is nonrecursive cumulative architecture, a 65-stage verifier, exact five-file evidence generation, three expert-surface passes, and one sanitized different-model critique. Later operational state belongs to the handoff receipt-phase capsule; C6M source-authority binding and C6B receipt reconciliation remain separate boundaries.

@@ -47,7 +47,7 @@ const authorityNames = Object.freeze(["go", "node", "git", "sh", "cc", "cxx"]);
 const sealedC4VHistoricalRosterDigest = "7cf294fcbe8247e7a4de2d8996fb6b960780a35d018a8d00069af15940f0efb8";
 const sealedC4HParentRosterDigest = "0fab61318d55314e3accaeabbaf56cc049aae5755f3c3f41d6a36eba1a6c7af5";
 const sealedCombinedC5RosterDigest = "3821722f937f647ec98f03170cf9efb1e9a51a98e63d361d38dae58ade9ffaed";
-const expectedRosterDigest = "9d9e308358e33c2c399646a047f676c47f634ef5e1e9900e34174466e8ae4c4a";
+const expectedRosterDigest = "30b641c24d6c38833746a141cc2e516a3598dde7adeab12b742aab96632cf1a7";
 const exactC5StepIDs = Object.freeze([
 	"architecture-p07b-c-c5",
 	"architecture-p07b-c-c5-selftest",
@@ -56,6 +56,10 @@ const exactC5StepIDs = Object.freeze([
 	"go-json-p07b-c-c5-scope-closure",
 	"go-json-p07b-c-c5-cross-profile-parity",
 	"go-json-p07b-c-c5-http-authority-race",
+]);
+const exactC6StepIDs = Object.freeze([
+	"architecture-p07b-c-c6",
+	"architecture-p07b-c-c6-selftest",
 ]);
 const exactExtendedChildTimeoutStepIDs = Object.freeze([
 	"architecture-p07b-c-c5",
@@ -113,7 +117,7 @@ function assertC5Roster(ids, sensitive, c5Sensitive) {
 	const positions = exactC5StepIDs.map((id) => ids.indexOf(id));
 	if (start !== ids.indexOf("go-json-p07b-c-c4-authority-race") + 1 ||
 		positions.some((position, index) => position !== start + index) ||
-		ids[start + exactC5StepIDs.length] !== "architecture-p07b-c-plan-selftest") {
+		ids[start + exactC5StepIDs.length] !== exactC6StepIDs[0]) {
 		fail("VERIFY_SELFTEST_C5_BLOCK_CONTIGUITY", ids.join(","));
 	}
 	if (JSON.stringify(sensitive) !== JSON.stringify(exactInheritedSensitivePackages)) {
@@ -128,7 +132,30 @@ function assertC5Roster(ids, sensitive, c5Sensitive) {
 		ids[c5SensitiveRow + 1] !== "go-package-partition-revalidation") {
 		fail("VERIFY_SELFTEST_SENSITIVE_ROW_ADJACENCY", ids.join(","));
 	}
-	if (ids.length !== 63) fail("VERIFY_SELFTEST_CURRENT_STEP_COUNT", String(ids.length));
+}
+
+function assertC6Roster(ids) {
+	for (const id of exactC6StepIDs) {
+		if (ids.filter((candidate) => candidate === id).length > 1) {
+			fail("VERIFY_SELFTEST_C6_BLOCK_DUPLICATION", ids.join(","));
+		}
+	}
+	if (exactC6StepIDs.some((id) => !ids.includes(id))) {
+		fail("VERIFY_SELFTEST_C6_BLOCK_OMISSION", ids.join(","));
+	}
+	const c6Set = new Set(exactC6StepIDs);
+	const actualC6Order = ids.filter((id) => c6Set.has(id));
+	if (JSON.stringify(actualC6Order) !== JSON.stringify(exactC6StepIDs)) {
+		fail("VERIFY_SELFTEST_C6_BLOCK_ORDER", actualC6Order.join(","));
+	}
+	const start = ids.indexOf(exactC6StepIDs[0]);
+	const positions = exactC6StepIDs.map((id) => ids.indexOf(id));
+	if (start !== ids.indexOf(exactC5StepIDs.at(-1)) + 1 ||
+		positions.some((position, index) => position !== start + index) ||
+		ids[start + exactC6StepIDs.length] !== "architecture-p07b-c-plan-selftest") {
+		fail("VERIFY_SELFTEST_C6_BLOCK_CONTIGUITY", ids.join(","));
+	}
+	if (ids.length !== 65) fail("VERIFY_SELFTEST_CURRENT_STEP_COUNT", String(ids.length));
 }
 
 function assertFinderGuardRoster(ids) {
@@ -262,6 +289,7 @@ async function inspectRosters() {
 	const currentIDs = currentSteps.map((step) => step.id);
 	expect(new Set(currentIDs).size === currentIDs.length, "VERIFY_SELFTEST_DUPLICATE_CURRENT", currentIDs.join(","));
 	assertC5Roster(currentIDs, sensitiveGoPackages, c5SensitiveGoPackages);
+	assertC6Roster(currentIDs);
 	assertFinderGuardRoster(currentIDs);
 	expectPlainCode(
 		() => assertC5Roster(
@@ -287,6 +315,37 @@ async function inspectRosters() {
 	expectPlainCode(
 		() => assertC5Roster(interposedC5, sensitiveGoPackages, c5SensitiveGoPackages),
 		"VERIFY_SELFTEST_C5_BLOCK_CONTIGUITY",
+	);
+	expectPlainCode(
+		() => assertC6Roster(currentIDs.filter((id) => id !== exactC6StepIDs[1])),
+		"VERIFY_SELFTEST_C6_BLOCK_OMISSION",
+	);
+	const reorderedC6 = [...currentIDs];
+	const c6Index = reorderedC6.indexOf(exactC6StepIDs[0]);
+	const c6SelftestIndex = reorderedC6.indexOf(exactC6StepIDs[1]);
+	[reorderedC6[c6Index], reorderedC6[c6SelftestIndex]] =
+		[reorderedC6[c6SelftestIndex], reorderedC6[c6Index]];
+	expectPlainCode(
+		() => assertC6Roster(reorderedC6),
+		"VERIFY_SELFTEST_C6_BLOCK_ORDER",
+	);
+	const duplicatedC6 = [...currentIDs];
+	duplicatedC6.splice(duplicatedC6.indexOf(exactC6StepIDs[0]), 0, exactC6StepIDs[0]);
+	expectPlainCode(
+		() => assertC6Roster(duplicatedC6),
+		"VERIFY_SELFTEST_C6_BLOCK_DUPLICATION",
+	);
+	const interposedC6 = [...currentIDs];
+	const c6InterpositionIndex = interposedC6.indexOf("architecture-p07b-c-unit-scope-selftest");
+	const [c6Interposition] = interposedC6.splice(c6InterpositionIndex, 1);
+	interposedC6.splice(interposedC6.indexOf(exactC6StepIDs[1]), 0, c6Interposition);
+	expectPlainCode(
+		() => assertC6Roster(interposedC6),
+		"VERIFY_SELFTEST_C6_BLOCK_CONTIGUITY",
+	);
+	expectPlainCode(
+		() => assertC6Roster([...currentIDs, "unadmitted-extra-stage"]),
+		"VERIFY_SELFTEST_CURRENT_STEP_COUNT",
 	);
 	expectPlainCode(
 		() => assertC5Roster(currentIDs, sensitiveGoPackages.slice(1), c5SensitiveGoPackages),
@@ -483,12 +542,14 @@ async function inspectRosters() {
 		tool: "node",
 		tools: ["node", "go"],
 		path: "tools/check-p07b-c-architecture.mjs",
+		args: ["--c1"],
 		marker: "P07B-C C1 architecture boundary OK",
 	});
 	exactStep("architecture-p07b-c-c1-selftest", {
 		tool: "node",
 		tools: ["node", "go"],
 		path: "tools/check-p07b-c-architecture-selftest.mjs",
+		args: ["--c1"],
 		marker: "P07B-C C1 architecture defensive self-test OK",
 	});
 	exactStep("architecture-p07b-c-c2", {
@@ -578,6 +639,20 @@ async function inspectRosters() {
 			marker: `P07B-C C5 Go JSON target execution OK (${profile}: ${count} passed, 0 skipped)`,
 		});
 	}
+	exactStep("architecture-p07b-c-c6", {
+		tool: "node",
+		tools: ["node", "go", "git", "sh", "cc", "cxx"],
+		path: "tools/check-p07b-c-architecture.mjs",
+		args: ["--c6"],
+		marker: "P07B-C C6 cumulative architecture boundary OK",
+	});
+	exactStep("architecture-p07b-c-c6-selftest", {
+		tool: "node",
+		tools: ["node", "go", "git", "sh", "cc", "cxx"],
+		path: "tools/check-p07b-c-architecture-selftest.mjs",
+		args: ["--c6"],
+		marker: "P07B-C C6 cumulative architecture defensive self-test OK (11 metadata cases; 22 Go JSON lifecycle cases)",
+	});
 	exactStep("architecture-p07b-c-c3", {
 		tool: "node",
 		tools: ["node", "go", "git", "sh", "cc", "cxx"],
