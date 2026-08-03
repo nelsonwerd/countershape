@@ -1,5 +1,5 @@
 {
-  "schema_version": "countershape/p07b-c-unit-paths/v26",
+  "schema_version": "countershape/p07b-c-unit-paths/v28",
   "units": {
     "C0A": {
       "exact": [
@@ -1090,6 +1090,75 @@
       },
       "verification_profile": "SOURCE_FULL"
     },
+    "C6F": {
+      "exact": [
+        "docs/HANDOFF_MODE_C.md",
+        "docs/PROMPT_PACK.md",
+        "docs/VERIFICATION.md",
+        "docs/status/P07B-C-C6F-HISTORICAL-AUTHORITY-FIXTURE-MAINTENANCE.md",
+        "spec/verification/p07b-c-unit-paths.json",
+        "tools/check-p07b-b-architecture-selftest.mjs",
+        "tools/check-p07b-b-architecture.mjs",
+        "tools/check-p07b-c-plan.mjs",
+        "tools/check-p07b-c-unit-scope.mjs",
+        "tools/check-sealed-c6a-architecture.mjs",
+        "tools/verify-current-selftest.mjs",
+        "tools/verify-current.mjs"
+      ],
+      "parent": "C6A",
+      "prefixes": [],
+      "receipt_states": {
+        "C3P": "PRESENT",
+        "C3": "PRESENT",
+        "C6A": "ABSENT"
+      },
+      "transition_authority": {
+        "authentication": "NOT_ESTABLISHED",
+        "classification": "OWNER_AUTHORIZED_AUTHORITY_MIGRATION / DEFECT_REPAIR",
+        "predecessor_declaration": {
+          "kind": "NONE"
+        },
+        "provenance": {
+          "disclosure": "OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT",
+          "kind": "UNEVIDENCED"
+        },
+        "signed_authorization": "NOT_IMPLEMENTED",
+        "source": "OWNER_OUT_OF_BAND"
+      },
+      "verification_profile": "SOURCE_FULL"
+    },
+    "C6G": {
+      "exact": [
+        "docs/HANDOFF_MODE_C.md",
+        "docs/PROMPT_PACK.md",
+        "docs/VERIFICATION.md",
+        "docs/status/P07B-C-C6G-C3U-HISTORICAL-FIXTURE-MAINTENANCE.md",
+        "spec/verification/p07b-c-unit-paths.json",
+        "tools/check-p07b-c-plan.mjs",
+        "tools/check-p07b-c-unit-scope.mjs"
+      ],
+      "parent": "C6F",
+      "prefixes": [],
+      "receipt_states": {
+        "C3P": "PRESENT",
+        "C3": "PRESENT",
+        "C6A": "ABSENT"
+      },
+      "transition_authority": {
+        "authentication": "NOT_ESTABLISHED",
+        "classification": "OWNER_AUTHORIZED_AUTHORITY_MIGRATION / DEFECT_REPAIR",
+        "predecessor_declaration": {
+          "kind": "NONE"
+        },
+        "provenance": {
+          "disclosure": "OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT",
+          "kind": "UNEVIDENCED"
+        },
+        "signed_authorization": "NOT_IMPLEMENTED",
+        "source": "OWNER_OUT_OF_BAND"
+      },
+      "verification_profile": "SOURCE_FULL"
+    },
     "C6M": {
       "exact": [
         "docs/HANDOFF_MODE_C.md",
@@ -1098,7 +1167,7 @@
         "docs/status/P07B-C-C6M-RECEIPT-ADAPTER-MAINTENANCE.md",
         "spec/verification/p07b-c-c6a-source-authority.json"
       ],
-      "parent": "C6A",
+      "parent": "C6G",
       "prefixes": [],
       "receipt_states": {
         "C3P": "PRESENT",

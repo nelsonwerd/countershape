@@ -13,7 +13,9 @@ import {
 	futureSurfaceManifest,
 	futureSurfaceManifestBytes,
 	futureSymbolsInSource,
+	inheritedC1Arguments,
 	partitionFutureSymbols,
+	runInheritedC1,
 	validateFacts,
 	validateFutureSurfaceManifest,
 	validateFutureSurfaceState,
@@ -40,11 +42,12 @@ const historicalCases = Object.freeze([
 ]);
 const cases = Object.freeze([
 	...historicalCases,
+	Object.freeze({ id: "inherited-c1-explicit", code: "P07B_B_SELFTEST_INHERITED_C1_EXPLICIT" }),
 	Object.freeze({ id: "future-manifest-authority", code: "P07B_B_SELFTEST_FUTURE_MANIFEST_AUTHORITY" }),
 	Object.freeze({ id: "future-state-machine", code: "P07B_B_SELFTEST_FUTURE_STATE_MACHINE" }),
 ]);
 const expectedHistoricalRosterDigest = "d5745ef69f205bbe4ce445448e6189ba244adacc36fe3e44fdf56f9485100ef2";
-const expectedRosterDigest = "0b4443b82326816dc6ecbb809cab95e0a0dab8161bf906f718bfb5b67e2f44bf";
+const expectedRosterDigest = "8dec151002dd727fd327ec5d46b4e0fdcf060324bda52859d82589948527db4a";
 
 function rosterDigest(roster = cases) {
 	const hash = createHash("sha256");
@@ -60,6 +63,31 @@ function requireViolation(facts, code, id) {
 	const violations = validateFacts(facts);
 	if (!violations.some((violation) => violation.code === code)) {
 		fail("P07B_B_SELFTEST_FALSE_NEGATIVE", `${id}:${violations.map((entry) => entry.code).join(",")}`);
+	}
+}
+
+function requireExplicitInheritedC1() {
+	let observed;
+	const result = runInheritedC1((executable, args, options) => {
+		observed = { executable, args, options };
+		return {
+			status: 0,
+			signal: null,
+			error: undefined,
+			stdout: "P07B-C C1 architecture boundary OK\n",
+			stderr: "",
+		};
+	});
+	if (result !== true || observed?.executable !== process.execPath ||
+		JSON.stringify(observed?.args) !== JSON.stringify([checker.replace("check-p07b-b-architecture.mjs", "check-p07b-c-architecture.mjs"), ...inheritedC1Arguments]) ||
+		JSON.stringify(inheritedC1Arguments) !== JSON.stringify(["--c1"]) || !Object.isFrozen(inheritedC1Arguments) ||
+		observed?.options?.cwd !== root || observed.options.encoding !== "utf8" || observed.options.env !== process.env ||
+		observed.options.timeout !== 180_000 || observed.options.maxBuffer !== 32 * 1024 * 1024) {
+		fail("P07B_B_SELFTEST_INHERITED_C1_EXPLICIT", JSON.stringify({
+			executable: observed?.executable,
+			args: observed?.args,
+			cwd: observed?.options?.cwd,
+		}));
 	}
 }
 
@@ -368,6 +396,10 @@ async function main() {
 	}
 
 	for (const test of cases) {
+		if (test.id === "inherited-c1-explicit") {
+			requireExplicitInheritedC1();
+			continue;
+		}
 		if (test.id === "prefix-partition") {
 			requireExactC1PrefixPartition();
 			continue;

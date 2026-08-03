@@ -640,8 +640,13 @@ function runInheritedA2() {
 	}
 }
 
-function runInheritedC1() {
-	const result = spawnSync(process.execPath, [resolve(repositoryRoot, "tools/check-p07b-c-architecture.mjs")], {
+export const inheritedC1Arguments = Object.freeze(["--c1"]);
+
+export function runInheritedC1(spawn = spawnSync) {
+	const result = spawn(process.execPath, [
+		resolve(repositoryRoot, "tools/check-p07b-c-architecture.mjs"),
+		...inheritedC1Arguments,
+	], {
 		cwd: repositoryRoot, encoding: "utf8", timeout: 180_000, maxBuffer: 32 * 1024 * 1024, env: process.env,
 	});
 	if (result.error || result.signal || result.status !== 0 || result.stderr !== "" || result.stdout.trim() !== "P07B-C C1 architecture boundary OK") {

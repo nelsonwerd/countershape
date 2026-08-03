@@ -26,6 +26,10 @@ const exactExtendedChildTimeoutStepIDs = Object.freeze([
 	"architecture-p07b-c-c5",
 	"architecture-p07b-c-c5-selftest",
 ]);
+export const sealedC6AArchitectureStepIDs = Object.freeze([
+	"architecture-p07b-c-c6",
+	"architecture-p07b-c-c6-selftest",
+]);
 
 // Sealed C0 compatibility invariants now enforced by verify-runtime-authority.mjs:
 // GOFLAGS: "-mod=readonly -buildvcs=false -p=1" and review-first VERIFY_STALE_LOCK refusal.
@@ -305,12 +309,12 @@ export const currentSteps = Object.freeze([
 	}),
 	Object.freeze({
 		id: "architecture-p07b-c-c6", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
-		path: "tools/check-p07b-c-architecture.mjs", args: Object.freeze(["--c6"]),
+		path: "tools/check-sealed-c6a-architecture.mjs", args: Object.freeze(["--c6"]), rootAuthority: "SEALED_C6A",
 		marker: "P07B-C C6 cumulative architecture boundary OK",
 	}),
 	Object.freeze({
 		id: "architecture-p07b-c-c6-selftest", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
-		path: "tools/check-p07b-c-architecture-selftest.mjs", args: Object.freeze(["--c6"]),
+		path: "tools/check-sealed-c6a-architecture.mjs", args: Object.freeze(["--c6-selftest"]), rootAuthority: "SEALED_C6A",
 		marker: "P07B-C C6 cumulative architecture defensive self-test OK (11 metadata cases; 22 Go JSON lifecycle cases)",
 	}),
 	Object.freeze({
@@ -371,6 +375,25 @@ function childToolNames(step) {
 	return [...step.tools];
 }
 
+export function rootAuthorityForStep(step) {
+	const sealedContracts = Object.freeze(Object.assign(Object.create(null), {
+		"architecture-p07b-c-c6": Object.freeze({ args: Object.freeze(["--c6"]), path: "tools/check-sealed-c6a-architecture.mjs" }),
+		"architecture-p07b-c-c6-selftest": Object.freeze({ args: Object.freeze(["--c6-selftest"]), path: "tools/check-sealed-c6a-architecture.mjs" }),
+	}));
+	const contract = step && typeof step === "object" ? sealedContracts[step.id] : undefined;
+	if (contract === undefined) {
+		if (step && typeof step === "object" && Object.hasOwn(step, "rootAuthority")) {
+			throw new VerificationError("VERIFY_ROOT_AUTHORITY_UNEXPECTED", `${step.id ?? "unnamed step"}:${String(step.rootAuthority)}`);
+		}
+		return "LIVE";
+	}
+	if (step.rootAuthority !== "SEALED_C6A" || step.path !== contract.path ||
+		JSON.stringify(step.args) !== JSON.stringify(contract.args)) {
+		throw new VerificationError("VERIFY_ROOT_AUTHORITY_CONTRACT", step.id);
+	}
+	return "SEALED_C6A";
+}
+
 function slash(value) {
 	return value.split(sep).join("/");
 }
@@ -409,6 +432,7 @@ export async function validateRepositoryPlan(root = repositoryRoot, steps = curr
 	if (absoluteRoot !== canonicalRoot) throw new VerificationError("VERIFY_REPOSITORY_ROOT_NOT_CANONICAL", `${absoluteRoot} != ${canonicalRoot}`);
 	const paths = new Set(["tools/verify-current.mjs", "tools/verify-runtime-authority.mjs"]);
 	for (const step of steps) {
+		rootAuthorityForStep(step);
 		if (step.tool) childToolNames(step);
 		else if (Object.hasOwn(step, "tools")) throw new VerificationError("VERIFY_PLAN_PRIMARY_TOOL_REQUIRED", step.id ?? "unnamed step");
 		if (step.path) paths.add(step.path);
@@ -575,6 +599,8 @@ export async function executeCurrentPlan({
 		write(`AUTHORITY ${name} path=${JSON.stringify(tool.path)} sha256:${tool.sha256}\n`);
 	}
 	write(`ROSTER CURRENT ${steps.map((step) => step.id).join(",")}\n`);
+	const sealedRows = steps.filter((step) => rootAuthorityForStep(step) === "SEALED_C6A").map((step) => step.id);
+	write(`ROSTER ROOT_AUTHORITY live=${steps.length - sealedRows.length} sealed_c6a=${sealedRows.length}:${sealedRows.join(",")}\n`);
 	for (const row of historical) {
 		write(`HISTORICAL-ONLY NOT-RUN ${row.id} scripts=${row.scripts.join(",")} status=${row.status}\n`);
 	}

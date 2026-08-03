@@ -21,7 +21,9 @@ import {
 	packageArguments,
 	partitionGoPackages,
 	revalidatePackagePartition,
+	rootAuthorityForStep,
 	rosterDigest,
+	sealedC6AArchitectureStepIDs,
 	sensitiveGoPackages,
 	validateRepositoryPlan,
 } from "./verify-current.mjs";
@@ -43,11 +45,12 @@ import {
 const selftestPath = fileURLToPath(import.meta.url);
 const verifierPath = resolve(dirname(selftestPath), "verify-current.mjs");
 const runtimePath = resolve(dirname(selftestPath), "verify-runtime-authority.mjs");
+const sealedC6ARunnerPath = resolve(dirname(selftestPath), "check-sealed-c6a-architecture.mjs");
 const authorityNames = Object.freeze(["go", "node", "git", "sh", "cc", "cxx"]);
 const sealedC4VHistoricalRosterDigest = "7cf294fcbe8247e7a4de2d8996fb6b960780a35d018a8d00069af15940f0efb8";
 const sealedC4HParentRosterDigest = "0fab61318d55314e3accaeabbaf56cc049aae5755f3c3f41d6a36eba1a6c7af5";
 const sealedCombinedC5RosterDigest = "3821722f937f647ec98f03170cf9efb1e9a51a98e63d361d38dae58ade9ffaed";
-const expectedRosterDigest = "30b641c24d6c38833746a141cc2e516a3598dde7adeab12b742aab96632cf1a7";
+const expectedRosterDigest = "8e751cc66c32e922e1fd0b1a471ce4f2b3fb630105056a4db493363232565b92";
 const exactC5StepIDs = Object.freeze([
 	"architecture-p07b-c-c5",
 	"architecture-p07b-c-c5-selftest",
@@ -291,6 +294,28 @@ async function inspectRosters() {
 	assertC5Roster(currentIDs, sensitiveGoPackages, c5SensitiveGoPackages);
 	assertC6Roster(currentIDs);
 	assertFinderGuardRoster(currentIDs);
+	const sealedRows = currentSteps.filter((step) => rootAuthorityForStep(step) === "SEALED_C6A");
+	expect(
+		JSON.stringify(sealedRows.map((step) => step.id)) === JSON.stringify(sealedC6AArchitectureStepIDs) &&
+		sealedRows.every((step) => step.path === "tools/check-sealed-c6a-architecture.mjs") &&
+		currentSteps.filter((step) => step.path === "tools/check-sealed-c6a-architecture.mjs").length === 2,
+		"VERIFY_SELFTEST_ROOT_AUTHORITY_ROSTER",
+		sealedRows.map((step) => `${step.id}:${step.path}`).join(","),
+	);
+	const sealedBaseline = sealedRows[0];
+	for (const [name, hostile] of [
+		["missing authority", { ...sealedBaseline, rootAuthority: undefined }],
+		["wrong authority", { ...sealedBaseline, rootAuthority: "LIVE" }],
+		["wrong path", { ...sealedBaseline, path: "tools/check-p07b-c-architecture.mjs" }],
+		["wrong mode", { ...sealedBaseline, args: ["--c6-selftest"] }],
+	]) {
+		expectPlainCode(() => rootAuthorityForStep(hostile), "VERIFY_ROOT_AUTHORITY_CONTRACT");
+		void name;
+	}
+	expectPlainCode(
+		() => rootAuthorityForStep({ ...currentSteps.find((step) => step.id === "go-build"), rootAuthority: "SEALED_C6A" }),
+		"VERIFY_ROOT_AUTHORITY_UNEXPECTED",
+	);
 	expectPlainCode(
 		() => assertC5Roster(
 			currentIDs.filter((id) => id !== "go-json-p07b-c-c5-scope-closure"),
@@ -642,15 +667,17 @@ async function inspectRosters() {
 	exactStep("architecture-p07b-c-c6", {
 		tool: "node",
 		tools: ["node", "go", "git", "sh", "cc", "cxx"],
-		path: "tools/check-p07b-c-architecture.mjs",
+		path: "tools/check-sealed-c6a-architecture.mjs",
 		args: ["--c6"],
+		rootAuthority: "SEALED_C6A",
 		marker: "P07B-C C6 cumulative architecture boundary OK",
 	});
 	exactStep("architecture-p07b-c-c6-selftest", {
 		tool: "node",
 		tools: ["node", "go", "git", "sh", "cc", "cxx"],
-		path: "tools/check-p07b-c-architecture-selftest.mjs",
-		args: ["--c6"],
+		path: "tools/check-sealed-c6a-architecture.mjs",
+		args: ["--c6-selftest"],
+		rootAuthority: "SEALED_C6A",
 		marker: "P07B-C C6 cumulative architecture defensive self-test OK (11 metadata cases; 22 Go JSON lifecycle cases)",
 	});
 	exactStep("architecture-p07b-c-c3", {
@@ -1707,8 +1734,22 @@ async function inspectResourceFinalization() {
 }
 
 async function inspectSourceAndArguments() {
-	const [source, runtimeSource] = await Promise.all([readFile(verifierPath, "utf8"), readFile(runtimePath, "utf8")]);
+	const [source, runtimeSource, sealedRunnerSource] = await Promise.all([
+		readFile(verifierPath, "utf8"), readFile(runtimePath, "utf8"), readFile(sealedC6ARunnerPath, "utf8"),
+	]);
 	expect(!source.includes("...process.env") && !runtimeSource.includes("...process.env"), "VERIFY_SELFTEST_PROCESS_ENV_SPREAD", "verification runtime modules");
+	expect(!sealedRunnerSource.includes("...process.env") && !sealedRunnerSource.includes("checkout") &&
+		!sealedRunnerSource.includes("worktree") && !sealedRunnerSource.includes("git archive"),
+	"VERIFY_SELFTEST_SEALED_RUNNER_SOURCE_AUTHORITY", "sealed runner must remain raw-blob and allowlisted-env only");
+	const sealedRunnerSelftest = spawnSync(process.execPath, [sealedC6ARunnerPath, "--self-test"], {
+		cwd: repositoryRoot, encoding: "utf8", timeout: 30_000, maxBuffer: 4 * 1024 * 1024,
+	});
+	expect(
+		sealedRunnerSelftest.status === 0 && sealedRunnerSelftest.signal === null && sealedRunnerSelftest.stderr === "" &&
+		sealedRunnerSelftest.stdout === "sealed C6A architecture runner self-test passed: raw blobs, path/mode authority, literal-filter immunity, and two-mode routing\n",
+		"VERIFY_SELFTEST_SEALED_RUNNER_SELFTEST",
+		`${sealedRunnerSelftest.status ?? sealedRunnerSelftest.signal}:${sealedRunnerSelftest.stderr || sealedRunnerSelftest.stdout || sealedRunnerSelftest.error}`,
+	);
 	let importFixture = await realpath(await mkdtemp(join(tmpdir(), "countershape-verify-import-selftest-")));
 	try {
 		const toolsDirectory = join(importFixture, "tools");
@@ -1779,8 +1820,9 @@ async function main() {
 	const sourceDigest = createHash("sha256")
 		.update(await readFile(verifierPath))
 		.update(await readFile(runtimePath))
+		.update(await readFile(sealedC6ARunnerPath))
 		.digest("hex");
-	process.stdout.write(`verification runner self-test passed: exact C5 rosters/env/package partition, fail-closed status/signal/error/marker, bounded tool admission, framed child output, canonical plan/tool paths, private root isolation, exclusive lock integrity plus real subprocess contention/stale recovery, inert verifier imports, noncanonical-entry refusal, cleanup aggregation, historical nonexecution, and artifact refusal (sources sha256:${sourceDigest})\n`);
+	process.stdout.write(`verification runner self-test passed: exact C5 rosters/env/package partition, explicit live/sealed-C6A root authority, raw-blob sealed runner self-test, fail-closed status/signal/error/marker, bounded tool admission, framed child output, canonical plan/tool paths, private root isolation, exclusive lock integrity plus real subprocess contention/stale recovery, inert verifier imports, noncanonical-entry refusal, cleanup aggregation, historical nonexecution, and artifact refusal (sources sha256:${sourceDigest})\n`);
 }
 
 main().catch((error) => {
