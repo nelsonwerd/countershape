@@ -1,0 +1,69 @@
+{
+  "schema_version": "countershape/p07b-c-c6a-source-authority/v1",
+  "source_commit": "3e9643f657248e0d5ff2c4bf0880218efbaeecd8",
+  "source_tree": "226a1e23da7eded933b3faabd4e8040576b2a2e0",
+  "source_parent": "e7f51c0a8fbd2d6fbe8eacb4a7f0d46f010af7ba",
+  "source_subject": "test: close P07B-C cumulative evidence",
+  "note_ref": "refs/notes/didrun",
+  "note_type": "blob",
+  "note_blob": "b110b998a56c89d77bec3f87a48f64f1f21a700e",
+  "note_body_sha256": "096e9ae74e9a9ccfb984018f792a59bac3eb8ae24c550d83bb273e6b5ff064c7",
+  "secrets_override": true,
+  "claims": [
+    {
+      "label": "P07B-C C6A candidate phase plan coherence",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT"
+    },
+    {
+      "label": "P07B-C C6A independent candidate transition authority",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT"
+    },
+    {
+      "label": "P07B-C C6A architecture conformance",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT"
+    },
+    {
+      "label": "P07B-C C6A architecture defensive self-test",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT"
+    },
+    {
+      "label": "P07B-C C6A cumulative verifier self-test",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT"
+    },
+    {
+      "label": "P07B-C C6A cumulative verification",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT"
+    },
+    {
+      "label": "P07B-C C6A final evidence defensive self-test",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT"
+    },
+    {
+      "label": "P07B-C C6A exact CLI HTTP Node and documentation evidence closure",
+      "type": "tests-pass",
+      "grade": "TREE-EXACT"
+    },
+    {
+      "label": "P07B-C C6A exact staged scope and diff integrity",
+      "type": "command-succeeded",
+      "grade": "TREE-EXACT"
+    },
+    {
+      "label": "P07B-C C6A scoped staged credential-pattern scan",
+      "type": "command-succeeded",
+      "grade": "TREE-EXACT"
+    },
+    {
+      "label": "P07B-C C6A declared C5V parent edge and preceding didrun chain integrity",
+      "type": "command-succeeded",
+      "grade": "TREE-EXACT"
+    }
+  ]
+}
