@@ -61,6 +61,10 @@ const productionLimits = Object.freeze({
 });
 const childTimeoutMS = 18 * 60 * 1_000;
 const gitOutputLimit = 64 * 1024 * 1024;
+const gitHashBatchOutputLimit = 128 * 1024;
+const gitHashBatchInputLimit = 8 * 1024 * 1024;
+const gitStderrMaximumBytes = 16 * 1024;
+const gitFailureDiagnosticPrefixBytes = 256;
 const allowedModes = new Map([["100644", 0o644], ["100755", 0o755]]);
 
 export class SealedC6AArchitectureError extends Error {
@@ -170,7 +174,58 @@ function gitEnvironment() {
 	});
 }
 
+export function admittedDarwinGitStderr(bytes) {
+	if (!Buffer.isBuffer(bytes) || bytes.length > gitStderrMaximumBytes) return false;
+	if (bytes.length === 0) return true;
+	if (bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) return false;
+	let source;
+	try {
+		source = fatalUTF8.decode(bytes);
+	} catch {
+		return false;
+	}
+	if (!source.endsWith("\n") || source.includes("\r")) return false;
+	return source.slice(0, -1).split("\n").every((line) =>
+		/^git: warning: confstr\(\) failed with code 5: couldn't get path of DARWIN_USER_TEMP_DIR; using \/tmp instead$/u.test(line) ||
+		/^20[0-9]{2}-[0-9]{2}-[0-9]{2} [0-9:.]+ xcodebuild\[[0-9]+:[0-9]+\]  DVTFilePathFSEvents: Failed to start fs event stream\.$/u.test(line) ||
+		/^20[0-9]{2}-[0-9]{2}-[0-9]{2} [0-9:.]+ xcodebuild\[[0-9]+:[0-9]+\] \[MT\] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr\(3\), error = Error Domain=NSPOSIXErrorDomain Code=5 "Input\/output error"\. Using NSCachesDirectory instead\.$/u.test(line));
+}
+
+function boundedErrorProjection(error) {
+	if (!error) return "none";
+	const name = typeof error.name === "string" ? error.name.slice(0, 64) : typeof error;
+	const message = typeof error.message === "string" ? error.message.slice(0, 256) : "";
+	return `${JSON.stringify(name)}:${JSON.stringify(message)}`;
+}
+
+function boundedScalarProjection(value) {
+	if (value === undefined) return "missing";
+	if (value === null) return "null";
+	return String(value).slice(0, 64);
+}
+
+export function describeRejectedGitResult(operation, result, stdout, stderr) {
+	const admitted = result !== null && typeof result === "object" && Buffer.isBuffer(stdout) && Buffer.isBuffer(stderr) &&
+		!result.error && result.signal === null && result.status === 0 && admittedDarwinGitStderr(stderr);
+	if (admitted) return null;
+	const stderrBytes = Buffer.isBuffer(stderr) ? stderr : Buffer.alloc(0);
+	const prefix = stderrBytes.subarray(0, gitFailureDiagnosticPrefixBytes);
+	return [
+		String(operation),
+		`status=${boundedScalarProjection(result?.status)}`,
+		`signal=${boundedScalarProjection(result?.signal)}`,
+		`error=${boundedErrorProjection(result?.error)}`,
+		`stdout_type=${Buffer.isBuffer(stdout) ? "buffer" : typeof stdout}`,
+		`stdout_bytes=${Buffer.isBuffer(stdout) ? stdout.length : 0}`,
+		`stderr_type=${Buffer.isBuffer(stderr) ? "buffer" : typeof stderr}`,
+		`stderr_bytes=${stderrBytes.length}`,
+		`stderr_prefix_hex=${prefix.toString("hex")}`,
+		`stderr_truncated=${stderrBytes.length > gitFailureDiagnosticPrefixBytes}`,
+	].join(" ");
+}
+
 function runGit(git, cwd, args, options = {}) {
+	const operation = options.operation ?? args.join(" ");
 	const result = spawnSync(git, ["--no-replace-objects", ...args], {
 		cwd,
 		encoding: null,
@@ -179,13 +234,137 @@ function runGit(git, cwd, args, options = {}) {
 		maxBuffer: options.maxBuffer ?? gitOutputLimit,
 		timeout: options.timeout ?? 60_000,
 	});
-	if (result.error || result.signal || result.status !== 0 || (result.stderr?.length ?? 0) !== 0) {
-		fail(
-			"SEALED_C6A_GIT",
-			`${args[0]} status=${result.status} signal=${result.signal} error=${result.error?.message ?? "none"} stderr=${JSON.stringify((result.stderr ?? Buffer.alloc(0)).toString("utf8").slice(0, 512))}`,
-		);
+	const rejection = describeRejectedGitResult(operation, result, result.stdout, result.stderr);
+	if (rejection !== null) fail("SEALED_C6A_GIT", rejection);
+	return result.stdout;
+}
+
+function validateBatchEntries(entries, limits) {
+	if (!limits || typeof limits !== "object" || !Number.isSafeInteger(limits.max_entries) ||
+		!Number.isSafeInteger(limits.max_path_bytes) || limits.max_entries <= 0 || limits.max_path_bytes <= 0 ||
+		!Array.isArray(entries) || entries.length === 0 || entries.length > limits.max_entries) {
+		fail("SEALED_C6A_BATCH_CONTRACT", Array.isArray(entries) ? String(entries.length) : typeof entries);
 	}
-	return result.stdout ?? Buffer.alloc(0);
+	const paths = new Set();
+	const canonicalPaths = new Set();
+	for (let index = 0; index < entries.length; index += 1) {
+		const entry = entries[index];
+		if (!entry || typeof entry !== "object" || typeof entry.path !== "string" ||
+			!AsLowerHexOID(entry.oid) || entry.path.length === 0 || entry.path.startsWith("/") || entry.path.endsWith("/") ||
+			entry.path.includes("\\") || /[\u0000-\u001f\u007f]/u.test(entry.path) || entry.path.normalize("NFC") !== entry.path ||
+			Buffer.byteLength(entry.path, "utf8") > limits.max_path_bytes) {
+			fail("SEALED_C6A_BATCH_CONTRACT", String(index));
+		}
+		const components = entry.path.split("/");
+		if (!Array.isArray(entry.components) || entry.components.length !== components.length ||
+			components.some((component, componentIndex) => component.length === 0 || component === "." || component === ".." ||
+				component.toLowerCase() === ".git" || entry.components[componentIndex] !== component)) {
+			fail("SEALED_C6A_BATCH_CONTRACT", `${index}:components`);
+		}
+		const canonical = entry.path.toLowerCase();
+		if (paths.has(entry.path) || canonicalPaths.has(canonical) || [...paths].some((path) =>
+			path.startsWith(`${entry.path}/`) || entry.path.startsWith(`${path}/`)) || [...canonicalPaths].some((path) =>
+			path.startsWith(`${canonical}/`) || canonical.startsWith(`${path}/`))) {
+			fail("SEALED_C6A_BATCH_CONTRACT", `${index}:collision`);
+		}
+		paths.add(entry.path);
+		canonicalPaths.add(canonical);
+	}
+}
+
+function AsLowerHexOID(value) {
+	return typeof value === "string" && /^[0-9a-f]{40}$/u.test(value);
+}
+
+export function parseGitBlobBatch(bytes, entries, limits = productionLimits) {
+	if (!Buffer.isBuffer(bytes) || !limits || typeof limits !== "object" ||
+		!Number.isSafeInteger(limits.max_entries) || !Number.isSafeInteger(limits.max_blob_bytes) ||
+		!Number.isSafeInteger(limits.max_total_blob_bytes)) {
+		fail("SEALED_C6A_BATCH_CONTRACT", Buffer.isBuffer(bytes) ? "limits" : typeof bytes);
+	}
+	validateBatchEntries(entries, limits);
+	const blobs = [];
+	let cursor = 0;
+	let total = 0;
+	for (let index = 0; index < entries.length; index += 1) {
+		const headerEnd = bytes.indexOf(0x0a, cursor);
+		if (headerEnd < cursor) fail("SEALED_C6A_BATCH_FRAMING", `${index}:header`);
+		let header;
+		try {
+			header = fatalUTF8.decode(bytes.subarray(cursor, headerEnd));
+		} catch (error) {
+			fail("SEALED_C6A_BATCH_HEADER", `${index}:${error.message}`);
+		}
+		const match = /^([0-9a-f]{40}) blob (0|[1-9][0-9]*)$/u.exec(header);
+		if (!match) fail("SEALED_C6A_BATCH_HEADER", `${index}:${JSON.stringify(header.slice(0, 128))}`);
+		const [, oid, sizeText] = match;
+		if (oid !== entries[index].oid) fail("SEALED_C6A_BATCH_OID", `${index}:${entries[index].path}:${oid}`);
+		const size = Number(sizeText);
+		if (!Number.isSafeInteger(size) || size > limits.max_blob_bytes || total + size > limits.max_total_blob_bytes) {
+			fail("SEALED_C6A_BATCH_SIZE", `${index}:${entries[index].path}:${sizeText}`);
+		}
+		const contentStart = headerEnd + 1;
+		const contentEnd = contentStart + size;
+		if (contentEnd >= bytes.length || bytes[contentEnd] !== 0x0a) {
+			fail("SEALED_C6A_BATCH_FRAMING", `${index}:${entries[index].path}:content`);
+		}
+		const blob = Buffer.from(bytes.subarray(contentStart, contentEnd));
+		if (gitBlobOID(blob) !== entries[index].oid) fail("SEALED_C6A_BLOB_AUTHORITY", entries[index].path);
+		blobs.push(blob);
+		total += size;
+		cursor = contentEnd + 1;
+	}
+	if (cursor !== bytes.length) fail("SEALED_C6A_BATCH_TRAILING", String(bytes.length - cursor));
+	return Object.freeze({ blobs: Object.freeze(blobs), total });
+}
+
+export function validateGitBlobHashBatch(bytes, entries, limits = productionLimits) {
+	if (!Buffer.isBuffer(bytes)) fail("SEALED_C6A_HASH_BATCH_FRAMING", typeof bytes);
+	validateBatchEntries(entries, limits);
+	if (bytes.length !== entries.length * 41) {
+		fail("SEALED_C6A_HASH_BATCH_FRAMING", `${bytes.length}:${entries.length}`);
+	}
+	for (let index = 0; index < entries.length; index += 1) {
+		const start = index * 41;
+		const line = bytes.subarray(start, start + 41);
+		if (line[40] !== 0x0a || !line.subarray(0, 40).every((byte) =>
+			(byte >= 0x30 && byte <= 0x39) || (byte >= 0x61 && byte <= 0x66))) {
+			fail("SEALED_C6A_HASH_BATCH_FRAMING", `${index}:${entries[index].path}`);
+		}
+		const oid = line.subarray(0, 40).toString("ascii");
+		if (oid !== entries[index].oid) fail("SEALED_C6A_BLOB_HASH_PARITY", `${index}:${entries[index].path}:${oid}`);
+	}
+}
+
+function loadGitBlobBatch(git, entries) {
+	const input = Buffer.from(`${entries.map((entry) => entry.oid).join("\n")}\n`, "ascii");
+	const output = runGit(git, repositoryRoot, ["cat-file", "--batch"], {
+		input,
+		maxBuffer: productionLimits.max_total_blob_bytes + (entries.length * 96) + 1,
+		operation: `cat-file --batch entries=${entries.length}`,
+	});
+	return parseGitBlobBatch(output, entries);
+}
+
+export function buildGitHashBatchInput(root, entries, limits = productionLimits, maximumBytes = gitHashBatchInputLimit) {
+	validateBatchEntries(entries, limits);
+	if (!isAbsolute(root) || /[\n\r\0]/u.test(root)) fail("SEALED_C6A_HASH_BATCH_ROOT", JSON.stringify(root));
+	const input = Buffer.from(`${entries.map((entry) => join(root, ...entry.components)).join("\n")}\n`, "utf8");
+	if (!Number.isSafeInteger(maximumBytes) || maximumBytes <= 0 || maximumBytes > gitHashBatchInputLimit ||
+		input.length > maximumBytes) {
+		fail("SEALED_C6A_HASH_BATCH_INPUT", `${input.length}:${entries.length}`);
+	}
+	return input;
+}
+
+function validateSnapshotGitHashes(git, root, entries) {
+	const input = buildGitHashBatchInput(root, entries);
+	const output = runGit(git, repositoryRoot, ["hash-object", "--stdin-paths", "--no-filters"], {
+		input,
+		maxBuffer: gitHashBatchOutputLimit,
+		operation: `hash-object --stdin-paths --no-filters entries=${entries.length}`,
+	});
+	validateGitBlobHashBatch(output, entries);
 }
 
 function decodeGitLine(bytes, operation) {
@@ -365,20 +544,24 @@ async function materializeSealedTree(git, root) {
 		fail("SEALED_C6A_MANIFEST_AUTHORITY", `${manifest.length}:sha256:${sha256(manifest)}`);
 	}
 	const entries = parseTreeManifest(manifest);
+	const batch = loadGitBlobBatch(git, entries);
 	const modeCounts = new Map([["100644", 0], ["100755", 0]]);
 	let total = 0;
-	for (const entry of entries) {
+	for (let index = 0; index < entries.length; index += 1) {
+		const entry = entries[index];
 		modeCounts.set(entry.mode, modeCounts.get(entry.mode) + 1);
-		const bytes = runGit(git, repositoryRoot, ["cat-file", "blob", entry.oid], { maxBuffer: productionLimits.max_blob_bytes });
+		const bytes = batch.blobs[index];
 		if (bytes.length > productionLimits.max_blob_bytes || total + bytes.length > productionLimits.max_total_blob_bytes ||
 			gitBlobOID(bytes) !== entry.oid) {
 			fail("SEALED_C6A_BLOB_AUTHORITY", entry.path);
 		}
-		const gitOID = decodeGitLine(runGit(git, repositoryRoot, ["hash-object", "--stdin"], { input: bytes }), "hash-object");
-		if (gitOID !== entry.oid) fail("SEALED_C6A_BLOB_HASH_PARITY", entry.path);
 		await writeSnapshotFile(root, entry, bytes);
 		total += bytes.length;
 	}
+	if (batch.total !== total || await inspectSnapshotFiles(root, entries) !== total) {
+		fail("SEALED_C6A_BATCH_TOTAL", `${batch.total}:${total}`);
+	}
+	validateSnapshotGitHashes(git, root, entries);
 	if (entries.length !== sealedC6AIdentity.regular_0644 + sealedC6AIdentity.regular_0755 ||
 		modeCounts.get("100644") !== sealedC6AIdentity.regular_0644 || modeCounts.get("100755") !== sealedC6AIdentity.regular_0755 ||
 		total !== sealedC6AIdentity.total_blob_bytes || await inspectSnapshotFiles(root, entries) !== total) {
@@ -463,7 +646,46 @@ async function runSelfTest() {
 	const limits = { ...productionLimits, max_entries: 8, max_manifest_bytes: 4_096, max_path_bytes: 128, max_total_blob_bytes: 4_096 };
 	const valid = manifestBytes(records);
 	const parsed = parseTreeManifest(valid, limits);
+	const batchBytes = Buffer.concat(parsed.flatMap((entry, index) => {
+		const blob = index === 0 ? literal : executable;
+		return [Buffer.from(`${entry.oid} blob ${blob.length}\n`, "ascii"), blob, Buffer.from("\n")];
+	}));
+	const batch = parseGitBlobBatch(batchBytes, parsed, limits);
+	const hashBytes = Buffer.from(`${parsed.map((entry) => entry.oid).join("\n")}\n`, "ascii");
+	validateGitBlobHashBatch(hashBytes, parsed, limits);
+	const hashInput = buildGitHashBatchInput("/private/sealed-c6a", parsed, limits);
+	const darwinStderrLines = Object.freeze([
+		"git: warning: confstr() failed with code 5: couldn't get path of DARWIN_USER_TEMP_DIR; using /tmp instead",
+		"2026-08-02 08:38:10.701 xcodebuild[98149:9820105]  DVTFilePathFSEvents: Failed to start fs event stream.",
+		"2026-08-02 08:38:10.926 xcodebuild[98149:9820104] [MT] DVTDeveloperPaths: Failed to get length of DARWIN_USER_CACHE_DIR from confstr(3), error = Error Domain=NSPOSIXErrorDomain Code=5 \"Input/output error\". Using NSCachesDirectory instead.",
+	]);
+	const acceptedGitResult = Object.freeze({ error: undefined, signal: null, status: 0 });
+	const oversizedRejectedStderr = Buffer.alloc(gitFailureDiagnosticPrefixBytes + 1, 0xff);
+	const oversizedRejectedDetail = describeRejectedGitResult(
+		"oversized-diagnostic", acceptedGitResult, Buffer.alloc(0), oversizedRejectedStderr,
+	);
+	const rejectedGitCases = Object.freeze([
+		[describeRejectedGitResult("status", { ...acceptedGitResult, status: 1 }, Buffer.alloc(0), Buffer.alloc(0)), "status=1"],
+		[describeRejectedGitResult("signal", { ...acceptedGitResult, signal: "SIGTERM" }, Buffer.alloc(0), Buffer.alloc(0)), "signal=SIGTERM"],
+		[describeRejectedGitResult("spawn", { ...acceptedGitResult, error: new Error("injected") }, Buffer.alloc(0), Buffer.alloc(0)), 'error="Error":"injected"'],
+		[describeRejectedGitResult("stderr", acceptedGitResult, Buffer.alloc(0), Buffer.from("foreign diagnostic\n", "utf8")), "stderr_prefix_hex=666f7265"],
+		[describeRejectedGitResult("stdout-type", acceptedGitResult, "not-a-buffer", Buffer.alloc(0)), "stdout_type=string"],
+		[describeRejectedGitResult("stderr-type", acceptedGitResult, Buffer.alloc(0), "not-a-buffer"), "stderr_type=string"],
+		[oversizedRejectedDetail, "stderr_truncated=true"],
+	]);
 	if (parsed.length !== 2 || parsed[0].path !== ".gitattributes" || parsed[1].mode !== "100755" ||
+		batch.total !== literal.length + executable.length || !batch.blobs[0].equals(literal) || !batch.blobs[1].equals(executable) ||
+		hashInput.toString("utf8") !== "/private/sealed-c6a/.gitattributes\n/private/sealed-c6a/tools/literal.sh\n" ||
+		describeRejectedGitResult("accepted", acceptedGitResult, Buffer.alloc(0), Buffer.alloc(0)) !== null ||
+		rejectedGitCases.some(([detail, required]) => typeof detail !== "string" || !detail.includes(required)) ||
+		!oversizedRejectedDetail.includes(`stderr_bytes=${gitFailureDiagnosticPrefixBytes + 1}`) ||
+		!oversizedRejectedDetail.includes("stderr_truncated=true") ||
+		oversizedRejectedDetail.includes("\ufffd") ||
+		!admittedDarwinGitStderr(Buffer.alloc(0)) ||
+		!admittedDarwinGitStderr(Buffer.from(`${darwinStderrLines.join("\n")}\n`, "utf8")) ||
+		gitHashBatchOutputLimit < (productionLimits.max_entries * 41) + gitStderrMaximumBytes ||
+		gitHashBatchOutputLimit > 256 * 1024 ||
+		gitHashBatchInputLimit !== 8 * 1024 * 1024 ||
 		JSON.stringify(sealedC6AArchitectureModes.map((mode) => mode.argument)) !== JSON.stringify(["--c6", "--c6-selftest"]) ||
 		sealedC6AArchitectureModes.some((mode) => mode.root_authority !== "SEALED_C6A") ||
 		modeForArgument("--c6-selftest").child_path !== "tools/check-p07b-c-architecture-selftest.mjs") {
@@ -483,6 +705,45 @@ async function runSelfTest() {
 		`100644 blob ${"0".repeat(40)}\ta`, `100644 blob ${"1".repeat(40)}\ta/b`,
 	]), limits), "SEALED_C6A_MANIFEST_DF_COLLISION");
 	expectCode(() => modeForArgument("--c5"), "SEALED_C6A_ARGUMENTS");
+	expectCode(() => parseGitBlobBatch(batchBytes.subarray(0, -1), parsed, limits), "SEALED_C6A_BATCH_FRAMING");
+	expectCode(() => parseGitBlobBatch(Buffer.concat([batchBytes, Buffer.from("x")]), parsed, limits), "SEALED_C6A_BATCH_TRAILING");
+	expectCode(() => parseGitBlobBatch(Buffer.from(batchBytes.toString("binary").replace(parsed[0].oid, "0".repeat(40)), "binary"), parsed, limits), "SEALED_C6A_BATCH_OID");
+	expectCode(() => parseGitBlobBatch(Buffer.from(batchBytes.toString("binary").replace(" blob ", " tree "), "binary"), parsed, limits), "SEALED_C6A_BATCH_HEADER");
+	const corruptedBatch = Buffer.from(batchBytes);
+	corruptedBatch[batchBytes.indexOf(0x0a) + 1] ^= 0x01;
+	expectCode(() => parseGitBlobBatch(corruptedBatch, parsed, limits), "SEALED_C6A_BLOB_AUTHORITY");
+	expectCode(() => parseGitBlobBatch(batchBytes, parsed, { ...limits, max_blob_bytes: literal.length - 1 }), "SEALED_C6A_BATCH_SIZE");
+	expectCode(() => validateGitBlobHashBatch(hashBytes.subarray(0, -1), parsed, limits), "SEALED_C6A_HASH_BATCH_FRAMING");
+	expectCode(() => validateGitBlobHashBatch(Buffer.concat([hashBytes, Buffer.from("\n")]), parsed, limits), "SEALED_C6A_HASH_BATCH_FRAMING");
+	expectCode(() => validateGitBlobHashBatch(Buffer.from(hashBytes.toString("ascii").replace(parsed[0].oid, "0".repeat(40)), "ascii"), parsed, limits), "SEALED_C6A_BLOB_HASH_PARITY");
+	const carriageReturnHash = Buffer.from(hashBytes);
+	carriageReturnHash[40] = 0x0d;
+	expectCode(() => validateGitBlobHashBatch(carriageReturnHash, parsed, limits), "SEALED_C6A_HASH_BATCH_FRAMING");
+	expectCode(() => buildGitHashBatchInput("relative", parsed, limits), "SEALED_C6A_HASH_BATCH_ROOT");
+	expectCode(() => buildGitHashBatchInput("/private/sealed\nroot", parsed, limits), "SEALED_C6A_HASH_BATCH_ROOT");
+	expectCode(() => buildGitHashBatchInput("/private/sealed-c6a", parsed, limits, 8), "SEALED_C6A_HASH_BATCH_INPUT");
+	expectCode(() => buildGitHashBatchInput("/private/sealed-c6a", [
+		{ ...parsed[0], components: Object.freeze(["wrong"]) }, parsed[1],
+	], limits), "SEALED_C6A_BATCH_CONTRACT");
+	expectCode(() => buildGitHashBatchInput("/private/sealed-c6a", [
+		{ ...parsed[0], components: Object.freeze(["..", "escape"]), path: "../escape" }, parsed[1],
+	], limits), "SEALED_C6A_BATCH_CONTRACT");
+	expectCode(() => buildGitHashBatchInput("/private/sealed-c6a", [
+		parsed[0], { ...parsed[1], components: parsed[0].components, path: parsed[0].path },
+	], limits), "SEALED_C6A_BATCH_CONTRACT");
+	expectCode(() => buildGitHashBatchInput("/private/sealed-c6a", [
+		{ ...parsed[0], components: Object.freeze(["A"]), path: "A" },
+		{ ...parsed[1], components: Object.freeze(["a", "b"]), path: "a/b" },
+	], limits), "SEALED_C6A_BATCH_CONTRACT");
+	for (const hostile of [
+		Buffer.from(darwinStderrLines[0], "utf8"),
+		Buffer.from(`${darwinStderrLines[1]}\r\n`, "utf8"),
+		Buffer.from(`${darwinStderrLines[2]}\nforeign diagnostic\n`, "utf8"),
+		Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(`${darwinStderrLines[0]}\n`, "utf8")]),
+		Buffer.from(`${darwinStderrLines[0]}\n`.repeat(200), "utf8"),
+	]) {
+		if (admittedDarwinGitStderr(hostile)) fail("SEALED_C6A_SELFTEST_FALSE_NEGATIVE", "Darwin Git stderr");
+	}
 
 	const fixture = await realpath(await mkdtemp(join(tmpdir(), "countershape-sealed-c6a-selftest-")));
 	try {
@@ -505,7 +766,7 @@ async function runSelfTest() {
 	} finally {
 		await rm(fixture, { recursive: true, force: true });
 	}
-	process.stdout.write("sealed C6A architecture runner self-test passed: raw blobs, path/mode authority, literal-filter immunity, and two-mode routing\n");
+	process.stdout.write("sealed C6A architecture runner self-test passed: bounded Git blob/hash batches and Darwin diagnostics, raw blobs, path/mode authority, literal-filter immunity, and two-mode routing\n");
 }
 
 async function classifyEntry(entry) {
