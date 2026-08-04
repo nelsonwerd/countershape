@@ -120,3 +120,39 @@ C6A does not establish:
 - security review or hostile containment
 
 It also does not establish vendor authenticity, complete Go toolchain/standard-library/SDK/dynamic-library or host provenance, host-wide absence, listener ownership, same-UID containment, confidentiality, secure deletion, physical reboot, survivor absence, process resume, universal power-loss recovery, or a supported product CLI. C6M is the next exact five-path source-authority adapter after C6A seals: `docs/HANDOFF_MODE_C.md`, `docs/PROMPT_PACK.md`, `docs/VERIFICATION.md`, `docs/status/P07B-C-C6M-RECEIPT-ADAPTER-MAINTENANCE.md`, and `spec/verification/p07b-c-c6a-source-authority.json`. C6B is the separate exact five-path receipt reconciliation after C6M seals. External APIs remain human-gated and are neither called nor faked.
+
+## C6B descendant receipt projection
+
+The preceding next-boundary paragraph is frozen C6A-era source text. C6R subsequently sealed, and the current cursor is C6B after exact sealed C6R; the receipt block below still binds only C6A.
+
+<!-- P07B-C-C6A-SOURCE-RECEIPTS:START -->
+### Sealed C6A source receipts
+
+- **Source commit:** `3e9643f657248e0d5ff2c4bf0880218efbaeecd8`
+- **Source tree:** `226a1e23da7eded933b3faabd4e8040576b2a2e0`
+- **Source parent:** `e7f51c0a8fbd2d6fbe8eacb4a7f0d46f010af7ba`
+- **Source subject:** `test: close P07B-C cumulative evidence`
+- **Didrun note:** `b110b998a56c89d77bec3f87a48f64f1f21a700e` (body SHA-256 `096e9ae74e9a9ccfb984018f792a59bac3eb8ae24c550d83bb273e6b5ff064c7`)
+- **Seal override disclosed:** `true`
+- **Strict result:** `11/11 claims recorded-exact`; strict exit `0`
+- **Local HTML snapshot:** `.countershape/evidence/p07b-c-c6a-final-3e9643f65724.html` (SHA-256 `a7d533c8c0189a15b30427900d77b5b8ff4dda2e2b87c819dd125e7f527e18cd`, 8222 bytes; not a portable strict witness)
+- **Ignored ledger snapshot:** `.didrun-history/p07b-c-c6a-final-3e9643f65724/.didrun/` (all-files SHA-256 `1c2ac6b900d6158881306185bd57a7b75410206911bd7438003fff48be695441`; local only)
+- **Tracked evidence summary:** `docs/captures/p07b-c/c6a-evidence-summary.json` (SHA-256 `d7e7c4df8af5fcb6f436c79e7660ed0a9e8f6724e95256c6a1b1b21f7af6ae86`; timings=3, permanent-negatives=1, didrun-bugs=6)
+- **Private evidence availability:** `UNAVAILABLE`; 0 declared blobs / 0 bytes; confidentiality is not established
+
+| # | Claim | Type | Grade |
+|---:|---|---|---|
+| 1 | `P07B-C C6A candidate phase plan coherence` | `tests-pass` | `TREE-EXACT` |
+| 2 | `P07B-C C6A independent candidate transition authority` | `tests-pass` | `TREE-EXACT` |
+| 3 | `P07B-C C6A architecture conformance` | `tests-pass` | `TREE-EXACT` |
+| 4 | `P07B-C C6A architecture defensive self-test` | `tests-pass` | `TREE-EXACT` |
+| 5 | `P07B-C C6A cumulative verifier self-test` | `tests-pass` | `TREE-EXACT` |
+| 6 | `P07B-C C6A cumulative verification` | `tests-pass` | `TREE-EXACT` |
+| 7 | `P07B-C C6A final evidence defensive self-test` | `tests-pass` | `TREE-EXACT` |
+| 8 | `P07B-C C6A exact CLI HTTP Node and documentation evidence closure` | `tests-pass` | `TREE-EXACT` |
+| 9 | `P07B-C C6A exact staged scope and diff integrity` | `command-succeeded` | `TREE-EXACT` |
+| 10 | `P07B-C C6A scoped staged credential-pattern scan` | `command-succeeded` | `TREE-EXACT` |
+| 11 | `P07B-C C6A declared C5V parent edge and preceding didrun chain integrity` | `command-succeeded` | `TREE-EXACT` |
+
+Nonclaims: `adoption or market demand`, `human comprehension or taste`, `maintainership`, `production hardening or cross-platform support`, `security review or hostile containment`.
+<!-- P07B-C-C6A-SOURCE-RECEIPTS:END -->

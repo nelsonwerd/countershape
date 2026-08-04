@@ -93,6 +93,10 @@ function expect(condition, code, detail) {
 	if (!condition) fail(code, detail);
 }
 
+function occurrenceCount(body, snippet) {
+	return body.split(snippet).length - 1;
+}
+
 function expectPlainCode(invoke, code) {
 	try {
 		invoke();
@@ -1741,12 +1745,26 @@ async function inspectSourceAndArguments() {
 	expect(!sealedRunnerSource.includes("...process.env") && !sealedRunnerSource.includes("checkout") &&
 		!sealedRunnerSource.includes("worktree") && !sealedRunnerSource.includes("git archive"),
 	"VERIFY_SELFTEST_SEALED_RUNNER_SOURCE_AUTHORITY", "sealed runner must remain raw-blob and allowlisted-env only");
+	expect(
+		occurrenceCount(sealedRunnerSource, 'runGit(git, repositoryRoot, ["cat-file", "--batch"], {') === 1 &&
+		occurrenceCount(sealedRunnerSource, 'runGit(git, repositoryRoot, ["hash-object", "--stdin-paths", "--no-filters"], {') === 1 &&
+		occurrenceCount(sealedRunnerSource, "loadGitBlobBatch(") === 2 &&
+		occurrenceCount(sealedRunnerSource, "validateSnapshotGitHashes(") === 2 &&
+		sealedRunnerSource.includes("admittedDarwinGitStderr") &&
+		sealedRunnerSource.includes("describeRejectedGitResult") &&
+		sealedRunnerSource.includes("stderr_prefix_hex=") &&
+		sealedRunnerSource.includes("stderr_truncated=") &&
+		!sealedRunnerSource.includes('["cat-file", "blob", entry.oid]') &&
+		!sealedRunnerSource.includes('["hash-object", "--stdin"]'),
+		"VERIFY_SELFTEST_SEALED_RUNNER_BATCH_CARDINALITY",
+		"sealed runner must use exactly one bounded blob batch and exactly one no-filter path-hash batch with bounded binary-safe rejection diagnostics",
+	);
 	const sealedRunnerSelftest = spawnSync(process.execPath, [sealedC6ARunnerPath, "--self-test"], {
 		cwd: repositoryRoot, encoding: "utf8", timeout: 30_000, maxBuffer: 4 * 1024 * 1024,
 	});
 	expect(
 		sealedRunnerSelftest.status === 0 && sealedRunnerSelftest.signal === null && sealedRunnerSelftest.stderr === "" &&
-		sealedRunnerSelftest.stdout === "sealed C6A architecture runner self-test passed: raw blobs, path/mode authority, literal-filter immunity, and two-mode routing\n",
+		sealedRunnerSelftest.stdout === "sealed C6A architecture runner self-test passed: bounded Git blob/hash batches and Darwin diagnostics, raw blobs, path/mode authority, literal-filter immunity, and two-mode routing\n",
 		"VERIFY_SELFTEST_SEALED_RUNNER_SELFTEST",
 		`${sealedRunnerSelftest.status ?? sealedRunnerSelftest.signal}:${sealedRunnerSelftest.stderr || sealedRunnerSelftest.stdout || sealedRunnerSelftest.error}`,
 	);
@@ -1822,7 +1840,7 @@ async function main() {
 		.update(await readFile(runtimePath))
 		.update(await readFile(sealedC6ARunnerPath))
 		.digest("hex");
-	process.stdout.write(`verification runner self-test passed: exact C5 rosters/env/package partition, explicit live/sealed-C6A root authority, raw-blob sealed runner self-test, fail-closed status/signal/error/marker, bounded tool admission, framed child output, canonical plan/tool paths, private root isolation, exclusive lock integrity plus real subprocess contention/stale recovery, inert verifier imports, noncanonical-entry refusal, cleanup aggregation, historical nonexecution, and artifact refusal (sources sha256:${sourceDigest})\n`);
+	process.stdout.write(`verification runner self-test passed: exact C5 rosters/env/package partition, explicit live/sealed-C6A root authority, bounded-batch raw-blob sealed runner self-test with narrow Darwin diagnostics, fail-closed status/signal/error/marker, bounded tool admission, framed child output, canonical plan/tool paths, private root isolation, exclusive lock integrity plus real subprocess contention/stale recovery, inert verifier imports, noncanonical-entry refusal, cleanup aggregation, historical nonexecution, and artifact refusal (sources sha256:${sourceDigest})\n`);
 }
 
 main().catch((error) => {
