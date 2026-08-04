@@ -15,23 +15,31 @@
 <!-- P07B-C-RECEIPT-PHASE:START -->
 ### Active P07B-C phase contract
 
-- **Boundary:** `C6R`
-- **Parent:** `C6N`
-- **Verification profile:** `SOURCE_FULL`
+- **Boundary:** `C6B`
+- **Parent:** `C6R`
+- **Verification profile:** `RECEIPT_RECONCILIATION`
 - **Receipt C3P:** `PRESENT`
 - **Receipt C3:** `PRESENT`
-- **Receipt C6A:** `ABSENT`
+- **Receipt C6A:** `PRESENT`
 <!-- P07B-C-RECEIPT-PHASE:END -->
 
-- **Pipeline phase:** U0–U6, P07A/U6b, every P07B-A/B boundary, and P07B-C through C6N are sealed and strict-clean. C6R is the active exact-seven-path `SOURCE_FULL` note-consumer projection repair; every C6R grade remains `UNRECEIPTED`. C6B remains the future, separate receipt-reconciliation boundary.
-- **Git:** repository is on `codex/countershape-autopilot` at exact sealed C6N HEAD `096842954c9e6ae72b66010fff81e90cf0bd7a22`, tree `69845d09f85abf76b275b16c0d941fbd568ee907`, direct parent sealed C6M `b0de83dca3510102af4d1cddae2b2023bc88a87d`. C6R is deliberately uncommitted with exact subject `fix: bind sealed C6N note redaction projection`; it may change only the seven paths declared by the parent-sealed transition. The exact C6B receipt draft is preserved at stash object `cf7389241684e3a6671baae47894249c4197943b`; every failed/final didrun archive remains retained and C6R rewrites none of them.
+#### C6B operator summary
+
+- **Status:** active and `UNRECEIPTED`.
+- **Parent:** exact sealed C6R; its immutable identity is listed below.
+- **May bind:** only a new canonical receipt declaration for the already-sealed C6A source authority and grades.
+- **May not create or reconcile:** a new C6R receipt or any C6B result; it also may not assert product re-verification, security review, adoption, or production readiness.
+
+- **Pipeline phase:** U0–U6, P07A/U6b, every P07B-A/B boundary, and P07B-C through C6R are sealed and strict-clean. C6B is the active exact-five-path `RECEIPT_RECONCILIATION` boundary; it may reconcile only the already-sealed C6A source grades and every C6B grade remains `UNRECEIPTED`.
+- **Git:** repository is on `codex/countershape-autopilot` at exact sealed C6R HEAD `fafff150d23d6df211b4313e73ac7cf43f28b2d3`, tree `d722c8adb58313bc7cbbdcc7ce634b5fb384cff2`, direct parent sealed C6N `096842954c9e6ae72b66010fff81e90cf0bd7a22`. C6B is deliberately uncommitted with exact subject `docs: receipt P07B-C contract execution`; it may change only the five paths declared by the parent-sealed transition. The exact partial C6B draft remains preserved at stash object `cf7389241684e3a6671baae47894249c4197943b`; every failed/final didrun archive remains retained and C6B rewrites none of them.
+- **Frozen C6R parent anchor:** C6R was the exact-seven-path `SOURCE_FULL` sealed-C6N note-consumer repair with subject `fix: bind sealed C6N note redaction projection`; its owning status is `docs/status/P07B-C-C6R-NOTE-CONSUMER-MAINTENANCE.md`. It sealed at commit `fafff150d23d6df211b4313e73ac7cf43f28b2d3`, tree `d722c8adb58313bc7cbbdcc7ce634b5fb384cff2`, note blob `8e72af6f3c15d97bd25a928dc31288439634d72c`, and note-body SHA-256 `6e785174d74a3e7c1aa78a9d98df2bd17e47cd6fbf9c8d5e701dc71db4cd4dc0`, with `10/10 claims recorded-exact`, every grade `TREE-EXACT`, strict exit `0`, and `secrets_override: true`. Its exact-commit HTML is `.countershape/evidence/p07b-c-c6r-final-fafff150d23d.html`, SHA-256 `35032c5e79b8dc2f1f803a772891383adc6c425987c44281824b7325afc32522`, 8,075 bytes; its retained final ledger is `.didrun-history/p07b-c-c6r-final-fafff150d23d/.didrun/`.
 - **Frozen C6N parent anchor:** C6N was the exact-nine-path `SOURCE_FULL` note-representation, sealed-replay, and plan-throughput repair with subject `fix: bind C6M note redaction epoch`; its owning status is `docs/status/P07B-C-C6N-NOTE-REDACTION-MAINTENANCE.md`. It sealed at commit `096842954c9e6ae72b66010fff81e90cf0bd7a22`, tree `69845d09f85abf76b275b16c0d941fbd568ee907`, note blob `b66c7b38bad6c8ea94288f2cd8afa87e76f0c831`, and note-body SHA-256 `68abfb23fe35e2d2844e0a1622f7c4566f08789a29d16dd170c02b0e7046ef11`, with `10/10 claims recorded-exact`, every grade `TREE-EXACT`, and strict exit `0`.
 - **Frozen C6M parent anchor:** C6M was the exact-five-path `SOURCE_FULL` data-only source-authority adapter with subject `fix: bind sealed C6A source authority`; its owning status is `docs/status/P07B-C-C6M-RECEIPT-ADAPTER-MAINTENANCE.md`. It sealed at commit `b0de83dca3510102af4d1cddae2b2023bc88a87d`, tree `3d80a02443209f5d5649fcba92b79b72a2a04a15`, note blob `d08739e2f5bb3d761d5962081242924ae9cb7f36`, and note-body SHA-256 `1bcf1b4563561d6a07db9394bb6b25b2e7d2ca126df18b98f0c8596cc960a487`, with `10/10 claims recorded-exact`, every grade `TREE-EXACT`, strict exit `0`, and `secrets_override: true`.
-- **Frozen C6G parent anchor:** C6G was the seven-path `SOURCE_FULL` historical-C3U fixture repair with exact subject `fix: isolate C3U historical C6 fixtures`; its owning status is `docs/status/P07B-C-C6G-C3U-HISTORICAL-FIXTURE-MAINTENANCE.md`. It sealed at commit `3677b45d75204ce2ef7242abb5edd11cc049934e`, tree `520ad2cbf2d3da8354b02afd1cd2a7cd5df82d7d`, note blob `df26876b86d89689d9125531a816b92b7db97afb`, and note-body SHA-256 `2d781bd6373dc0d91b0683a5a0e046ada58522451e0d9f58a71d4df1eb115bc9`, with `10/10 claims recorded-exact`, every grade `TREE-EXACT`, strict exit `0`, and `secrets_override: true`. Its later C6M reconciliation checkpoint remains retained as stash object `6a0f9bd03c706a2a8afd23a68bb0c18d42551896`; that object is historical recovery state, not current C6R authority.
+- **Frozen C6G parent anchor:** C6G was the seven-path `SOURCE_FULL` historical-C3U fixture repair with exact subject `fix: isolate C3U historical C6 fixtures`; its owning status is `docs/status/P07B-C-C6G-C3U-HISTORICAL-FIXTURE-MAINTENANCE.md`. It sealed at commit `3677b45d75204ce2ef7242abb5edd11cc049934e`, tree `520ad2cbf2d3da8354b02afd1cd2a7cd5df82d7d`, note blob `df26876b86d89689d9125531a816b92b7db97afb`, and note-body SHA-256 `2d781bd6373dc0d91b0683a5a0e046ada58522451e0d9f58a71d4df1eb115bc9`, with `10/10 claims recorded-exact`, every grade `TREE-EXACT`, strict exit `0`, and `secrets_override: true`. Its later C6M reconciliation checkpoint remains retained as stash object `6a0f9bd03c706a2a8afd23a68bb0c18d42551896`; that object is historical recovery state, not current C6B authority.
 - **Frozen C6F ancestor anchor:** C6F was the twelve-path `SOURCE_FULL` historical-fixture/frozen-replay repair with exact subject `fix: isolate historical C6 authority fixtures`; its owning status is `docs/status/P07B-C-C6F-HISTORICAL-AUTHORITY-FIXTURE-MAINTENANCE.md`. It sealed at commit `dd2a011edff20d65c43934fc7c3e5a09b5829d2e`, tree `b0141ac2671df75e51c4fdb5b71c35cee5d0f4ea`, note blob `677e7dda3fc445bda07a7b473b0a40b9a18cea00`, and note-body SHA-256 `fdabc5c9518d1b0d14981cc8dc9c99815b8caf57c481b6fbd75edd58390665f3`, with `10/10 claims recorded-exact`, every grade `TREE-EXACT`, strict exit `0`, and `secrets_override: true`.
-- **Frozen C6A source anchor:** C6A was the fourteen-exact-path plus three-prefix `SOURCE_FULL` cumulative architecture and expert-evidence boundary at commit `3e9643f657248e0d5ff2c4bf0880218efbaeecd8`, tree `226a1e23da7eded933b3faabd4e8040576b2a2e0`, with exact subject `test: close P07B-C cumulative evidence`; its owning status is `docs/status/P07B-C-C6-EVIDENCE.md`. This sentence preserves sealed-source replay authority and does not move the live C6R cursor backward.
-- **Frozen C5V replay anchor:** C5V was the nine-path `SOURCE_FULL` maintenance boundary with exact subject `fix: harden final verification hygiene`; its owning status is `docs/status/P07B-C-C5V-VERIFIER-PREFLIGHT-HYGIENE.md`. This sentence preserves the earlier sealed replay corpus and does not move the live C6R cursor backward.
-- **didrun:** installed globally and unchanged. Exact sealed C6N has `10/10 claims recorded-exact`, every grade `TREE-EXACT`, strict exit `0`, and note blob `b66c7b38bad6c8ea94288f2cd8afa87e76f0c831`. C6A remains sealed with `11/11 claims recorded-exact`, every grade `TREE-EXACT`, strict exit `0`, and `secrets_override: true`; its note blob is `b110b998a56c89d77bec3f87a48f64f1f21a700e`. C6R changes only its two independent checkers, phase table, lifecycle documentation, and owning status; it does not change the verifier, project a C6A receipt, or reuse any ancestor grade as its own.
+- **Frozen C6A source anchor:** C6A was the fourteen-exact-path plus three-prefix `SOURCE_FULL` cumulative architecture and expert-evidence boundary at commit `3e9643f657248e0d5ff2c4bf0880218efbaeecd8`, tree `226a1e23da7eded933b3faabd4e8040576b2a2e0`, with exact subject `test: close P07B-C cumulative evidence`; its owning status is `docs/status/P07B-C-C6-EVIDENCE.md`. This sentence preserves sealed-source replay authority and does not move the live C6B cursor backward.
+- **Frozen C5V replay anchor:** C5V was the nine-path `SOURCE_FULL` maintenance boundary with exact subject `fix: harden final verification hygiene`; its owning status is `docs/status/P07B-C-C5V-VERIFIER-PREFLIGHT-HYGIENE.md`. This sentence preserves the earlier sealed replay corpus and does not move the live C6B cursor backward.
+- **didrun:** installed globally and unchanged. Exact sealed C6R has `10/10 claims recorded-exact`, every grade `TREE-EXACT`, strict exit `0`, `secrets_override: true`, and note blob `8e72af6f3c15d97bd25a928dc31288439634d72c`. C6A remains sealed with `11/11 claims recorded-exact`, every grade `TREE-EXACT`, strict exit `0`, and `secrets_override: true`; its note blob is `b110b998a56c89d77bec3f87a48f64f1f21a700e`. C6B changes only handoff/prompt/receipt-status documentation plus its canonical receipt declaration; it changes no product, verifier, checker, phase table, or source-authority manifest, and it cannot receipt its own result.
 - **Permanent C6N final reds:** attempt 1 is retained at `.didrun-history/p07b-c-c6n-final-attempt-1-sandbox-git-lock/.didrun/`; the restarted app sandbox denied `.git/index.lock` before command 1 could be claimed. Attempt 2 is retained at `.didrun-history/p07b-c-c6n-final-attempt-2-c6-hash-object-timeout/.didrun/`; commands 1–6 passed and were claimed, while unclaimed cumulative command 7 failed at row 57 when one per-blob `git hash-object --stdin` child reached 60 seconds. Neither attempt produced a commit, seal, note, strict result, HTML, or reusable C6N grade. The focused thirteen-event repair ledger is retained separately at `.didrun-history/p07b-c-c6n-batch-repair-diagnostic-2dd3ee57e772/.didrun/` and remains unclaimed development evidence.
 - **Permanent C6N development red:** `.didrun-history/p07b-c-c6n-development-red-plan-selftest-timeout-0f2ce2b787a9/.didrun/` retains the complete 39-event restart on tree `0f2ce2b787a92c849a38d0f76b3cc2c6b64cad10`. Rows 1–58 passed; unclaimed event 38 and row 59, `architecture-p07b-c-plan-selftest`, exited `1` after `1,200,016` ms with `spawnSync ... ETIMEDOUT` at the unchanged `1,200,000` ms ceiling. The preceding power-loss interruption emitted no terminal event and is not a result. Rows 60–65 and every historical row were not run, and the red event supports no claim, seal, grade, or partial cumulative pass.
 - **Focused C6N plan-throughput green:** `.didrun-history/p07b-c-c6n-plan-throughput-green-26a91ed4bb6c/.didrun/` retains three unclaimed events on staged tree `26a91ed4bb6ca1a13b75d7934975f7e6e75a4859`. Event 2 completed the unchanged plan self-test in `164.872573` seconds with exit `0`, empty stderr, and the same C3P `1926/968`, C3 `205` plus two-decoy, and evolved `25225` public markers—approximately 86.3% below the unchanged outer ceiling. Recording the measurement changes the documentation tree, so this diagnostic cannot replace final-tree focused or cumulative evidence.
@@ -47,8 +55,10 @@
 - **Historical C6A development red:** permanent unclaimed event 172 completed cumulative rows `1–49/65` and failed row `50/65`, `architecture-p07b-c-c5`, because Countershape's Go-JSON parser treated every slash-delimited test-name prefix as a separately emitted lifecycle. Event 173 independently preserved the real passing profile that emits `.../setgid/nested-directory` without `.../setgid`. The repaired dual parsers require exact admitted top-level-root enclosure and retain every per-name/package/skip/output/pause rule; Go-JSON has no explicit parent ID, so intermediate prefix ancestry is a stated nonclaim. Two complete post-repair development passes and the final C6A ledger later closed that boundary; the red events remain permanent history and support no grade.
 - **Current baseline:** from a fresh repository-root shell, run `/opt/homebrew/bin/node tools/verify-current.mjs`. The current 65-row roster keeps all product, B, C1–C5, plan, scope, receipt, and terminal-authority rows `LIVE`; live B now invokes exact C1 with `--c1`. Exactly two rows—C6 architecture and its self-test—are machine-labeled `SEALED_C6A` and route through `tools/check-sealed-c6a-architecture.mjs` against exact raw sealed-C6A ancestor blobs and a pinned private Git/notes authority. They follow the seven C5 rows and precede the live plan/scope/receipt tail. Exactly two `.DS_Store` guards bookend product/checker execution. Exactly 12 whole sensitive packages remain split into adjacent inherited-nine and C5-three serial rows; each retains `-p=1`, `-parallel=2`, `-count=1`, and `-timeout=20m`, with sorted, unique, disjoint, exact-union closure. Sealed C4K gives only exact `c3-official-target` `-timeout=12m`; the outer C3/C4 profile ceiling remains 900 seconds, the clean C3 self-test is bounded at 1080 seconds, and the cumulative-verifier child default remains 1200 seconds. Sealed C4J's exact two C5 rows retain `1800000` ms. Sealed C6F and C6G changed no Go cache, parallelism, package partition, retry, inner semantic deadline, or runtime lock acquisition/release policy.
 - **Verifier-evolution ruling:** historical C3 explicitly supersedes rather than literally satisfies C3V's blanket future-byte trigger. The observer throughput proposal remains routed by sealed C1V/C4V evidence: persistent Go-only cache is `DECLINED_WITH_REASON` for the cgo/SDK/library authority gap; higher global parallelism is `DECLINED_WITH_REASON` after the documented recurrence; the fail-fast O_EXCL lock and narrow `RECEIPT_RECONCILIATION` roster are `INTENTIONAL / ALREADY SATISFIED`. C4N and C4P changed phase/checker authority only, not that execution profile. Any reconsideration needs a separately scoped verifier-authority migration and full requalification.
-- **Build:** C1 implements strict inert target/run/execution semantics; C2 adds exact inert nonhead persistence and receipt-backed interlock/StartClaim mechanics. C3 owns bounded runtime measurement, target materialization, and official-target issuance. Sealed C4 implements the CLI-only physical slice; sealed C4H/C4I/C4K/C4J/C4L harden process, verifier, timing, and governance boundaries; sealed C5 adds the HTTP/full-scope product slice; sealed C5V closes final-runbook and cumulative-verifier hygiene; sealed C6A closes nonrecursive cumulative architecture plus deterministic exact evidence/diagnostic surfaces; sealed C6F and C6G isolate historical authority and phase fixtures; sealed C6M binds the portable C6A source-authority manifest; sealed C6N hardens note representation and sealed replay. Active C6R binds the observed immutable C6N note projection without changing product behavior, the cumulative row roster, or receipt state.
-- **External APIs:** none used in the product. C6A's required different-model critic received only sanitized tracked captures; its qualitative verdict remains `UNRECEIPTED` and has no semantic authority. C6R calls no external API. Any real external model/API integration remains human-gated and must never be faked.
+- **Build:** C1 implements strict inert target/run/execution semantics; C2 adds exact inert nonhead persistence and receipt-backed interlock/StartClaim mechanics. C3 owns bounded runtime measurement, target materialization, and official-target issuance. Sealed C4 implements the CLI-only physical slice; sealed C4H/C4I/C4K/C4J/C4L harden process, verifier, timing, and governance boundaries; sealed C5 adds the HTTP/full-scope product slice; sealed C5V closes final-runbook and cumulative-verifier hygiene; sealed C6A closes nonrecursive cumulative architecture plus deterministic exact evidence/diagnostic surfaces; sealed C6F and C6G isolate historical authority and phase fixtures; sealed C6M binds the portable C6A source-authority manifest; sealed C6N and C6R harden note representation, replay, and descendant consumption. Active C6B records the already-sealed C6A receipt projection without changing product behavior or rerunning the product suite.
+- **External APIs:** none used in the product. C6A's required different-model critic received only sanitized tracked captures; its qualitative verdict remains `UNRECEIPTED` and has no semantic authority. C6B calls no external API. Any real external model/API integration remains human-gated and must never be faked.
+
+The following C6R subsection is frozen v30 source-era compatibility text. The live capsule above selects C6B after exact sealed C6R; the subsection's `ABSENT`, `UNRECEIPTED`, active, and blocked language records the pre-seal C6R contract and does not move the cursor backward. C6B's exact preseal parent is C6R, not C6N or C6M.
 
 ### Active C6R sealed C6N note-consumer maintenance
 
@@ -72,7 +82,7 @@ The second defect is verifier stability, not product behavior. One real final cu
 
 The third defect is plan-self-test throughput, not a missing semantic check. The 39-event development restart above completed rows 1–58 before the plan child exhausted its unchanged outer bound. The repaired self-test leaves every case, output contract, claim, receipt transition, verifier row, and deadline in place. One ordinary uncached baseline may then install an invocation-scoped authority snapshot guarded by exact canonical root, active boundary, receipt and C6-manifest bytes, Git and Node executable identities, `HEAD`, index tree, and notes tree; configured Git must resolve to the `/usr/bin/git` used by sealed-C6 derivation, explicit injections win, mismatches use the original validation path, loaded objects are immutable clones, and a terminal recapture runs even after body failure. Identical qualification sources are parsed once per exact ordered path-to-byte set and Node identity, with full input equality after the typed digest lookup and successful analyses only. The wrapper is intentionally limited to the current C6M/C6N/C6B horizon. There is no retry, deadline increase, case removal, case sharding, claim change, receipt change, or verifier-row change.
 
-The frozen source-era text declared all ten C6N grades `UNRECEIPTED` and rendered its deterministic procedure with `/opt/homebrew/bin/node tools/check-p07b-c-plan.mjs --print-final-runbook C6N`; that statement is historical, not an instruction to reopen the sealed boundary. The phrase “C6B remains blocked until C6N seals” is likewise frozen history; active C6R now gates C6B.
+The frozen source-era text declared all ten C6N grades `UNRECEIPTED` and rendered its deterministic procedure with `/opt/homebrew/bin/node tools/check-p07b-c-plan.mjs --print-final-runbook C6N`; that statement is historical, not an instruction to reopen the sealed boundary. The phrase “C6B remains blocked until C6N seals” is likewise frozen history; sealed C6R is now the exact parent of active C6B.
 
 ### Active C6G C3U historical future-C6 fixture maintenance
 
@@ -88,7 +98,7 @@ Both generic checkers independently froze the C6G note projection at `sha256:3df
 
 ### Active C6M sealed-source authority adapter
 
-The heading and present-tense pre-seal statements below are frozen v28 authority text. C6M and C6N are sealed; the source-era v29 cursor was C6N, while the live v30 cursor is C6R as declared above.
+The heading and present-tense pre-seal statements below are frozen v28 authority text. C6M, C6N, and C6R are sealed; the source-era v29 cursor was C6N, while the live v30 cursor is C6B as declared above.
 
 C6M is the exact five-path `SOURCE_FULL` data-only boundary with subject `fix: bind sealed C6A source authority` and roster digest `sha256:5501a7e8c2d8f6d44392d101110edafe90a0348ef77f5ea24539f6a8ba969803`. Its direct parent is sealed C6G, and its validators traverse exact `C6M → C6G → C6F → C6A` ancestry. Its only machine payload is canonical `spec/verification/p07b-c-c6a-source-authority.json`; it changes no checker, verifier, phase table, product source, C6 evidence, or receipt declaration.
 
@@ -98,7 +108,7 @@ C6M keeps Receipt C6A `ABSENT`, projects no `P07B-C-C6A-SOURCE-RECEIPTS` block, 
 
 Under its sealed source contract, `C6A → C6F → C6G → C6M → C6B` is the now-extended exact tail. C6A was sealed source authority, but Receipt C6A remains `ABSENT`: neither the canonical source-authority manifest nor the receipt declaration existed in the C6F tree. C6F was a twelve-path `SOURCE_FULL` repair that introduced `countershape/p07b-c-unit-paths/v27`, changed both generic phase checkers, isolated the frozen C6A replay, and ran the cumulative verifier.
 
-The heading above is a frozen v27 pre-seal checker marker. C6F, C6G, C6M, and C6N are now sealed; exact C6R is the live cursor, as the delimited capsule and current-state facts above state.
+The heading above is a frozen v27 pre-seal checker marker. C6F, C6G, C6M, C6N, and C6R are sealed; C6B is the live receipt cursor selected by the delimited capsule and current-state facts above.
 
 C6A → C6F → C6G → C6M → C6B was the v28 source-era exact tail. C6F sealed at commit `dd2a011edff20d65c43934fc7c3e5a09b5829d2e`, tree `b0141ac2671df75e51c4fdb5b71c35cee5d0f4ea`, with 10/10 `TREE-EXACT` and strict exit `0`; C6G and C6M then sealed independently as recorded above. Receipt C6A remains `ABSENT`: neither C6F nor C6G contained the canonical source-authority manifest or receipt declaration; sealed C6M added only the manifest and kept the receipt absent.
 
@@ -108,11 +118,11 @@ The second defect was the frozen C6A checker reading the descendant C6F HANDOFF 
 
 The first final ledger then exposed a third host-boundary defect after its full cumulative event passed: exact status-zero Git inventory inherited 344 bytes of managed-Darwin developer-tool diagnostics. The repaired scope checker admits only three exact, bounded, no-BOM, otherwise-fatal-UTF-8, LF-framed Apple diagnostic forms and continues to reject all unclassified stderr. That repair is within the existing C6F scope-checker path and does not weaken staged roster, diff, status, signal, or spawn-error enforcement.
 
-Frozen historical pre-seal anchor: Active C5V verifier-preflight hygiene maintenance. Its exact subject was `fix: harden final verification hygiene`, its status authority is `docs/status/P07B-C-C5V-VERIFIER-PREFLIGHT-HYGIENE.md`, and its nine-path SOURCE_FULL wording is retained for sealed checker replay; none of that text selects the live C6R boundary.
+Frozen historical pre-seal anchor: Active C5V verifier-preflight hygiene maintenance. Its exact subject was `fix: harden final verification hygiene`, its status authority is `docs/status/P07B-C-C5V-VERIFIER-PREFLIGHT-HYGIENE.md`, and its nine-path SOURCE_FULL wording is retained for sealed checker replay; none of that text selects the live C6B boundary.
 
 ### Sealed C4H verifier-hermeticity maintenance — historical snapshot
 
-C4H sealed at commit `4b4686ea30e5ddc5043eee11ba24725bcce8bb94`, tree `2d02d220961f3fc41b2372df5eb8dc3aac47a529`, directly after its exact parent at `c4089ab31181c08dad880bf9e5d40c622c8c91c4`. Its didrun note blob is `9532c545dd685046efd57e999613092f92e54e8d`, with note-body SHA-256 `e94c4b8b48978f0208757f7f7707bde5c02b0cb7c91eebaa16873e9aaf1b5041`; it closed with `11/11 claims recorded-exact`, every grade `TREE-EXACT`, and strict exit `0`. That exact parent's note blob was `e1e106d3e7cecf51cbf3a6b5752a5b5268e97427`, with note-body SHA-256 `63a19a8bd7ddf446f7d53873e107d47c4deaa5f9c8ef741b5c892d964f38db17`. The owner-tense statements below are frozen v21 pre-seal history retained for checker compatibility; they do not supersede the live C4L capsule above. That exact wrapper is retained as immutable checker history; the active C6R capsule at the top now governs, and the later boundaries intervened after this historical boundary.
+C4H sealed at commit `4b4686ea30e5ddc5043eee11ba24725bcce8bb94`, tree `2d02d220961f3fc41b2372df5eb8dc3aac47a529`, directly after its exact parent at `c4089ab31181c08dad880bf9e5d40c622c8c91c4`. Its didrun note blob is `9532c545dd685046efd57e999613092f92e54e8d`, with note-body SHA-256 `e94c4b8b48978f0208757f7f7707bde5c02b0cb7c91eebaa16873e9aaf1b5041`; it closed with `11/11 claims recorded-exact`, every grade `TREE-EXACT`, and strict exit `0`. That exact parent's note blob was `e1e106d3e7cecf51cbf3a6b5752a5b5268e97427`, with note-body SHA-256 `63a19a8bd7ddf446f7d53873e107d47c4deaa5f9c8ef741b5c892d964f38db17`. The owner-tense statements below are frozen v21 pre-seal history retained for checker compatibility; they do not supersede the live C4L capsule above. That exact wrapper is retained as immutable checker history; the active C6B capsule at the top now governs, and the later boundaries intervened after this historical boundary.
 
 C4H is active between exact sealed C4 and C5. That exact owner-tense sentence is frozen v21 history; C4H actually sealed before C4I and is not the live cursor.
 
@@ -128,11 +138,11 @@ The repair has four load-bearing parts: bounded terminal-safe Git failure diagno
 
 The observer's proof-sharding proposal is `DECLINED_WITH_REASON`: under the current no-relabel/no-weakening contract, C5's terminal predicate is one exact 79-event ledger and there is no authorized receipt transition that can substitute a witness boundary. Composite Proof Protocol v2 is `DEFERRED_WITH_REASON` until after C6B, when it can be designed prospectively. C4H's deterministic 11-command unit has closed; C5 is now active.
 
-The following C4I subsection is frozen v22 pre-seal history retained verbatim for phase-checker compatibility. Its owner-tense statements do not supersede the active C6R capsule above.
+The following C4I subsection is frozen v22 pre-seal history retained verbatim for phase-checker compatibility. Its owner-tense statements do not supersede the active C6B capsule above.
 
 ### Sealed C4K C3 Go-timeout maintenance — historical snapshot
 
-C4K sealed at commit `8c1ee2df955055ee40eec1f14f0c4d96f97d5361`, tree `99fe7082d05c96647a144785e0ddc5af1a09f52f`, directly after exact sealed C4I. Its didrun note blob is `2d039109e269968e2314934fb4e2c4cccb31a097`, with note-body SHA-256 `cc276493b0d67bb9903d30591aaa99ed29df09d33154bed2f81faef717435766`; it closed with `12/12 claims recorded-exact`, every grade `TREE-EXACT`, strict exit `0`, and `secrets_override: true`. The owner-tense and `UNRECEIPTED` C4K statements below are frozen v23 pre-seal history retained for compatibility; they preserve that boundary's exact contract and do not supersede the active C6R capsule above.
+C4K sealed at commit `8c1ee2df955055ee40eec1f14f0c4d96f97d5361`, tree `99fe7082d05c96647a144785e0ddc5af1a09f52f`, directly after exact sealed C4I. Its didrun note blob is `2d039109e269968e2314934fb4e2c4cccb31a097`, with note-body SHA-256 `cc276493b0d67bb9903d30591aaa99ed29df09d33154bed2f81faef717435766`; it closed with `12/12 claims recorded-exact`, every grade `TREE-EXACT`, strict exit `0`, and `secrets_override: true`. The owner-tense and `UNRECEIPTED` C4K statements below are frozen v23 pre-seal history retained for compatibility; they preserve that boundary's exact contract and do not supersede the active C6B capsule above.
 
 C4K is active between exact sealed C4I and the owner-parked C4J checkpoint. It owns no product behavior. Its subject is `fix: bound C3 architecture test timeout`, and its authority is `OWNER_OUT_OF_BAND`: sealed C4I did not predeclare this repair, so `predecessor-predeclared = false`, no external signed instruction artifact exists, and C4K inherits or rewrites no C4I grade.
 
@@ -146,7 +156,7 @@ C4J remains parked in stash `6357d7e039d79586e18210ebde283cc4ba0a28e0` after per
 
 The C4K final boundary has 12 events: nine `tests-pass` claims and three `command-succeeded` claims. Render the exact ledger with `--print-final-runbook C4K`. Every C4K grade remains `UNRECEIPTED` until that staged tree commits, seals, exposes a readable note, and exits strict with zero.
 
-The owner-tense C4I section below is frozen v22 pre-seal history; its live-tense wording does not supersede the active C6R capsule.
+The owner-tense C4I section below is frozen v22 pre-seal history; its live-tense wording does not supersede the active C6B capsule.
 
 ### Sealed C4I verification-surface stability maintenance — historical snapshot
 
@@ -176,7 +186,7 @@ tree `c99c1f394e02f17f8cf9de6b18f1a949bcaa07a8`, note blob
 `a6b6191547efccf168d18932d559cba5a896c8dcde1f64ede72a27844f495cf1`,
 with 13/13 `TREE-EXACT`, strict exit `0`, and `secrets_override: true`.
 The owner-tense “active” and `UNRECEIPTED` statements below are frozen v24
-pre-seal history; they do not supersede the active C6R capsule.
+pre-seal history; they do not supersede the active C6B capsule.
 
 Exact sealed C4K is commit `8c1ee2df955055ee40eec1f14f0c4d96f97d5361`, tree `99fe7082d05c96647a144785e0ddc5af1a09f52f`, note blob `2d039109e269968e2314934fb4e2c4cccb31a097`, and note-body SHA-256 `cc276493b0d67bb9903d30591aaa99ed29df09d33154bed2f81faef717435766`. C4J is active after that exact parent with commit subject `fix: bound C5 architecture verification`. Its authority source is `OWNER_OUT_OF_BAND`: sealed C4K predeclared restoration of the checkpoint in prose, but v23 did not machine-declare C4J, so `predecessor-predeclared = true (sealed prose only)` and `machine-predeclared = false`. No external signed instruction artifact exists; no C4K grade is inherited or rewritten.
 
@@ -197,7 +207,7 @@ Exact sealed C4K's 12 exported note previews use a boundary-local legacy double-
 Historical snapshot: the heading and exact owner-tense markers “C4L is active”
 and “C5 remains blocked until C4L seals” are frozen v25 pre-seal evidence.
 The frozen phase edge is `C4J → C4L → C5`. Operationally, C4L and every
-boundary through C6N sealed, and C6R is now the live edge under v30. C4L is a 13-exact-path, no-prefix
+boundary through C6R sealed, and C6B is now the live receipt edge under v30. C4L is a 13-exact-path, no-prefix
 `SOURCE_FULL` authority-migration boundary. Its commit subject is
 `fix: bootstrap non-product maintenance authority`. It sealed at commit
 `32911730afb7cc717b8e0a164b9ea0038d83f3fa`, tree
@@ -244,7 +254,7 @@ C4I subsequently sealed at commit `d784ace97dd03660c6c724e1cb8f838b869681ec`, tr
 
 ### Sealed C5 HTTP execution — frozen pre-seal snapshot
 
-The C5 owner-tense and `UNRECEIPTED` statements in this subsection are frozen pre-seal contract text retained for checker replay. Exact C5 is now sealed at `240060f018d5b0e86914bd27361c5899ac9ba1c0`, tree `4906ff4af407fa4e48cbf569f7e456694660ca06`, with `79/79 TREE-EXACT`; the top-level C6R/v30 current-state capsule is authoritative.
+The C5 owner-tense and `UNRECEIPTED` statements in this subsection are frozen pre-seal contract text retained for checker replay. Exact C5 is now sealed at `240060f018d5b0e86914bd27361c5899ac9ba1c0`, tree `4906ff4af407fa4e48cbf569f7e456694660ca06`, with `79/79 TREE-EXACT`; the top-level C6B/v30 current-state capsule is authoritative.
 
 C5 owns 12 exact paths at `sha256:d16ba74582e53dc5c791b8c34fbcd6200338dc066ec13230c2908eb6ba257bf5` plus `internal/contractexec/http/`, `internal/contractexec/scope/`, and `testkit/contractexec/http/` at prefix digest `sha256:a9212680066fdbddc8f25eef04a41c264ac9148a506238dd92c39978e3e35f84`. Its exact execution-owner inventory contains the sealed CLI call site, the active HTTP call site, and the separate store definition. No other production package may consume admission authority.
 
@@ -269,7 +279,7 @@ All current product/checker/doc work is development evidence only. No C5 claim, 
 
 C4P is sealed and immutable at commit `bbda662314fa3584859ad38f1baeb86ac1f09b5f`, tree `2819dfb90d23da0e89a17f92528338930b73f32c`, directly after sealed C4N. Its didrun note blob is `0dbc8868d07eac3fa19a5cfab2a9b584d07209e8` with body SHA-256 `4a022906c3d4d4be4a6f32396537cd5c8fac0e2072f06b093b40f7fc8d0e3e75`; it closed with `10/10 claims recorded-exact`, every grade `TREE-EXACT`, strict exit `0`, and recorded `secrets_override: true`. The exact-commit HTML is `.countershape/evidence/p07b-c-c4p-final-bbda662314fa.html`, SHA-256 `cb18eed1305345d77925d9f3ee34e391a515a4860ebcf6ae155e849ab2d686d9`, 7,956 bytes. Those are C4P grades only and cannot receipt C4.
 
-The exact pre-seal phrases “C4P is active”, “C4 is safely checkpointed”, and “C4 remains blocked until C4P seals” are retained below solely as checker-compatible sealed history; the active C6R/current-state capsule above governs.
+The exact pre-seal phrases “C4P is active”, “C4 is safely checkpointed”, and “C4 remains blocked until C4P seals” are retained below solely as checker-compatible sealed history; the active C6B/current-state capsule above governs.
 C4P owns exactly these 7 paths: `docs/HANDOFF_MODE_C.md`, `docs/PROMPT_PACK.md`, `docs/VERIFICATION.md`, `docs/status/P07B-C-C4P-FUTURE-SURFACE-PHASE-MAINTENANCE.md`, `spec/verification/p07b-c-unit-paths.json`, `tools/check-p07b-c-plan.mjs`, and `tools/check-p07b-c-unit-scope.mjs`. Their sorted-newline roster digest is `sha256:5dc083fadb60003b0ba96516d0a01f91daa88b7298b142018b5eda00e48ab59b`.
 
 Its sealed commit subject is `fix: make B future-surface self-test phase-aware`. The sealed machine authority is `countershape/p07b-c-unit-paths/v20`, with 22 ordered phase rows and digest `sha256:6d7e41d5ff22fc73118ceb0ae9f27a2151e7121d3a91c8945a391b3f42868f7d`; it inserts only `C4P` between sealed C4N and checkpointed C4. The plan transition matrix has 10 accepted and 266 rejected cases; the independently implemented scope matrix has 10 accepted and 253 rejected cases.
@@ -302,7 +312,7 @@ Under sealed v18, C4 reentry added its declared status path to C4M's 47-path cor
 
 C4 product work was retained in stash object `c419c38c608dc6bec7e23e0fc379df28d3cb2d47`, message `countershape-c4-pre-c4r-checkpoint-20260722`, with exact staged tree `3a8cdfd33168751fc38e219881fd874b0495a577`. Its archived development ledger is `.didrun-history/p07b-c-c4-development-pre-c4m-c419c38c608d/.didrun/`; no event in that ledger supports a C4 or C4N claim. The stash remains retained after reapplication.
 
-The pre-seal source text stated that every C4N grade remains `UNRECEIPTED` until its exact ten-command ledger, commit, seal, readable note, strict-zero verification, HTML, and archive exist. That gate is now satisfied by `b915d43cced850936c46b52620654f7506bdb993`; the historical sentence “C4 is active” records the next cursor at that time. Every boundary through C6N is now sealed; C6R is current under v30.
+The pre-seal source text stated that every C4N grade remains `UNRECEIPTED` until its exact ten-command ledger, commit, seal, readable note, strict-zero verification, HTML, and archive exist. That gate is now satisfied by `b915d43cced850936c46b52620654f7506bdb993`; the historical sentence “C4 is active” records the next cursor at that time. Every boundary through C6R is now sealed; C6B is current under v30.
 
 ### Sealed C4M historical receipt-fixture repair — historical snapshot
 
@@ -382,7 +392,7 @@ C3P source commit `f7b6e6bda7a8864969415ab8636c495902e78dd9`, tree `2d5555db63d4
 
 ### Sealed C3V boundary — historical anchor: Active C3V throughput-proposal reconciliation
 
-The sentence “The active C3 source unit remains `UNRECEIPTED`” is retained only as a historical checker-compatibility anchor. Every boundary through C6N is sealed; C6R is the sole active unit under v30 and cannot inherit any earlier boundary's grades.
+The sentence “The active C3 source unit remains `UNRECEIPTED`” is retained only as a historical checker-compatibility anchor. Every boundary through C6R is sealed; C6B is the sole active receipt unit under v30 and cannot inherit any earlier boundary's grades.
 
 The phrase “Active C3V throughput-proposal reconciliation” is retained only as a historical checker-compatibility anchor; C3V is not the current unit. C3V routed the observer's four items against sealed C1V commit `88e62acb3023dcd6ee51950c2ad24bbcc2ca8900`, tree `6c98b3c384f01b63d1a00a002303041576896609`, whose `10/10` strict-clean receipt includes the exact 52-case qualification matrix and three cumulative passes at `814384`, `815886`, and `813933` milliseconds. Persistent Go-only cache reuse remains declined for this Darwin/cgo tree; C1V's then-qualified direct `p=2` general plus `p=1` sensitive/nested partition remains accurate sealed historical evidence after the `p=4` candidate caused permanent later AST timeouts; the fail-fast O_EXCL lock is already present; and the seven-claim `RECEIPT_RECONCILIATION` profile already supplies the narrow docs-only battery. C4V supersedes only the live direct-general setting: its second independent late A2 AST occurrence fires C1V's declared recurrence clause and reverts direct build, vet, and general testing to `p=1` without extending any deadline or weakening any assertion. C3V changes only its seven declared documentation/checker-authority paths and does not edit the verifier or repetition runner. C3L and C3F do not reopen those historical dispositions.
 
@@ -432,7 +442,7 @@ The C3P and C3 receipt declarations and their two exact source-receipt blocks re
 
 ### Historical C3D pre-seal snapshot — sealed, not current instructions
 
-The next paragraphs preserve the exact C3D-era checker language, including its then-active and then-blocked statements. Operational authority is the sealed-through-C6N/active-C6R section and current-state capsule above.
+The next paragraphs preserve the exact C3D-era checker language, including its then-active and then-blocked statements. Operational authority is the sealed-through-C6R/active-C6B section and current-state capsule above.
 
 ### Active C3D data-driven receipt-phase machinery
 
@@ -464,7 +474,7 @@ C3R changed only note-preview validation and dual-phase fixture authority. It ch
 
 C3 source commit `029c5cf43853eb3cb46520f6e0dea8431a3de5c0`, tree `de3e02a343f8ecfb344bdb28d014342f5b423959`, directly descends sealed C3S and closed with `18/18 claims recorded-exact` at strict exit `0`. Its didrun Git-note blob is `9ad8a864911ca30914463c61d3447a88beeda927`, with note-body SHA-256 `f5eaa66d0cae152a9edc7f4ff2d49ba66c0d1eb8f3459171a2888daaaaf80fa8`. The local HTML snapshot is `.countershape/evidence/p07b-c-c3-final-029c5cf43853.html`; the ignored ledger archive is `.didrun-history/2026-07-19-p07b-c-c3-final/.didrun/`. The note records `secrets_override: true`; this discloses a redacted export override and is not evidence of secret absence. Sealed C3B later reconciled the declaration and terminal source-receipt map from separate evidence; sealed C3D, C4V, C4M, and C4N did not grade themselves from either earlier boundary, and the then-active C4 could not inherit those grades.
 
-C3M's earlier “synthetic C3PB receipt phase” heading is retained in its status as historical checker evidence. The exact phrase “C3M receipt-phase checker maintenance is the active `SOURCE_FULL` unit” is retained here only as inert compatibility history, as is preserved C3PB-era stash object `5eeb848c334ad3a8a44e4cf61fa298e452188ab1`. The later sentence “C4 is the sole active unit” is likewise retained only as historical cursor text. Every boundary through C6N is closed; C6R is current under v30.
+C3M's earlier “synthetic C3PB receipt phase” heading is retained in its status as historical checker evidence. The exact phrase “C3M receipt-phase checker maintenance is the active `SOURCE_FULL` unit” is retained here only as inert compatibility history, as is preserved C3PB-era stash object `5eeb848c334ad3a8a44e4cf61fa298e452188ab1`. The later sentence “C4 is the sole active unit” is likewise retained only as historical cursor text. Every boundary through C6R is closed; C6B is current under v30.
 
 C3M source commit `c211d0534864e078fd0ea2c15adabca63ca3fe51`, tree `21cc76ed3979d1b6ed6ee24bd9babd9dbc1c6791`, is sealed and strict-clean with `8/8 claims recorded-exact`; strict exit `0`. Its Git-note blob is `276f011f2bf6e224e763e1a9f03326604e68c921`, with body SHA-256 `870a6ac50df57d7cd43808b8f4f2f115e2faee675ccfa4912c3bcf058bf2290e`. The exact-commit HTML is `.countershape/evidence/p07b-c-c3m-final-c211d0534864.html`, SHA-256 `ef701abc1c1f09abd092de4325efec7ed3e06a5ccd27ce105026a0bca825d58b`, 7295 bytes. Its final ledger is `.didrun-history/2026-07-19-p07b-c-c3m-final/.didrun/`. The seal records the logged redacted `--allow-secrets` override after 4 aggregate high-entropy findings; the separately claimed structured staged credential scan reported zero findings. This closes only the phase-stable checker repair and exact scope authority; it is not a C3M self-receipt, evidence of secret absence, or runtime capability.
 
@@ -494,7 +504,7 @@ The corresponding historical orientation described the bounded unit as “P07B-C
 
 ### Historical pre-seal C1E snapshot — not current
 
-The phase checker likewise retains the following pre-seal compatibility statement. It is historical evidence only; every boundary through C6N subsequently sealed, and C6R is now the sole active source unit under v30:
+The phase checker likewise retains the following pre-seal compatibility statement. It is historical evidence only; every boundary through C6R subsequently sealed, and C6B is now the sole active receipt unit under v30:
 
 > C1E local-evidence checker maintenance is the active `SOURCE_FULL` unit. C1B's exact four-path work is preserved with sorted-newline roster digest `sha256:f8d1fb96d36f7e0cfde99bb73c7726297763c66bafd21aeb5c1fb1e249bdd119`; its recorded handoff SHA-256 is `4bf73e5a34bef6cf72b491d654f423cfa317ae84e3ee66852ccb9cbf1790a5dc`, and its untracked receipt was preserved at `1d2c14f160ff42d509d96219512fa413830a9b1d^3:spec/verification/p07b-c-c1-receipt.json`. C1E's exact seven-path roster digest is `sha256:9a6422b45c82a44e6171ae9351468df5f6ece2190d6ab47f26aec6f84fd7ccde`; its development evidence remains at `.didrun-history/2026-07-18-p07b-c-c1e-build-loop/.didrun/`.
 
@@ -1259,11 +1269,19 @@ separate reviewed boundary.
 
 ## Exact next actions if this task resumes elsewhere
 
-1. Run `git status --short --branch`; confirm branch `codex/countershape-autopilot`, exact sealed C6N commit `096842954c9e6ae72b66010fff81e90cf0bd7a22` / tree `69845d09f85abf76b275b16c0d941fbd568ee907` remains `HEAD` above sealed C6M, C6G, C6F, and C6A ancestry, and candidate changes are limited to C6R's exact seven paths. Confirm the C6B draft stash object `cf7389241684e3a6671baae47894249c4197943b` remains retained. Retain every failed/superseded didrun event, final ledger, and `.countershape` artifact; stage no `.didrun` or `.didrun-history` path.
-2. Complete the C6R checker/specification/documentation repair against exact sealed C6N, stage exactly its seven-path roster, and run every changed deterministic gate through didrun. Both independent validators must preserve the frozen authored C6N prediction, separately bind the suffix-preserving projection observed in exact sealed C6N, prove direct C6N predecessor plus sealed C6M/C6G/C6F/C6A ancestry, inherit the canonical manifest byte-for-byte, and keep the receipt declaration and both projections absent. Treat every nonzero didrun event as permanent failed evidence and repair the fact rather than the gate.
-3. After source/doc edits stop, preserve any development ledger, require `.didrun`, `.countershape/verify-current/active.lock`, and `.countershape/p07bc-c6r-final` absent by no-follow inspection, then render `/opt/homebrew/bin/node tools/check-p07b-c-plan.mjs --print-final-runbook C6R`. Follow that deterministic artifact exactly: ten commands, ten immediate claims, commit subject `fix: bind sealed C6N note redaction projection`, seal, independent note inspection, `NO_COLOR=1 didrun verify --strict`, exact-commit HTML, and unchanged ledger archive. Any nonzero event permanently fails that ledger; repair the defect and restart at command 1.
-4. Preserve sealed C6N, C6M, C6G, C6F, and C6A unchanged. Their labels/types/argv/order, notes, reports, ledgers, evidence captures, and grades remain frozen. C6R reopens exact predecessor/ancestry authority only; it neither amends nor renews prior evidence.
-5. Only following an independently verified C6R seal and strict-clean receipt, restore and update the separately scoped C6B receipt reconciliation. C6B's exact preseal parent is C6R, not C6N or C6M; no grade crosses that edge automatically.
+C6B's exact five-path roster is:
+
+- `docs/HANDOFF_MODE_C.md`
+- `docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md`
+- `docs/status/DIDRUN_BUGS.md`
+- `docs/status/P07B-C-C6-EVIDENCE.md`
+- `spec/verification/p07b-c-c6a-receipt.json`
+
+1. Run `git status --short --branch`; confirm branch `codex/countershape-autopilot`, exact sealed C6R commit `fafff150d23d6df211b4313e73ac7cf43f28b2d3` / tree `d722c8adb58313bc7cbbdcc7ce634b5fb384cff2` remains `HEAD` above sealed C6N, C6M, C6G, C6F, and C6A ancestry, and candidate changes are limited to C6B's exact five paths. Confirm the partial C6B draft stash object `cf7389241684e3a6671baae47894249c4197943b` remains retained. Retain every failed/superseded didrun event, final ledger, and `.countershape` artifact; stage no `.didrun` or `.didrun-history` path.
+2. Resume from exact sealed C6R, which is the parent; create and reconcile only the canonical receipt declaration for the already-sealed C6A source authority and grades. Preserve `spec/verification/p07b-c-c6a-source-authority.json` byte-for-byte, add the canonical C6A receipt declaration, and project its one canonical source-receipt block exactly once in both HANDOFF and `docs/status/P07B-C-C6-EVIDENCE.md`. Keep C6B's own result explicitly unasserted; the receipt binds only sealed C6A source grades and labels local HTML/ledger checks as local snapshots rather than portable strict witnesses.
+3. Stage exactly C6B's five-path roster and run the candidate transition, independent source-authority gate, receipt validator/self-test, local-evidence snapshot check, receipt-only Go build, scope/diff, credential, and chain gates through didrun. Treat every nonzero event as permanent failed evidence and repair the fact rather than the gate. Keep parallel reviewers read-only.
+4. After edits stop, preserve any development ledger, require `.didrun`, `.countershape/verify-current/active.lock`, and `.countershape/p07bc-c6b-final` absent by no-follow inspection, then render `/opt/homebrew/bin/node tools/check-p07b-c-plan.mjs --print-final-runbook C6B`. Follow that deterministic artifact exactly: nine commands, nine immediate claims, commit subject `docs: receipt P07B-C contract execution`, seal, independent note inspection, `NO_COLOR=1 didrun verify --strict`, exact-commit HTML, and unchanged ledger archive. Any nonzero event permanently fails that ledger; repair the defect and restart at command 1.
+5. Preserve sealed C6R, C6N, C6M, C6G, C6F, and C6A unchanged. Their labels/types/argv/order, notes, reports, ledgers, evidence captures, and grades remain frozen. C6B reopens only the exact sealed C6A source authority through the parent-declared receipt contract; it neither amends nor renews prior evidence and cannot receipt itself.
 6. Keep root as the sole didrun/Git/seal operator and keep parallel agents read-only. Preserve the human-gated external-API boundary and the adoption, comprehension, production-hardening, independent-security-review, cross-platform, release, and maintainership tail.
 
 ## Orientation handshake for a fresh agent/chat
@@ -1274,9 +1292,45 @@ Before editing, reply in your working notes with:
 2. the three distinct truth authorities (Git, Choicepoint observations/ruling, didrun receipts);
 3. two things the system must never claim;
 4. the maintenance and A2.1 commits, P07B-A1 source prerequisite `1e56da3bfafc4cdb8abdca62f18fb3b1accea8c3`, A2.2 checkpoint `32efaaf2f6d9fc58389d48d18219ce03995a2805`, accepted corrected source `6bf33350944dcdd56a4ceaa70f1d0836203ffb1f`, B0 scope lock `7f04b2a5129dcbee2fc991453aefdd6713281b86`, sealed B source `eb06bdcf18f8e14db1257e73733afdc05cac045e`, sealed B receipt document `b4ac17bd66c6260fd4b12b9277ab5259659c55e1`, and sealed final B handoff `464e47adbf7f4497dfafa89938a9539239ffd41b`, with their exact receipt maps and nonclaims; and
-5. the current bounded shippable unit: C6R `SOURCE_FULL` over exactly seven paths; exact sealed C6N `096842954c9e6ae72b66010fff81e90cf0bd7a22` / `69845d09f85abf76b275b16c0d941fbd568ee907` is the direct parent/current `HEAD`, exact sealed C6M, C6G, C6F, and C6A are its ancestry/source authority, `countershape/p07b-c-unit-paths/v30` has 44 ordered unit rows and 32 receipt-phase rows, C3P/C3 receipts are present and C6A receipt is absent, C6N/C6M/C6G/C6F each have 10/10 sealed `TREE-EXACT`, C6A has 11/11 sealed `TREE-EXACT`, and all ten C6R grades remain `UNRECEIPTED` until the exact final seal.
+5. the current bounded shippable unit: C6B `RECEIPT_RECONCILIATION` over exactly five paths; exact sealed C6R `fafff150d23d6df211b4313e73ac7cf43f28b2d3` / `d722c8adb58313bc7cbbdcc7ce634b5fb384cff2` is the direct parent/current `HEAD`, exact sealed C6N, C6M, C6G, C6F, and C6A are its ancestry/source authority, `countershape/p07b-c-unit-paths/v30` has 44 ordered unit rows and 32 receipt-phase rows, C3P/C3/C6A receipts are present, C6R/C6N/C6M/C6G/C6F each have 10/10 sealed `TREE-EXACT`, C6A has 11/11 sealed `TREE-EXACT`, and all nine C6B grades remain `UNRECEIPTED` until C6B's exact final seal.
 
 If any answer is missing, read the files above again. Do not infer a didrun grade from this handoff; run strict verification locally.
+
+## C6B sealed-C6A source receipt projection
+
+The block below reconciles only the already-sealed C6A source. C6B remains `UNRECEIPTED` in this tracked candidate and cannot grade itself.
+
+<!-- P07B-C-C6A-SOURCE-RECEIPTS:START -->
+### Sealed C6A source receipts
+
+- **Source commit:** `3e9643f657248e0d5ff2c4bf0880218efbaeecd8`
+- **Source tree:** `226a1e23da7eded933b3faabd4e8040576b2a2e0`
+- **Source parent:** `e7f51c0a8fbd2d6fbe8eacb4a7f0d46f010af7ba`
+- **Source subject:** `test: close P07B-C cumulative evidence`
+- **Didrun note:** `b110b998a56c89d77bec3f87a48f64f1f21a700e` (body SHA-256 `096e9ae74e9a9ccfb984018f792a59bac3eb8ae24c550d83bb273e6b5ff064c7`)
+- **Seal override disclosed:** `true`
+- **Strict result:** `11/11 claims recorded-exact`; strict exit `0`
+- **Local HTML snapshot:** `.countershape/evidence/p07b-c-c6a-final-3e9643f65724.html` (SHA-256 `a7d533c8c0189a15b30427900d77b5b8ff4dda2e2b87c819dd125e7f527e18cd`, 8222 bytes; not a portable strict witness)
+- **Ignored ledger snapshot:** `.didrun-history/p07b-c-c6a-final-3e9643f65724/.didrun/` (all-files SHA-256 `1c2ac6b900d6158881306185bd57a7b75410206911bd7438003fff48be695441`; local only)
+- **Tracked evidence summary:** `docs/captures/p07b-c/c6a-evidence-summary.json` (SHA-256 `d7e7c4df8af5fcb6f436c79e7660ed0a9e8f6724e95256c6a1b1b21f7af6ae86`; timings=3, permanent-negatives=1, didrun-bugs=6)
+- **Private evidence availability:** `UNAVAILABLE`; 0 declared blobs / 0 bytes; confidentiality is not established
+
+| # | Claim | Type | Grade |
+|---:|---|---|---|
+| 1 | `P07B-C C6A candidate phase plan coherence` | `tests-pass` | `TREE-EXACT` |
+| 2 | `P07B-C C6A independent candidate transition authority` | `tests-pass` | `TREE-EXACT` |
+| 3 | `P07B-C C6A architecture conformance` | `tests-pass` | `TREE-EXACT` |
+| 4 | `P07B-C C6A architecture defensive self-test` | `tests-pass` | `TREE-EXACT` |
+| 5 | `P07B-C C6A cumulative verifier self-test` | `tests-pass` | `TREE-EXACT` |
+| 6 | `P07B-C C6A cumulative verification` | `tests-pass` | `TREE-EXACT` |
+| 7 | `P07B-C C6A final evidence defensive self-test` | `tests-pass` | `TREE-EXACT` |
+| 8 | `P07B-C C6A exact CLI HTTP Node and documentation evidence closure` | `tests-pass` | `TREE-EXACT` |
+| 9 | `P07B-C C6A exact staged scope and diff integrity` | `command-succeeded` | `TREE-EXACT` |
+| 10 | `P07B-C C6A scoped staged credential-pattern scan` | `command-succeeded` | `TREE-EXACT` |
+| 11 | `P07B-C C6A declared C5V parent edge and preceding didrun chain integrity` | `command-succeeded` | `TREE-EXACT` |
+
+Nonclaims: `adoption or market demand`, `human comprehension or taste`, `maintainership`, `production hardening or cross-platform support`, `security review or hostile containment`.
+<!-- P07B-C-C6A-SOURCE-RECEIPTS:END -->
 <!-- P07B-C-C3-SOURCE-RECEIPTS:START -->
 ### P07B-C C3 source receipt map
 

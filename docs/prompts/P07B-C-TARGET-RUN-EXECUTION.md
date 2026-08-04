@@ -612,7 +612,7 @@ The final ledger is exactly 79 commands and 79 immediate claims: 76 `tests-pass`
 
 ## Goal
 
-Use C6a to freeze and prove all C layers plus inherited boundaries and run a genuine multi-pass expert diagnostic/JSON/docs review. Use C6b only after C6a seals to reconcile exact source receipts and handoff state without self-reference.
+Use C6a to freeze and prove all C layers plus inherited boundaries and run a genuine multi-pass expert diagnostic/JSON/docs review. Use C6b only after exact C6R seals to reconcile the already-sealed C6A source authority and grades into the new descendant receipt and handoff state without self-reference; C6B does not receipt C6R or itself.
 
 ## Exact changes
 
@@ -621,7 +621,7 @@ Use C6a to freeze and prove all C layers plus inherited boundaries and run a gen
 - Run at least three build/see/exercise/critique/rebuild passes on developer-fixture diagnostics, strict JSON evidence, and C operator documentation at 60/80/120 columns. Do not use the P08 Matches/Differs/Could-not-judge headlines or define a product CLI ABI.
 - Run a blind different-model critic on sanitized expert captures; disposition every Medium+ finding. Deterministic capture commands may be receipted; critic judgment remains explicitly `UNRECEIPTED` and has no semantic authority.
 - C6a records implementation-owned native facts and then commits/seals/strict-verifies the frozen source tree.
-- C6b records C6a’s exact commit/tree, timings, permanent negatives, didrun bugs, claims/grades, nonclaims, current private-evidence availability, and handoff; it receives its own fresh receipt-doc ledger, commit, seal, note check, and strict gate.
+- The C6 receipt document may bind only the already-sealed C6A source authority; C6B's own result remains unasserted in that source tree and requires a later observer.
 - Generate the exact C6b strict HTML and SHA-256 outside Git after C6b strict succeeds. Preserve an archival byte-identical copy of the final ledger, but retain the matching `.didrun` live; if it is ever rotated, restore it before strict/HTML reproduction. HTML is not a ledger substitute.
 
 ## MUST NOT change
@@ -630,9 +630,9 @@ Use C6a to freeze and prove all C layers plus inherited boundaries and run a gen
 
 ## Verification
 
-- Full repo twice under stock macOS TMPDIR; the current direct build/vet/general `p=1`, sensitive/nested `p=1`, `GOMAXPROCS=2`, test `-parallel=2`, fresh-cache, single-lock, fixed-order profile unless a later sealed verifier migration supersedes it; race/vet/count-fuzz; architecture/checker selftests; exact physical CLI/HTTP matrix; direct generated Node parity; unchanged head; staged scope/credential-prefix checks.
+- C6A's sealed `SOURCE_FULL` evidence already ran the full repository battery. Active C6B uses only the parent-declared nine-command `RECEIPT_RECONCILIATION` roster: phase-plan coherence, independent sealed-C6A source authority, receipt reconciliation and its defensive self-test, declared local snapshot matching, receipt-only Go build, exact five-path scope/diff integrity, scoped credential scan, and preceding-chain integrity. It does not rerun or reclaim cumulative/product behavior.
 - Each final command receives an immediate narrow didrun claim.
-- C6a source and C6b receipt commits each seal, their Git notes validate, and strict exits `0`; exact HTML is generated for C6b only after that exact commit exists.
+- C6A must already be sealed before C6B can bind its source authority; asserting C6B's own seal or strict result inside C6B remains forbidden.
 
 ## Gate
 
