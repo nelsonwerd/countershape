@@ -1,6 +1,6 @@
 # Countershape
 
-**A live, unfinished autonomous build.** An AI agent has been building this repository on its own for over two weeks, under a verification discipline where every claim has to be backed by a recorded command. It is still running as you read this. There is no CLI yet, no interface, and nothing you can install.
+**A live, unfinished autonomous build.** An AI agent has been building this repository on its own for three weeks, under a verification discipline where every claim has to be backed by a recorded command. It is currently paused at a clean boundary — usage limits — and resumes when they reset. There is no CLI yet, no interface, and nothing you can install.
 
 The repository is public early because the *process* is the interesting part, and process is only interesting if you can inspect it.
 
@@ -37,7 +37,7 @@ The bet is that generating code got cheap and **deciding which behavior you actu
 | | |
 |---|---|
 | Started | 2026-07-14 |
-| Status | **Still building.** Roughly unit 6 of a 10-unit roadmap, now in its final-evidence phase (C6) |
+| Status | **Paused at a clean boundary** (usage limits). Units 0–6 of a 10-unit roadmap sealed and closed — the 18-day verification slice closed August 4. Unit 7, the CLI, is staged next |
 | Sealed commits | 75 |
 | Verified claims | 1045 (1014 clean, 30 stale, 1 failed) |
 | Go — product code | ~66,000 lines |
@@ -46,7 +46,7 @@ The bet is that generating code got cheap and **deciding which behavior you actu
 | **Runnable?** | **No.** No CLI, no UI, no install path |
 | Stats as of | 2026-08-04 (line counts from the 2026-07-29 survey) |
 
-The core engine exists and is sealed: exact Git materialization, isolated execution worlds, CLI and HTTP observation, a bounded reducer, the decision store, the ruling authority, the standalone-test compiler, publication, and execution classification. What does *not* exist yet is everything a human would touch — the command line, the blind decision screen, and packaging. Those are units 7 through 9 and have not been started.
+The core engine exists and is sealed: exact Git materialization, isolated execution worlds, CLI and HTTP observation, a bounded reducer, the decision store, the ruling authority, the standalone-test compiler, publication, and execution classification. What does *not* exist yet is everything a human would touch — the command line, the blind decision screen, and packaging. Those are units 7 through 9; unit 7's scope declaration is already drafted, and it starts when the run resumes.
 
 If you clone this expecting to run something, you will be disappointed. Come back later.
 
