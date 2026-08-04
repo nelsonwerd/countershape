@@ -110,6 +110,7 @@ const c6fStatusPath = "docs/status/P07B-C-C6F-HISTORICAL-AUTHORITY-FIXTURE-MAINT
 const c6gStatusPath = "docs/status/P07B-C-C6G-C3U-HISTORICAL-FIXTURE-MAINTENANCE.md";
 const c6mStatusPath = "docs/status/P07B-C-C6M-RECEIPT-ADAPTER-MAINTENANCE.md";
 const c6nStatusPath = "docs/status/P07B-C-C6N-NOTE-REDACTION-MAINTENANCE.md";
+const c6rStatusPath = "docs/status/P07B-C-C6R-NOTE-CONSUMER-MAINTENANCE.md";
 const bFutureSurfaceAuthorityPath = "spec/verification/p07b-b-future-surface-authority.json";
 const bFutureSurfaceInstanceSchema = "countershape/p07b-b-future-surface-authority/v1";
 const bFutureSurfaceSchemaDigest = "91c4ca13a4b30a683b82066fdcdc1a7892de2679a2e5419a57142e36b22f5937";
@@ -233,6 +234,7 @@ const c6fSourceSubject = "fix: isolate historical C6 authority fixtures";
 const c6gSourceSubject = "fix: isolate C3U historical C6 fixtures";
 const c6mSourceSubject = "fix: bind sealed C6A source authority";
 const c6nSourceSubject = "fix: bind C6M note redaction epoch";
+const c6rSourceSubject = "fix: bind sealed C6N note redaction projection";
 const c6bReceiptSubject = "docs: receipt P07B-C contract execution";
 const c3pReceiptBlockStart = "<!-- P07B-C-C3P-SOURCE-RECEIPTS:START -->";
 const c3pReceiptBlockEnd = "<!-- P07B-C-C3P-SOURCE-RECEIPTS:END -->";
@@ -554,6 +556,16 @@ const sealedC6MIdentity = Object.freeze({
 	noteBlob: "d08739e2f5bb3d761d5962081242924ae9cb7f36",
 	noteBodySHA256: "1bcf1b4563561d6a07db9394bb6b25b2e7d2ca126df18b98f0c8596cc960a487",
 });
+const sealedC6NIdentity = Object.freeze({
+	commit: "096842954c9e6ae72b66010fff81e90cf0bd7a22",
+	tree: "69845d09f85abf76b275b16c0d941fbd568ee907",
+	parent: sealedC6MIdentity.commit,
+	subject: c6nSourceSubject,
+	noteRef: "refs/notes/didrun",
+	noteType: "blob",
+	noteBlob: "b66c7b38bad6c8ea94288f2cd8afa87e76f0c831",
+	noteBodySHA256: "68abfb23fe35e2d2844e0a1622f7c4566f08789a29d16dd170c02b0e7046ef11",
+});
 const c0ClaimLabels = Object.freeze([
 	"P07B C0 authority plan coherence",
 	"P07B C0 plan checker self-test",
@@ -832,7 +844,7 @@ const requiredText = Object.freeze({
 		"`RECEIPT_RECONCILIATION` is admitted only for an exact empty-prefix roster",
 	],
 	"spec/verification/p07b-c-unit-paths.json": [
-		"countershape/p07b-c-unit-paths/v29",
+		"countershape/p07b-c-unit-paths/v30",
 		"\"C0A\"",
 		"\"C1M\"",
 		"\"C1V\"",
@@ -4102,7 +4114,7 @@ const requiredC1EvidenceMaintenanceText = Object.freeze({
 			"later independently sealed, delimited handoff/receipt descendant",
 	],
 		"spec/verification/p07b-c-unit-paths.json": [
-			"countershape/p07b-c-unit-paths/v29",
+			"countershape/p07b-c-unit-paths/v30",
 		"\"C1E\"",
 	],
 		"tools/check-p07b-c-plan.mjs": [
@@ -6497,9 +6509,77 @@ export function computedC6NSealedSourceContractDigest() {
 	});
 	return `sha256:${createHash("sha256").update(`${JSON.stringify(projection)}\n`, "utf8").digest("hex")}`;
 }
+const expectedObservedC6NSealedSourceContractDigest = "sha256:cc851cc157036b09ae84739220db65bdc6593d0f78644d5a61fe789d6a93ffc4";
+export function computedObservedC6NSealedSourceContractDigest() {
+	const projection = Object.freeze({
+		version: "countershape/p07b-c-c6n-sealed-source-contract/v1",
+		subject: c6nSourceSubject,
+		claims: c6nClaimLabels.map((label, index) => Object.freeze({ label, type: c6nClaimTypes[index] })),
+		command_tails: c6nFinalCommandTails,
+		final_run_root: ".countershape/p07bc-c6n-final",
+		redaction: Object.freeze({
+			double_positions: Object.freeze([2, 4, 5, 7, 8]),
+			gocache_policy: "SUFFIX_PRESERVING",
+			bare_positions: Object.freeze([31, 32, 33, 35, 36]),
+		}),
+	});
+	return `sha256:${createHash("sha256").update(`${JSON.stringify(projection)}\n`, "utf8").digest("hex")}`;
+}
 const c6nFinalRunDirectories = Object.freeze([
 	c6nFinalRunRoot,
 	...["home", "tmp", "gotmp", "gocache", "gopath", "gomodcache"].map((name) => resolve(c6nFinalRunRoot, name)),
+]);
+const c6rClaimLabels = Object.freeze([
+	"P07B-C C6R data-driven phase plan coherence",
+	"P07B-C C6R independent candidate transition authority",
+	"P07B-C C6R sealed-C6N note-redaction compatibility",
+	"P07B-C C6R sealed-C6N Git-note and sealed-C6M, sealed-C6G, sealed-C6F, and sealed-C6A ancestry compatibility",
+	"P07B-C C6R unit-scope defensive self-test",
+	"P07B-C C6R cumulative verifier self-test",
+	"P07B-C C6R cumulative verification with sealed-C6A replay",
+	"P07B-C C6R exact seven-path staged scope and diff integrity",
+	"P07B-C C6R scoped staged credential-pattern scan",
+	"P07B-C C6R sealed-C6N predecessor, sealed-C6M, sealed-C6G, sealed-C6F, and sealed-C6A ancestry, and preceding didrun chain integrity",
+]);
+const c6rClaimTypes = Object.freeze([...Array(7).fill("tests-pass"), ...Array(3).fill("command-succeeded")]);
+const c6rFinalRunRoot = resolve(repositoryRoot, ".countershape/p07bc-c6r-final");
+const c6rHermeticArgvPrefix = Object.freeze(c3dHermeticArgvPrefix.map((argument) =>
+	argument.replaceAll(c3dFinalRunRoot, c6rFinalRunRoot)));
+const c6rHermeticArgv = (...tail) => Object.freeze([...c6rHermeticArgvPrefix, ...tail]);
+const c6rFinalCommandTails = Object.freeze([
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--check-candidate-phase", "C6R"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--candidate-phase", "C6R"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--self-test"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--verify-c6r-sealed-c6n-note"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--self-test"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current-selftest.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C6R", "--source-final-gate"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C6R", "--credential-scan"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--verify-c6r-preseal-ledger"]),
+]);
+const c6rExpectedClaimArgv = Object.freeze(c6rFinalCommandTails.map((tail) => c6rHermeticArgv(...tail)));
+const c6rFinalCommandOrderMarkdown = c6rFinalCommandTails
+	.map((tail, index) => `${index + 1}. \`${tail.join(" ")}\``).join("\n");
+const expectedC6RSealedSourceContractDigest = "sha256:bc4dffd3b0a393eefbb7d3947a1ad9ca7a391a7a2a332113a893e0682a88cfde";
+export function computedC6RSealedSourceContractDigest() {
+	const projection = Object.freeze({
+		version: "countershape/p07b-c-c6r-sealed-source-contract/v1",
+		subject: c6rSourceSubject,
+		claims: c6rClaimLabels.map((label, index) => Object.freeze({ label, type: c6rClaimTypes[index] })),
+		command_tails: c6rFinalCommandTails,
+		final_run_root: ".countershape/p07bc-c6r-final",
+		redaction: Object.freeze({
+			double_positions: Object.freeze([2, 4, 5, 7, 8]),
+			gocache_policy: "SUFFIX_PRESERVING",
+			bare_positions: Object.freeze([31, 32, 33, 35, 36]),
+		}),
+	});
+	return `sha256:${createHash("sha256").update(`${JSON.stringify(projection)}\n`, "utf8").digest("hex")}`;
+}
+const c6rFinalRunDirectories = Object.freeze([
+	c6rFinalRunRoot,
+	...["home", "tmp", "gotmp", "gocache", "gopath", "gomodcache"].map((name) => resolve(c6rFinalRunRoot, name)),
 ]);
 const c6bClaimLabels = Object.freeze([
 	"P07B-C C6B candidate phase plan coherence",
@@ -8013,7 +8093,65 @@ const c6nStatusCommandSectionMarkdown = [
 	"",
 	c6nStatusCommandExplanation,
 ].join("\n");
-const finalRunbookBoundaryOrder = Object.freeze(["C3D", "C4V", "C4M", "C4N", "C4P", "C4", "C4H", "C4I", "C4K", "C4J", "C4L", "C5", "C5V", "C6A", "C6F", "C6G", "C6M", "C6N", "C6B"]);
+const requiredC6RPaths = Object.freeze([
+	"docs/HANDOFF_MODE_C.md",
+	"docs/PROMPT_PACK.md",
+	"docs/VERIFICATION.md",
+	c6rStatusPath,
+	"spec/verification/p07b-c-unit-paths.json",
+	"tools/check-p07b-c-plan.mjs",
+	"tools/check-p07b-c-unit-scope.mjs",
+]);
+const requiredC6RDigest = "sha256:3f815ac91f817fba618f24d307919dd9e97aec0f142a5cee1c9e86b284e06169";
+const requiredC6RAddedPaths = new Set([c6rStatusPath]);
+const c6rExpectedTransitionAuthority = Object.freeze({
+	authentication: "NOT_ESTABLISHED",
+	classification: "OWNER_AUTHORIZED_AUTHORITY_MIGRATION / DEFECT_REPAIR",
+	predecessor_declaration: Object.freeze({ kind: "NONE" }),
+	provenance: Object.freeze({
+		disclosure: "OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT",
+		kind: "UNEVIDENCED",
+	}),
+	signed_authorization: "NOT_IMPLEMENTED",
+	source: "OWNER_OUT_OF_BAND",
+});
+const c6rStatusMachineAuthoritySentence = "The current machine authority is `countershape/p07b-c-unit-paths/v30`, with 44 ordered unit rows and 32 receipt-phase rows at receipt-phase authority digest `sha256:cd7bd450bec6d891ea66dd48408788d38aa7bbcee778912eabce7f45e8538f3e`.";
+const c6rStatusCauseSentence = "The redaction-form difference is deterministic and content-sensitive, not temporal: the same didrun redactor independently redacts the C6M suffix but preserves the C6N suffix after the common root token is redacted.";
+const c6rStatusFrozenProspectiveSentence = `The frozen source-authored C6N prospective contract remains \`${expectedC6NSealedSourceContractDigest}\` and retains policy \`LEGACY_DOUBLE\`; C6R does not reinterpret or retroactively rewrite that authored prediction.`;
+const c6rStatusObservedConsumerSentence = `The separately named observed sealed-C6N projection is \`${expectedObservedC6NSealedSourceContractDigest}\` and uses policy \`SUFFIX_PRESERVING\`.`;
+const c6rStatusClaimRows = Object.freeze(c6rClaimLabels.map(
+	(label, index) => `| ${index + 1} | \`${label}\` | \`${c6rClaimTypes[index]}\` | \`UNRECEIPTED\` |`,
+));
+const c6rStatusClaimSectionMarkdown = [
+	"## C6R final manifest",
+	"",
+	"| # | Claim | Type | Intended grade |",
+	"|---:|---|---|---|",
+	...c6rStatusClaimRows,
+].join("\n");
+const c6rStatusScopeSectionMarkdown = [
+	"## Scope",
+	"",
+	"C6R owns exactly these seven mode-`100644` paths:",
+	"",
+	...requiredC6RPaths.map((path, index) => `${index + 1}. \`${path}\``),
+	"",
+	`The sorted-newline roster digest is \`${requiredC6RDigest}\`.`,
+	"",
+	"Prefixes are empty. The inherited C6A manifest, C6 receipt declaration and evidence, product/runtime source, cumulative verifier implementation and roster, sealed C6N/C6M/C6G/C6F/C6A commits and notes, and all failed-attempt archives are outside this roster and remain byte-stable.",
+].join("\n");
+const c6rStatusFinalProcedureSentence = "Run each command once in the generated C6R runbook and claim it immediately; any nonzero command stops that ledger, supports no claim, and requires a repaired fresh boundary.";
+const c6rStatusCommandExplanation = "The first seven prove the phase transition, the observed sealed-C6N suffix-preserving note projection and frozen prospective mismatch, exact C6N/C6M/C6G/C6F/C6A ancestry, both generic checker self-tests, the cumulative-verifier self-test, and unchanged cumulative verification with sealed-C6A replay. The last three prove exact staged ownership, structured credential-pattern absence over the seven blobs, and final ledger/ancestry coherence. No C6R claim grades product behavior independently of that cumulative command.";
+const c6rStatusCommandSectionMarkdown = [
+	"## Exact final command order",
+	"",
+	c6rFinalCommandOrderMarkdown,
+	"",
+	c6rStatusFinalProcedureSentence,
+	"",
+	c6rStatusCommandExplanation,
+].join("\n");
+const finalRunbookBoundaryOrder = Object.freeze(["C3D", "C4V", "C4M", "C4N", "C4P", "C4", "C4H", "C4I", "C4K", "C4J", "C4L", "C5", "C5V", "C6A", "C6F", "C6G", "C6M", "C6N", "C6R", "C6B"]);
 const finalRunbookRegistry = Object.freeze({
 	C3D: Object.freeze({
 		subject: c3dSourceSubject, parent: "sealed C3B", profile: "SOURCE_FULL",
@@ -8105,8 +8243,13 @@ const finalRunbookRegistry = Object.freeze({
 		labels: c6nClaimLabels, types: c6nClaimTypes, argv: c6nExpectedClaimArgv,
 		prefix: c6nHermeticArgvPrefix, directories: c6nFinalRunDirectories,
 	}),
+	C6R: Object.freeze({
+		subject: c6rSourceSubject, parent: "exact sealed C6N", profile: "SOURCE_FULL",
+		labels: c6rClaimLabels, types: c6rClaimTypes, argv: c6rExpectedClaimArgv,
+		prefix: c6rHermeticArgvPrefix, directories: c6rFinalRunDirectories,
+	}),
 	C6B: Object.freeze({
-		subject: c6bReceiptSubject, parent: "sealed C6N", profile: "RECEIPT_RECONCILIATION",
+		subject: c6bReceiptSubject, parent: "sealed C6R", profile: "RECEIPT_RECONCILIATION",
 		labels: c6bClaimLabels, types: c6bClaimTypes, argv: c6bExpectedClaimArgv,
 		prefix: c6bHermeticArgvPrefix, directories: c6bFinalRunDirectories,
 	}),
@@ -8202,7 +8345,7 @@ function finalLedgerArchivePath(boundary, commit) {
 }
 
 const finalRunbookParentAuthorityCommandPrefix = "/usr/bin/env -i HOME=/ PATH=/usr/bin:/bin LANG=C LC_ALL=C NO_COLOR=1 /opt/homebrew/bin/node tools/check-p07b-c-plan.mjs --verify-final-runbook-parent-authority";
-const finalRunbookPerFenceUmaskBoundaries = new Set(["C4I", "C4K", "C4J", "C4L", "C5V", "C6F", "C6G", "C6N"]);
+const finalRunbookPerFenceUmaskBoundaries = new Set(["C4I", "C4K", "C4J", "C4L", "C5V", "C6F", "C6G", "C6N", "C6R"]);
 const finalRunbookDSStoreIgnoredTopLevel = new Set([".git", ".countershape", ".didrun", ".didrun-history", "node_modules"]);
 const finalRunbookDSStoreLimits = Object.freeze({ entries: 200_000, depth: 128, pathBytes: 4096 });
 
@@ -8863,8 +9006,8 @@ async function runFinalRunbookRendererSelfTest() {
 	if (!isDeepStrictEqual(Object.keys(finalRunbookRegistry), finalRunbookBoundaryOrder)) {
 		throw new Error("final runbook boundary order");
 	}
-	const expectedCardinality = Object.freeze({ C3D: 10, C4V: 68, C4M: 10, C4N: 10, C4P: 10, C4: 80, C4H: 11, C4I: 17, C4K: 12, C4J: 13, C4L: 13, C5: 79, C5V: 12, C6A: 11, C6F: 10, C6G: 10, C6M: 10, C6N: 10, C6B: 9 });
-	const expectedTests = Object.freeze({ C3D: 7, C4V: 65, C4M: 7, C4N: 7, C4P: 7, C4: 77, C4H: 8, C4I: 14, C4K: 9, C4J: 10, C4L: 10, C5: 76, C5V: 9, C6A: 8, C6F: 7, C6G: 7, C6M: 7, C6N: 7, C6B: 5 });
+	const expectedCardinality = Object.freeze({ C3D: 10, C4V: 68, C4M: 10, C4N: 10, C4P: 10, C4: 80, C4H: 11, C4I: 17, C4K: 12, C4J: 13, C4L: 13, C5: 79, C5V: 12, C6A: 11, C6F: 10, C6G: 10, C6M: 10, C6N: 10, C6R: 10, C6B: 9 });
+	const expectedTests = Object.freeze({ C3D: 7, C4V: 65, C4M: 7, C4N: 7, C4P: 7, C4: 77, C4H: 8, C4I: 14, C4K: 9, C4J: 10, C4L: 10, C5: 76, C5V: 9, C6A: 8, C6F: 7, C6G: 7, C6M: 7, C6N: 7, C6R: 7, C6B: 5 });
 	let controls = 0;
 	for (const boundary of finalRunbookBoundaryOrder) {
 		const spec = finalRunbookRegistry[boundary];
@@ -9098,6 +9241,12 @@ async function runFinalRunbookRendererSelfTest() {
 		!c6nFinalCommandTails[7].includes("--source-final-gate") ||
 		!c6nFinalCommandTails[9].includes("--verify-c6n-preseal-ledger")) {
 		throw new Error("final runbook C6N source-specific topology");
+	}
+	if (!c6rFinalCommandTails[1].includes("--candidate-phase") ||
+		!c6rFinalCommandTails[3].includes("--verify-c6r-sealed-c6n-note") ||
+		!c6rFinalCommandTails[7].includes("--source-final-gate") ||
+		!c6rFinalCommandTails[9].includes("--verify-c6r-preseal-ledger")) {
+		throw new Error("final runbook C6R source-specific topology");
 	}
 	if (!c6bFinalCommandTails[1].includes("--source-authority-gate") ||
 		!c6bFinalCommandTails[2].includes("--verify-c6a-source-receipt") ||
@@ -9428,7 +9577,7 @@ const requiredC3FText = Object.freeze({
 		c3fStatusUnreceiptedLine,
 		...c3fClaimLabels.map((label) => `\`${label}\``),
 	],
-	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v29", "\"C3F\""],
+	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v30", "\"C3F\""],
 	"tools/check-p07b-b-architecture.mjs": [
 		"c3OfficialTargetSurface", "completeC3Surface", "partitionFutureSymbols",
 		"internal/store/nonhead_contract.go:ParseContractExecutionTarget",
@@ -9488,7 +9637,7 @@ const requiredC3SText = Object.freeze({
 		c3sStatusUnreceiptedLine,
 		...c3sClaimLabels.map((label) => `\`${label}\``),
 	],
-	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v29", "\"C3S\""],
+	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v30", "\"C3S\""],
 	"tools/check-p07b-c-plan.mjs": [
 		"requiredC3SPaths", "C3S_ACTIVE", "--verify-c3s-preseal-ledger", "requirePrivateC3SFinalRunDirectories",
 		"requireSealedC3FPredecessorAuthority", "validateSealedC3FNote",
@@ -9681,7 +9830,7 @@ const requiredC3RText = Object.freeze({
 		"does not prove plain-seal-first sequencing",
 		...c3rClaimLabels.map((label) => `\`${label}\``),
 	],
-	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v29", "\"C3R\""],
+	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v30", "\"C3R\""],
 	"tools/check-p07b-c-plan.mjs": [
 		"requiredC3RPaths", "C3R_ACTIVE", "validateC3RClaimPreview", "validateC3RAuthority",
 		"c3rSealOutcomeDisclosure",
@@ -9762,7 +9911,7 @@ const requiredC3QText = Object.freeze({
 		"C3Q changes no verifier roster",
 		...c3qClaimLabels.map((label) => `\`${label}\``),
 	],
-	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v29", "\"C3Q\""],
+	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v30", "\"C3Q\""],
 	"tools/check-p07b-c-plan.mjs": [
 		"requiredC3QPaths", "C3Q_ACTIVE", "validateC3QClaimPreview", "validateC3QAuthority",
 		"planAuthorityMarkdownPaths", "planAuthorityMarkdownDigest", "computedPlanAuthorityMarkdownDigest",
@@ -9820,7 +9969,7 @@ const requiredC3TText = Object.freeze({
 		"## Final command order", c3tFinalCommandOrderMarkdown,
 		...c3tClaimLabels.map((label) => `\`${label}\``),
 	],
-	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v29", "\"C3T\""],
+	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v30", "\"C3T\""],
 	"tools/check-p07b-c-plan.mjs": [
 		"requiredC3TPaths", "C3T_ACTIVE", "syntheticC3AbsentPlanFixture",
 		"validateC3TClaimPreview", "validateC3TAuthority", "loadC3TAuthorityWithRunner",
@@ -9874,7 +10023,7 @@ const requiredC3UText = Object.freeze({
 		"## Final command order", c3uFinalCommandOrderMarkdown,
 		...c3uClaimLabels.map((label) => `\`${label}\``),
 	],
-	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v29", "\"C3U\""],
+	"spec/verification/p07b-c-unit-paths.json": ["countershape/p07b-c-unit-paths/v30", "\"C3U\""],
 	"tools/check-p07b-c-plan.mjs": [
 		"requiredC3UPaths", "C3U_ACTIVE", "insertLegacyReceiptBlockBeforeOptionalTerminalC3",
 		"validateC3UClaimPreview", "validateC3UAuthority", "loadC3UAuthorityWithRunner",
@@ -10002,7 +10151,7 @@ const requiredC3DText = Object.freeze({
 		...c3dClaimLabels.map((label) => `\`${label}\``),
 	],
 	"spec/verification/p07b-c-unit-paths.json": [
-		"countershape/p07b-c-unit-paths/v29", "\"C3D\"", "\"C4M\"", "\"C4N\"", "\"C4P\"", "\"C6M\"", "\"C6N\"", "\"parent\"", "\"receipt_states\"",
+		"countershape/p07b-c-unit-paths/v30", "\"C3D\"", "\"C4M\"", "\"C4N\"", "\"C4P\"", "\"C6M\"", "\"C6N\"", "\"parent\"", "\"receipt_states\"",
 		"docs/status/P07B-C-C6M-RECEIPT-ADAPTER-MAINTENANCE.md",
 		"spec/verification/p07b-c-c6a-source-authority.json",
 		"docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md", "P07B-C C6B exact five-path staged scope and diff integrity",
@@ -10188,7 +10337,7 @@ const requiredC4VText = Object.freeze({
 		...c4vClaimLabels.map((label) => `\`${label}\``),
 	],
 	"spec/verification/p07b-c-unit-paths.json": [
-		"countershape/p07b-c-unit-paths/v29", "\"C4V\"", "\"C4M\"", "\"C4N\"", "\"C4P\"", "\"C4\"", "\"C5\"",
+		"countershape/p07b-c-unit-paths/v30", "\"C4V\"", "\"C4M\"", "\"C4N\"", "\"C4P\"", "\"C4\"", "\"C5\"",
 		"internal/contractexec/runner/", "internal/contractexec/http/", bFutureSurfaceAuthorityPath,
 	],
 	"tools/check-p07b-c-plan.mjs": [
@@ -10275,7 +10424,7 @@ const requiredC4MText = Object.freeze({
 		...c4mClaimLabels.map((label) => `\`${label}\``),
 	],
 	"spec/verification/p07b-c-unit-paths.json": [
-		"countershape/p07b-c-unit-paths/v29", "\"C4M\"", "\"C4N\"", "\"C4P\"", "\"parent\": \"C4V\"", "\"parent\": \"C4M\"", "\"parent\": \"C4N\"", "\"parent\": \"C4P\"",
+		"countershape/p07b-c-unit-paths/v30", "\"C4M\"", "\"C4N\"", "\"C4P\"", "\"parent\": \"C4V\"", "\"parent\": \"C4M\"", "\"parent\": \"C4N\"", "\"parent\": \"C4P\"",
 		"docs/status/P07B-C-C4M-HISTORICAL-RECEIPT-FIXTURE-MAINTENANCE.md",
 	],
 	"tools/check-p07b-c-plan.mjs": [
@@ -10342,7 +10491,7 @@ const requiredC4NText = Object.freeze({
 		...c4nClaimLabels.map((label) => `\`${label}\``),
 	],
 	"spec/verification/p07b-c-unit-paths.json": [
-		"countershape/p07b-c-unit-paths/v29", "\"C4N\"", "\"C4P\"", "\"parent\": \"C4M\"", "\"parent\": \"C4N\"", "\"parent\": \"C4P\"",
+		"countershape/p07b-c-unit-paths/v30", "\"C4N\"", "\"C4P\"", "\"parent\": \"C4M\"", "\"parent\": \"C4N\"", "\"parent\": \"C4P\"",
 		c4nStatusPath,
 	],
 	"tools/check-p07b-c-plan.mjs": [
@@ -10424,7 +10573,7 @@ const requiredC4PText = Object.freeze({
 		...c4pClaimLabels.map((label) => `\`${label}\``),
 	],
 	"spec/verification/p07b-c-unit-paths.json": [
-		"countershape/p07b-c-unit-paths/v29", "\"C4P\"", "\"parent\": \"C4N\"", "\"parent\": \"C4P\"",
+		"countershape/p07b-c-unit-paths/v30", "\"C4P\"", "\"parent\": \"C4N\"", "\"parent\": \"C4P\"",
 		c4pStatusPath,
 	],
 	"tools/check-p07b-c-plan.mjs": [
@@ -10509,7 +10658,7 @@ const requiredC4HText = Object.freeze({
 		"Proceed with C4H", "Decline C5/C6 sharding",
 	],
 	"spec/verification/p07b-c-unit-paths.json": [
-		"countershape/p07b-c-unit-paths/v29", "\"C4H\"", "\"parent\": \"C4\"", "\"parent\": \"C4H\"",
+		"countershape/p07b-c-unit-paths/v30", "\"C4H\"", "\"parent\": \"C4\"", "\"parent\": \"C4H\"",
 		c4hStatusPath,
 	],
 	"tools/check-p07b-c-plan.mjs": [
@@ -10697,7 +10846,7 @@ const requiredC4IText = Object.freeze({
 		...c4iClaimLabels.map((label) => `\`${label}\``),
 	],
 	"spec/verification/p07b-c-unit-paths.json": [
-		"countershape/p07b-c-unit-paths/v29", "\"C4I\"", "\"parent\": \"C4H\"",
+		"countershape/p07b-c-unit-paths/v30", "\"C4I\"", "\"parent\": \"C4H\"",
 		"\"C4K\"", "\"parent\": \"C4I\"", "\"C4J\"", "\"parent\": \"C4K\"", "\"parent\": \"C4J\"",
 		c4iStatusPath,
 	],
@@ -10828,7 +10977,7 @@ const requiredC4JText = Object.freeze({
 		"remaining bet is operational",
 	],
 	"spec/verification/p07b-c-unit-paths.json": [
-		"countershape/p07b-c-unit-paths/v29", "\"C4K\"", "\"C4J\"", "\"parent\": \"C4K\"", "\"parent\": \"C4J\"",
+		"countershape/p07b-c-unit-paths/v30", "\"C4K\"", "\"C4J\"", "\"parent\": \"C4K\"", "\"parent\": \"C4J\"",
 		c4jStatusPath,
 	],
 	"tools/check-p07b-c-plan.mjs": [
@@ -10917,7 +11066,7 @@ const requiredC4KText = Object.freeze({
 		...c4kClaimLabels.map((label) => `\`${label}\``),
 	],
 	"spec/verification/p07b-c-unit-paths.json": [
-		"countershape/p07b-c-unit-paths/v29", "\"C4K\"", "\"parent\": \"C4I\"",
+		"countershape/p07b-c-unit-paths/v30", "\"C4K\"", "\"parent\": \"C4I\"",
 		"\"C4J\"", "\"parent\": \"C4K\"", c4kStatusPath,
 	],
 	"tools/check-p07b-c-architecture.mjs": [
@@ -12431,6 +12580,149 @@ function runC6NStatusContractSelfTest(body) {
 	return hostiles.length + 1;
 }
 
+function parseC6RClaimTableRow(line) {
+	let table = line.trim();
+	if (!table.includes("|")) return null;
+	if (table.startsWith("|")) table = table.slice(1);
+	if (table.endsWith("|")) table = table.slice(0, -1);
+	const cells = table.split("|").map(normalizeC4KClaimTableCell);
+	if (cells.length === 4 && /^\d+$/u.test(cells[0])) cells.shift();
+	if (cells.length !== 3) return null;
+	const [label, type, grade] = cells;
+	if (!/^P07B-C C6R(?:\s|$)/iu.test(label) ||
+		!new Set(["tests-pass", "command-succeeded"]).has(type) ||
+		!new Set(["UNRECEIPTED", "TREE-EXACT", "RECORDED-EXACT"]).has(grade)) return null;
+	return Object.freeze({ label, type, grade });
+}
+
+function validateVisibleC6RStatusContract(body) {
+	const errors = [];
+	for (const [snippet, label] of [
+		["# P07B-C C6R — sealed C6N note-consumer maintenance", "C6R heading"],
+		["**State:** active pre-seal `SOURCE_FULL` defect repair. Every C6R grade is `UNRECEIPTED`", "C6R active state"],
+		[`- **Commit subject:** \`${c6rSourceSubject}\``, "C6R commit subject"],
+		[`- **Direct parent:** exact sealed C6N commit \`${sealedC6NIdentity.commit}\`, tree \`${sealedC6NIdentity.tree}\``, "C6R exact parent"],
+		[`- **Parent note:** blob \`${sealedC6NIdentity.noteBlob}\`, body SHA-256 \`${sealedC6NIdentity.noteBodySHA256}\``, "C6R exact parent note"],
+		[`- **Sealed C6M ancestor:** commit \`${sealedC6MIdentity.commit}\`, tree \`${sealedC6MIdentity.tree}\``, "C6R sealed C6M ancestry"],
+		[`- **Sealed C6G ancestor:** commit \`${sealedC6GIdentity.commit}\`, tree \`${sealedC6GIdentity.tree}\``, "C6R sealed C6G ancestry"],
+		[`- **Sealed C6F ancestor:** commit \`${sealedC6FIdentity.commit}\`, tree \`${sealedC6FIdentity.tree}\``, "C6R sealed C6F ancestry"],
+		[`- **Sealed C6A ancestor:** commit \`${sealedC6AIdentity.commit}\`, tree \`${sealedC6AIdentity.tree}\``, "C6R sealed C6A ancestry"],
+		["- **Transition source:** `OWNER_OUT_OF_BAND`", "C6R transition source"],
+		["- **Classification:** `OWNER_AUTHORIZED_AUTHORITY_MIGRATION / DEFECT_REPAIR`", "C6R classification"],
+		["- **Predecessor declaration:** `NONE`", "C6R predecessor declaration"],
+		["- **Provenance:** `UNEVIDENCED`", "C6R provenance"],
+		["`OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT`", "C6R provenance disclosure"],
+		["- **Authentication:** `NOT_ESTABLISHED`", "C6R authentication ceiling"],
+		["- **Signed authorization:** `NOT_IMPLEMENTED`", "C6R signature ceiling"],
+		["Receipt C6A remains `ABSENT`; the C6A source-authority manifest is inherited byte-identically", "C6R source/receipt distinction"],
+		[`The sorted-newline roster digest is \`${requiredC6RDigest}\`.`, "C6R exact roster digest"],
+		[c6rStatusMachineAuthoritySentence, "C6R machine authority summary"],
+		[expectedC6NSealedSourceContractDigest, "C6R frozen prospective C6N contract digest"],
+		[expectedObservedC6NSealedSourceContractDigest, "C6R observed sealed C6N projection digest"],
+		[expectedC6RSealedSourceContractDigest, "C6R prospective contract digest"],
+		[c6rStatusCauseSentence, "C6R deterministic redaction cause"],
+		[c6rStatusFrozenProspectiveSentence, "C6R frozen digest-policy association"],
+		[c6rStatusObservedConsumerSentence, "C6R observed digest-policy association"],
+		["C6N: didrun note claim 1", "C6R observed renderer refusal"],
+		["`SUFFIX_PRESERVING`", "C6R sealed C6N redaction policy"],
+		["`LEGACY_DOUBLE`", "C6R frozen prospective C6N redaction policy"],
+	]) requireExactlyOnce(body, snippet, c6rStatusPath, label, errors);
+	requireExactLevelTwoMarkdownSection(
+		body, "## Scope", c6rStatusScopeSectionMarkdown,
+		c6rStatusPath, "C6R exact scope", errors,
+	);
+	requireExactLevelTwoMarkdownSection(
+		body, "## C6R final manifest", c6rStatusClaimSectionMarkdown,
+		c6rStatusPath, "C6R final manifest", errors,
+	);
+	requireExactLevelTwoMarkdownSection(
+		body, "## Exact final command order", c6rStatusCommandSectionMarkdown,
+		c6rStatusPath, "C6R final command order", errors,
+	);
+	const observedClaimRows = body.split("\n").filter((line) => parseC6RClaimTableRow(line) !== null);
+	if (!isDeepStrictEqual(observedClaimRows, [...c6rStatusClaimRows])) {
+		errors.push(`${c6rStatusPath}: C6R intended claim rows must be exact, closed, and ordered`);
+	}
+	const observedCommandRows = body.split("\n").filter((line) =>
+		/^\d+\.\s+`\/opt\/homebrew\/bin\/node\s/u.test(line));
+	if (!isDeepStrictEqual(observedCommandRows, c6rFinalCommandOrderMarkdown.split("\n"))) {
+		errors.push(`${c6rStatusPath}: C6R final command rows must be exact, closed, and ordered`);
+	}
+	for (let index = 0; index < c6rClaimLabels.length; index += 1) {
+		requireExactlyOnce(body, c6rStatusClaimRows[index], c6rStatusPath, "C6R final manifest", errors);
+		requireClaimLabelExactlyOnce(body, c6rClaimLabels[index], c6rStatusPath, "C6R final manifest", errors);
+	}
+	rejectReceiptSelfClaims(body, c6rStatusPath, "C6R", errors);
+	return errors;
+}
+
+function validateC6RStatusContract(body) {
+	try { return validateVisibleC6RStatusContract(visibleMarkdownLifecycleBody(body)); }
+	catch (error) { return [`${c6rStatusPath}: C6R visible Markdown projection failed (${error.message})`]; }
+}
+
+function runC6RStatusContractSelfTest(body) {
+	const baselineErrors = validateC6RStatusContract(body);
+	if (baselineErrors.length !== 0) {
+		throw new Error(`P07B-C C6R status-contract self-test baseline failed:\n${baselineErrors.join("\n")}`);
+	}
+	const first = c6rStatusClaimRows[0];
+	const second = c6rStatusClaimRows[1];
+	const last = c6rStatusClaimRows.at(-1);
+	const hostiles = Object.freeze([
+		body.replace(c6rSourceSubject, "fix: forge sealed C6N note redaction projection"),
+		body.replace(sealedC6NIdentity.commit, "0".repeat(40)),
+		body.replace(sealedC6NIdentity.tree, "0".repeat(40)),
+		body.replace(sealedC6NIdentity.noteBlob, "0".repeat(40)),
+		body.replace(sealedC6NIdentity.noteBodySHA256, "0".repeat(64)),
+		body.replace(sealedC6MIdentity.commit, "1".repeat(40)),
+		body.replace(sealedC6MIdentity.tree, "1".repeat(40)),
+		body.replace(sealedC6GIdentity.commit, "2".repeat(40)),
+		body.replace(sealedC6GIdentity.tree, "2".repeat(40)),
+		body.replace(sealedC6FIdentity.commit, "3".repeat(40)),
+		body.replace(sealedC6FIdentity.tree, "3".repeat(40)),
+		body.replace(sealedC6AIdentity.commit, "4".repeat(40)),
+		body.replace(sealedC6AIdentity.tree, "4".repeat(40)),
+		body.replace("- **Transition source:** `OWNER_OUT_OF_BAND`", "- **Transition source:** `PREDECLARED`"),
+		body.replace(
+			"- **Classification:** `OWNER_AUTHORIZED_AUTHORITY_MIGRATION / DEFECT_REPAIR`",
+			"- **Classification:** `INHERITED / INTENTIONAL`",
+		),
+		body.replace("- **Predecessor declaration:** `NONE`", "- **Predecessor declaration:** `PRESENT`"),
+		body.replace("- **Signed authorization:** `NOT_IMPLEMENTED`", "- **Signed authorization:** `IMPLEMENTED`"),
+		body.replace(requiredC6RDigest, `sha256:${"0".repeat(64)}`),
+		body.replace(c6rStatusMachineAuthoritySentence, c6rStatusMachineAuthoritySentence
+			.replace("p07b-c-unit-paths/v30", "p07b-c-unit-paths/v29")),
+		body.replace(expectedC6NSealedSourceContractDigest, `sha256:${"1".repeat(64)}`),
+		body.replace(expectedObservedC6NSealedSourceContractDigest, `sha256:${"2".repeat(64)}`),
+		body.replace(expectedC6RSealedSourceContractDigest, `sha256:${"3".repeat(64)}`),
+		body.replace("Receipt C6A remains `ABSENT`", "Receipt C6A is `PRESENT`"),
+		body.replace(c6rStatusCauseSentence, "The redaction-form difference is temporal."),
+		body.replace(c6rStatusFrozenProspectiveSentence, c6rStatusFrozenProspectiveSentence
+			.replace(expectedC6NSealedSourceContractDigest, expectedObservedC6NSealedSourceContractDigest)),
+		body.replace(c6rStatusObservedConsumerSentence, c6rStatusObservedConsumerSentence
+			.replace("`SUFFIX_PRESERVING`", "`LEGACY_DOUBLE`")),
+		body.replace("C6N: didrun note claim 1", "C6N: accepted note claim 1"),
+		body.replace("`SUFFIX_PRESERVING`", "`EITHER_FORM`"),
+		body.replace("`UNEVIDENCED`", "`CITED_UNAUTHENTICATED`"),
+		body.replace("`NOT_ESTABLISHED`", "`ESTABLISHED`"),
+		body.replace("1. `docs/HANDOFF_MODE_C.md`", "1. `docs/FOREIGN.md`"),
+		body.replace(`${first}\n${second}`, `${second}\n${first}`),
+		body.replace(first, first.replace("`tests-pass`", "`command-succeeded`")),
+		body.replace(first, first.replace("`UNRECEIPTED`", "`TREE-EXACT`")),
+		body.replace(last, `${last}\n| 11 | \`P07B-C C6R foreign claim\` | \`tests-pass\` | \`UNRECEIPTED\` |`),
+		body.replace(c6rFinalCommandOrderMarkdown, c6rFinalCommandOrderMarkdown.split("\n").reverse().join("\n")),
+		body.replace(c6rStatusFinalProcedureSentence, `${c6rStatusFinalProcedureSentence}\n11. \`/usr/bin/true\``),
+		`${body}\nC6R is sealed and strict-clean with TREE-EXACT grades.\n`,
+	]);
+	for (const [index, hostile] of hostiles.entries()) {
+		if (hostile === body || validateC6RStatusContract(hostile).length === 0) {
+			throw new Error(`P07B-C C6R status-contract self-test false negative ${index + 1}`);
+		}
+	}
+	return hostiles.length + 1;
+}
+
 const requiredC4LText = Object.freeze({
 	"docs/ARCHITECTURE.md": [
 		"NON_PRODUCT_MAINTENANCE", "INHERITED_UNREPROVEN", "OWNER_OUT_OF_BAND",
@@ -12499,7 +12791,7 @@ const requiredC4LText = Object.freeze({
 		...c4lClaimLabels.map((label) => `\`${label}\``),
 	],
 	"spec/verification/p07b-c-unit-paths.json": [
-		"countershape/p07b-c-unit-paths/v29", "\"C4L\"", "\"parent\": \"C4J\"",
+		"countershape/p07b-c-unit-paths/v30", "\"C4L\"", "\"parent\": \"C4J\"",
 		"\"parent\": \"C4L\"", "\"transition_authority\"", "\"OWNER_OUT_OF_BAND\"",
 		"\"UNEVIDENCED\"", "\"NOT_ESTABLISHED\"", "\"NOT_IMPLEMENTED\"",
 		c4lStatusPath,
@@ -12540,7 +12832,7 @@ const requiredC5VText = Object.freeze({
 		...c5vClaimLabels.map((label) => `\`${label}\``),
 	],
 	"spec/verification/p07b-c-unit-paths.json": [
-		"countershape/p07b-c-unit-paths/v29", "\"C5V\"", "\"parent\": \"C5\"", "\"parent\": \"C5V\"",
+		"countershape/p07b-c-unit-paths/v30", "\"C5V\"", "\"parent\": \"C5\"", "\"parent\": \"C5V\"",
 		c5vStatusPath, "\"OWNER_OUT_OF_BAND\"", "\"UNEVIDENCED\"",
 	],
 	"tools/check-p07b-c-plan.mjs": [
@@ -12551,7 +12843,7 @@ const requiredC5VText = Object.freeze({
 		"parseFinalRunbookParentAuthorityArguments", "verifyFinalRunbookParentAuthorityInvocation",
 	],
 	"tools/check-p07b-c-unit-scope.mjs": [
-		"p07b-c-unit-paths/v29", "c5vDeclaredSourceMaintenanceContract", "sealedC5CandidateParent", "C5V",
+		"p07b-c-unit-paths/v30", "c5vDeclaredSourceMaintenanceContract", "sealedC5CandidateParent", "C5V",
 	],
 	"tools/verify-current-selftest.mjs": [
 		"assertFinderGuardRoster", "workspace-no-ds-store-terminal", "absent-finder-target", "terminal mutation",
@@ -12599,7 +12891,7 @@ const requiredC6FText = Object.freeze({
 		...c6fClaimLabels.map((label) => `\`${label}\``),
 	],
 	"spec/verification/p07b-c-unit-paths.json": [
-		"countershape/p07b-c-unit-paths/v29", "\"C6F\"", "\"parent\": \"C6A\"",
+		"countershape/p07b-c-unit-paths/v30", "\"C6F\"", "\"parent\": \"C6A\"",
 		"\"C6G\"", "\"parent\": \"C6F\"", "\"C6M\"", "\"parent\": \"C6G\"", c6fStatusPath,
 		"\"OWNER_OUT_OF_BAND\"", "\"UNEVIDENCED\"",
 	],
@@ -12615,7 +12907,7 @@ const requiredC6FText = Object.freeze({
 		"tools/check-sealed-c6a-architecture.mjs", "SEALED_C6A",
 	],
 	"tools/check-p07b-c-unit-scope.mjs": [
-		"p07b-c-unit-paths/v29", "c6fDeclaredMaintenanceContract", "sealedC6ACandidateParent", "C6F",
+		"p07b-c-unit-paths/v30", "c6fDeclaredMaintenanceContract", "sealedC6ACandidateParent", "C6F",
 		"c6fSourceClaimManifest", "syntheticDidrunSourceNote", "computedC6FSealedSourceContractDigest",
 		expectedC6FSealedSourceContractDigest,
 		"tools/check-sealed-c6a-architecture.mjs",
@@ -12660,7 +12952,7 @@ const requiredC6GText = Object.freeze({
 		c6gStatusCommandSectionMarkdown, ...c6gClaimLabels.map((label) => `\`${label}\``),
 	],
 	"spec/verification/p07b-c-unit-paths.json": [
-		"countershape/p07b-c-unit-paths/v29", "\"C6G\"", "\"parent\": \"C6F\"",
+		"countershape/p07b-c-unit-paths/v30", "\"C6G\"", "\"parent\": \"C6F\"",
 		"\"C6M\"", "\"parent\": \"C6G\"", c6gStatusPath,
 		"\"OWNER_OUT_OF_BAND\"", "\"UNEVIDENCED\"",
 	],
@@ -12673,7 +12965,7 @@ const requiredC6GText = Object.freeze({
 		"verifyC6GPresealLedger", "--verify-c6g-sealed-c6f-note", "--verify-c6g-preseal-ledger",
 	],
 	"tools/check-p07b-c-unit-scope.mjs": [
-		"p07b-c-unit-paths/v29", "c6gDeclaredMaintenanceContract", "sealedC6FCandidateParent", "C6G",
+		"p07b-c-unit-paths/v30", "c6gDeclaredMaintenanceContract", "sealedC6FCandidateParent", "C6G",
 		"c6gSourceClaimManifest", "computedC6GSealedSourceContractDigest",
 		expectedC6GSealedSourceContractDigest,
 	],
@@ -12681,7 +12973,7 @@ const requiredC6GText = Object.freeze({
 
 const requiredC6NText = Object.freeze({
 	"docs/HANDOFF_MODE_C.md": [
-		"### Active C6N sealed C6M note-redaction maintenance", c6nSourceSubject,
+		"### Sealed C6N sealed C6M note-redaction maintenance — frozen v29 snapshot", c6nSourceSubject,
 		sealedC6MIdentity.commit, sealedC6MIdentity.tree, sealedC6MIdentity.noteBlob,
 		sealedC6MIdentity.noteBodySHA256, c6nStatusPath,
 		"C6A → C6F → C6G → C6M → C6N → C6B", "countershape/p07b-c-unit-paths/v29",
@@ -12727,8 +13019,8 @@ const requiredC6NText = Object.freeze({
 		"no timeout increase, retry, case removal, case sharding",
 	],
 	"spec/verification/p07b-c-unit-paths.json": [
-		"countershape/p07b-c-unit-paths/v29", "\"C6N\"", "\"parent\": \"C6M\"",
-		"\"C6B\"", "\"parent\": \"C6N\"", c6nStatusPath,
+		"countershape/p07b-c-unit-paths/v30", "\"C6N\"", "\"parent\": \"C6M\"",
+		"\"C6R\"", "\"parent\": \"C6N\"", "\"C6B\"", "\"parent\": \"C6R\"", c6nStatusPath,
 		"\"OWNER_OUT_OF_BAND\"", "\"UNEVIDENCED\"",
 	],
 	"tools/check-p07b-c-plan.mjs": [
@@ -12740,7 +13032,7 @@ const requiredC6NText = Object.freeze({
 		"verifyC6NPresealLedger", "--verify-c6n-sealed-c6m-note", "--verify-c6n-preseal-ledger",
 	],
 	"tools/check-p07b-c-unit-scope.mjs": [
-		"p07b-c-unit-paths/v29", "c6nDeclaredMaintenanceContract", "sealedC6MCandidateParent", "C6N",
+		"p07b-c-unit-paths/v30", "c6nDeclaredMaintenanceContract", "sealedC6MCandidateParent", "C6N",
 		"sealedC6MSourceIdentity", "sealedSourceGOCACHEPolicy", "LEGACY_DOUBLE", "SUFFIX_PRESERVING",
 		"c6nSourceClaimManifest", "computedC6MSealedSourceContractDigest",
 		"computedC6NSealedSourceContractDigest", expectedC6MSealedSourceContractDigest,
@@ -12757,6 +13049,78 @@ const requiredC6NText = Object.freeze({
 		"VERIFY_SELFTEST_SEALED_RUNNER_BATCH_CARDINALITY", "occurrenceCount",
 		"describeRejectedGitResult", "stderr_prefix_hex=", "stderr_truncated=",
 		"sealed runner must use exactly one bounded blob batch and exactly one no-filter path-hash batch",
+	],
+});
+
+const requiredC6RText = Object.freeze({
+	"docs/HANDOFF_MODE_C.md": [
+		"### Active C6R sealed C6N note-consumer maintenance", c6rSourceSubject,
+		sealedC6NIdentity.commit, sealedC6NIdentity.tree, sealedC6NIdentity.noteBlob,
+		sealedC6NIdentity.noteBodySHA256, c6rStatusPath,
+		"C6A → C6F → C6G → C6M → C6N → C6R → C6B", "countershape/p07b-c-unit-paths/v30",
+		"seven-path `SOURCE_FULL`", "Receipt C6A remains `ABSENT`",
+		expectedC6NSealedSourceContractDigest, expectedObservedC6NSealedSourceContractDigest,
+		expectedC6RSealedSourceContractDigest, "SUFFIX_PRESERVING", "LEGACY_DOUBLE",
+		"C6N: didrun note claim 1", "--print-final-runbook C6R",
+		"C6B's exact preseal parent is C6R, not C6N or C6M",
+	],
+	"docs/PROMPT_PACK.md": [
+		"# C6R — bind the observed sealed C6N note projection", c6rStatusPath, c6rSourceSubject,
+		"C6A → C6F → C6G → C6M → C6N → C6R → C6B", "seven-path `SOURCE_FULL`",
+		sealedC6NIdentity.commit, sealedC6NIdentity.noteBlob, sealedC6NIdentity.noteBodySHA256,
+		expectedC6NSealedSourceContractDigest, expectedObservedC6NSealedSourceContractDigest,
+		expectedC6RSealedSourceContractDigest, "SUFFIX_PRESERVING", "LEGACY_DOUBLE",
+		"--verify-c6r-sealed-c6n-note", "--verify-c6r-preseal-ledger",
+		"C6R is the live exact-seven-path `SOURCE_FULL` note-consumer projection repair",
+		"C6B remains blocked until C6R seals",
+	],
+	"docs/VERIFICATION.md": [
+		"## C6R sealed C6N note-consumer compatibility maintenance",
+		"countershape/p07b-c-unit-paths/v30", "44 ordered unit rows", "32 receipt-phase rows",
+		"seven-path `SOURCE_FULL`", "C6A → C6F → C6G → C6M → C6N → C6R → C6B",
+		sealedC6NIdentity.commit, sealedC6NIdentity.noteBlob, sealedC6NIdentity.noteBodySHA256,
+		expectedC6NSealedSourceContractDigest, expectedObservedC6NSealedSourceContractDigest,
+		expectedC6RSealedSourceContractDigest, "SUFFIX_PRESERVING", "LEGACY_DOUBLE",
+		"C6A/C6F/C6G/C6M/C6N/C6R plan self-test", "machine-readable v30 staged-unit-scope self-test",
+		"--verify-c6r-sealed-c6n-note", "--verify-c6r-preseal-ledger",
+		"C6R resolves preseal-parent HEAD=C6N or sealed-current HEAD=C6R",
+		"C6B resolves preseal-parent HEAD=C6R or sealed-current HEAD=C6B",
+		"<C3D|C4V|C4M|C4N|C4P|C4|C4H|C4I|C4K|C4J|C4L|C5|C5V|C6A|C6F|C6G|C6M|C6N|C6R|C6B>",
+		"C6R's v30 runbooks", "current C6R reopens exact sealed C6N",
+		"C6R has 10 claims ending `/opt/homebrew/bin/node tools/check-p07b-c-plan.mjs --verify-c6r-preseal-ledger`",
+		"C6R claim 10 proves exact sealed-C6N predecessor",
+	],
+	[c6rStatusPath]: [
+		"# P07B-C C6R — sealed C6N note-consumer maintenance", "SOURCE_FULL",
+		"OWNER_OUT_OF_BAND", "UNEVIDENCED", c6rSourceSubject,
+		sealedC6NIdentity.commit, sealedC6NIdentity.tree, sealedC6NIdentity.noteBlob,
+		sealedC6NIdentity.noteBodySHA256, sealedC6MIdentity.commit, sealedC6GIdentity.commit,
+		sealedC6FIdentity.commit, sealedC6AIdentity.commit, "Receipt C6A", "ABSENT", "UNRECEIPTED",
+		requiredC6RDigest, c6rStatusMachineAuthoritySentence, c6rStatusCauseSentence,
+		expectedC6NSealedSourceContractDigest, expectedObservedC6NSealedSourceContractDigest,
+		expectedC6RSealedSourceContractDigest, "SUFFIX_PRESERVING", "LEGACY_DOUBLE",
+		"C6N: didrun note claim 1", c6rStatusClaimSectionMarkdown,
+		c6rStatusCommandSectionMarkdown, ...c6rClaimLabels.map((label) => `\`${label}\``),
+	],
+	"spec/verification/p07b-c-unit-paths.json": [
+		"countershape/p07b-c-unit-paths/v30", "\"C6R\"", "\"parent\": \"C6N\"",
+		"\"C6B\"", "\"parent\": \"C6R\"", c6rStatusPath,
+		"\"OWNER_OUT_OF_BAND\"", "\"UNEVIDENCED\"",
+	],
+	"tools/check-p07b-c-plan.mjs": [
+		"requiredC6RText", "requiredC6RPaths", "sealedC6NIdentity", "c6rExpectedTransitionAuthority",
+		"computedObservedC6NSealedSourceContractDigest", expectedObservedC6NSealedSourceContractDigest,
+		"computedC6RSealedSourceContractDigest", expectedC6RSealedSourceContractDigest,
+		"validateC6RStatusContract", "runC6RStatusContractSelfTest",
+		"validateC6RLiveCursorNarrative", "runC6RLiveCursorNarrativeSelfTest", "verifyC6RSealedC6NNote",
+		"verifyC6RPresealLedger", "--verify-c6r-sealed-c6n-note", "--verify-c6r-preseal-ledger",
+	],
+	"tools/check-p07b-c-unit-scope.mjs": [
+		"p07b-c-unit-paths/v30", "c6rDeclaredMaintenanceContract", "sealedC6NCandidateParent", "C6R",
+		"sealedC6NSourceIdentity", "SUFFIX_PRESERVING", "LEGACY_DOUBLE",
+		"c6rSourceClaimManifest", "computedObservedC6NSealedSourceContractDigest",
+		"computedC6RSealedSourceContractDigest", expectedObservedC6NSealedSourceContractDigest,
+		expectedC6RSealedSourceContractDigest,
 	],
 });
 
@@ -12814,6 +13178,184 @@ async function runC4LLiveCursorNarrativeSelfTest(bodies) {
 			throw new Error(`P07B-C C4L live-cursor self-test duplicate-marker false negative: ${path}`);
 		}
 		controls += 3;
+	}
+	return controls;
+}
+
+const c6rFrozenC6NNarrativeSectionByPath = Object.freeze({
+	"docs/HANDOFF_MODE_C.md": Object.freeze({
+		start: "### Sealed C6N sealed C6M note-redaction maintenance — frozen v29 snapshot",
+		end: "### Active C6G C3U historical future-C6 fixture maintenance",
+		level: 3,
+	}),
+	"docs/PROMPT_PACK.md": Object.freeze({
+		start: "# C6N — bind the sealed C6M note-redaction epoch",
+		end: "# C6G — isolate C3U historical C6 fixtures",
+		level: 1,
+	}),
+	"docs/VERIFICATION.md": Object.freeze({
+		start: "## C6N sealed C6M note-redaction compatibility maintenance",
+		end: "## C6G C3U historical future-C6 fixture maintenance",
+		level: 2,
+	}),
+});
+const c6rLiveCursorAnchorsByPath = Object.freeze({
+	"docs/HANDOFF_MODE_C.md": Object.freeze([
+		"- **Boundary:** `C6R`",
+		"### Active C6R sealed C6N note-consumer maintenance",
+		"C6A → C6F → C6G → C6M → C6N → C6R → C6B",
+		"C6B's exact preseal parent is C6R, not C6N or C6M",
+	]),
+	"docs/PROMPT_PACK.md": Object.freeze([
+		"# C6R — bind the observed sealed C6N note projection",
+		"C6R is the live exact-seven-path `SOURCE_FULL` note-consumer projection repair",
+		"C6A → C6F → C6G → C6M → C6N → C6R → C6B",
+		"C6B remains blocked until C6R seals",
+	]),
+	"docs/VERIFICATION.md": Object.freeze([
+		"Live v30 inserts C6R between sealed C6N and C6B",
+		"C6R resolves preseal-parent HEAD=C6N or sealed-current HEAD=C6R",
+		"C6B resolves preseal-parent HEAD=C6R or sealed-current HEAD=C6B",
+		"C6R has 10 claims ending `/opt/homebrew/bin/node tools/check-p07b-c-plan.mjs --verify-c6r-preseal-ledger`",
+		"C6R claim 10 proves exact sealed-C6N predecessor",
+		"<C3D|C4V|C4M|C4N|C4P|C4|C4H|C4I|C4K|C4J|C4L|C5|C5V|C6A|C6F|C6G|C6M|C6N|C6R|C6B>",
+		"C6R's v30 runbooks",
+		"current C6R reopens exact sealed C6N",
+	]),
+});
+const c6rStaleLiveCursorSnippets = Object.freeze([
+	"exact C6N is the live cursor",
+	"C6N is now the live edge under v29",
+	"top-level C6N/v29 current-state capsule is authoritative",
+	"C6N is current under v29",
+	"C6N is the sole active unit under v29",
+	"sealed-through-C6M/active-C6N section",
+	"C6N is now the sole active source unit under v29",
+	"live authority is the v29/C6N section",
+	"Current v29 authority is stated only in the top C6N section",
+	"Live v29 inserts C6N",
+	"current v29 admits C6N",
+	"<C3D|C4V|C4M|C4N|C4P|C4|C4H|C4I|C4K|C4J|C4L|C5|C5V|C6A|C6F|C6G|C6M|C6N|C6B>",
+	"C6B resolves preseal-parent HEAD=C6N",
+	"current C6N reopens exact sealed C6M",
+	"the C6N section at the top is the live cursor",
+	"C6N is active under v29",
+	"C6N is live",
+]);
+const c6rStaleLiveCursorPatterns = Object.freeze([
+	Object.freeze({ label: "present-tense C6N cursor", expression: /\bC6N (?:is(?: (?:now|still))?|remains|continues (?:as|to be)) (?:the )?(?:sole )?(?:active|current|live)\b/iu }),
+	Object.freeze({ label: "inverse-order C6N cursor", expression: /\b(?:the )?(?:active|current|live) (?:cursor|boundary|unit|edge|authority) (?:is|remains|continues (?:as|to be)) C6N\b/iu }),
+	Object.freeze({ label: "present-tense v29 authority", expression: /\bv29 (?:is|remains|continues (?:as|to be)) (?:the )?(?:active|current|live) (?:authority|cursor|boundary|version)\b/iu }),
+	Object.freeze({ label: "inverse-order v29 authority", expression: /\b(?:the )?(?:active|current|live) (?:authority|cursor|boundary|version) (?:is|remains|continues (?:as|to be)) (?:v29(?:\/C6N)?|C6N)\b/iu }),
+	Object.freeze({ label: "current v29 cursor", expression: /\bcurrent v29\b/iu }),
+	Object.freeze({ label: "live v29 cursor", expression: /\blive v29\b/iu }),
+	Object.freeze({ label: "current C6N consumer", expression: /\bcurrent C6N (?:reopens|section|cursor|boundary|unit)\b/iu }),
+]);
+const c6rStaleLiveCursorPatternHostiles = Object.freeze([
+	"C6N remains the live cursor.",
+	"The live cursor remains C6N.",
+	"C6N continues as the active boundary.",
+	"v29 remains the current authority.",
+	"C6N is still the live cursor.",
+	"The current authority remains v29/C6N.",
+]);
+
+function c6rNarrativeOutsideFrozenSection(path, body, errors) {
+	const markers = c6rFrozenC6NNarrativeSectionByPath[path];
+	if (markers === undefined) return body;
+	const startIndex = body.indexOf(markers.start);
+	const endIndex = body.indexOf(markers.end);
+	const startUnique = startIndex !== -1 && body.indexOf(markers.start, startIndex + markers.start.length) === -1;
+	const endUnique = endIndex !== -1 && body.indexOf(markers.end, endIndex + markers.end.length) === -1;
+	if (!startUnique) errors.push(`${path}: exact frozen-C6N start marker must occur once`);
+	if (!endUnique) errors.push(`${path}: exact frozen-C6N end marker must occur once`);
+	if (!startUnique || !endUnique) return body;
+	if (startIndex >= endIndex) {
+		errors.push(`${path}: exact frozen-C6N section markers are reordered`);
+		return body;
+	}
+	const nextHeading = body.slice(startIndex + markers.start.length)
+		.match(new RegExp(`^#{1,${markers.level}} .+$`, "mu"));
+	if (nextHeading === null || nextHeading[0] !== markers.end) {
+		errors.push(`${path}: frozen C6N exemption must end at the next level-${markers.level}-or-higher heading`);
+		return body;
+	}
+	return `${body.slice(0, startIndex)}${body.slice(endIndex)}`;
+}
+
+function validateC6RLiveCursorNarrative(path, body) {
+	const errors = [];
+	if (c6rFrozenC6NNarrativeSectionByPath[path] === undefined) return errors;
+	const liveBody = c6rNarrativeOutsideFrozenSection(path, body, errors);
+	for (const snippet of c6rStaleLiveCursorSnippets) {
+		if (liveBody.includes(snippet)) {
+			errors.push(`${path}: stale C6N/v29 live cursor outside frozen C6N history: ${JSON.stringify(snippet)}`);
+		}
+	}
+	for (const { label, expression } of c6rStaleLiveCursorPatterns) {
+		if (expression.test(liveBody)) errors.push(`${path}: stale C6N/v29 live cursor pattern: ${label}`);
+	}
+	for (const anchor of c6rLiveCursorAnchorsByPath[path] ?? []) {
+		requireExactlyOnce(liveBody, anchor, path, "C6R live-cursor anchor", errors);
+	}
+	return errors;
+}
+
+function runC6RLiveCursorNarrativeSelfTest(bodies) {
+	let controls = 0;
+	for (const [path, markers] of Object.entries(c6rFrozenC6NNarrativeSectionByPath)) {
+		const body = bodies.get(path);
+		if (typeof body !== "string") throw new Error(`P07B-C C6R live-cursor self-test missing ${path}`);
+		const baseline = validateC6RLiveCursorNarrative(path, body);
+		if (baseline.length !== 0) {
+			throw new Error(`P07B-C C6R live-cursor self-test baseline failed: ${baseline.join("; ")}`);
+		}
+		controls += 1;
+		for (const snippet of c6rStaleLiveCursorSnippets) {
+			const outside = body.replace(markers.start, `${snippet}\n\n${markers.start}`);
+			if (outside === body || validateC6RLiveCursorNarrative(path, outside).length === 0) {
+				throw new Error(`P07B-C C6R live-cursor self-test stale-current false negative: ${path} ${JSON.stringify(snippet)}`);
+			}
+			const frozen = body.replace(markers.start, `${markers.start}\n\n${snippet}`);
+			if (frozen === body || validateC6RLiveCursorNarrative(path, frozen).length !== 0) {
+				throw new Error(`P07B-C C6R live-cursor self-test rejected frozen history: ${path} ${JSON.stringify(snippet)}`);
+			}
+			controls += 2;
+		}
+		for (const hostileText of c6rStaleLiveCursorPatternHostiles) {
+			const outside = body.replace(markers.start, `${hostileText}\n\n${markers.start}`);
+			if (outside === body || validateC6RLiveCursorNarrative(path, outside).length === 0) {
+				throw new Error(`P07B-C C6R live-cursor self-test paraphrase false negative: ${path} ${JSON.stringify(hostileText)}`);
+			}
+			const frozen = body.replace(markers.start, `${markers.start}\n\n${hostileText}`);
+			if (frozen === body || validateC6RLiveCursorNarrative(path, frozen).length !== 0) {
+				throw new Error(`P07B-C C6R live-cursor self-test rejected frozen paraphrase: ${path} ${JSON.stringify(hostileText)}`);
+			}
+			controls += 2;
+		}
+		const sentinel = `C6R-FROZEN-MARKER-SWAP-${path}`;
+		if (body.includes(sentinel)) throw new Error(`P07B-C C6R live-cursor self-test sentinel collision: ${path}`);
+		const markerHostiles = Object.freeze([
+			body.replace(markers.start, markers.start.replace("C6N", "C6X")),
+			body.replace(markers.start, `${markers.start}\n${markers.start}`),
+			body.replace(markers.end, markers.end.replace("C6G", "C6X")),
+			body.replace(markers.end, `${markers.end}\n${markers.end}`),
+			body.replace(markers.start, sentinel).replace(markers.end, markers.start).replace(sentinel, markers.end),
+			body.replace(markers.end, `${"#".repeat(markers.level)} Inserted unbounded exemption\n\n${markers.end}`),
+		]);
+		for (const [index, hostile] of markerHostiles.entries()) {
+			if (hostile === body || validateC6RLiveCursorNarrative(path, hostile).length === 0) {
+				throw new Error(`P07B-C C6R live-cursor self-test marker false negative: ${path} ${index + 1}`);
+			}
+			controls += 1;
+		}
+		for (const anchor of c6rLiveCursorAnchorsByPath[path]) {
+			const hostile = body.replace(anchor, anchor.replace("C6R", "C6X"));
+			if (hostile === body || validateC6RLiveCursorNarrative(path, hostile).length === 0) {
+				throw new Error(`P07B-C C6R live-cursor self-test anchor false negative: ${path} ${JSON.stringify(anchor)}`);
+			}
+			controls += 1;
+		}
 	}
 	return controls;
 }
@@ -12895,10 +13437,11 @@ const planAuthorityMarkdownPaths = Object.freeze([...new Set([
 		requiredC6FText,
 		requiredC6GText,
 		requiredC6NText,
+		requiredC6RText,
 	].flatMap((authority) => Object.keys(authority)),
 ].filter(receiptPhaseMarkdownAuthorityPath))].sort((left, right) =>
 	Buffer.compare(Buffer.from(left, "utf8"), Buffer.from(right, "utf8"))));
-const planAuthorityMarkdownDigest = "sha256:2f65ba0989a19aed9a38c3a54335f8b9be2703e7cc5fd61379242c03c9a31191";
+const planAuthorityMarkdownDigest = "sha256:a515c1306e751b9056c41014e4962ae87977eee474c21bc5a4f49153bef54d33";
 const frozenC3USelfReceiptMarkdownPaths = Object.freeze([
 	"docs/ARCHITECTURE.md",
 	"docs/CLAIM_VOCABULARY.md",
@@ -13502,9 +14045,9 @@ const bFutureSurfacePhaseModeOracle = Object.freeze([
 	Object.freeze({ boundary: "C4K", mode: "C4" }),
 	Object.freeze({ boundary: "C4J", mode: "C4" }),
 	Object.freeze({ boundary: "C4L", mode: "C4" }),
-	...["C5", "C5V", "C6A", "C6F", "C6G", "C6M", "C6N", "C6B"].map((boundary) => Object.freeze({ boundary, mode: "C5" })),
+	...["C5", "C5V", "C6A", "C6F", "C6G", "C6M", "C6N", "C6R", "C6B"].map((boundary) => Object.freeze({ boundary, mode: "C5" })),
 ]);
-const bFutureSurfacePhaseModeOracleDigest = "8b837f726282ccefb7c2ac3104a163b6d749b12574ac54032976a45fd0234b86";
+const bFutureSurfacePhaseModeOracleDigest = "2f7ef87c8b48ba61a586511434f4fc825f3a8b89695aa2dc97b71bf3095540ff";
 
 function bFutureSurfaceValidationModeForPhase(boundary) {
 	const phaseIndex = p07bCReceiptPhaseRows.findIndex((row) => row.boundary === boundary);
@@ -13996,7 +14539,7 @@ const selfReceiptSuffixFixturePaths = Object.freeze([
 	"docs/receipt-phase-suffix-fixture.MD",
 	"docs/receipt-phase-suffix-fixture.markdown",
 ]);
-const selfReceiptPhaseExtensionCatalogDigest = "cc1b6248af4a8e7413c6ec1bf30d03b04f07ce6d1ece306855dd8ea677ea92cc";
+const selfReceiptPhaseExtensionCatalogDigest = "fc0c5506c9904649de9691cc8f1bbfd7e923e64d1532511dd8e7dfda3b4dacee";
 
 export function selfReceiptPhaseExtensionCatalog() {
 	const firstBoundary = forwardCandidateReceiptPhaseBoundaries.indexOf("C4V");
@@ -14051,6 +14594,7 @@ function runSelfReceiptPhaseExtensionCatalogSelfTest() {
 	const c6g = catalog.find(({ boundary }) => boundary === "C6G");
 	const c6m = catalog.find(({ boundary }) => boundary === "C6M");
 	const c6n = catalog.find(({ boundary }) => boundary === "C6N");
+	const c6r = catalog.find(({ boundary }) => boundary === "C6R");
 	const c6b = catalog.find(({ boundary }) => boundary === "C6B");
 	if (c4m?.paths !== 47 || c4m.paths_sha256 !== frozenC4MSelfReceiptMarkdownDigest ||
 		c4m.rejected !== 735 || c4m.controls !== 245 ||
@@ -14083,8 +14627,10 @@ function runSelfReceiptPhaseExtensionCatalogSelfTest() {
 		c6m.rejected !== 1170 || c6m.controls !== 390 ||
 		c6n?.paths !== 77 || c6n.paths_sha256 !== "sha256:2f65ba0989a19aed9a38c3a54335f8b9be2703e7cc5fd61379242c03c9a31191" ||
 		c6n.rejected !== 1185 || c6n.controls !== 395 ||
-		c6b?.paths !== 77 || c6b.paths_sha256 !== c6n.paths_sha256 ||
-		c6b.rejected !== 1185 || c6b.controls !== 395) {
+		c6r?.paths !== 78 || c6r.paths_sha256 !== "sha256:a515c1306e751b9056c41014e4962ae87977eee474c21bc5a4f49153bef54d33" ||
+		c6r.rejected !== 1200 || c6r.controls !== 400 ||
+		c6b?.paths !== 78 || c6b.paths_sha256 !== c6r.paths_sha256 ||
+		c6b.rejected !== 1200 || c6b.controls !== 400) {
 		throw new Error(`self-receipt phase extension frozen/current/reentry oracle ${JSON.stringify(catalog)}`);
 	}
 	return Object.freeze({ catalog, digest });
@@ -19811,6 +20357,7 @@ const candidateReceiptPhaseSpecificationOwnerContracts = Object.freeze({
 	C6F: Object.freeze({ parent: "C6A", authority: sealedC6AIdentity, priorSchema: "countershape/p07b-c-unit-paths/v26" }),
 	C6G: Object.freeze({ parent: "C6F", authority: sealedC6FIdentity, priorSchema: "countershape/p07b-c-unit-paths/v27" }),
 	C6N: Object.freeze({ parent: "C6M", authority: sealedC6MIdentity, priorSchema: "countershape/p07b-c-unit-paths/v28" }),
+	C6R: Object.freeze({ parent: "C6N", authority: sealedC6NIdentity, priorSchema: "countershape/p07b-c-unit-paths/v29" }),
 });
 const candidateReceiptPhaseSpecificationOwners = new Set([
 	"C3D", ...Object.keys(candidateReceiptPhaseSpecificationOwnerContracts),
@@ -19900,6 +20447,9 @@ function requireCandidateReceiptPhaseTransition(candidateBoundary, parentBoundar
 	}
 	if (candidate.boundary === "C6N" && (parentCommit !== sealedC6MIdentity.commit || parentTree !== sealedC6MIdentity.tree)) {
 		throw new Error(`receipt phase C6N requires exact sealed C6M parent ${parentCommit}/${parentTree}`);
+	}
+	if (candidate.boundary === "C6R" && (parentCommit !== sealedC6NIdentity.commit || parentTree !== sealedC6NIdentity.tree)) {
+		throw new Error(`receipt phase C6R requires exact sealed C6N parent ${parentCommit}/${parentTree}`);
 	}
 	return candidate;
 }
@@ -20659,7 +21209,8 @@ const planC6GOCACHEPolicyBySourceUnit = Object.freeze({
 	C6F: planC6GOCACHEPolicy.SUFFIX_PRESERVING,
 	C6G: planC6GOCACHEPolicy.SUFFIX_PRESERVING,
 	C6M: planC6GOCACHEPolicy.LEGACY_DOUBLE,
-	C6N: planC6GOCACHEPolicy.LEGACY_DOUBLE,
+	C6N: planC6GOCACHEPolicy.SUFFIX_PRESERVING,
+	C6R: planC6GOCACHEPolicy.SUFFIX_PRESERVING,
 });
 const planC6DoubleRedactionPositions = new Set([2, 4, 5, 7, 8]);
 const planC6BareRedactionPositions = new Set([31, 32, 33, 35, 36]);
@@ -20893,8 +21444,12 @@ function planC6SourceDerivationMode(boundary, headSubject) {
 		if (headSubject === c6mSourceSubject) return "PRESEAL_PARENT";
 		if (headSubject === c6nSourceSubject) return "SEALED_CURRENT";
 	}
-	if (boundary === "C6B") {
+	if (boundary === "C6R") {
 		if (headSubject === c6nSourceSubject) return "PRESEAL_PARENT";
+		if (headSubject === c6rSourceSubject) return "SEALED_CURRENT";
+	}
+	if (boundary === "C6B") {
+		if (headSubject === c6rSourceSubject) return "PRESEAL_PARENT";
 		if (headSubject === c6bReceiptSubject) return "SEALED_CURRENT";
 	}
 	throw new Error(`${boundary}: HEAD subject does not identify an admitted preseal parent or sealed current boundary`);
@@ -20923,18 +21478,31 @@ function resolvePlanC6ASourceAuthority(root, boundary, injectedAuthority) {
 			root, c6f.parent, "C6A", c6aSourceSubject, c6aClaimLabels, c6aClaimTypes, c6aExpectedClaimArgv, c6aHermeticArgvPrefix,
 			planC6GOCACHEPolicy.SUFFIX_PRESERVING,
 		);
-	} else if (boundary === "C6N" || boundary === "C6B") {
+	} else if (boundary === "C6N" || boundary === "C6R" || boundary === "C6B") {
 		let c6nCommit;
 		if (boundary === "C6N") {
 			c6nCommit = mode === "SEALED_CURRENT" ? head : undefined;
 		} else {
-			c6nCommit = mode === "PRESEAL_PARENT" ? head : derivePlanC6ReceiptParent(
-				root, head, "C6B", c6bReceiptSubject,
-			);
+			let c6rCommit;
+			if (boundary === "C6R") {
+				c6rCommit = mode === "SEALED_CURRENT" ? head : undefined;
+			} else {
+				c6rCommit = mode === "PRESEAL_PARENT" ? head : derivePlanC6ReceiptParent(
+					root, head, "C6B", c6bReceiptSubject,
+				);
+			}
+			c6nCommit = c6rCommit === undefined ? head : derivePlanC6SealedSource(
+				root, c6rCommit, "C6R", c6rSourceSubject, c6rClaimLabels, c6rClaimTypes,
+				c6rExpectedClaimArgv, c6rHermeticArgvPrefix, planC6GOCACHEPolicy.SUFFIX_PRESERVING,
+			).parent;
+			if (c6nCommit !== sealedC6NIdentity.commit) {
+				throw new Error(`${boundary}: C6R did not bind exact sealed C6N parent`);
+			}
 		}
 		const c6mCommit = c6nCommit === undefined ? head : derivePlanC6SealedSource(
 			root, c6nCommit, "C6N", c6nSourceSubject, c6nClaimLabels, c6nClaimTypes,
-			c6nExpectedClaimArgv, c6nHermeticArgvPrefix, planC6GOCACHEPolicy.LEGACY_DOUBLE,
+			c6nExpectedClaimArgv, c6nHermeticArgvPrefix, planC6GOCACHEPolicy.SUFFIX_PRESERVING,
+			sealedC6NIdentity,
 		).parent;
 		if (c6mCommit !== sealedC6MIdentity.commit) {
 			throw new Error(`${boundary}: C6N did not bind exact sealed C6M parent`);
@@ -21128,7 +21696,7 @@ async function capturePlanSelfTestAuthoritySnapshot() {
 	}
 	const c6ManifestBytes = await stablePlanSelfTestAuthorityBytes(c6aSourceAuthorityPath);
 	const boundary = p07bCActiveReceiptPhaseBoundary;
-	if (!["C6M", "C6N", "C6B"].includes(boundary)) {
+	if (!["C6M", "C6N", "C6R", "C6B"].includes(boundary)) {
 		throw new Error(`plan self-test authority snapshot does not admit active boundary ${boundary}`);
 	}
 	const c6Authority = clonedImmutablePlanAuthority(
@@ -21270,7 +21838,7 @@ async function observedReceiptStates(root, overrides, boundary, injectedC6ASourc
 	};
 	const manifestBytes = await optionalPlanBytes(root, c6aSourceAuthorityPath, overrides);
 	const receiptBytes = await optionalPlanBytes(root, c6aReceiptDeclarationPath, overrides);
-	const manifestRequired = boundary === "C6M" || boundary === "C6N" || boundary === "C6B";
+	const manifestRequired = boundary === "C6M" || boundary === "C6N" || boundary === "C6R" || boundary === "C6B";
 	if ((manifestBytes !== undefined) !== manifestRequired) {
 		throw new Error(`receipt phase ${boundary} C6A source-authority manifest must be ${manifestRequired ? "PRESENT" : "ABSENT"}`);
 	}
@@ -21296,7 +21864,7 @@ async function observedReceiptStates(root, overrides, boundary, injectedC6ASourc
 	}
 	const handoff = await readText(root, receiptPhaseHandoffPath, overrides);
 	const evidence = await optionalPlanText(root, c6EvidencePath, overrides);
-	if (["C6A", "C6F", "C6G", "C6M", "C6N", "C6B"].includes(boundary) && evidence === undefined) {
+	if (["C6A", "C6F", "C6G", "C6M", "C6N", "C6R", "C6B"].includes(boundary) && evidence === undefined) {
 		throw new Error(`receipt phase ${boundary} requires inherited C6 evidence authority`);
 	}
 	const handoffState = planC6SourceProjectionState(handoff, manifest, receipt, summary, "HANDOFF");
@@ -21394,7 +21962,9 @@ function runPlanC6SourceAuthoritySelfTest() {
 		planC6SourceDerivationMode("C6M", c6mSourceSubject) !== "SEALED_CURRENT" ||
 		planC6SourceDerivationMode("C6N", c6mSourceSubject) !== "PRESEAL_PARENT" ||
 		planC6SourceDerivationMode("C6N", c6nSourceSubject) !== "SEALED_CURRENT" ||
-		planC6SourceDerivationMode("C6B", c6nSourceSubject) !== "PRESEAL_PARENT" ||
+		planC6SourceDerivationMode("C6R", c6nSourceSubject) !== "PRESEAL_PARENT" ||
+		planC6SourceDerivationMode("C6R", c6rSourceSubject) !== "SEALED_CURRENT" ||
+		planC6SourceDerivationMode("C6B", c6rSourceSubject) !== "PRESEAL_PARENT" ||
 		planC6SourceDerivationMode("C6B", c6bReceiptSubject) !== "SEALED_CURRENT") {
 		throw new Error("plan C6A source-authority preseal/sealed derivation controls");
 	}
@@ -21402,7 +21972,9 @@ function runPlanC6SourceAuthoritySelfTest() {
 	refuse("C6M unknown HEAD", () => planC6SourceDerivationMode("C6M", "other"));
 	refuse("C6N bypassed C6M HEAD", () => planC6SourceDerivationMode("C6N", c6gSourceSubject));
 	refuse("C6N unknown HEAD", () => planC6SourceDerivationMode("C6N", "other"));
-	refuse("C6B bypassed C6N HEAD", () => planC6SourceDerivationMode("C6B", c6mSourceSubject));
+	refuse("C6R bypassed C6N HEAD", () => planC6SourceDerivationMode("C6R", c6mSourceSubject));
+	refuse("C6R unknown HEAD", () => planC6SourceDerivationMode("C6R", "other"));
+	refuse("C6B bypassed C6R HEAD", () => planC6SourceDerivationMode("C6B", c6nSourceSubject));
 	refuse("C6B unknown HEAD", () => planC6SourceDerivationMode("C6B", "other"));
 	refuse("C6B has no sealed-source redaction epoch", () => planC6GOCACHEPolicyForSourceUnit("C6B"));
 	const note = syntheticPlanC6SourceNote(authority, c6aClaimLabels, c6aClaimTypes, c6aExpectedClaimArgv);
@@ -21452,6 +22024,12 @@ function runPlanC6SourceAuthoritySelfTest() {
 	}
 	if (computedC6NSealedSourceContractDigest() !== expectedC6NSealedSourceContractDigest) {
 		throw new Error(`plan C6N sealed-source contract digest ${computedC6NSealedSourceContractDigest()}`);
+	}
+	if (computedObservedC6NSealedSourceContractDigest() !== expectedObservedC6NSealedSourceContractDigest) {
+		throw new Error(`plan observed C6N sealed-source contract digest ${computedObservedC6NSealedSourceContractDigest()}`);
+	}
+	if (computedC6RSealedSourceContractDigest() !== expectedC6RSealedSourceContractDigest) {
+		throw new Error(`plan C6R sealed-source contract digest ${computedC6RSealedSourceContractDigest()}`);
 	}
 	const c6fContractDigest = computedC6FSealedSourceContractDigest();
 	if (c6fContractDigest !== expectedC6FSealedSourceContractDigest) {
@@ -21544,25 +22122,49 @@ function runPlanC6SourceAuthoritySelfTest() {
 	);
 	validatePlanC6SourceNote(
 		c6nNote, c6nIdentity, c6nClaimLabels, c6nClaimTypes, c6nExpectedClaimArgv,
-		c6nHermeticArgvPrefix, planC6GOCACHEPolicy.LEGACY_DOUBLE, "C6N raw fixture",
+		c6nHermeticArgvPrefix, planC6GOCACHEPolicy.SUFFIX_PRESERVING, "C6N raw fixture",
 	);
 	validatePlanC6SourceNote(
-		redactForPolicy(c6nNote, planC6GOCACHEPolicy.LEGACY_DOUBLE), c6nIdentity,
-		c6nClaimLabels, c6nClaimTypes, c6nExpectedClaimArgv, c6nHermeticArgvPrefix,
-		planC6GOCACHEPolicy.LEGACY_DOUBLE, "C6N double fixture",
-	);
-	refuse("C6N suffix under legacy-double policy", () => validatePlanC6SourceNote(
 		redactForPolicy(c6nNote, planC6GOCACHEPolicy.SUFFIX_PRESERVING), c6nIdentity,
 		c6nClaimLabels, c6nClaimTypes, c6nExpectedClaimArgv, c6nHermeticArgvPrefix,
-		planC6GOCACHEPolicy.LEGACY_DOUBLE, "C6N suffix fixture",
+		planC6GOCACHEPolicy.SUFFIX_PRESERVING, "C6N suffix fixture",
+	);
+	refuse("C6N legacy-double under observed suffix-preserving policy", () => validatePlanC6SourceNote(
+		redactForPolicy(c6nNote, planC6GOCACHEPolicy.LEGACY_DOUBLE), c6nIdentity,
+		c6nClaimLabels, c6nClaimTypes, c6nExpectedClaimArgv, c6nHermeticArgvPrefix,
+		planC6GOCACHEPolicy.SUFFIX_PRESERVING, "C6N legacy-double fixture",
 	));
-	const c6nBare = redactForPolicy(c6nNote, planC6GOCACHEPolicy.LEGACY_DOUBLE);
+	const c6nBare = redactForPolicy(c6nNote, planC6GOCACHEPolicy.SUFFIX_PRESERVING);
 	c6nBare.claims[0].claim.argv_preview[6] = planC6PreviewRedaction;
-	refuse("C6N bare GOCACHE under legacy-double policy", () => validatePlanC6SourceNote(
+	refuse("C6N bare GOCACHE under observed suffix-preserving policy", () => validatePlanC6SourceNote(
 		c6nBare, c6nIdentity, c6nClaimLabels, c6nClaimTypes, c6nExpectedClaimArgv,
-		c6nHermeticArgvPrefix, planC6GOCACHEPolicy.LEGACY_DOUBLE, "C6N bare fixture",
+		c6nHermeticArgvPrefix, planC6GOCACHEPolicy.SUFFIX_PRESERVING, "C6N bare fixture",
 	));
-	if (rejected !== 48) throw new Error(`plan C6A/C6F/C6G/C6M/C6N source-authority self-test cardinality ${rejected}`);
+	const c6rIdentity = Object.freeze({ commit: "9".repeat(40), tree: "a".repeat(40) });
+	const c6rNote = syntheticPlanC6SourceNote(
+		c6rIdentity, c6rClaimLabels, c6rClaimTypes, c6rExpectedClaimArgv,
+	);
+	validatePlanC6SourceNote(
+		c6rNote, c6rIdentity, c6rClaimLabels, c6rClaimTypes, c6rExpectedClaimArgv,
+		c6rHermeticArgvPrefix, planC6GOCACHEPolicy.SUFFIX_PRESERVING, "C6R raw fixture",
+	);
+	validatePlanC6SourceNote(
+		redactForPolicy(c6rNote, planC6GOCACHEPolicy.SUFFIX_PRESERVING), c6rIdentity,
+		c6rClaimLabels, c6rClaimTypes, c6rExpectedClaimArgv, c6rHermeticArgvPrefix,
+		planC6GOCACHEPolicy.SUFFIX_PRESERVING, "C6R suffix fixture",
+	);
+	refuse("C6R legacy-double under suffix-preserving policy", () => validatePlanC6SourceNote(
+		redactForPolicy(c6rNote, planC6GOCACHEPolicy.LEGACY_DOUBLE), c6rIdentity,
+		c6rClaimLabels, c6rClaimTypes, c6rExpectedClaimArgv, c6rHermeticArgvPrefix,
+		planC6GOCACHEPolicy.SUFFIX_PRESERVING, "C6R legacy-double fixture",
+	));
+	const c6rBare = redactForPolicy(c6rNote, planC6GOCACHEPolicy.SUFFIX_PRESERVING);
+	c6rBare.claims[0].claim.argv_preview[6] = planC6PreviewRedaction;
+	refuse("C6R bare GOCACHE under suffix-preserving policy", () => validatePlanC6SourceNote(
+		c6rBare, c6rIdentity, c6rClaimLabels, c6rClaimTypes, c6rExpectedClaimArgv,
+		c6rHermeticArgvPrefix, planC6GOCACHEPolicy.SUFFIX_PRESERVING, "C6R bare fixture",
+	));
+	if (rejected !== 52) throw new Error(`plan C6A/C6F/C6G/C6M/C6N/C6R source-authority self-test cardinality ${rejected}`);
 	return rejected;
 }
 
@@ -22233,7 +22835,7 @@ async function verifyFixedReceiptPhaseRegressions() {
 export async function runReceiptPhaseTableSelfTest() {
 	const historicalC6AuthorityAbsence = runHistoricalC6AuthorityAbsenceFixtureSelfTest();
 	const candidateTransitions = runCandidateReceiptPhaseTransitionSelfTest();
-	if (candidateTransitions.accepted !== 19 || candidateTransitions.rejected !== 662) {
+	if (candidateTransitions.accepted !== 20 || candidateTransitions.rejected !== 716) {
 		throw new Error(`receipt phase candidate-transition catalog cardinality ${candidateTransitions.accepted}/${candidateTransitions.rejected}`);
 	}
 	const caseIDs = new Set();
@@ -22272,9 +22874,9 @@ export async function runReceiptPhaseTableSelfTest() {
 	}
 	const catalog = receiptPhaseFixtureCatalog();
 	const digest = createHash("sha256").update(`${catalog.map((record) => JSON.stringify(record)).join("\n")}\n`, "utf8").digest("hex");
-	if (catalog.length !== 1_550 || caseIDs.size !== 1_550) throw new Error(`receipt phase catalog cardinality ${catalog.length}/${caseIDs.size}`);
-	if (accepted !== 961 || rejected !== 589) throw new Error(`receipt phase catalog split ${accepted}/${rejected}`);
-	if (digest !== "7cc8750e3daae50dd89b87ae12cc5a113ec8755e0a495d720d67654c0ee3dd55") throw new Error(`receipt phase catalog digest ${digest}`);
+	if (catalog.length !== 1_632 || caseIDs.size !== 1_632) throw new Error(`receipt phase catalog cardinality ${catalog.length}/${caseIDs.size}`);
+	if (accepted !== 1_024 || rejected !== 608) throw new Error(`receipt phase catalog split ${accepted}/${rejected}`);
+	if (digest !== "b5dcddcf22c5d5ed99cce0bdfe32285ffbbe1f524a7f4d6d93409f80809339fb") throw new Error(`receipt phase catalog digest ${digest}`);
 	if (fixedReceiptPhaseRegressions.length !== 6 || new Set(fixedReceiptPhaseRegressions.map(({ id }) => id)).size !== 6) {
 		throw new Error("fixed receipt phase regression manifest");
 	}
@@ -22288,13 +22890,13 @@ export async function runReceiptPhaseTableSelfTest() {
 	const executableCatalog = Object.freeze([...catalog, ...fixedCatalog]);
 	const executableDigest = createHash("sha256")
 		.update(`${executableCatalog.map((record) => JSON.stringify(record)).join("\n")}\n`, "utf8").digest("hex");
-	if (executableCatalog.length !== 1_556 || caseIDs.size !== 1_556) {
+	if (executableCatalog.length !== 1_638 || caseIDs.size !== 1_638) {
 		throw new Error(`receipt phase executable catalog cardinality ${executableCatalog.length}/${caseIDs.size}`);
 	}
-	if (accepted !== 967 || rejected !== 589) {
+	if (accepted !== 1_030 || rejected !== 608) {
 		throw new Error(`receipt phase executable catalog split ${accepted}/${rejected}`);
 	}
-	if (executableDigest !== "b13a5d101560b1d9d1a943131e8821de2b01c72f5938f26b5884575db0528c84") {
+	if (executableDigest !== "91e4b0cd0172857566a9f6e7e1717f1b12a38682ace3d0c89022f8f6aa4f5502") {
 		throw new Error(`receipt phase executable catalog digest ${executableDigest}`);
 	}
 	return Object.freeze({
@@ -22421,7 +23023,7 @@ async function liveForwardPlanCorpus(boundary) {
 	overrides.set(receiptPhaseHandoffPath, rewriteReceiptPhaseCapsule(
 		liveHandoff, p07bCActiveReceiptPhaseBoundary, boundary,
 	));
-	if (["C6A", "C6F", "C6G", "C6M", "C6N", "C6B"].includes(boundary) &&
+	if (["C6A", "C6F", "C6G", "C6M", "C6N", "C6R", "C6B"].includes(boundary) &&
 		(!overrides.has(c6EvidencePath) || overrides.get(c6EvidencePath) === ABSENT_FIXTURE_PATH)) {
 		overrides.set(c6EvidencePath, "# C6 evidence forward fixture\n\nC6A source receipts remain absent.\n");
 	}
@@ -22533,7 +23135,7 @@ export async function runDeclaredForwardReceiptPhasePlanSelfTest() {
 		),
 	});
 	const fixtureIsolationHostiles = runForwardFixtureIsolationSelfTest();
-	if (fixtureIsolationHostiles !== 345) {
+	if (fixtureIsolationHostiles !== 383) {
 		throw new Error(`forward receipt-phase fixture-isolation cardinality ${fixtureIsolationHostiles}`);
 	}
 	let fullPlanControls = 0;
@@ -22613,10 +23215,10 @@ export async function runDeclaredForwardReceiptPhasePlanSelfTest() {
 				adapterBlocks += 1;
 			}
 		} else {
-			if (boundary === "C6M" || boundary === "C6N") overrides.set(c6aSourceAuthorityPath, manifestText);
+			if (boundary === "C6M" || boundary === "C6N" || boundary === "C6R") overrides.set(c6aSourceAuthorityPath, manifestText);
 			const activeFixture = withOverrides(fixture, overrides);
 			const errors = await callForwardPlan(
-				activeFixture, boundary === "C6M" || boundary === "C6N" ? syntheticAuthority : undefined,
+				activeFixture, boundary === "C6M" || boundary === "C6N" || boundary === "C6R" ? syntheticAuthority : undefined,
 			);
 			if (errors.length > 0) {
 				throw new Error(`P07B-C ${boundary} forward full-plan phase self-test failed:\n${errors.join("\n")}`);
@@ -22658,7 +23260,7 @@ export async function runDeclaredForwardReceiptPhasePlanSelfTest() {
 				}
 				adapterBlocks += 1;
 			}
-			if (boundary === "C6M" || boundary === "C6N") {
+			if (boundary === "C6M" || boundary === "C6N" || boundary === "C6R") {
 				const prematureProjection = new Map(overrides);
 				prematureProjection.set(
 					receiptPhaseHandoffPath, `${prematureProjection.get(receiptPhaseHandoffPath).trimEnd()}\n\n${receiptBlock}\n`,
@@ -22679,7 +23281,7 @@ export async function runDeclaredForwardReceiptPhasePlanSelfTest() {
 	if (planC6GitLine(repositoryRoot, ["rev-parse", "--verify", "HEAD^{commit}"], "stable forward fixture HEAD") !== historyHead) {
 		throw new Error("forward fixture HEAD changed during self-test");
 	}
-	if (fullPlanControls !== forwardBoundaries.length || adapterBlocks !== 13 || bFutureSurfaceBlocks !== 14 || postTransitionControls !== 1) {
+	if (fullPlanControls !== forwardBoundaries.length || adapterBlocks !== 14 || bFutureSurfaceBlocks !== 14 || postTransitionControls !== 1) {
 		throw new Error(`forward receipt-phase control cardinality ${fullPlanControls}/${adapterBlocks}/${bFutureSurfaceBlocks}/${postTransitionControls}`);
 	}
 	const extensionCatalog = selfReceiptPhaseExtensionCatalog();
@@ -23426,6 +24028,7 @@ export async function runC3PReceiptSelfTest() {
 	rejected += runHermeticPresealSelfTest("C6G", c6gExpectedClaimArgv, c6gHermeticArgvPrefix);
 	rejected += runHermeticPresealSelfTest("C6M", c6mExpectedClaimArgv, c6mHermeticArgvPrefix);
 	rejected += runHermeticPresealSelfTest("C6N", c6nExpectedClaimArgv, c6nHermeticArgvPrefix);
+	rejected += runHermeticPresealSelfTest("C6R", c6rExpectedClaimArgv, c6rHermeticArgvPrefix);
 	rejected += runHermeticPresealSelfTest("C6B", c6bExpectedClaimArgv, c6bHermeticArgvPrefix);
 	rejected += runPlanC6SourceAuthoritySelfTest();
 	const requireError = (name, errors, expected) => {
@@ -25762,6 +26365,7 @@ export async function checkPlan(
 	const c6fVisibleBodies = new Map();
 	const c6gVisibleBodies = new Map();
 	const c6nVisibleBodies = new Map();
+	const c6rVisibleBodies = new Map();
 	const c4iNarrativeCatalog = c4iNarrativeCatalogSnapshot();
 	if (!isDeepStrictEqual(c4iNarrativeCatalog, expectedC4INarrativeCatalog)) {
 		errors.push(`internal C4I narrative catalog mismatch: ${JSON.stringify(c4iNarrativeCatalog)}`);
@@ -26325,6 +26929,32 @@ export async function checkPlan(
 			if (!authorityBody.includes(snippet)) errors.push(`${path}: missing required C6N ruling: ${JSON.stringify(snippet)}`);
 		}
 	}
+	for (const [path, snippets] of Object.entries(requiredC6RText)) {
+		let body;
+		try {
+			body = bodies.get(path) ?? await readText(root, path, overrides);
+			bodies.set(path, body);
+		} catch (error) {
+			errors.push(`${path}: unreadable (${error.message})`);
+			continue;
+		}
+		let authorityBody = body;
+		if (receiptPhaseMarkdownAuthorityPath(path)) {
+			try {
+				authorityBody = visibleMarkdownLifecycleBody(body);
+				c6rVisibleBodies.set(path, authorityBody);
+			} catch (error) {
+				errors.push(`${path}: C6R visible Markdown projection failed (${error.message})`);
+				continue;
+			}
+		}
+		for (const snippet of snippets) {
+			if (!authorityBody.includes(snippet)) errors.push(`${path}: missing required C6R ruling: ${JSON.stringify(snippet)}`);
+		}
+		if (expectedReceiptPhaseBoundary === "C6R") {
+			errors.push(...validateC6RLiveCursorNarrative(path, authorityBody));
+		}
+	}
 	try {
 		const manifestBytes = await readBytes(root, c3PredecessorManifestPath, overrides);
 		const manifest = JSON.parse(decodeGitUTF8(manifestBytes, "C3 predecessor declaration"));
@@ -26391,6 +27021,7 @@ export async function checkPlan(
 		["C6F", requiredC6FPaths, requiredC6FDigest],
 		["C6G", requiredC6GPaths, requiredC6GDigest],
 		["C6N", requiredC6NPaths, requiredC6NDigest],
+		["C6R", requiredC6RPaths, requiredC6RDigest],
 	]) {
 		const computed = `sha256:${createHash("sha256").update(`${paths.join("\n")}\n`, "utf8").digest("hex")}`;
 		if (computed !== digest) errors.push(`internal ${unit} roster digest mismatch: ${computed}`);
@@ -26443,6 +27074,11 @@ export async function checkPlan(
 	const c6nModified = requiredC6NPaths.filter((path) => !requiredC6NAddedPaths.has(path));
 	if (!isDeepStrictEqual(c6nAdded, [c6nStatusPath]) || c6nModified.length !== 8) {
 		errors.push(`internal C6N exact A/M partition mismatch: A=${c6nAdded.length} M=${c6nModified.length}`);
+	}
+	const c6rAdded = requiredC6RPaths.filter((path) => requiredC6RAddedPaths.has(path));
+	const c6rModified = requiredC6RPaths.filter((path) => !requiredC6RAddedPaths.has(path));
+	if (!isDeepStrictEqual(c6rAdded, [c6rStatusPath]) || c6rModified.length !== 6) {
+		errors.push(`internal C6R exact A/M partition mismatch: A=${c6rAdded.length} M=${c6rModified.length}`);
 	}
 	for (const [unit, prefixes, digest] of [
 		["C4", requiredC4Prefixes, requiredC4PrefixDigest],
@@ -27160,6 +27796,13 @@ export async function checkPlan(
 			? validateC6NStatusContract(c6nStatusBody)
 			: validateVisibleC6NStatusContract(visibleStatusBody)));
 	}
+	const c6rStatusBody = bodies.get(c6rStatusPath);
+	if (c6rStatusBody !== undefined) {
+		const visibleStatusBody = c6rVisibleBodies.get(c6rStatusPath);
+		errors.push(...(visibleStatusBody === undefined
+			? validateC6RStatusContract(c6rStatusBody)
+			: validateVisibleC6RStatusContract(visibleStatusBody)));
+	}
 
 	try {
 		const maintenanceStatus = await readText(root, c1MaintenanceStatusPath, overrides);
@@ -27384,8 +28027,8 @@ export async function checkPlan(
 
 	try {
 		const rawSpecification = JSON.parse(await readText(root, "spec/verification/p07b-c-unit-paths.json", overrides));
-		if (rawSpecification?.schema_version !== "countershape/p07b-c-unit-paths/v29") {
-			errors.push("spec/verification/p07b-c-unit-paths.json: plan-owned v29 schema mismatch");
+		if (rawSpecification?.schema_version !== "countershape/p07b-c-unit-paths/v30") {
+			errors.push("spec/verification/p07b-c-unit-paths.json: plan-owned v30 schema mismatch");
 		}
 		const rawC4L = rawSpecification?.units?.C4L;
 		if (!rawC4L || rawC4L.parent !== "C4J" ||
@@ -27466,8 +28109,21 @@ export async function checkPlan(
 			!isDeepStrictEqual(rawC6N.transition_authority, c6nExpectedTransitionAuthority)) {
 			errors.push("spec/verification/p07b-c-unit-paths.json: plan-owned exact C6N authority contract mismatch");
 		}
-		if (rawSpecification?.units?.C6B?.parent !== "C6N") {
-			errors.push("spec/verification/p07b-c-unit-paths.json: plan-owned C6B-after-C6N parent mismatch");
+		const rawC6R = rawSpecification?.units?.C6R;
+		if (!rawC6R || rawC6R.parent !== "C6N" ||
+			rawC6R.verification_profile !== "SOURCE_FULL" ||
+			!isDeepStrictEqual(rawC6R.exact, requiredC6RPaths) ||
+			!isDeepStrictEqual(rawC6R.prefixes, []) ||
+			!isDeepStrictEqual(rawC6R.receipt_states, {
+				C3P: "PRESENT",
+				C3: "PRESENT",
+				C6A: "ABSENT",
+			}) ||
+			!isDeepStrictEqual(rawC6R.transition_authority, c6rExpectedTransitionAuthority)) {
+			errors.push("spec/verification/p07b-c-unit-paths.json: plan-owned exact C6R authority contract mismatch");
+		}
+		if (rawSpecification?.units?.C6B?.parent !== "C6R") {
+			errors.push("spec/verification/p07b-c-unit-paths.json: plan-owned C6B-after-C6R parent mismatch");
 		}
 		const specification = validateSpecification(rawSpecification);
 		for (const path of requiredC0APaths) {
@@ -28264,6 +28920,16 @@ async function runSelfTest() {
 	const c6nStatusContractControls = runC6NStatusContractSelfTest(
 		await readText(repositoryRoot, c6nStatusPath, new Map()),
 	);
+	const c6rStatusContractControls = runC6RStatusContractSelfTest(
+		await readText(repositoryRoot, c6rStatusPath, new Map()),
+	);
+	const c6rLiveCursorBodies = new Map(await Promise.all(
+		Object.keys(c6rFrozenC6NNarrativeSectionByPath).map(async (path) => [
+			path,
+			visibleMarkdownLifecycleBody(await readText(repositoryRoot, path, new Map())),
+		]),
+	));
+	const c6rLiveCursorControls = runC6RLiveCursorNarrativeSelfTest(c6rLiveCursorBodies);
 	const c4lLiveCursorBodies = new Map(await Promise.all(
 		Object.keys(c4lFrozenC4JMarkerByPath).map(async (path) => [
 			path,
@@ -30517,13 +31183,14 @@ async function runSelfTest() {
 		c4hGovernanceControls, c4hStatusContractControls,
 		c4iStatusContractControls, c4kStatusContractControls, c4jStatusContractControls, c4lStatusContractControls,
 		c5vStatusContractControls, c6fStatusContractControls, c6gStatusContractControls, c6nStatusContractControls,
+		c6rStatusContractControls, c6rLiveCursorControls,
 		c4lLiveCursorControls, c4iNarrativeControls, c4kNarrativeControls, bFutureSurfaceAuthorityControls,
 		futureQualificationAuthorityControls, finalRunbookControls, historicalSelfReceiptMatrix.rejected,
 		currentSelfReceiptExtension.rejected, forwardPhaseResult.adapterBlocks,
 		forwardPhaseResult.bFutureSurfaceBlocks, forwardPhaseResult.selfReceiptRejected,
 		forwardPhaseResult.fixtureIsolationHostiles,
 	].reduce((total, value) => total + value, 0);
-	console.log(`P07B-C evolved plan checker self-test passed: ${aggregateControlCount} aggregate authority, structure, C1/C2/C3P/C3 local-evidence, phase-isolation, semantic-projection, receipt, runbook, narrative, and allowlist defensive checks and controls exercised; live-self-receipt-capture-hostiles=${liveSelfReceiptCaptureMutations}; sealed-C4V-authority-hostiles=${sealedC4VAuthorityMutations}; sealed-C4M-authority-hostiles=${sealedC4MAuthorityMutations}; sealed-C4N-authority-hostiles=${sealedC4NAuthorityMutations}; sealed-C4P-authority-hostiles=${sealedC4PAuthorityMutations}; sealed-C4-authority-hostiles=${sealedC4AuthorityMutations}; sealed-C4H-authority-hostiles=${sealedC4HAuthorityMutations}; sealed-C4I-authority-hostiles=${sealedC4IAuthorityMutations}; exact-sealed-C4I-ancestry-hostiles=${exactSealedC4IAncestryMutations}; sealed-C4K-authority-hostiles=${sealedC4KAuthorityMutations}; sealed-C4J-authority-hostiles=${sealedC4JAuthorityMutations}; sealed-C4L-authority-hostiles=${sealedC4LAuthorityMutations}; sealed-C5-authority-hostiles=${sealedC5AuthorityMutations}; C4H-governance-controls=${c4hGovernanceControls}; C4H-status-contract-controls=${c4hStatusContractControls}; C4I-status-contract-controls=${c4iStatusContractControls}; C4K-status-contract-controls=${c4kStatusContractControls}; C4J-status-contract-controls=${c4jStatusContractControls}; C4L-status-contract-controls=${c4lStatusContractControls}; C5V-status-contract-controls=${c5vStatusContractControls}; C6F-status-contract-controls=${c6fStatusContractControls}; C6G-status-contract-controls=${c6gStatusContractControls}; C6N-status-contract-controls=${c6nStatusContractControls}; C4L-live-cursor-controls=${c4lLiveCursorControls}; C4I-narrative-controls=${c4iNarrativeControls}; C4K-narrative-controls=${c4kNarrativeControls}; B-future-surface-controls=${bFutureSurfaceAuthorityControls}; future-qualification-controls=${futureQualificationAuthorityControls}; final-runbook-controls=${finalRunbookControls}; self-receipt-catalog=${selfReceiptExtensionCatalog.digest}; frozen-historical matrix phases=${historicalSelfReceiptMatrix.phases} historical-phases=C3U,C3B paths=${historicalSelfReceiptMatrix.paths} forms=${historicalSelfReceiptMatrix.forms} rejected=${historicalSelfReceiptMatrix.rejected} positive-controls=${historicalSelfReceiptMatrix.controls} supplemental-aliases=${historicalSelfReceiptMatrix.supplementalAliases} supplemental-controls=${historicalSelfReceiptMatrix.supplementalControls}; current-extension phase=${p07bCActiveReceiptPhaseBoundary} paths=${currentSelfReceiptExtension.paths} rejected=${currentSelfReceiptExtension.rejected} positive-controls=${currentSelfReceiptExtension.controls}; forward-declared full-plan-controls=${forwardPhaseResult.fullPlanControls} forward-fixture-isolation-hostiles=${forwardPhaseResult.fixtureIsolationHostiles} B-surface-plan-blocks=${forwardPhaseResult.bFutureSurfaceBlocks} C6-phase-adapter-blocks=${forwardPhaseResult.adapterBlocks} self-receipt-rejected=${forwardPhaseResult.selfReceiptRejected} self-receipt-controls=${forwardPhaseResult.selfReceiptControls}; result=positive-form refusal only, not a general Markdown or security audit`);
+	console.log(`P07B-C evolved plan checker self-test passed: ${aggregateControlCount} aggregate authority, structure, C1/C2/C3P/C3 local-evidence, phase-isolation, semantic-projection, receipt, runbook, narrative, and allowlist defensive checks and controls exercised; live-self-receipt-capture-hostiles=${liveSelfReceiptCaptureMutations}; sealed-C4V-authority-hostiles=${sealedC4VAuthorityMutations}; sealed-C4M-authority-hostiles=${sealedC4MAuthorityMutations}; sealed-C4N-authority-hostiles=${sealedC4NAuthorityMutations}; sealed-C4P-authority-hostiles=${sealedC4PAuthorityMutations}; sealed-C4-authority-hostiles=${sealedC4AuthorityMutations}; sealed-C4H-authority-hostiles=${sealedC4HAuthorityMutations}; sealed-C4I-authority-hostiles=${sealedC4IAuthorityMutations}; exact-sealed-C4I-ancestry-hostiles=${exactSealedC4IAncestryMutations}; sealed-C4K-authority-hostiles=${sealedC4KAuthorityMutations}; sealed-C4J-authority-hostiles=${sealedC4JAuthorityMutations}; sealed-C4L-authority-hostiles=${sealedC4LAuthorityMutations}; sealed-C5-authority-hostiles=${sealedC5AuthorityMutations}; C4H-governance-controls=${c4hGovernanceControls}; C4H-status-contract-controls=${c4hStatusContractControls}; C4I-status-contract-controls=${c4iStatusContractControls}; C4K-status-contract-controls=${c4kStatusContractControls}; C4J-status-contract-controls=${c4jStatusContractControls}; C4L-status-contract-controls=${c4lStatusContractControls}; C5V-status-contract-controls=${c5vStatusContractControls}; C6F-status-contract-controls=${c6fStatusContractControls}; C6G-status-contract-controls=${c6gStatusContractControls}; C6N-status-contract-controls=${c6nStatusContractControls}; C6R-status-contract-controls=${c6rStatusContractControls}; C6R-live-cursor-controls=${c6rLiveCursorControls}; C4L-live-cursor-controls=${c4lLiveCursorControls}; C4I-narrative-controls=${c4iNarrativeControls}; C4K-narrative-controls=${c4kNarrativeControls}; B-future-surface-controls=${bFutureSurfaceAuthorityControls}; future-qualification-controls=${futureQualificationAuthorityControls}; final-runbook-controls=${finalRunbookControls}; self-receipt-catalog=${selfReceiptExtensionCatalog.digest}; frozen-historical matrix phases=${historicalSelfReceiptMatrix.phases} historical-phases=C3U,C3B paths=${historicalSelfReceiptMatrix.paths} forms=${historicalSelfReceiptMatrix.forms} rejected=${historicalSelfReceiptMatrix.rejected} positive-controls=${historicalSelfReceiptMatrix.controls} supplemental-aliases=${historicalSelfReceiptMatrix.supplementalAliases} supplemental-controls=${historicalSelfReceiptMatrix.supplementalControls}; current-extension phase=${p07bCActiveReceiptPhaseBoundary} paths=${currentSelfReceiptExtension.paths} rejected=${currentSelfReceiptExtension.rejected} positive-controls=${currentSelfReceiptExtension.controls}; forward-declared full-plan-controls=${forwardPhaseResult.fullPlanControls} forward-fixture-isolation-hostiles=${forwardPhaseResult.fixtureIsolationHostiles} B-surface-plan-blocks=${forwardPhaseResult.bFutureSurfaceBlocks} C6-phase-adapter-blocks=${forwardPhaseResult.adapterBlocks} self-receipt-rejected=${forwardPhaseResult.selfReceiptRejected} self-receipt-controls=${forwardPhaseResult.selfReceiptControls}; result=positive-form refusal only, not a general Markdown or security audit`);
 }
 
 async function verifyC2MaintenancePresealLedger() {
@@ -31425,7 +32092,7 @@ async function requireCurrentC6PhaseAuthority(boundary) {
 	}
 	await requireReceiptDeclarationPhase(
 		repositoryRoot, c6aSourceAuthorityPath,
-		boundary === "C6M" || boundary === "C6N" || boundary === "C6B", boundary,
+		boundary === "C6M" || boundary === "C6N" || boundary === "C6R" || boundary === "C6B", boundary,
 	);
 	const observed = await observedReceiptStates(repositoryRoot, new Map(), boundary);
 	validateReceiptPresence(p07bCReceiptPhaseRowsByBoundary[boundary], observed);
@@ -31593,6 +32260,66 @@ export async function verifyC6NPresealLedger() {
 	});
 }
 
+export async function verifyC6RSealedC6NNote() {
+	const head = planC6GitLine(repositoryRoot, ["rev-parse", "--verify", "HEAD^{commit}"], "C6R sealed-C6N HEAD");
+	if (head !== sealedC6NIdentity.commit) {
+		throw new Error(`P07B-C C6R requires exact sealed C6N HEAD ${sealedC6NIdentity.commit}, found ${head}`);
+	}
+	const assertIdentity = (label, authority, expected) => {
+		for (const field of ["commit", "tree", "parent", "subject", "noteBlob", "noteBodySHA256"]) {
+			if (authority[field] !== expected[field]) {
+				throw new Error(`P07B-C C6R ${label} ${field} mismatch`);
+			}
+		}
+	};
+	const c6nAuthority = derivePlanC6SealedSource(
+		repositoryRoot, head, "C6N", c6nSourceSubject, c6nClaimLabels, c6nClaimTypes,
+		c6nExpectedClaimArgv, c6nHermeticArgvPrefix, planC6GOCACHEPolicy.SUFFIX_PRESERVING,
+		sealedC6NIdentity,
+	);
+	assertIdentity("sealed-C6N", c6nAuthority, sealedC6NIdentity);
+	const c6mAuthority = derivePlanC6SealedSource(
+		repositoryRoot, c6nAuthority.parent, "C6M", c6mSourceSubject, c6mClaimLabels, c6mClaimTypes,
+		c6mExpectedClaimArgv, c6mHermeticArgvPrefix, planC6GOCACHEPolicy.LEGACY_DOUBLE,
+		sealedC6MIdentity,
+	);
+	assertIdentity("sealed-C6M", c6mAuthority, sealedC6MIdentity);
+	const c6gAuthority = derivePlanC6SealedSource(
+		repositoryRoot, c6mAuthority.parent, "C6G", c6gSourceSubject, c6gClaimLabels, c6gClaimTypes,
+		c6gExpectedClaimArgv, c6gHermeticArgvPrefix, planC6GOCACHEPolicy.SUFFIX_PRESERVING,
+	);
+	assertIdentity("sealed-C6G", c6gAuthority, sealedC6GIdentity);
+	const c6fAuthority = derivePlanC6SealedSource(
+		repositoryRoot, c6gAuthority.parent, "C6F", c6fSourceSubject, c6fClaimLabels, c6fClaimTypes,
+		c6fExpectedClaimArgv, c6fHermeticArgvPrefix, planC6GOCACHEPolicy.SUFFIX_PRESERVING,
+	);
+	assertIdentity("sealed-C6F", c6fAuthority, sealedC6FIdentity);
+	const c6aAuthority = derivePlanC6SealedSource(
+		repositoryRoot, c6fAuthority.parent, "C6A", c6aSourceSubject, c6aClaimLabels, c6aClaimTypes,
+		c6aExpectedClaimArgv, c6aHermeticArgvPrefix, planC6GOCACHEPolicy.SUFFIX_PRESERVING,
+	);
+	assertIdentity("sealed-C6A", c6aAuthority, sealedC6AIdentity);
+	console.log(`P07B-C C6R sealed ancestry exact: C6N=${c6nAuthority.commit} tree=${c6nAuthority.tree} note=${c6nAuthority.noteBlob} claims=${c6nClaimLabels.length}; C6M=${c6mAuthority.commit}; C6G=${c6gAuthority.commit}; C6F=${c6fAuthority.commit}; C6A=${c6aAuthority.commit}`);
+}
+
+export async function verifyC6RPresealLedger() {
+	await requirePrivateFinalRunDirectories("C6R", c6rFinalRunDirectories);
+	await requireCurrentC6PhaseAuthority("C6R");
+	await verifyC6RSealedC6NNote();
+	await verifyLivePresealLedger({
+		phase: "C6R",
+		expectedArgv: c6rExpectedClaimArgv,
+		claims: c6rClaimLabels.map((label, index) => ({ label, type: c6rClaimTypes[index] })),
+		receiptStates: [
+			{ path: c3pReceiptDeclarationPath, present: true },
+			{ path: c3ReceiptDeclarationPath, present: true },
+			{ path: c6aSourceAuthorityPath, present: true },
+			{ path: c6aReceiptDeclarationPath, present: false },
+		],
+		hermeticArgvPrefix: c6rHermeticArgvPrefix,
+	});
+}
+
 export async function verifyC6MPresealLedger() {
 	await requirePrivateFinalRunDirectories("C6M", c6mFinalRunDirectories);
 	await requireCurrentC6PhaseAuthority("C6M");
@@ -31751,7 +32478,7 @@ export async function verifyC3BCredentialScan() {
 
 async function main() {
 	const mode = process.argv[2];
-	const usage = "usage: check-p07b-c-plan.mjs [--check-candidate-phase <C3D|C4V|C4M|C4N|C4P|C4|C4H|C4I|C4K|C4J|C4L|C5|C5V|C6A|C6F|C6G|C6M|C6N|C6B>|--self-test|--print-plan-authority-corpus|--print-final-runbook <C3D|C4V|C4M|C4N|C4P|C4|C4H|C4I|C4K|C4J|C4L|C5|C5V|C6A|C6F|C6G|C6M|C6N|C6B>|--verify-final-runbook-parent-authority [prepare <boundary>|archive <boundary> <archive-root>]|--print-c6a-source-authority|--print-c6a-source-receipt-block|--self-test-c6a-source-receipt|--verify-c6a-source-receipt|--verify-c6a-local-evidence|--verify-sealed-c1-local-evidence|--verify-c1-local-evidence|--verify-c2-local-evidence|--verify-c2m-preseal-ledger|--verify-c2-preseal-ledger|--verify-c3v-preseal-ledger|--verify-c3m-preseal-ledger|--verify-c3a-preseal-ledger|--verify-c3l-preseal-ledger|--verify-c3f-preseal-ledger|--verify-c3s-preseal-ledger|--verify-c3-preseal-ledger|--verify-c3r-sealed-c3-note|--verify-c3r-preseal-ledger|--verify-c3q-sealed-c3r-note|--verify-c3q-preseal-ledger|--verify-c3t-sealed-c3q-note|--verify-c3t-preseal-ledger|--verify-c3u-sealed-c3t-note|--verify-c3u-preseal-ledger|--verify-c3-local-evidence|--verify-c3b-staged|--verify-c3b-credential-scan|--verify-c3b-preseal-ledger|--verify-c3d-sealed-c3b-note|--verify-c3d-preseal-ledger|--verify-c4v-sealed-c3d-note|--verify-c4v-preseal-ledger|--verify-c4m-sealed-c4v-note|--verify-c4m-preseal-ledger|--verify-c4n-sealed-c4m-note|--verify-c4n-preseal-ledger|--verify-c4p-sealed-c4n-note|--verify-c4p-preseal-ledger|--verify-c4-sealed-c4n-note|--verify-c4-sealed-c4p-note|--verify-c4-preseal-ledger|--verify-c4h-sealed-c4-note|--verify-c4h-preseal-ledger|--verify-c4i-sealed-c4h-note|--verify-c4i-preseal-ledger|--verify-c4k-sealed-c4i-note|--verify-c4k-preseal-ledger|--verify-c4j-sealed-c4i-note|--verify-c4j-preseal-ledger|--verify-c4l-sealed-c4j-note|--verify-c4l-preseal-ledger|--verify-c5-sealed-c4-note|--verify-c5-preseal-ledger|--verify-c5v-sealed-c5-note|--verify-c5v-preseal-ledger|--verify-c6a-preseal-ledger|--verify-c6f-sealed-c6a-note|--verify-c6f-preseal-ledger|--verify-c6g-sealed-c6f-note|--verify-c6g-preseal-ledger|--verify-c6m-preseal-ledger|--verify-c6n-sealed-c6m-note|--verify-c6n-preseal-ledger|--verify-c6b-preseal-ledger]";
+	const usage = "usage: check-p07b-c-plan.mjs [--check-candidate-phase <C3D|C4V|C4M|C4N|C4P|C4|C4H|C4I|C4K|C4J|C4L|C5|C5V|C6A|C6F|C6G|C6M|C6N|C6R|C6B>|--self-test|--print-plan-authority-corpus|--print-final-runbook <C3D|C4V|C4M|C4N|C4P|C4|C4H|C4I|C4K|C4J|C4L|C5|C5V|C6A|C6F|C6G|C6M|C6N|C6R|C6B>|--verify-final-runbook-parent-authority [prepare <boundary>|archive <boundary> <archive-root>]|--print-c6a-source-authority|--print-c6a-source-receipt-block|--self-test-c6a-source-receipt|--verify-c6a-source-receipt|--verify-c6a-local-evidence|--verify-sealed-c1-local-evidence|--verify-c1-local-evidence|--verify-c2-local-evidence|--verify-c2m-preseal-ledger|--verify-c2-preseal-ledger|--verify-c3v-preseal-ledger|--verify-c3m-preseal-ledger|--verify-c3a-preseal-ledger|--verify-c3l-preseal-ledger|--verify-c3f-preseal-ledger|--verify-c3s-preseal-ledger|--verify-c3-preseal-ledger|--verify-c3r-sealed-c3-note|--verify-c3r-preseal-ledger|--verify-c3q-sealed-c3r-note|--verify-c3q-preseal-ledger|--verify-c3t-sealed-c3q-note|--verify-c3t-preseal-ledger|--verify-c3u-sealed-c3t-note|--verify-c3u-preseal-ledger|--verify-c3-local-evidence|--verify-c3b-staged|--verify-c3b-credential-scan|--verify-c3b-preseal-ledger|--verify-c3d-sealed-c3b-note|--verify-c3d-preseal-ledger|--verify-c4v-sealed-c3d-note|--verify-c4v-preseal-ledger|--verify-c4m-sealed-c4v-note|--verify-c4m-preseal-ledger|--verify-c4n-sealed-c4m-note|--verify-c4n-preseal-ledger|--verify-c4p-sealed-c4n-note|--verify-c4p-preseal-ledger|--verify-c4-sealed-c4n-note|--verify-c4-sealed-c4p-note|--verify-c4-preseal-ledger|--verify-c4h-sealed-c4-note|--verify-c4h-preseal-ledger|--verify-c4i-sealed-c4h-note|--verify-c4i-preseal-ledger|--verify-c4k-sealed-c4i-note|--verify-c4k-preseal-ledger|--verify-c4j-sealed-c4i-note|--verify-c4j-preseal-ledger|--verify-c4l-sealed-c4j-note|--verify-c4l-preseal-ledger|--verify-c5-sealed-c4-note|--verify-c5-preseal-ledger|--verify-c5v-sealed-c5-note|--verify-c5v-preseal-ledger|--verify-c6a-preseal-ledger|--verify-c6f-sealed-c6a-note|--verify-c6f-preseal-ledger|--verify-c6g-sealed-c6f-note|--verify-c6g-preseal-ledger|--verify-c6m-preseal-ledger|--verify-c6n-sealed-c6m-note|--verify-c6n-preseal-ledger|--verify-c6r-sealed-c6n-note|--verify-c6r-preseal-ledger|--verify-c6b-preseal-ledger]";
 	const currentUsage = usage;
 	if (mode === "--check-candidate-phase") {
 		if (process.argv.length !== 4) throw new Error(currentUsage);
@@ -32143,6 +32870,16 @@ async function main() {
 		await verifyC6NPresealLedger();
 		return;
 	}
+	if (mode === "--verify-c6r-sealed-c6n-note") {
+		if (process.argv.length !== 3) throw new Error(currentUsage);
+		await verifyC6RSealedC6NNote();
+		return;
+	}
+	if (mode === "--verify-c6r-preseal-ledger") {
+		if (process.argv.length !== 3) throw new Error(currentUsage);
+		await verifyC6RPresealLedger();
+		return;
+	}
 	if (mode === "--verify-c6b-preseal-ledger") {
 		if (process.argv.length !== 3) throw new Error(currentUsage);
 		await verifyC6BPresealLedger();
@@ -32158,7 +32895,7 @@ async function main() {
 		return;
 	}
 
-	console.log(`P07B-C ${p07bCActiveReceiptPhaseBoundary} plan check passed: the visible-capsule-selected v29 row, observed receipt states, sealed predecessor evidence, generated phase fixtures, phase-aware future-surface policy, and frozen historical regression oracles are coherent; this gate confers no product, process-start, execution, or current-unit receipt authority`);
+	console.log(`P07B-C ${p07bCActiveReceiptPhaseBoundary} plan check passed: the visible-capsule-selected v30 row, observed receipt states, sealed predecessor evidence, generated phase fixtures, phase-aware future-surface policy, and frozen historical regression oracles are coherent; this gate confers no product, process-start, execution, or current-unit receipt authority`);
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {

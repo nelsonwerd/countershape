@@ -12,12 +12,12 @@ export const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "
 const specificationPath = resolve(repositoryRoot, "spec/verification/p07b-c-unit-paths.json");
 const gitStderrPrefixBytes = 256;
 const gitStderrMaximumBytes = 16 * 1024;
-const unitOrder = Object.freeze(["C0A", "C0B", "C1", "C1M", "C1V", "C1E", "C1B", "C2", "C2M", "C2B", "C3P", "C3V", "C3M", "C3PB", "C3A", "C3L", "C3F", "C3S", "C3", "C3R", "C3Q", "C3T", "C3U", "C3B", "C3D", "C4V", "C4M", "C4N", "C4P", "C4", "C4H", "C4I", "C4K", "C4J", "C4L", "C5", "C5V", "C6A", "C6F", "C6G", "C6M", "C6N", "C6B"]);
+const unitOrder = Object.freeze(["C0A", "C0B", "C1", "C1M", "C1V", "C1E", "C1B", "C2", "C2M", "C2B", "C3P", "C3V", "C3M", "C3PB", "C3A", "C3L", "C3F", "C3S", "C3", "C3R", "C3Q", "C3T", "C3U", "C3B", "C3D", "C4V", "C4M", "C4N", "C4P", "C4", "C4H", "C4I", "C4K", "C4J", "C4L", "C5", "C5V", "C6A", "C6F", "C6G", "C6M", "C6N", "C6R", "C6B"]);
 const receiptPhaseUnitOrder = Object.freeze(unitOrder.slice(unitOrder.indexOf("C3M")));
 const receiptPhaseUnitSet = new Set(receiptPhaseUnitOrder);
 const receiptPhaseKeys = Object.freeze(["C3P", "C3", "C6A"]);
 const receiptPhaseStates = new Set(["ABSENT", "PRESENT"]);
-const receiptPhaseAuthoritySHA256 = "30ac9d08842915a5f3dfe5aca79c7fa94b02add8dc9785226ca1741411b66bb5";
+const receiptPhaseAuthoritySHA256 = "cd7bd450bec6d891ea66dd48408788d38aa7bbcee778912eabce7f45e8538f3e";
 const sealedC4NReceiptPhaseAuthoritySHA256 = "8f237c7d883c212167e5a04e5dd24d6efdacf4a9ce5492215fd06892a8237c4a";
 const sealedC4PReceiptPhaseAuthoritySHA256 = "66f568efb313303c92b23a51b743200f15b47a451a9b3424aaa251e0228e7928";
 const sealedC4HIndependentCandidateRejected = 289;
@@ -91,6 +91,10 @@ const sealedC6MCandidateParent = Object.freeze({
 	commit: "b0de83dca3510102af4d1cddae2b2023bc88a87d",
 	tree: "3d80a02443209f5d5649fcba92b79b72a2a04a15",
 });
+const sealedC6NCandidateParent = Object.freeze({
+	commit: "096842954c9e6ae72b66010fff81e90cf0bd7a22",
+	tree: "69845d09f85abf76b275b16c0d941fbd568ee907",
+});
 const candidateSpecificationOwnerContracts = Object.freeze({
 	C4V: Object.freeze({ parent: "C3D", authority: sealedC3DCandidateParent, priorSchema: "countershape/p07b-c-unit-paths/v16" }),
 	C4M: Object.freeze({ parent: "C4V", authority: sealedC4VCandidateParent, priorSchema: "countershape/p07b-c-unit-paths/v17" }),
@@ -105,10 +109,11 @@ const candidateSpecificationOwnerContracts = Object.freeze({
 	C6F: Object.freeze({ parent: "C6A", authority: sealedC6ACandidateParent, priorSchema: "countershape/p07b-c-unit-paths/v26" }),
 	C6G: Object.freeze({ parent: "C6F", authority: sealedC6FCandidateParent, priorSchema: "countershape/p07b-c-unit-paths/v27" }),
 	C6N: Object.freeze({ parent: "C6M", authority: sealedC6MCandidateParent, priorSchema: "countershape/p07b-c-unit-paths/v28" }),
+	C6R: Object.freeze({ parent: "C6N", authority: sealedC6NCandidateParent, priorSchema: "countershape/p07b-c-unit-paths/v29" }),
 });
 const candidateSpecificationOwners = new Set(["C3D", ...Object.keys(candidateSpecificationOwnerContracts)]);
 const verificationProfiles = new Set(["SOURCE_FULL", "RECEIPT_RECONCILIATION", "NON_PRODUCT_MAINTENANCE"]);
-const ownerOutOfBandUnits = new Set(["C4H", "C4I", "C4K", "C4J", "C4L", "C5V", "C6F", "C6G", "C6N"]);
+const ownerOutOfBandUnits = new Set(["C4H", "C4I", "C4K", "C4J", "C4L", "C5V", "C6F", "C6G", "C6N", "C6R"]);
 const knownOwnerOutOfBandProvenance = Object.freeze({
 	C4H: "UNEVIDENCED",
 	C4I: "UNEVIDENCED",
@@ -119,6 +124,7 @@ const knownOwnerOutOfBandProvenance = Object.freeze({
 	C6F: "UNEVIDENCED",
 	C6G: "UNEVIDENCED",
 	C6N: "UNEVIDENCED",
+	C6R: "UNEVIDENCED",
 });
 const ownerAuthorityDisclosure =
 	"OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT";
@@ -569,11 +575,26 @@ const c6nDeclaredMaintenanceContract = Object.freeze({
 	]),
 	exact_roster_sha256: "012c7559efd28dce5dac7fb56881bbddd8f326f89eac4d32a6773ad8cfe856af",
 });
+const c6rDeclaredMaintenanceContract = Object.freeze({
+	verification_profile: "SOURCE_FULL",
+	prefixes: Object.freeze([]),
+	exact: Object.freeze([
+		"docs/HANDOFF_MODE_C.md",
+		"docs/PROMPT_PACK.md",
+		"docs/VERIFICATION.md",
+		"docs/status/P07B-C-C6R-NOTE-CONSUMER-MAINTENANCE.md",
+		"spec/verification/p07b-c-unit-paths.json",
+		"tools/check-p07b-c-plan.mjs",
+		"tools/check-p07b-c-unit-scope.mjs",
+	]),
+	exact_roster_sha256: "3f815ac91f817fba618f24d307919dd9e97aec0f142a5cee1c9e86b284e06169",
+});
 const c6aSourceSubject = "test: close P07B-C cumulative evidence";
 const c6fSourceSubject = "fix: isolate historical C6 authority fixtures";
 const c6gSourceSubject = "fix: isolate C3U historical C6 fixtures";
 const c6mSourceSubject = "fix: bind sealed C6A source authority";
 const c6nSourceSubject = "fix: bind C6M note redaction epoch";
+const c6rSourceSubject = "fix: bind sealed C6N note redaction projection";
 const sealedC6MSourceIdentity = Object.freeze({
 	commit: "b0de83dca3510102af4d1cddae2b2023bc88a87d",
 	tree: "3d80a02443209f5d5649fcba92b79b72a2a04a15",
@@ -581,6 +602,14 @@ const sealedC6MSourceIdentity = Object.freeze({
 	subject: c6mSourceSubject,
 	noteBlob: "d08739e2f5bb3d761d5962081242924ae9cb7f36",
 	noteBodySHA256: "1bcf1b4563561d6a07db9394bb6b25b2e7d2ca126df18b98f0c8596cc960a487",
+});
+const sealedC6NSourceIdentity = Object.freeze({
+	commit: "096842954c9e6ae72b66010fff81e90cf0bd7a22",
+	tree: "69845d09f85abf76b275b16c0d941fbd568ee907",
+	parent: sealedC6MSourceIdentity.commit,
+	subject: c6nSourceSubject,
+	noteBlob: "b66c7b38bad6c8ea94288f2cd8afa87e76f0c831",
+	noteBodySHA256: "68abfb23fe35e2d2844e0a1622f7c4566f08789a29d16dd170c02b0e7046ef11",
 });
 const c6aSourceAuthoritySchema = "countershape/p07b-c-c6a-source-authority/v1";
 const sealedSourceHermeticRedaction = "«redacted:high-entropy»";
@@ -593,7 +622,8 @@ const sealedSourceGOCACHEPolicyByUnit = Object.freeze({
 	C6F: sealedSourceGOCACHEPolicy.SUFFIX_PRESERVING,
 	C6G: sealedSourceGOCACHEPolicy.SUFFIX_PRESERVING,
 	C6M: sealedSourceGOCACHEPolicy.LEGACY_DOUBLE,
-	C6N: sealedSourceGOCACHEPolicy.LEGACY_DOUBLE,
+	C6N: sealedSourceGOCACHEPolicy.SUFFIX_PRESERVING,
+	C6R: sealedSourceGOCACHEPolicy.SUFFIX_PRESERVING,
 });
 const sealedSourceDoubleRedactionPositions = new Set([2, 4, 5, 7, 8]);
 const sealedSourceBareRedactionPositions = new Set([31, 32, 33, 35, 36]);
@@ -658,6 +688,8 @@ const c6mSourceFinalRunRoot = resolve(repositoryRoot, ".countershape/p07bc-c6m-f
 const c6mSourceHermeticArgvPrefix = sealedSourceHermeticArgvPrefix(c6mSourceFinalRunRoot);
 const c6nSourceFinalRunRoot = resolve(repositoryRoot, ".countershape/p07bc-c6n-final");
 const c6nSourceHermeticArgvPrefix = sealedSourceHermeticArgvPrefix(c6nSourceFinalRunRoot);
+const c6rSourceFinalRunRoot = resolve(repositoryRoot, ".countershape/p07bc-c6r-final");
+const c6rSourceHermeticArgvPrefix = sealedSourceHermeticArgvPrefix(c6rSourceFinalRunRoot);
 const c6aSourceClaimManifest = Object.freeze([
 	Object.freeze({ label: "P07B-C C6A candidate phase plan coherence", type: "tests-pass" }),
 	Object.freeze({ label: "P07B-C C6A independent candidate transition authority", type: "tests-pass" }),
@@ -844,6 +876,63 @@ export function computedC6NSealedSourceContractDigest() {
 		redaction: Object.freeze({
 			double_positions: Object.freeze([2, 4, 5, 7, 8]),
 			gocache_policy: sealedSourceGOCACHEPolicy.LEGACY_DOUBLE,
+			bare_positions: Object.freeze([31, 32, 33, 35, 36]),
+		}),
+	});
+	return `sha256:${createHash("sha256").update(`${JSON.stringify(projection)}\n`, "utf8").digest("hex")}`;
+}
+const expectedObservedC6NSealedSourceContractDigest = "sha256:cc851cc157036b09ae84739220db65bdc6593d0f78644d5a61fe789d6a93ffc4";
+export function computedObservedC6NSealedSourceContractDigest() {
+	const projection = Object.freeze({
+		version: "countershape/p07b-c-c6n-sealed-source-contract/v1",
+		subject: c6nSourceSubject,
+		claims: c6nSourceClaimManifest,
+		command_tails: c6nSourceCommandTails,
+		final_run_root: ".countershape/p07bc-c6n-final",
+		redaction: Object.freeze({
+			double_positions: Object.freeze([2, 4, 5, 7, 8]),
+			gocache_policy: sealedSourceGOCACHEPolicy.SUFFIX_PRESERVING,
+			bare_positions: Object.freeze([31, 32, 33, 35, 36]),
+		}),
+	});
+	return `sha256:${createHash("sha256").update(`${JSON.stringify(projection)}\n`, "utf8").digest("hex")}`;
+}
+const c6rSourceClaimManifest = Object.freeze([
+	Object.freeze({ label: "P07B-C C6R data-driven phase plan coherence", type: "tests-pass" }),
+	Object.freeze({ label: "P07B-C C6R independent candidate transition authority", type: "tests-pass" }),
+	Object.freeze({ label: "P07B-C C6R sealed-C6N note-redaction compatibility", type: "tests-pass" }),
+	Object.freeze({ label: "P07B-C C6R sealed-C6N Git-note and sealed-C6M, sealed-C6G, sealed-C6F, and sealed-C6A ancestry compatibility", type: "tests-pass" }),
+	Object.freeze({ label: "P07B-C C6R unit-scope defensive self-test", type: "tests-pass" }),
+	Object.freeze({ label: "P07B-C C6R cumulative verifier self-test", type: "tests-pass" }),
+	Object.freeze({ label: "P07B-C C6R cumulative verification with sealed-C6A replay", type: "tests-pass" }),
+	Object.freeze({ label: "P07B-C C6R exact seven-path staged scope and diff integrity", type: "command-succeeded" }),
+	Object.freeze({ label: "P07B-C C6R scoped staged credential-pattern scan", type: "command-succeeded" }),
+	Object.freeze({ label: "P07B-C C6R sealed-C6N predecessor, sealed-C6M, sealed-C6G, sealed-C6F, and sealed-C6A ancestry, and preceding didrun chain integrity", type: "command-succeeded" }),
+]);
+const c6rSourceCommandTails = Object.freeze([
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--check-candidate-phase", "C6R"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--candidate-phase", "C6R"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--self-test"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--verify-c6r-sealed-c6n-note"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--self-test"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current-selftest.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current.mjs"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C6R", "--source-final-gate"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-unit-scope.mjs", "--unit", "C6R", "--credential-scan"]),
+	Object.freeze(["/opt/homebrew/bin/node", "tools/check-p07b-c-plan.mjs", "--verify-c6r-preseal-ledger"]),
+]);
+const c6rSourceExpectedClaimArgv = sealedSourceExpectedClaimArgv(c6rSourceHermeticArgvPrefix, c6rSourceCommandTails);
+const expectedC6RSealedSourceContractDigest = "sha256:bc4dffd3b0a393eefbb7d3947a1ad9ca7a391a7a2a332113a893e0682a88cfde";
+export function computedC6RSealedSourceContractDigest() {
+	const projection = Object.freeze({
+		version: "countershape/p07b-c-c6r-sealed-source-contract/v1",
+		subject: c6rSourceSubject,
+		claims: c6rSourceClaimManifest,
+		command_tails: c6rSourceCommandTails,
+		final_run_root: ".countershape/p07bc-c6r-final",
+		redaction: Object.freeze({
+			double_positions: Object.freeze([2, 4, 5, 7, 8]),
+			gocache_policy: sealedSourceGOCACHEPolicy.SUFFIX_PRESERVING,
 			bare_positions: Object.freeze([31, 32, 33, 35, 36]),
 		}),
 	});
@@ -1046,7 +1135,7 @@ export function validateSpecification(specification) {
 		JSON.stringify(Object.keys(specification).sort()) !== JSON.stringify(["schema_version", "units"])) {
 		fail("specification root roster");
 	}
-	if (specification.schema_version !== "countershape/p07b-c-unit-paths/v29") fail("specification version");
+	if (specification.schema_version !== "countershape/p07b-c-unit-paths/v30") fail("specification version");
 	if (!specification.units || typeof specification.units !== "object" || Array.isArray(specification.units) ||
 		JSON.stringify(Object.keys(specification.units)) !== JSON.stringify(unitOrder)) fail("unit roster/order");
 
@@ -1237,6 +1326,12 @@ export function validateSpecification(specification) {
 			JSON.stringify(entry.exact) !== JSON.stringify(c6nDeclaredMaintenanceContract.exact) ||
 			exactRosterDigest(entry.exact) !== c6nDeclaredMaintenanceContract.exact_roster_sha256)) {
 			fail("C6N: declared maintenance contract");
+		}
+		if (unit === "C6R" && (entry.verification_profile !== c6rDeclaredMaintenanceContract.verification_profile ||
+			JSON.stringify(entry.prefixes) !== JSON.stringify(c6rDeclaredMaintenanceContract.prefixes) ||
+			JSON.stringify(entry.exact) !== JSON.stringify(c6rDeclaredMaintenanceContract.exact) ||
+			exactRosterDigest(entry.exact) !== c6rDeclaredMaintenanceContract.exact_roster_sha256)) {
+			fail("C6R: declared maintenance contract");
 		}
 	}
 	const rows = receiptPhaseRows(specification);
@@ -1721,7 +1816,7 @@ function validateFutureC6Material({
 		}
 		return undefined;
 	}
-	if (boundary !== "C6M" && boundary !== "C6N" && boundary !== "C6B") {
+	if (boundary !== "C6M" && boundary !== "C6N" && boundary !== "C6R" && boundary !== "C6B") {
 		fail(`future C6 material boundary: ${boundary}`);
 	}
 	if (!Buffer.isBuffer(manifestBytes) || authority === undefined) fail(`${boundary}: C6A source-authority manifest absent`);
@@ -1735,17 +1830,18 @@ function validateFutureC6Material({
 			c6aReceiptProjectionState(evidenceBody, manifest, "C6M evidence") !== "ABSENT") {
 			fail("C6M: source-authority manifest cannot project C6A receipt presence");
 		}
-	} else if (boundary === "C6N") {
+	} else if (boundary === "C6N" || boundary === "C6R") {
 		if (!Buffer.isBuffer(parentManifestBytes) || !parentManifestBytes.equals(manifestBytes)) {
-			fail("C6N: inherited source-authority drift");
+			fail(`${boundary}: inherited source-authority drift`);
 		}
-		if (!isDeepStrictEqual(changedPaths, c6nDeclaredMaintenanceContract.exact) ||
+		const declaredContract = boundary === "C6N" ? c6nDeclaredMaintenanceContract : c6rDeclaredMaintenanceContract;
+		if (!isDeepStrictEqual(changedPaths, declaredContract.exact) ||
 			changedPaths.includes(c6aSourceAuthorityPath)) {
-			fail("C6N: exact maintenance staged roster or inherited-manifest mutation");
+			fail(`${boundary}: exact maintenance staged roster or inherited-manifest mutation`);
 		}
-		if (c6aReceiptProjectionState(handoffBody, manifest, "C6N HANDOFF") !== "ABSENT" ||
-			c6aReceiptProjectionState(evidenceBody, manifest, "C6N evidence") !== "ABSENT") {
-			fail("C6N: source-authority compatibility repair cannot project C6A receipt presence");
+		if (c6aReceiptProjectionState(handoffBody, manifest, `${boundary} HANDOFF`) !== "ABSENT" ||
+			c6aReceiptProjectionState(evidenceBody, manifest, `${boundary} evidence`) !== "ABSENT") {
+			fail(`${boundary}: source-authority compatibility repair cannot project C6A receipt presence`);
 		}
 	} else {
 		if (!Buffer.isBuffer(parentManifestBytes) || !parentManifestBytes.equals(manifestBytes)) {
@@ -1769,7 +1865,7 @@ function validateFutureC6Material({
 async function validateFutureC6Authority(specification, snapshot) {
 	const boundary = snapshot.candidateBoundary;
 	if (boundary !== "C6A" && boundary !== "C6F" && boundary !== "C6G" &&
-		boundary !== "C6M" && boundary !== "C6N" && boundary !== "C6B") return;
+		boundary !== "C6M" && boundary !== "C6N" && boundary !== "C6R" && boundary !== "C6B") return;
 	const candidateHandoff = decodeCandidateUTF8(snapshot.stagedHandoffBytes, `${boundary} candidate HANDOFF`);
 	const evidence = await treePathBytes(snapshot.indexTree, c6EvidencePath, `${boundary} C6 evidence`);
 	const workingEvidence = await readCandidateWorktreeBytes(c6EvidencePath);
@@ -1806,10 +1902,22 @@ async function validateFutureC6Authority(specification, snapshot) {
 		if (boundary === "C6N") {
 			c6mCommit = snapshot.parentCommit;
 		} else {
+			let c6nCommit = snapshot.parentCommit;
+			if (boundary === "C6B") {
+				const c6rAuthority = await deriveSealedSourceAuthority(
+					specification, snapshot.parentCommit, "C6R", c6rSourceSubject, c6rSourceClaimManifest,
+					c6rSourceExpectedClaimArgv, c6rSourceHermeticArgvPrefix,
+					sealedSourceGOCACHEPolicy.SUFFIX_PRESERVING,
+				);
+				if (c6rAuthority.parent !== sealedC6NSourceIdentity.commit) {
+					fail("C6R: direct sealed C6N parent identity");
+				}
+				c6nCommit = c6rAuthority.parent;
+			}
 			const c6nAuthority = await deriveSealedSourceAuthority(
-				specification, snapshot.parentCommit, "C6N", c6nSourceSubject, c6nSourceClaimManifest,
+				specification, c6nCommit, "C6N", c6nSourceSubject, c6nSourceClaimManifest,
 				c6nSourceExpectedClaimArgv, c6nSourceHermeticArgvPrefix,
-				sealedSourceGOCACHEPolicy.LEGACY_DOUBLE,
+				sealedSourceGOCACHEPolicy.SUFFIX_PRESERVING, sealedC6NSourceIdentity,
 			);
 			if (c6nAuthority.parent !== sealedC6MSourceIdentity.commit) {
 				fail("C6N: direct sealed C6M parent identity");
@@ -2324,8 +2432,8 @@ async function runCredentialScan(specification, unit) {
 }
 
 async function runC6ASourceAuthorityGate(specification, unit) {
-	if (unit !== "C6M" && unit !== "C6N" && unit !== "C6B") {
-		fail("source-authority-gate is admitted only for C6M, C6N, or C6B");
+	if (unit !== "C6M" && unit !== "C6N" && unit !== "C6R" && unit !== "C6B") {
+		fail("source-authority-gate is admitted only for C6M, C6N, C6R, or C6B");
 	}
 	await runIndependentCandidatePhaseGate(specification, unit);
 	console.log(`P07B-C ${unit} C6A source-authority gate passed: sealed ancestry/note, canonical manifest transport, and phase-appropriate receipt projections agree`);
@@ -2438,7 +2546,7 @@ function runIndependentCandidatePhaseSelfTest(specification) {
 		if (!refused) fail(`independent candidate self-test false negative: ${name}`);
 		rejected += 1;
 	}
-	if (accepted.length !== 19 || rejected !== 649) fail(`independent candidate self-test cardinality ${accepted.length}/${rejected}`);
+	if (accepted.length !== 20 || rejected !== 703) fail(`independent candidate self-test cardinality ${accepted.length}/${rejected}`);
 }
 
 function runFutureC6MaterialSelfTest(authority) {
@@ -2457,6 +2565,10 @@ function runFutureC6MaterialSelfTest(authority) {
 	validateFutureC6Material({
 		boundary: "C6N", authority, manifestBytes, parentManifestBytes: Buffer.from(manifestBytes),
 		handoffBody: absent, evidenceBody: absent, changedPaths: c6nDeclaredMaintenanceContract.exact,
+	});
+	validateFutureC6Material({
+		boundary: "C6R", authority, manifestBytes, parentManifestBytes: Buffer.from(manifestBytes),
+		handoffBody: absent, evidenceBody: absent, changedPaths: c6rDeclaredMaintenanceContract.exact,
 	});
 	validateFutureC6Material({
 		boundary: "C6B", authority, manifestBytes, parentManifestBytes: Buffer.from(manifestBytes),
@@ -2532,6 +2644,32 @@ function runFutureC6MaterialSelfTest(authority) {
 	refuse("C6N premature evidence projection", {
 		boundary: "C6N", authority, manifestBytes, parentManifestBytes: manifestBytes,
 		handoffBody: absent, evidenceBody: present, changedPaths: c6nDeclaredMaintenanceContract.exact,
+	});
+	refuse("C6R missing manifest", {
+		boundary: "C6R", authority, parentManifestBytes: manifestBytes,
+		handoffBody: absent, evidenceBody: absent, changedPaths: c6rDeclaredMaintenanceContract.exact,
+	});
+	refuse("C6R missing inherited parent manifest", {
+		boundary: "C6R", authority, manifestBytes,
+		handoffBody: absent, evidenceBody: absent, changedPaths: c6rDeclaredMaintenanceContract.exact,
+	});
+	refuse("C6R inherited manifest drift", {
+		boundary: "C6R", authority, manifestBytes,
+		parentManifestBytes: Buffer.from(`${manifestBytes.toString("utf8")}\n`),
+		handoffBody: absent, evidenceBody: absent, changedPaths: c6rDeclaredMaintenanceContract.exact,
+	});
+	refuse("C6R staged manifest", {
+		boundary: "C6R", authority, manifestBytes, parentManifestBytes: manifestBytes,
+		handoffBody: absent, evidenceBody: absent,
+		changedPaths: [...c6rDeclaredMaintenanceContract.exact, c6aSourceAuthorityPath].sort(),
+	});
+	refuse("C6R premature HANDOFF projection", {
+		boundary: "C6R", authority, manifestBytes, parentManifestBytes: manifestBytes,
+		handoffBody: present, evidenceBody: absent, changedPaths: c6rDeclaredMaintenanceContract.exact,
+	});
+	refuse("C6R premature evidence projection", {
+		boundary: "C6R", authority, manifestBytes, parentManifestBytes: manifestBytes,
+		handoffBody: absent, evidenceBody: present, changedPaths: c6rDeclaredMaintenanceContract.exact,
 	});
 	refuse("C6B missing inherited manifest", {
 		boundary: "C6B", authority, manifestBytes, handoffBody: present, evidenceBody: present,
@@ -2692,6 +2830,14 @@ function runC6ASourceAuthoritySelfTest() {
 	if (c6nContractDigest !== expectedC6NSealedSourceContractDigest) {
 		fail(`C6N sealed-source contract digest ${c6nContractDigest}`);
 	}
+	const observedC6NContractDigest = computedObservedC6NSealedSourceContractDigest();
+	if (observedC6NContractDigest !== expectedObservedC6NSealedSourceContractDigest) {
+		fail(`observed C6N sealed-source contract digest ${observedC6NContractDigest}`);
+	}
+	const c6rContractDigest = computedC6RSealedSourceContractDigest();
+	if (c6rContractDigest !== expectedC6RSealedSourceContractDigest) {
+		fail(`C6R sealed-source contract digest ${c6rContractDigest}`);
+	}
 	const c6fContractDigest = computedC6FSealedSourceContractDigest();
 	if (c6fContractDigest !== expectedC6FSealedSourceContractDigest) {
 		fail(`C6F sealed-source contract digest ${c6fContractDigest}`);
@@ -2805,26 +2951,50 @@ function runC6ASourceAuthoritySelfTest() {
 	);
 	validateDidrunSourceNote(
 		c6nNote, c6nIdentity, c6nSourceClaimManifest, c6nSourceExpectedClaimArgv,
-		c6nSourceHermeticArgvPrefix, sealedSourceGOCACHEPolicy.LEGACY_DOUBLE, "C6N raw fixture",
+		c6nSourceHermeticArgvPrefix, sealedSourceGOCACHEPolicy.SUFFIX_PRESERVING, "C6N raw fixture",
 	);
 	validateDidrunSourceNote(
-		redactForPolicy(c6nNote, sealedSourceGOCACHEPolicy.LEGACY_DOUBLE), c6nIdentity,
-		c6nSourceClaimManifest, c6nSourceExpectedClaimArgv, c6nSourceHermeticArgvPrefix,
-		sealedSourceGOCACHEPolicy.LEGACY_DOUBLE, "C6N double fixture",
-	);
-	requireNoteRejected("C6N suffix under legacy-double policy", () => validateDidrunSourceNote(
 		redactForPolicy(c6nNote, sealedSourceGOCACHEPolicy.SUFFIX_PRESERVING), c6nIdentity,
 		c6nSourceClaimManifest, c6nSourceExpectedClaimArgv, c6nSourceHermeticArgvPrefix,
-		sealedSourceGOCACHEPolicy.LEGACY_DOUBLE, "C6N suffix fixture",
+		sealedSourceGOCACHEPolicy.SUFFIX_PRESERVING, "C6N suffix fixture",
+	);
+	requireNoteRejected("C6N legacy-double under observed suffix-preserving policy", () => validateDidrunSourceNote(
+		redactForPolicy(c6nNote, sealedSourceGOCACHEPolicy.LEGACY_DOUBLE), c6nIdentity,
+		c6nSourceClaimManifest, c6nSourceExpectedClaimArgv, c6nSourceHermeticArgvPrefix,
+		sealedSourceGOCACHEPolicy.SUFFIX_PRESERVING, "C6N legacy-double fixture",
 	));
-	const c6nBare = redactForPolicy(c6nNote, sealedSourceGOCACHEPolicy.LEGACY_DOUBLE);
+	const c6nBare = redactForPolicy(c6nNote, sealedSourceGOCACHEPolicy.SUFFIX_PRESERVING);
 	c6nBare.claims[0].claim.argv_preview[6] = sealedSourceHermeticRedaction;
-	requireNoteRejected("C6N bare GOCACHE under legacy-double policy", () => validateDidrunSourceNote(
+	requireNoteRejected("C6N bare GOCACHE under observed suffix-preserving policy", () => validateDidrunSourceNote(
 		c6nBare, c6nIdentity, c6nSourceClaimManifest, c6nSourceExpectedClaimArgv,
-		c6nSourceHermeticArgvPrefix, sealedSourceGOCACHEPolicy.LEGACY_DOUBLE, "C6N bare fixture",
+		c6nSourceHermeticArgvPrefix, sealedSourceGOCACHEPolicy.SUFFIX_PRESERVING, "C6N bare fixture",
+	));
+	const c6rIdentity = Object.freeze({ commit: "9".repeat(40), tree: "a".repeat(40) });
+	const c6rNote = syntheticDidrunSourceNote(
+		c6rIdentity, c6rSourceClaimManifest, c6rSourceExpectedClaimArgv,
+	);
+	validateDidrunSourceNote(
+		c6rNote, c6rIdentity, c6rSourceClaimManifest, c6rSourceExpectedClaimArgv,
+		c6rSourceHermeticArgvPrefix, sealedSourceGOCACHEPolicy.SUFFIX_PRESERVING, "C6R raw fixture",
+	);
+	validateDidrunSourceNote(
+		redactForPolicy(c6rNote, sealedSourceGOCACHEPolicy.SUFFIX_PRESERVING), c6rIdentity,
+		c6rSourceClaimManifest, c6rSourceExpectedClaimArgv, c6rSourceHermeticArgvPrefix,
+		sealedSourceGOCACHEPolicy.SUFFIX_PRESERVING, "C6R suffix fixture",
+	);
+	requireNoteRejected("C6R legacy-double under suffix-preserving policy", () => validateDidrunSourceNote(
+		redactForPolicy(c6rNote, sealedSourceGOCACHEPolicy.LEGACY_DOUBLE), c6rIdentity,
+		c6rSourceClaimManifest, c6rSourceExpectedClaimArgv, c6rSourceHermeticArgvPrefix,
+		sealedSourceGOCACHEPolicy.SUFFIX_PRESERVING, "C6R legacy-double fixture",
+	));
+	const c6rBare = redactForPolicy(c6rNote, sealedSourceGOCACHEPolicy.SUFFIX_PRESERVING);
+	c6rBare.claims[0].claim.argv_preview[6] = sealedSourceHermeticRedaction;
+	requireNoteRejected("C6R bare GOCACHE under suffix-preserving policy", () => validateDidrunSourceNote(
+		c6rBare, c6rIdentity, c6rSourceClaimManifest, c6rSourceExpectedClaimArgv,
+		c6rSourceHermeticArgvPrefix, sealedSourceGOCACHEPolicy.SUFFIX_PRESERVING, "C6R bare fixture",
 	));
 	const futureMaterialRejected = runFutureC6MaterialSelfTest(authority);
-	if (futureMaterialRejected !== 23) fail(`future C6 material self-test cardinality ${futureMaterialRejected}`);
+	if (futureMaterialRejected !== 29) fail(`future C6 material self-test cardinality ${futureMaterialRejected}`);
 	rejected += futureMaterialRejected;
 	return rejected;
 }
@@ -3339,6 +3509,7 @@ async function runSelfTest() {
 		exactSourceGateAdmitted(specification, "C6G"),
 		exactSourceGateAdmitted(specification, "C6M"),
 		exactSourceGateAdmitted(specification, "C6N"),
+		exactSourceGateAdmitted(specification, "C6R"),
 		!exactSourceGateAdmitted(specification, "C2B"),
 		!exactSourceGateAdmitted(specification, "C3B"),
 		specification.units.C3.verification_profile === "SOURCE_FULL" && specification.units.C3.prefixes.length === 0,
@@ -3359,7 +3530,8 @@ async function runSelfTest() {
 		specification.units.C5V.verification_profile === "SOURCE_FULL" && specification.units.C5V.prefixes.length === 0,
 		specification.units.C6G.verification_profile === "SOURCE_FULL" && specification.units.C6G.prefixes.length === 0,
 		specification.units.C6N.verification_profile === "SOURCE_FULL" && specification.units.C6N.prefixes.length === 0,
-		receiptPhaseRows(specification).length === 31,
+		specification.units.C6R.verification_profile === "SOURCE_FULL" && specification.units.C6R.prefixes.length === 0,
+		receiptPhaseRows(specification).length === 32,
 		receiptPhaseRows(specification).at(-1).boundary === "C6B",
 		receiptPhaseAuthorityDigest(specification) === receiptPhaseAuthoritySHA256,
 		!["C4", "C5", "C6A", "C6M", "C6B"].some((boundary) =>
@@ -3377,6 +3549,7 @@ async function runSelfTest() {
 		specification.units.C6F.exact.includes("spec/verification/p07b-c-unit-paths.json"),
 		specification.units.C6G.exact.includes("spec/verification/p07b-c-unit-paths.json"),
 		specification.units.C6N.exact.includes("spec/verification/p07b-c-unit-paths.json"),
+		specification.units.C6R.exact.includes("spec/verification/p07b-c-unit-paths.json"),
 		exactPathsMatch(specification, "C6M", c6mDeclaredAdapterContract.exact),
 		!specification.units.C6M.exact.includes("docs/prompts/P07B-C-TARGET-RUN-EXECUTION.md"),
 		!specification.units.C6M.exact.includes("docs/status/P07B-C-C6-EVIDENCE.md"),
@@ -3385,6 +3558,9 @@ async function runSelfTest() {
 		exactPathsMatch(specification, "C6N", c6nDeclaredMaintenanceContract.exact),
 		!specification.units.C6N.exact.includes(c6aSourceAuthorityPath),
 		!specification.units.C6N.exact.includes(c6aReceiptDeclarationPath),
+		exactPathsMatch(specification, "C6R", c6rDeclaredMaintenanceContract.exact),
+		!specification.units.C6R.exact.includes(c6aSourceAuthorityPath),
+		!specification.units.C6R.exact.includes(c6aReceiptDeclarationPath),
 		activeReceiptPhaseBoundary(specification, "C3D") === "C3D",
 		unexpectedPaths(specification, "C0A", ["docs/SEMANTICS.md", "README.md"])[0] === "README.md",
 		unexpectedPaths(specification, "C6A", ["docs/captures/p07b-c/capture.json"]).length === 0,
@@ -3419,8 +3595,8 @@ async function runSelfTest() {
 			fail(`${boundary} visible-capsule active-boundary pointer self-test`);
 		}
 	}
-	requireSpecificationMutationRejected(specification, "schema v28 downgrade", (hostile) => {
-		hostile.schema_version = "countershape/p07b-c-unit-paths/v28";
+	requireSpecificationMutationRejected(specification, "schema v29 downgrade", (hostile) => {
+		hostile.schema_version = "countershape/p07b-c-unit-paths/v29";
 	});
 	requireSpecificationMutationRejected(specification, "duplicated specification active boundary", (hostile) => {
 		hostile.active_boundary = "C3D";
@@ -3706,8 +3882,17 @@ async function runSelfTest() {
 	requireSpecificationMutationRejected(specification, "C6N receipt state drift", (hostile) => {
 		hostile.units.C6N.receipt_states.C6A = "PRESENT";
 	});
-	requireSpecificationMutationRejected(specification, "C6B bypassed C6N parent", (hostile) => {
-		hostile.units.C6B.parent = "C6M";
+	requireSpecificationMutationRejected(specification, "C6R bypassed C6N parent", (hostile) => {
+		hostile.units.C6R.parent = "C6M";
+	});
+	requireSpecificationMutationRejected(specification, "C6R transition authority removal", (hostile) => {
+		delete hostile.units.C6R.transition_authority;
+	});
+	requireSpecificationMutationRejected(specification, "C6R receipt state drift", (hostile) => {
+		hostile.units.C6R.receipt_states.C6A = "PRESENT";
+	});
+	requireSpecificationMutationRejected(specification, "C6B bypassed C6R parent", (hostile) => {
+		hostile.units.C6B.parent = "C6N";
 	});
 	requireSpecificationMutationRejected(specification, "C6A stale C5 parent", (hostile) => {
 		hostile.units.C6A.parent = "C5";
@@ -4083,7 +4268,7 @@ async function main() {
 	}
 	if (process.argv.length !== 5 || process.argv[2] !== "--unit" ||
 		!(["--staged", "--exact-staged", "--receipt-manifest", "--maintenance-manifest", "--source-final-gate", "--receipt-final-gate", "--maintenance-final-gate", "--credential-scan", "--source-authority-gate"].includes(process.argv[4]))) {
-		fail("usage: check-p07b-c-unit-scope.mjs --candidate-phase <C3D|C4V|C4M|C4N|C4P|C4|C4H|C4I|C4K|C4J|C4L|C5|C5V|C6A|C6F|C6G|C6M|C6N|C6B> | --unit <C0A|C0B|C1|C1M|C1V|C1E|C1B|C2|C2M|C2B|C3P|C3V|C3M|C3PB|C3A|C3L|C3F|C3S|C3|C3R|C3Q|C3T|C3U|C3B|C3D|C4V|C4M|C4N|C4P|C4|C4H|C4I|C4K|C4J|C4L|C5|C5V|C6A|C6F|C6G|C6M|C6N|C6B> <--staged|--exact-staged|--receipt-manifest|--maintenance-manifest|--source-final-gate|--receipt-final-gate|--maintenance-final-gate|--credential-scan|--source-authority-gate> | --authority-profile-self-test | --self-test");
+		fail("usage: check-p07b-c-unit-scope.mjs --candidate-phase <C3D|C4V|C4M|C4N|C4P|C4|C4H|C4I|C4K|C4J|C4L|C5|C5V|C6A|C6F|C6G|C6M|C6N|C6R|C6B> | --unit <C0A|C0B|C1|C1M|C1V|C1E|C1B|C2|C2M|C2B|C3P|C3V|C3M|C3PB|C3A|C3L|C3F|C3S|C3|C3R|C3Q|C3T|C3U|C3B|C3D|C4V|C4M|C4N|C4P|C4|C4H|C4I|C4K|C4J|C4L|C5|C5V|C6A|C6F|C6G|C6M|C6N|C6R|C6B> <--staged|--exact-staged|--receipt-manifest|--maintenance-manifest|--source-final-gate|--receipt-final-gate|--maintenance-final-gate|--credential-scan|--source-authority-gate> | --authority-profile-self-test | --self-test");
 	}
 	const specification = await loadSpecification();
 	if (process.argv[4] === "--source-authority-gate") {
