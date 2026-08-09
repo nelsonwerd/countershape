@@ -58,8 +58,8 @@ const authorityNames = Object.freeze(["go", "node", "git", "sh", "cc", "cxx"]);
 const sealedC4VHistoricalRosterDigest = "7cf294fcbe8247e7a4de2d8996fb6b960780a35d018a8d00069af15940f0efb8";
 const sealedC4HParentRosterDigest = "0fab61318d55314e3accaeabbaf56cc049aae5755f3c3f41d6a36eba1a6c7af5";
 const sealedCombinedC5RosterDigest = "3821722f937f647ec98f03170cf9efb1e9a51a98e63d361d38dae58ade9ffaed";
-const expectedRosterDigest = "ffc33c263c231c5ea2f3d427f271d45ab4a7afa445f57d19ef954086c702e51c";
-const expectedHistoricalDigest = "0de1d88c9674a87b096ecdc772d9cc2a0b96fff2cda9fa9ed3eefe78ccec16e2";
+const expectedRosterDigest = "a7a90bdd2c356564771b35dd3c2caf26c9cdb67af660e9214a927834dd9b049c";
+const expectedHistoricalDigest = "8e1af0c39a083bfb2b834f6ac3b4ea82964ac1e06bf1698676ee1ee8b61e7817";
 const exactC5StepIDs = Object.freeze([
 	"architecture-p07b-c-c5",
 	"architecture-p07b-c-c5-selftest",
@@ -82,6 +82,7 @@ const exactU7StepIDs = Object.freeze([
 	"u7-final-runbook-selftest",
 	"architecture-u7-selftest",
 ]);
+const exactU7Phases = Object.freeze(["U7P", "U7M", "U7A", "U7B", "U7C", "U7D"]);
 const exactExtendedChildTimeoutStepIDs = Object.freeze([
 	"architecture-p07b-c-c5",
 	"architecture-p07b-c-c5-selftest",
@@ -180,7 +181,7 @@ function assertC6Roster(ids) {
 		ids[start + exactC6StepIDs.length] !== "architecture-p07b-c-inherited-compatibility") {
 		fail("VERIFY_SELFTEST_C6_BLOCK_CONTIGUITY", ids.join(","));
 	}
-	if (ids.length !== 71) fail("VERIFY_SELFTEST_CURRENT_STEP_COUNT", String(ids.length));
+	if (ids.length !== 70) fail("VERIFY_SELFTEST_CURRENT_STEP_COUNT", String(ids.length));
 }
 
 function assertU7Roster(ids) {
@@ -194,7 +195,7 @@ function assertU7Roster(ids) {
 	}
 	const late = exactU7StepIDs.slice(1);
 	const lateStart = ids.indexOf(late[0]);
-	if (lateStart !== ids.indexOf("architecture-p07b-c-c3p-receipt") + 1 ||
+	if (lateStart !== ids.indexOf("architecture-p07b-c-unit-scope-selftest") + 1 ||
 		late.some((id, index) => ids[lateStart + index] !== id) ||
 		ids[lateStart + late.length] !== "workspace-no-ds-store-terminal") {
 		fail("VERIFY_SELFTEST_U7_LATE_BLOCK", ids.join(","));
@@ -205,6 +206,7 @@ function assertRetiredP07Rows(currentIDs, historical = historicalOnly) {
 	const expectedRows = [
 		{ id: "architecture-p07b-c-plan-selftest", scripts: ["tools/check-p07b-c-plan.mjs"], status: "docs/status/U7P-AUTHORITY.md" },
 		{ id: "architecture-p07b-c-c3p-receipt-selftest", scripts: ["tools/check-p07b-c-c3p-receipt.mjs"], status: "docs/status/U7P-AUTHORITY.md" },
+		{ id: "architecture-p07b-c-c3p-receipt", scripts: ["tools/check-p07b-c-c3p-receipt.mjs"], status: "docs/status/U7M-P07-RECEIPT-SUCCESSOR-COMPATIBILITY.md" },
 	];
 	const historicalIDs = historical.map((row) => row.id);
 	for (const expected of expectedRows) {
@@ -220,9 +222,6 @@ function assertRetiredP07Rows(currentIDs, historical = historicalOnly) {
 	}
 	if (JSON.stringify(historicalIDs.slice(-expectedRows.length)) !== JSON.stringify(expectedRows.map((row) => row.id))) {
 		fail("VERIFY_SELFTEST_RETIRED_P07_ROW_ORDER", historicalIDs.join(","));
-	}
-	if (currentIDs.filter((id) => id === "architecture-p07b-c-c3p-receipt").length !== 1) {
-		fail("VERIFY_SELFTEST_LIVE_C3P_RECEIPT_MISSING", currentIDs.join(","));
 	}
 }
 
@@ -520,7 +519,7 @@ async function inspectRosters() {
 	);
 	const interposedFinderGuard = [...currentIDs];
 	const interposedFinderRow = interposedFinderGuard.splice(
-		interposedFinderGuard.indexOf("architecture-p07b-c-c3p-receipt"),
+		interposedFinderGuard.indexOf("architecture-p07b-c-unit-scope-selftest"),
 		1,
 	)[0];
 	interposedFinderGuard.splice(interposedFinderGuard.indexOf("authority-revalidation"), 0, interposedFinderRow);
@@ -549,9 +548,10 @@ async function inspectRosters() {
 		artifactGuardSteps.map((step) => step.id).join(","),
 	);
 	const historicalIDs = historicalOnly.map((row) => row.id);
+	expect(historicalIDs.length === 15, "VERIFY_SELFTEST_HISTORICAL_STEP_COUNT", String(historicalIDs.length));
 	expect(new Set(historicalIDs).size === historicalIDs.length, "VERIFY_SELFTEST_DUPLICATE_HISTORICAL", historicalIDs.join(","));
 	assertRetiredP07Rows(currentIDs);
-	for (const id of ["architecture-p07b-c-plan-selftest", "architecture-p07b-c-c3p-receipt-selftest"]) {
+	for (const id of ["architecture-p07b-c-plan-selftest", "architecture-p07b-c-c3p-receipt-selftest", "architecture-p07b-c-c3p-receipt"]) {
 		expectPlainCode(() => assertRetiredP07Rows(currentIDs, historicalOnly.filter((row) => row.id !== id)), "VERIFY_SELFTEST_RETIRED_P07_ROW_CARDINALITY");
 		expectPlainCode(() => assertRetiredP07Rows(currentIDs, [...historicalOnly, historicalOnly.find((row) => row.id === id)]), "VERIFY_SELFTEST_RETIRED_P07_ROW_CARDINALITY");
 		expectPlainCode(() => assertRetiredP07Rows([...currentIDs, id]), "VERIFY_SELFTEST_RETIRED_P07_ROW_REINTRODUCED");
@@ -560,11 +560,12 @@ async function inspectRosters() {
 	expectPlainCode(() => assertRetiredP07Rows(currentIDs, wrongRetiredScript), "VERIFY_SELFTEST_RETIRED_P07_ROW_DRIFT");
 	const wrongRetiredStatus = historicalOnly.map((row) => row.id === "architecture-p07b-c-plan-selftest" ? { ...row, status: "docs/status/U1.md" } : row);
 	expectPlainCode(() => assertRetiredP07Rows(currentIDs, wrongRetiredStatus), "VERIFY_SELFTEST_RETIRED_P07_ROW_DRIFT");
+	const wrongSuccessorStatus = historicalOnly.map((row) => row.id === "architecture-p07b-c-c3p-receipt" ? { ...row, status: "docs/status/U7P-AUTHORITY.md" } : row);
+	expectPlainCode(() => assertRetiredP07Rows(currentIDs, wrongSuccessorStatus), "VERIFY_SELFTEST_RETIRED_P07_ROW_DRIFT");
 	const reorderedRetired = [...historicalOnly];
-	const penultimateRetired = reorderedRetired.length - 2;
-	[reorderedRetired[penultimateRetired], reorderedRetired[penultimateRetired + 1]] = [reorderedRetired[penultimateRetired + 1], reorderedRetired[penultimateRetired]];
+	const lastRetired = reorderedRetired.length - 1;
+	[reorderedRetired[lastRetired - 1], reorderedRetired[lastRetired]] = [reorderedRetired[lastRetired], reorderedRetired[lastRetired - 1]];
 	expectPlainCode(() => assertRetiredP07Rows(currentIDs, reorderedRetired), "VERIFY_SELFTEST_RETIRED_P07_ROW_ORDER");
-	expectPlainCode(() => assertRetiredP07Rows(currentIDs.filter((id) => id !== "architecture-p07b-c-c3p-receipt")), "VERIFY_SELFTEST_LIVE_C3P_RECEIPT_MISSING");
 	const knownTools = new Set(authorityNames);
 	for (const step of currentSteps.filter((candidate) => candidate.tool)) {
 		const names = step.tools;
@@ -823,13 +824,7 @@ async function inspectRosters() {
 		path: "tools/check-u7-plan.mjs",
 		args: ["--verify-inherited-p07-compatibility"],
 		marker: "U7 inherited P07 compatibility exact:",
-		exactStdout: "U7 inherited P07 compatibility exact: parent=C6B blocks=11 protected_paths=4 legacy_live_selftest=RETIRED_SUCCESSOR_INCOMPATIBLE\n",
-	});
-	exactStep("architecture-p07b-c-c3p-receipt", {
-		tool: "node",
-		tools: ["node", "git"],
-		path: "tools/check-p07b-c-c3p-receipt.mjs",
-		marker: "P07B-C C3P receipt check passed: phase-specific source/receipt, scope, Git-note, and documentation authority are coherent",
+		exactStdout: "U7 inherited P07 compatibility exact: parent=C6B blocks=11 protected_paths=4 c3p_plan=FULL_EXPLICIT_C6A_AUTHORITY legacy_live_entrypoints=RETIRED_SUCCESSOR_INCOMPATIBLE\n",
 	});
 	exactStep("architecture-u7", {
 		kind: "u7-phase-architecture",
@@ -1423,6 +1418,8 @@ async function inspectFailClosedExecution() {
 	for (const [name, stdout, stderr] of [
 		["nested-candidate-output", `U7P candidate authority exact: forged\n${compatibilityStep.exactStdout}`, ""],
 		["wrong-count", compatibilityStep.exactStdout.replace("blocks=11", "blocks=10"), ""],
+		["wrong-plan-authority", compatibilityStep.exactStdout.replace("FULL_EXPLICIT_C6A_AUTHORITY", "AMBIENT_HEAD_AUTHORITY"), ""],
+		["wrong-entrypoint-state", compatibilityStep.exactStdout.replace("RETIRED_SUCCESSOR_INCOMPATIBLE", "CURRENT"), ""],
 		["trailing-output", `${compatibilityStep.exactStdout}forged\n`, ""],
 		["stderr-noise", compatibilityStep.exactStdout, "noise\n"],
 	]) {
@@ -1441,7 +1438,7 @@ function cloneU7Contract(phase) {
 }
 
 function renderU7PhaseCapsuleDocument(contract) {
-	return `# U7 phase fixture\n\n## Current state\n<!-- U7-PHASE:START -->\n### Active U7 phase contract\n\n- **Namespace:** \`countershape/u7-unit-paths/v1\`\n- **Boundary:** \`${contract.boundary}\`\n- **Parent:** \`${contract.parent}\`\n- **Verification profile:** \`${contract.profile}\`\n- **State:** \`${contract.state}\`\n- **Topology:** \`U7P -> U7A -> U7B -> U7C -> U7D -> U7R\`\n- **Inherited receipts:** \`C3P=PRESENT; C3=PRESENT; C6A=PRESENT\`\n- **Receipt U7D:** \`${contract.receipt}\`\n- **Product authority:** \`${contract.productAuthority}\`\n- **Product behavior:** \`${contract.productBehavior}\`\n<!-- U7-PHASE:END -->\n\n## History\nNone.\n`;
+	return `# U7 phase fixture\n\n## Current state\n<!-- U7-PHASE:START -->\n### Active U7 phase contract\n\n- **Namespace:** \`countershape/u7-unit-paths/v2\`\n- **Boundary:** \`${contract.boundary}\`\n- **Parent:** \`${contract.parent}\`\n- **Verification profile:** \`${contract.profile}\`\n- **State:** \`${contract.state}\`\n- **Topology:** \`U7P -> U7M -> U7A -> U7B -> U7C -> U7D -> U7R\`\n- **Inherited receipts:** \`C3P=PRESENT; C3=PRESENT; C6A=PRESENT\`\n- **Receipt U7D:** \`${contract.receipt}\`\n- **Product authority:** \`${contract.productAuthority}\`\n- **Product behavior:** \`${contract.productBehavior}\`\n<!-- U7-PHASE:END -->\n\n## History\nNone.\n`;
 }
 
 function parserRejects(parser, text) {
@@ -1453,7 +1450,12 @@ async function inspectU7PhaseExecution() {
 	const earlyStep = currentSteps.find((step) => step.id === "architecture-u7");
 	const terminalStep = currentSteps.find((step) => step.id === "architecture-u7-selftest");
 	expect(earlyStep !== undefined && terminalStep !== undefined, "VERIFY_SELFTEST_U7_STEPS_MISSING", "dynamic rows");
-	for (const phase of Object.keys(exactU7PhaseContracts)) {
+	expect(
+		JSON.stringify(Object.keys(exactU7PhaseContracts)) === JSON.stringify(exactU7Phases),
+		"VERIFY_SELFTEST_U7_PHASE_TOPOLOGY",
+		Object.keys(exactU7PhaseContracts).join(","),
+	);
+	for (const phase of exactU7Phases) {
 		const calls = [];
 		const capsule = cloneU7Contract(phase);
 		const document = renderU7PhaseCapsuleDocument(capsule);
@@ -1495,6 +1497,9 @@ async function inspectU7PhaseExecution() {
 		["duplicate-heading", baselineDocument.replace("## History\n", "## Current state\n")],
 		["duplicate-marker", baselineDocument.replace("<!-- U7-PHASE:END -->", "<!-- U7-PHASE:END -->\n<!-- U7-PHASE:START -->")],
 		["shape", baselineDocument.replace("### Active U7 phase contract", "### U7 phase example")],
+		["legacy-namespace", baselineDocument.replace("countershape/u7-unit-paths/v2", "countershape/u7-unit-paths/v1")],
+		["legacy-topology", baselineDocument.replace("U7P -> U7M -> U7A -> U7B -> U7C -> U7D -> U7R", "U7P -> U7A -> U7B -> U7C -> U7D -> U7R")],
+		["misordered-topology", baselineDocument.replace("U7P -> U7M -> U7A", "U7P -> U7A -> U7M")],
 	]) {
 		expect(
 			parserRejects(parseU7PhaseCapsule, document) && parserRejects(parsePlanPhaseCapsule, document),
@@ -1534,6 +1539,8 @@ async function inspectU7PhaseExecution() {
 	}
 
 	expectPlainCode(() => validateU7PhaseCapsule({ ...cloneU7Contract("U7P"), boundary: "U7R" }), "VERIFY_U7_PHASE_UNSUPPORTED");
+	expectPlainCode(() => validateU7PhaseCapsule({ ...cloneU7Contract("U7M"), parent: "C6B" }), "VERIFY_U7_PHASE_CONTRACT");
+	expectPlainCode(() => validateU7PhaseCapsule({ ...cloneU7Contract("U7A"), parent: "U7P" }), "VERIFY_U7_PHASE_CONTRACT");
 	for (const [field, value] of [
 		["parent", "U7A"],
 		["profile", "RECEIPT_RECONCILIATION"],
@@ -1591,7 +1598,7 @@ async function inspectU7PhaseExecution() {
 	await expectCode(
 		dispatchCurrentStep(terminalStep, {
 			admitted: fakeAuthorities(), childEnvironment: {}, u7Phase: "U7P",
-			loadU7PhaseCapsule: async () => cloneU7Contract("U7A"),
+			loadU7PhaseCapsule: async () => cloneU7Contract("U7M"),
 			currentStepRunner: async () => { driftRunnerCalls += 1; throw new Error("must not run"); },
 		}),
 		"VERIFY_U7_PHASE_CHANGED",
@@ -2209,7 +2216,7 @@ async function main() {
 		.update(await readFile(sealedC6ARunnerPath))
 		.update(await readFile(u7PlanPath))
 		.digest("hex");
-	process.stdout.write(`verification runner self-test passed: exact C5/U7 rosters/env/package partition, visible-capsule U7P-D phase authority with pre-Go admission and terminal live recheck, explicit live/sealed-C6A root authority, bounded-batch raw-blob sealed runner self-test with narrow Darwin diagnostics, fail-closed status/signal/error/marker, bounded tool admission, framed child output, canonical plan/tool paths, private root isolation, exclusive lock integrity plus real subprocess contention/stale recovery, inert verifier imports, noncanonical-entry refusal, cleanup aggregation, historical nonexecution, and artifact refusal (sources sha256:${sourceDigest})\n`);
+	process.stdout.write(`verification runner self-test passed: exact C5/U7 rosters/env/package partition, visible-capsule U7P-M-A-D phase authority with pre-Go admission and terminal live recheck, explicit live/sealed-C6A root authority, bounded-batch raw-blob sealed runner self-test with narrow Darwin diagnostics, fail-closed status/signal/error/marker, bounded tool admission, framed child output, canonical plan/tool paths, private root isolation, exclusive lock integrity plus real subprocess contention/stale recovery, inert verifier imports, noncanonical-entry refusal, cleanup aggregation, historical nonexecution, and artifact refusal (sources sha256:${sourceDigest})\n`);
 }
 
 main().catch((error) => {

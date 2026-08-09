@@ -1,12 +1,13 @@
 # P08 — U7 reference CLI and falsifiable two-domain studies
 
-Implement Countershape U7 from the active Mode C handoff. Read `docs/CONCEPT_BRIEF.md`, `docs/SEMANTICS.md`, `docs/PROJECTION_ALGEBRA.md`, deep-dive reports `06`–`08`, the checked-in study specs, and the U7 authority/status documents. Exact sealed C6B is the parent; its archived note/ledger authority is a prerequisite, not a transferable U7 grade.
+Implement Countershape U7 from the active Mode C handoff. Read `docs/CONCEPT_BRIEF.md`, `docs/SEMANTICS.md`, `docs/PROJECTION_ALGEBRA.md`, deep-dive reports `06`–`08`, the checked-in study specs, and the U7 authority/status documents. Exact sealed U7P is the immediate parent of the active U7M maintenance boundary; exact sealed C6B remains the inherited root authority. Their archived note/ledger authority is prerequisite evidence, not a transferable U7 grade.
 
 ## Execution decomposition
 
-The original one-boundary U7 wording is superseded by the parent-frozen `countershape/u7-unit-paths/v1` execution chain `C6B -> U7P -> U7A -> U7B -> U7C -> U7D -> U7R`:
+The original one-boundary U7 wording and the sealed-U7P continuation are superseded by the owner-selected `countershape/u7-unit-paths/v2` execution chain `C6B -> U7P -> U7M -> U7A -> U7B -> U7C -> U7D -> U7R`:
 
 - `U7P` freezes the topology, exact rosters and claims, independent transition validators, architecture oracle, study-harness protocol/self-test, runbook, runtime epoch, and cumulative-verifier enrollment. It has no product authority and every claim begins `UNRECEIPTED`.
+- `U7M` is a zero-product-surface `SOURCE_FULL` maintenance boundary. It preserves the sealed P07 checker bytes, moves the ambient-HEAD-coupled C3P wrapper to historical-only, and replaces that live descendant row with exact sealed-C6B/C6A authority binding plus the unchanged full P07 plan under explicit C6A authority. It transfers no grade and every claim begins `UNRECEIPTED`.
 - `U7A` implements only the reference CLI/application foundation.
 - `U7B` implements the HTTP falsification study and closes that domain's three-run process/artifact protocol and byte-repetition gate before sealing.
 - `U7C` implements the independent CLI decision/contract study and closes that domain's three-run process/artifact protocol and byte-repetition gate before sealing.
@@ -14,6 +15,8 @@ The original one-boundary U7 wording is superseded by the parent-frozen `counter
 - `U7R` owns only the exact three-path parent-relative receipt projection. It binds already-sealed U7D evidence and cannot change or re-run product authority.
 
 Every source child must remain a direct child of its exact sealed parent and satisfy the parent's exact roster, subject, product/receipt ceiling, command order, event indexes, pathspecs, and terminal evidence closure. A later unit cannot repair bytes owned by an earlier sealed domain unless a separately authorized repair boundary is declared. This decomposition changes execution topology, not the product objective or acceptance standard below.
+
+The first U7A attempt exposed the inherited ambient-HEAD verifier defect at its unclaimed cumulative-verifier event. Its ledger, final root, and candidate checkpoint are permanently preserved as named in `docs/status/U7M-P07-RECEIPT-SUCCESSOR-COMPATIBILITY.md`; none of that evidence is reusable. U7A may resume only after U7M seals, with parent U7M and a fresh event-zero ledger.
 
 ## Objective and product milestone
 

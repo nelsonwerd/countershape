@@ -9,27 +9,30 @@ import { isAbsolute, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { isDeepStrictEqual } from "node:util";
 
+import { checkPlan as checkInheritedP07Plan } from "./check-p07b-c-plan.mjs";
+
 export const repositoryRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
 export const specificationPath = resolve(repositoryRoot, "spec/verification/u7-unit-paths.json");
 const handoffPath = resolve(repositoryRoot, "docs/HANDOFF_MODE_C.md");
 const didrunPath = "/opt/homebrew/bin/didrun";
 const gitPath = "/usr/bin/git";
-const unitOrder = Object.freeze(["U7P", "U7A", "U7B", "U7C", "U7D", "U7R"]);
-const expectedParents = Object.freeze({ U7P: "C6B", U7A: "U7P", U7B: "U7A", U7C: "U7B", U7D: "U7C", U7R: "U7D" });
+const unitOrder = Object.freeze(["U7P", "U7M", "U7A", "U7B", "U7C", "U7D", "U7R"]);
+const expectedParents = Object.freeze({ U7P: "C6B", U7M: "U7P", U7A: "U7M", U7B: "U7A", U7C: "U7B", U7D: "U7C", U7R: "U7D" });
 const expectedProfiles = Object.freeze({
-	U7P: "SOURCE_FULL", U7A: "SOURCE_FULL", U7B: "SOURCE_FULL",
+	U7P: "SOURCE_FULL", U7M: "SOURCE_FULL", U7A: "SOURCE_FULL", U7B: "SOURCE_FULL",
 	U7C: "SOURCE_FULL", U7D: "SOURCE_FULL", U7R: "RECEIPT_RECONCILIATION",
 });
 const expectedProductAuthority = Object.freeze({
-	U7P: "NONE", U7A: "U7_REFERENCE_APPLICATION", U7B: "U7_REFERENCE_APPLICATION",
+	U7P: "NONE", U7M: "NONE", U7A: "U7_REFERENCE_APPLICATION", U7B: "U7_REFERENCE_APPLICATION",
 	U7C: "U7_REFERENCE_APPLICATION", U7D: "U7_REFERENCE_APPLICATION", U7R: "NONE",
 });
 const expectedProductBehavior = Object.freeze({
-	U7P: "INHERITED_UNREPROVEN", U7A: "CANDIDATE_UNRECEIPTED", U7B: "CANDIDATE_UNRECEIPTED",
+	U7P: "INHERITED_UNREPROVEN", U7M: "INHERITED_UNREPROVEN", U7A: "CANDIDATE_UNRECEIPTED", U7B: "CANDIDATE_UNRECEIPTED",
 	U7C: "CANDIDATE_UNRECEIPTED", U7D: "CANDIDATE_UNRECEIPTED", U7R: "SOURCE_RECEIPT_RECONCILIATION",
 });
 const expectedSubjects = Object.freeze({
 	U7P: "chore: lock U7 execution authority",
+	U7M: "fix: adapt inherited P07 receipt verification",
 	U7A: "feat: add U7 reference CLI foundation",
 	U7B: "feat: add U7 HTTP falsification study",
 	U7C: "feat: add U7 CLI decision and contract flow",
@@ -37,11 +40,11 @@ const expectedSubjects = Object.freeze({
 	U7R: "docs: receipt U7 reference milestone",
 });
 const expectedFinalRoots = Object.freeze({
-	U7P: ".countershape/u7p-final", U7A: ".countershape/u7a-final",
+	U7P: ".countershape/u7p-final", U7M: ".countershape/u7m-final", U7A: ".countershape/u7a-final",
 	U7B: ".countershape/u7b-final", U7C: ".countershape/u7c-final",
 	U7D: ".countershape/u7d-final", U7R: ".countershape/u7r-final",
 });
-const expectedClaimCounts = Object.freeze({ U7P: 13, U7A: 12, U7B: 12, U7C: 12, U7D: 13, U7R: 9 });
+const expectedClaimCounts = Object.freeze({ U7P: 13, U7M: 13, U7A: 12, U7B: 12, U7C: 12, U7D: 13, U7R: 9 });
 const u7pExactPaths = Object.freeze([
 	"docs/ARCHITECTURE.md",
 	"docs/HANDOFF_MODE_C.md",
@@ -80,6 +83,22 @@ const expectedTransitionAuthority = Object.freeze({
 		artifact_role: "PREDECESSOR_ROADMAP_DIRECTION_ONLY_NOT_EXACT_U7_TOPOLOGY",
 		preexistence: "DIRECT_PARENT_TREE",
 	}),
+	product_authority: "NONE",
+	product_behavior: "INHERITED_UNREPROVEN",
+	grade_transfer: "NONE",
+});
+const expectedTopologyAmendmentAuthority = Object.freeze({
+	boundary: "U7M",
+	source: "OWNER_OUT_OF_BAND",
+	classification: "OWNER_AUTHORIZED_AUTHORITY_MIGRATION_DEFECT_REPAIR",
+	provenance: Object.freeze({
+		kind: "UNEVIDENCED",
+		disclosure: "OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT",
+	}),
+	authentication: "NOT_ESTABLISHED",
+	signed_authorization: "NOT_IMPLEMENTED",
+	predecessor_declaration: Object.freeze({ kind: "NONE" }),
+	defect: "P07_C3P_RECEIPT_LIVE_ENTRYPOINT_REQUIRES_C6R_OR_C6B_HEAD_SUBJECT_AND_REJECTS_ALL_U7_DESCENDANTS",
 	product_authority: "NONE",
 	product_behavior: "INHERITED_UNREPROVEN",
 	grade_transfer: "NONE",
@@ -173,6 +192,37 @@ const expectedU7PClaims = Object.freeze([
 	Object.freeze({ type: "command-succeeded", label: "U7P scoped staged credential-pattern scan", command: Object.freeze(["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--unit", "U7P", "--credential-scan"]) }),
 	Object.freeze({ type: "command-succeeded", label: "U7P sealed-C6B predecessor and preceding didrun chain integrity", command: Object.freeze(["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--verify-preseal", "U7P"]) }),
 ]);
+const u7mExactPaths = Object.freeze([
+	"docs/ARCHITECTURE.md",
+	"docs/HANDOFF_MODE_C.md",
+	"docs/PROMPT_PACK.md",
+	"docs/STATE_MACHINES.md",
+	"docs/VERIFICATION.md",
+	"docs/prompts/P08-U7-CLI-REFERENCE-STUDIES.md",
+	"docs/status/U7M-P07-RECEIPT-SUCCESSOR-COMPATIBILITY.md",
+	"spec/verification/u7-unit-paths.json",
+	"tools/check-u7-architecture.mjs",
+	"tools/check-u7-architecture-selftest.mjs",
+	"tools/check-u7-plan.mjs",
+	"tools/check-u7-scope.mjs",
+	"tools/verify-current.mjs",
+	"tools/verify-current-selftest.mjs",
+]);
+const expectedU7MClaims = Object.freeze([
+	Object.freeze({ type: "tests-pass", label: "U7M candidate plan and sealed-U7P parent authority", command: Object.freeze(["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--check-candidate", "U7M"]) }),
+	Object.freeze({ type: "tests-pass", label: "U7M independent candidate transition and exact staged authority", command: Object.freeze(["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--unit", "U7M", "--candidate-phase"]) }),
+	Object.freeze({ type: "tests-pass", label: "U7M inherited P07 receipt successor compatibility", command: Object.freeze(["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--verify-inherited-p07-compatibility"]) }),
+	Object.freeze({ type: "tests-pass", label: "U7M plan contract defensive self-test", command: Object.freeze(["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--self-test"]) }),
+	Object.freeze({ type: "tests-pass", label: "U7M independent staged-scope defensive self-test", command: Object.freeze(["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--self-test"]) }),
+	Object.freeze({ type: "tests-pass", label: "U7M final runbook renderer defensive self-test", command: Object.freeze(["/opt/homebrew/bin/node", "tools/print-u7-final-runbook.mjs", "--self-test"]) }),
+	Object.freeze({ type: "tests-pass", label: "U7M zero-product-surface architecture conformance", command: Object.freeze(["/opt/homebrew/bin/node", "tools/check-u7-architecture.mjs", "--phase", "U7M"]) }),
+	Object.freeze({ type: "tests-pass", label: "U7M architecture authority defensive self-test", command: Object.freeze(["/opt/homebrew/bin/node", "tools/check-u7-architecture-selftest.mjs", "--phase", "U7M"]) }),
+	Object.freeze({ type: "tests-pass", label: "U7M cumulative verifier defensive self-test", command: Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current-selftest.mjs"]) }),
+	Object.freeze({ type: "tests-pass", label: "U7M cumulative verification on the exact staged maintenance candidate", command: Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current.mjs"]) }),
+	Object.freeze({ type: "command-succeeded", label: "U7M exact fourteen-path staged scope and diff integrity", command: Object.freeze(["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--unit", "U7M", "--final-gate"]) }),
+	Object.freeze({ type: "command-succeeded", label: "U7M scoped staged credential-pattern scan", command: Object.freeze(["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--unit", "U7M", "--credential-scan"]) }),
+	Object.freeze({ type: "command-succeeded", label: "U7M sealed-U7P predecessor and preceding didrun chain integrity", command: Object.freeze(["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--verify-preseal", "U7M"]) }),
+]);
 const capsuleStart = "<!-- U7-PHASE:START -->";
 const capsuleEnd = "<!-- U7-PHASE:END -->";
 const inheritedP07MarkerBases = Object.freeze([
@@ -187,6 +237,14 @@ const inheritedP07ProtectedPaths = Object.freeze([
 	"tools/check-p07b-c-plan.mjs",
 	"tools/check-p07b-c-unit-scope.mjs",
 ]);
+const inheritedP07C6AuthorityPaths = Object.freeze([
+	"spec/verification/p07b-c-c6a-source-authority.json",
+	"spec/verification/p07b-c-c6a-receipt.json",
+	"docs/captures/p07b-c/c6a-evidence-summary.json",
+	"docs/status/P07B-C-C6-EVIDENCE.md",
+]);
+const inheritedP07C6AuthoritySchema = "countershape/p07b-c-c6a-source-authority/v1";
+const inheritedP07C6SourceSubject = "test: close P07B-C cumulative evidence";
 const maximumTextBytes = 4 * 1024 * 1024;
 
 function fail(code, detail) {
@@ -314,16 +372,17 @@ function sectionBounds(body, heading) {
 }
 
 export function validateSpecification(value) {
-	if (!exactKeys(value, ["schema_version", "transition_authority", "runtime_authority", "inherited_receipts", "receipt_contract", "claim_binding_policy", "sealed_parent", "units"])) fail("SPEC_KEYS", "top-level keys");
-	if (value.schema_version !== "countershape/u7-unit-paths/v1") fail("SCHEMA", String(value.schema_version));
+	if (!exactKeys(value, ["schema_version", "transition_authority", "topology_amendment_authority", "runtime_authority", "inherited_receipts", "receipt_contract", "claim_binding_policy", "sealed_parent", "units"])) fail("SPEC_KEYS", "top-level keys");
+	if (value.schema_version !== "countershape/u7-unit-paths/v2") fail("SCHEMA", String(value.schema_version));
 	if (!isDeepStrictEqual(value.transition_authority, expectedTransitionAuthority)) fail("AUTHORITY", "transition authority must remain exact and explicitly unevidenced");
+	if (!isDeepStrictEqual(value.topology_amendment_authority, expectedTopologyAmendmentAuthority)) fail("AMENDMENT_AUTHORITY", "U7M successor-compatibility repair authority must remain exact and explicitly unevidenced");
 	if (!isDeepStrictEqual(value.runtime_authority, expectedRuntimeAuthority)) fail("RUNTIME_AUTHORITY", "Darwin arm64 and Node major 25 tool epoch must remain exact");
 	if (!isDeepStrictEqual(value.inherited_receipts, expectedInheritedReceipts)) fail("INHERITED_RECEIPTS", "C3P/C3/C6A must remain PRESENT");
 	if (!isDeepStrictEqual(value.receipt_contract, expectedReceiptContract)) fail("RECEIPT_CONTRACT", "U7D study evidence and U7R projection authority must remain exact");
 	if (!isDeepStrictEqual(value.claim_binding_policy, expectedClaimBindingPolicy)) fail("CLAIM_BINDING_POLICY", "event, pathspec, recorded child-process interval, and operational writer authority must remain explicit");
 	if (!isDeepStrictEqual(value.sealed_parent, expectedSealedParent)) fail("SEALED_PARENT", "C6B identity drift");
 	if (!Array.isArray(value.units) || value.units.length !== unitOrder.length ||
-		!isDeepStrictEqual(value.units.map((unit) => unit?.id), unitOrder)) fail("UNIT_ORDER", "expected U7P,U7A,U7B,U7C,U7D,U7R");
+		!isDeepStrictEqual(value.units.map((unit) => unit?.id), unitOrder)) fail("UNIT_ORDER", "expected U7P,U7M,U7A,U7B,U7C,U7D,U7R");
 
 	for (const unit of value.units) {
 		if (!exactKeys(unit, ["id", "parent", "verification_profile", "product_authority", "product_behavior", "u7d_receipt_state", "subject", "final_root", "allowed_paths", "required_paths", "claims"])) {
@@ -353,7 +412,10 @@ export function validateSpecification(value) {
 	const u7p = value.units[0];
 	if (!isDeepStrictEqual(u7p.allowed_paths, u7pExactPaths) || !isDeepStrictEqual(u7p.required_paths, u7pExactPaths) ||
 		!isDeepStrictEqual(normalizeClaims(u7p.claims), normalizeClaims(expectedU7PClaims))) fail("U7P_CONTRACT", "exact U7P scope or claims drift");
-	for (const unit of value.units.slice(1)) {
+	const u7m = value.units[1];
+	if (!isDeepStrictEqual(u7m.allowed_paths, u7mExactPaths) || !isDeepStrictEqual(u7m.required_paths, u7mExactPaths) ||
+		!isDeepStrictEqual(normalizeClaims(u7m.claims), normalizeClaims(expectedU7MClaims))) fail("U7M_CONTRACT", "exact U7M scope or claims drift");
+	for (const unit of value.units.slice(2)) {
 		for (const protectedPath of [
 			"spec/verification/u7-unit-paths.json", "tools/check-u7-plan.mjs", "tools/check-u7-scope.mjs",
 			"tools/check-u7-architecture.mjs", "tools/check-u7-architecture-selftest.mjs",
@@ -563,7 +625,7 @@ export function parsePhaseCapsule(text) {
 	if (start < currentState.start || end >= currentState.end || !/^\s*$/u.test(text.slice(currentState.start, start))) fail("CAPSULE_JURISDICTION", "first authority in Current state");
 	requireVisibleMarkers(text, capsuleStart, capsuleEnd, "U7_PHASE");
 	const body = text.slice(start, end + capsuleEnd.length);
-	const match = /^<!-- U7-PHASE:START -->\n### Active U7 phase contract\n\n- \*\*Namespace:\*\* `countershape\/u7-unit-paths\/v1`\n- \*\*Boundary:\*\* `([A-Z0-9]+)`\n- \*\*Parent:\*\* `([A-Z0-9.]+)`\n- \*\*Verification profile:\*\* `(SOURCE_FULL|RECEIPT_RECONCILIATION)`\n- \*\*State:\*\* `(SOURCE_CANDIDATE|RECEIPT_CANDIDATE)`\n- \*\*Topology:\*\* `U7P -> U7A -> U7B -> U7C -> U7D -> U7R`\n- \*\*Inherited receipts:\*\* `C3P=PRESENT; C3=PRESENT; C6A=PRESENT`\n- \*\*Receipt U7D:\*\* `(ABSENT|PRESENT)`\n- \*\*Product authority:\*\* `(NONE|U7_REFERENCE_APPLICATION)`\n- \*\*Product behavior:\*\* `(INHERITED_UNREPROVEN|CANDIDATE_UNRECEIPTED|SOURCE_RECEIPT_RECONCILIATION)`\n<!-- U7-PHASE:END -->$/u.exec(body);
+	const match = /^<!-- U7-PHASE:START -->\n### Active U7 phase contract\n\n- \*\*Namespace:\*\* `countershape\/u7-unit-paths\/v2`\n- \*\*Boundary:\*\* `([A-Z0-9]+)`\n- \*\*Parent:\*\* `([A-Z0-9.]+)`\n- \*\*Verification profile:\*\* `(SOURCE_FULL|RECEIPT_RECONCILIATION)`\n- \*\*State:\*\* `(SOURCE_CANDIDATE|RECEIPT_CANDIDATE)`\n- \*\*Topology:\*\* `U7P -> U7M -> U7A -> U7B -> U7C -> U7D -> U7R`\n- \*\*Inherited receipts:\*\* `C3P=PRESENT; C3=PRESENT; C6A=PRESENT`\n- \*\*Receipt U7D:\*\* `(ABSENT|PRESENT)`\n- \*\*Product authority:\*\* `(NONE|U7_REFERENCE_APPLICATION)`\n- \*\*Product behavior:\*\* `(INHERITED_UNREPROVEN|CANDIDATE_UNRECEIPTED|SOURCE_RECEIPT_RECONCILIATION)`\n<!-- U7-PHASE:END -->$/u.exec(body);
 	if (!match) fail("CAPSULE_SHAPE", body.slice(0, 512));
 	return Object.freeze({ boundary: match[1], parent: match[2], profile: match[3], state: match[4], receipt: match[5], productAuthority: match[6], productBehavior: match[7] });
 }
@@ -778,7 +840,7 @@ export async function checkCandidate(unitID, writeSuccess = (line) => console.lo
 	const handoffText = decodeUTF8(await readRegular(handoffPath), "HANDOFF");
 	const capsule = parsePhaseCapsule(handoffText);
 	const expectedState = unit.verification_profile === "SOURCE_FULL" ? "SOURCE_CANDIDATE" : "RECEIPT_CANDIDATE";
-	const expectedBehavior = unit.id === "U7P" ? "INHERITED_UNREPROVEN" : unit.id === "U7R" ? "SOURCE_RECEIPT_RECONCILIATION" : "CANDIDATE_UNRECEIPTED";
+	const expectedBehavior = expectedProductBehavior[unit.id];
 	if (!isDeepStrictEqual(capsule, {
 		boundary: unit.id, parent: unit.parent, profile: unit.verification_profile, state: expectedState,
 		receipt: unit.u7d_receipt_state, productAuthority: unit.product_authority, productBehavior: expectedBehavior,
@@ -821,17 +883,134 @@ function inheritedP07CompatibilityInputs(specification) {
 	return Object.freeze({ parentHandoff, candidateHandoff, parentProtected, candidateProtected });
 }
 
+function parseInheritedP07C6AuthorityManifest(bytes) {
+	let manifest;
+	try { manifest = JSON.parse(decodeUTF8(bytes, "sealed C6A source-authority manifest")); }
+	catch (error) { fail("P07_C6A_AUTHORITY_JSON", error.message); }
+	const keys = [
+		"schema_version", "source_commit", "source_tree", "source_parent", "source_subject",
+		"note_ref", "note_type", "note_blob", "note_body_sha256", "secrets_override", "claims",
+	];
+	if (!exactKeys(manifest, keys) || manifest.schema_version !== inheritedP07C6AuthoritySchema ||
+		manifest.source_subject !== inheritedP07C6SourceSubject || manifest.note_ref !== "refs/notes/didrun" ||
+		manifest.note_type !== "blob" || typeof manifest.secrets_override !== "boolean" ||
+		![manifest.source_commit, manifest.source_tree, manifest.source_parent, manifest.note_blob]
+			.every((value) => typeof value === "string" && /^[0-9a-f]{40}$/u.test(value)) ||
+		typeof manifest.note_body_sha256 !== "string" || !/^[0-9a-f]{64}$/u.test(manifest.note_body_sha256) ||
+		!Array.isArray(manifest.claims) || manifest.claims.length !== 11 ||
+		new Set(manifest.claims.map((claim) => claim?.label)).size !== manifest.claims.length ||
+		manifest.claims.some((claim) => !exactKeys(claim, ["label", "type", "grade"]) ||
+			typeof claim.label !== "string" || claim.label.length === 0 ||
+			!["tests-pass", "command-succeeded"].includes(claim.type) || claim.grade !== "TREE-EXACT") ||
+		!bytes.equals(Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`, "utf8"))) {
+		fail("P07_C6A_AUTHORITY_MANIFEST", "sealed canonical source authority");
+	}
+	return Object.freeze(manifest);
+}
+
+function inheritedP07C6AuthorityInputs(specification) {
+	const sealedCommit = specification.sealed_parent.commit;
+	const sealedTracked = new Map();
+	const candidateTracked = new Map();
+	for (const path of inheritedP07C6AuthorityPaths) {
+		sealedTracked.set(path, gitBytes(["show", `${sealedCommit}:${path}`]));
+		candidateTracked.set(path, gitBytes(["show", `:${path}`]));
+	}
+	const manifest = parseInheritedP07C6AuthorityManifest(sealedTracked.get(inheritedP07C6AuthorityPaths[0]));
+	const sourceCommit = gitLine(["rev-parse", "--verify", `${manifest.source_commit}^{commit}`], "sealed C6A source commit");
+	const source = Object.freeze({
+		commit: sourceCommit,
+		tree: gitLine(["rev-parse", "--verify", `${sourceCommit}^{tree}`], "sealed C6A source tree"),
+		parent: gitLine(["show", "-s", "--format=%P", sourceCommit], "sealed C6A source parent"),
+		subject: gitLine(["show", "-s", "--format=%s", sourceCommit], "sealed C6A source subject"),
+		noteBlob: gitLine(["notes", "--ref=didrun", "list", sourceCommit], "sealed C6A note blob"),
+	});
+	const noteBytes = gitBytes(["cat-file", "blob", source.noteBlob]);
+	const sealedSourceSummary = gitBytes(["show", `${source.tree}:${inheritedP07C6AuthorityPaths[2]}`]);
+	return Object.freeze({ sealedTracked, candidateTracked, source, noteBytes, sealedSourceSummary });
+}
+
+export function validateInheritedP07C6Authority(inputs) {
+	if (!exactKeys(inputs, ["sealedTracked", "candidateTracked", "source", "noteBytes", "sealedSourceSummary"]) ||
+		!(inputs.sealedTracked instanceof Map) || !(inputs.candidateTracked instanceof Map) ||
+		!isDeepStrictEqual([...inputs.sealedTracked.keys()], inheritedP07C6AuthorityPaths) ||
+		!isDeepStrictEqual([...inputs.candidateTracked.keys()], inheritedP07C6AuthorityPaths) ||
+		!Buffer.isBuffer(inputs.noteBytes) || !Buffer.isBuffer(inputs.sealedSourceSummary)) {
+		fail("P07_C6A_AUTHORITY_INPUT", "exact sealed/current authority corpus");
+	}
+	for (const path of inheritedP07C6AuthorityPaths) {
+		const sealed = inputs.sealedTracked.get(path); const candidate = inputs.candidateTracked.get(path);
+		if (!Buffer.isBuffer(sealed) || !Buffer.isBuffer(candidate) || !candidate.equals(sealed)) {
+			fail("P07_C6A_AUTHORITY_PROJECTION", path);
+		}
+	}
+	const manifest = parseInheritedP07C6AuthorityManifest(inputs.sealedTracked.get(inheritedP07C6AuthorityPaths[0]));
+	if (!exactKeys(inputs.source, ["commit", "tree", "parent", "subject", "noteBlob"]) ||
+		inputs.source.commit !== manifest.source_commit || inputs.source.tree !== manifest.source_tree ||
+		inputs.source.parent !== manifest.source_parent || inputs.source.subject !== manifest.source_subject ||
+		inputs.source.noteBlob !== manifest.note_blob ||
+		createHash("sha256").update(inputs.noteBytes).digest("hex") !== manifest.note_body_sha256) {
+		fail("P07_C6A_AUTHORITY_IDENTITY", manifest.source_commit);
+	}
+	const sealedSummary = inputs.sealedTracked.get(inheritedP07C6AuthorityPaths[2]);
+	if (!inputs.sealedSourceSummary.equals(sealedSummary)) {
+		fail("P07_C6A_AUTHORITY_SUMMARY", inheritedP07C6AuthorityPaths[2]);
+	}
+	return Object.freeze({
+		commit: manifest.source_commit, tree: manifest.source_tree, parent: manifest.source_parent,
+		subject: manifest.source_subject, noteBlob: manifest.note_blob,
+		noteBodySHA256: manifest.note_body_sha256, secretsOverride: manifest.secrets_override,
+	});
+}
+
+async function runInheritedP07SuccessorPlan(authority, plan = checkInheritedP07Plan) {
+	const errors = await plan(
+		repositoryRoot, new Map(), ...Array(9).fill(undefined), "C6B", "C6B", undefined, authority,
+	);
+	if (!Array.isArray(errors) || errors.some((error) => typeof error !== "string")) {
+		fail("P07_SUCCESSOR_PLAN_RESULT", "legacy checker returned malformed result");
+	}
+	if (errors.length !== 0) fail("P07_SUCCESSOR_PLAN", errors.join(" | "));
+}
+
+async function inheritedP07CompositeSnapshot(unit) {
+	return Object.freeze({
+		candidate: await candidateSnapshot(unit),
+		notesTree: gitLine(["rev-parse", "--verify", "refs/notes/didrun^{tree}"], "inherited P07 notes tree"),
+	});
+}
+
+function sameInheritedP07CompositeSnapshot(left, right) {
+	return left?.notesTree === right?.notesTree && sameCandidateSnapshot(left?.candidate, right?.candidate);
+}
+
 export async function verifyInheritedP07Compatibility(dependencies = {}) {
 	const specification = dependencies.specification ?? await loadSpecification();
 	const capsule = dependencies.capsule ?? await loadPhaseCapsule();
+	const unit = unitByID(specification, capsule.boundary);
 	const candidate = dependencies.candidate ?? checkCandidate;
 	const validate = dependencies.validate ?? validateInheritedP07Compatibility;
+	const validateAuthority = dependencies.validateAuthority ?? validateInheritedP07C6Authority;
+	const runPlan = dependencies.runPlan ?? runInheritedP07SuccessorPlan;
+	const snapshot = dependencies.snapshot ?? inheritedP07CompositeSnapshot;
+	const reload = dependencies.reload ?? loadSpecification;
 	const write = dependencies.write ?? ((line) => console.log(line));
+	const before = await snapshot(unit);
 	await candidate(capsule.boundary, () => {});
 	const inputs = dependencies.inputs ?? inheritedP07CompatibilityInputs(specification);
 	const result = validate(inputs.parentHandoff, inputs.candidateHandoff, inputs.parentProtected, inputs.candidateProtected);
-	write(`U7 inherited P07 compatibility exact: parent=C6B blocks=${result.blocks} protected_paths=${result.protectedPaths} legacy_live_selftest=RETIRED_SUCCESSOR_INCOMPATIBLE`);
-	return result;
+	const authorityInputs = dependencies.authorityInputs ?? inheritedP07C6AuthorityInputs(specification);
+	const authority = validateAuthority(authorityInputs);
+	await runPlan(authority);
+	await candidate(capsule.boundary, () => {});
+	const reloaded = await reload();
+	const after = await snapshot(unit);
+	if (!sameInheritedP07CompositeSnapshot(before, after) || !isDeepStrictEqual(specification, reloaded)) {
+		fail("P07_SUCCESSOR_AUTHORITY_CHANGED", capsule.boundary);
+	}
+	const combined = Object.freeze({ blocks: result.blocks, protectedPaths: result.protectedPaths, c3pPlan: "FULL_EXPLICIT_C6A_AUTHORITY" });
+	write(`U7 inherited P07 compatibility exact: parent=C6B blocks=${result.blocks} protected_paths=${result.protectedPaths} c3p_plan=FULL_EXPLICIT_C6A_AUTHORITY legacy_live_entrypoints=RETIRED_SUCCESSOR_INCOMPATIBLE`);
+	return combined;
 }
 
 async function requireAbsentNoFollow(path, label) {
@@ -1469,7 +1648,7 @@ function validateReceiptPhase(unitID, handoffText) {
 	const receiptEnds = occurrenceCount(handoffText, receiptBlockEnd);
 	const pendingStarts = occurrenceCount(handoffText, pendingReceiptBlockStart);
 	const pendingEnds = occurrenceCount(handoffText, pendingReceiptBlockEnd);
-	if (["U7P", "U7A", "U7B", "U7C"].includes(unitID) ? receiptStarts + receiptEnds + pendingStarts + pendingEnds !== 0 :
+	if (["U7P", "U7M", "U7A", "U7B", "U7C"].includes(unitID) ? receiptStarts + receiptEnds + pendingStarts + pendingEnds !== 0 :
 		unitID === "U7D" ? receiptStarts !== 0 || receiptEnds !== 0 || pendingStarts !== 1 || pendingEnds !== 1 :
 		unitID === "U7R" ? receiptStarts !== 1 || receiptEnds !== 1 || pendingStarts !== 0 || pendingEnds !== 0 : true) {
 		fail("RECEIPT_PHASE", `${unitID}:${receiptStarts}:${receiptEnds}:${pendingStarts}:${pendingEnds}`);
@@ -2381,6 +2560,7 @@ export async function selfTest() {
 	const mutations = [
 		["SPEC_KEYS", (value) => { value.extra = true; }],
 		["AUTHORITY", (value) => { value.transition_authority.provenance = "CITED_UNAUTHENTICATED"; }],
+		["AMENDMENT_AUTHORITY", (value) => { value.topology_amendment_authority.authentication = "ESTABLISHED"; }],
 		["RECEIPT_CONTRACT", (value) => { value.receipt_contract.study_run_count_per_domain = 2; }],
 		["CLAIM_BINDING_POLICY", (value) => { value.claim_binding_policy.pathspecs = "EMPTY"; }],
 		["CLAIM_BINDING_POLICY", (value) => { value.claim_binding_policy.recorded_child_process_intervals = "ALLOW_OVERLAP"; }],
@@ -2402,9 +2582,10 @@ export async function selfTest() {
 			[value.units[0].required_paths[0], value.units[0].required_paths[1]] = [value.units[0].required_paths[1], value.units[0].required_paths[0]];
 		}],
 		["U7P_CONTRACT", (value) => { value.units[0].claims[7].label += " altered"; }],
+		["U7M_CONTRACT", (value) => { value.units[1].claims[2].label += " altered"; }],
 		["FUTURE_CONTROL_PLANE_OWNERSHIP", (value) => {
-			value.units[1].allowed_paths.push("tools/verify-current.mjs");
-			value.units[1].required_paths.push("tools/verify-current.mjs");
+			value.units[2].allowed_paths.push("tools/verify-current.mjs");
+			value.units[2].required_paths.push("tools/verify-current.mjs");
 		}],
 	];
 	for (const [token, mutate] of mutations) {
@@ -2426,12 +2607,17 @@ export async function selfTest() {
 		catch (error) { if (String(error.message).includes(token)) continue; fail("SELFTEST_INTERVAL_WRONG_REJECTION", `${token}:${error.message}`); }
 		fail("SELFTEST_INTERVAL_FALSE_NEGATIVE", token);
 	}
-	const capsuleBlock = `${capsuleStart}\n### Active U7 phase contract\n\n- **Namespace:** \`countershape/u7-unit-paths/v1\`\n- **Boundary:** \`U7P\`\n- **Parent:** \`C6B\`\n- **Verification profile:** \`SOURCE_FULL\`\n- **State:** \`SOURCE_CANDIDATE\`\n- **Topology:** \`U7P -> U7A -> U7B -> U7C -> U7D -> U7R\`\n- **Inherited receipts:** \`C3P=PRESENT; C3=PRESENT; C6A=PRESENT\`\n- **Receipt U7D:** \`ABSENT\`\n- **Product authority:** \`NONE\`\n- **Product behavior:** \`INHERITED_UNREPROVEN\`\n${capsuleEnd}`;
+	const capsuleBlock = `${capsuleStart}\n### Active U7 phase contract\n\n- **Namespace:** \`countershape/u7-unit-paths/v2\`\n- **Boundary:** \`U7P\`\n- **Parent:** \`C6B\`\n- **Verification profile:** \`SOURCE_FULL\`\n- **State:** \`SOURCE_CANDIDATE\`\n- **Topology:** \`U7P -> U7M -> U7A -> U7B -> U7C -> U7D -> U7R\`\n- **Inherited receipts:** \`C3P=PRESENT; C3=PRESENT; C6A=PRESENT\`\n- **Receipt U7D:** \`ABSENT\`\n- **Product authority:** \`NONE\`\n- **Product behavior:** \`INHERITED_UNREPROVEN\`\n${capsuleEnd}`;
 	const capsule = `# U7 fixture\n\n## Current state\n\n${capsuleBlock}\n\nFrozen compatibility follows.\n\n## History\n\nNone.\n`;
 	if (!isDeepStrictEqual(parsePhaseCapsule(capsule), {
 		boundary: "U7P", parent: "C6B", profile: "SOURCE_FULL", state: "SOURCE_CANDIDATE", receipt: "ABSENT",
 		productAuthority: "NONE", productBehavior: "INHERITED_UNREPROVEN",
 	})) fail("SELFTEST_CAPSULE", "positive");
+	const u7mCapsule = capsule.replace("- **Boundary:** `U7P`", "- **Boundary:** `U7M`").replace("- **Parent:** `C6B`", "- **Parent:** `U7P`");
+	if (!isDeepStrictEqual(parsePhaseCapsule(u7mCapsule), {
+		boundary: "U7M", parent: "U7P", profile: "SOURCE_FULL", state: "SOURCE_CANDIDATE", receipt: "ABSENT",
+		productAuthority: "NONE", productBehavior: "INHERITED_UNREPROVEN",
+	})) fail("SELFTEST_CAPSULE", "U7M positive");
 	for (const hostile of [
 		capsule.replace("SOURCE_FULL", "SOURCE_PARTIAL"), `${capsule}\n${capsuleBlock}`,
 		capsule.replace("SOURCE_CANDIDATE", "SEALED"),
@@ -2443,6 +2629,7 @@ export async function selfTest() {
 		fail("SELFTEST_CAPSULE_FALSE_NEGATIVE", hostile.slice(0, 80));
 	}
 	validateReceiptPhase("U7P", capsule);
+	validateReceiptPhase("U7M", u7mCapsule);
 	const u7dReceiptFixture = `# U7D\n\n## Current state\n\n${pendingReceiptBlock}\n\n## History\n\nFrozen.\n`;
 	const u7dStatusFixture = `# U7D evidence\n\n## Source receipt\n\n${pendingReceiptBlock}\n`;
 	const u7rReceiptFixture = u7dReceiptFixture.replace(pendingReceiptBlock, `${receiptBlockStart}\nsealed\n${receiptBlockEnd}`);
@@ -2504,33 +2691,102 @@ export async function selfTest() {
 	expectP07Refusal("protected-byte", "P07_COMPATIBILITY_PROTECTED_PATH", (_handoff, protectedPaths) => {
 		protectedPaths.set(inheritedP07ProtectedPaths[0], Buffer.from("hostile\n", "utf8"));
 	});
+	const p07AuthorityInputs = inheritedP07C6AuthorityInputs(base);
+	const p07Authority = validateInheritedP07C6Authority(p07AuthorityInputs);
+	if (!isDeepStrictEqual(Object.keys(p07Authority).sort(), [
+		"commit", "noteBlob", "noteBodySHA256", "parent", "secretsOverride", "subject", "tree",
+	])) fail("SELFTEST_P07_C6A_AUTHORITY", "positive shape");
+	const cloneAuthorityInputs = () => ({
+		sealedTracked: new Map([...p07AuthorityInputs.sealedTracked].map(([path, bytes]) => [path, Buffer.from(bytes)])),
+		candidateTracked: new Map([...p07AuthorityInputs.candidateTracked].map(([path, bytes]) => [path, Buffer.from(bytes)])),
+		source: { ...p07AuthorityInputs.source },
+		noteBytes: Buffer.from(p07AuthorityInputs.noteBytes),
+		sealedSourceSummary: Buffer.from(p07AuthorityInputs.sealedSourceSummary),
+	});
+	const authorityHostiles = [
+		["P07_C6A_AUTHORITY_PROJECTION", (value) => { value.candidateTracked.set(inheritedP07C6AuthorityPaths[1], Buffer.from("{}\n")); }],
+		["P07_C6A_AUTHORITY_JSON", (value) => {
+			value.sealedTracked.set(inheritedP07C6AuthorityPaths[0], Buffer.from("{\n"));
+			value.candidateTracked.set(inheritedP07C6AuthorityPaths[0], Buffer.from("{\n"));
+		}],
+		["P07_C6A_AUTHORITY_IDENTITY", (value) => { value.source.tree = "f".repeat(40); }],
+		["P07_C6A_AUTHORITY_IDENTITY", (value) => { value.noteBytes = Buffer.from("hostile note\n"); }],
+		["P07_C6A_AUTHORITY_SUMMARY", (value) => { value.sealedSourceSummary = Buffer.from("hostile summary\n"); }],
+	];
+	for (const [token, mutate] of authorityHostiles) {
+		const hostile = cloneAuthorityInputs(); mutate(hostile);
+		try { validateInheritedP07C6Authority(hostile); }
+		catch (error) { if (String(error.message).includes(token)) continue; fail("SELFTEST_P07_C6A_AUTHORITY_WRONG_REJECTION", `${token}:${error.message}`); }
+		fail("SELFTEST_P07_C6A_AUTHORITY_FALSE_NEGATIVE", token);
+	}
+	let capturedPlanArgs;
+	await runInheritedP07SuccessorPlan(p07Authority, async (...args) => { capturedPlanArgs = args; return []; });
+	if (!Array.isArray(capturedPlanArgs) || capturedPlanArgs.length !== 15 || capturedPlanArgs[0] !== repositoryRoot ||
+		!(capturedPlanArgs[1] instanceof Map) || capturedPlanArgs[1].size !== 0 ||
+		capturedPlanArgs.slice(2, 11).some((value) => value !== undefined) ||
+		capturedPlanArgs[11] !== "C6B" || capturedPlanArgs[12] !== "C6B" || capturedPlanArgs[13] !== undefined ||
+		capturedPlanArgs[14] !== p07Authority) {
+		fail("SELFTEST_P07_SUCCESSOR_PLAN_ARGUMENTS", JSON.stringify(capturedPlanArgs));
+	}
+	const planResultHostiles = [
+		["P07_SUCCESSOR_PLAN_RESULT", undefined],
+		["P07_SUCCESSOR_PLAN_RESULT", [42]],
+		["P07_SUCCESSOR_PLAN", ["legacy plan error"]],
+	];
+	for (const [token, resultValue] of planResultHostiles) {
+		try { await runInheritedP07SuccessorPlan(p07Authority, async () => resultValue); }
+		catch (error) { if (String(error.message).includes(token)) continue; fail("SELFTEST_P07_SUCCESSOR_PLAN_WRONG_REJECTION", `${token}:${error.message}`); }
+		fail("SELFTEST_P07_SUCCESSOR_PLAN_FALSE_NEGATIVE", token);
+	}
+	let planThrowObserved = false;
+	try { await runInheritedP07SuccessorPlan(p07Authority, async () => { throw new Error("legacy plan threw"); }); }
+	catch (error) { if (String(error.message) === "legacy plan threw") planThrowObserved = true; else throw error; }
+	if (!planThrowObserved) fail("SELFTEST_P07_SUCCESSOR_PLAN_FALSE_GREEN", "throw");
 	const compatibilityWrites = [];
 	const compatibilityOrder = [];
 	let compatibilityCandidateCalls = 0;
+	let compatibilitySnapshots = 0;
+	const stableCompositeSnapshot = Object.freeze({
+		candidate: Object.freeze({ head: "1".repeat(40), indexTree: "2".repeat(40), paths: Object.freeze([]), blobDigests: Object.freeze([]) }),
+		notesTree: "3".repeat(40),
+	});
 	const compositeResult = await verifyInheritedP07Compatibility({
 		specification: base, capsule: Object.freeze({ boundary: "U7P" }),
 		candidate: async (boundary, writeSuccess) => {
-			compatibilityOrder.push("candidate");
+			compatibilityOrder.push(`candidate-${compatibilityCandidateCalls + 1}`);
 			compatibilityCandidateCalls += 1;
 			if (boundary !== "U7P") fail("SELFTEST_P07_COMPATIBILITY_WRAPPER_BOUNDARY", boundary);
 			writeSuccess("nested candidate narration must be suppressed");
 		},
+		snapshot: async () => { compatibilityOrder.push(`snapshot-${compatibilitySnapshots + 1}`); compatibilitySnapshots += 1; return stableCompositeSnapshot; },
 		get inputs() {
-			compatibilityOrder.push("snapshot");
+			compatibilityOrder.push("compatibility-inputs");
 			return Object.freeze({ parentHandoff: "", candidateHandoff: "", parentProtected: new Map(), candidateProtected: new Map() });
 		},
 		validate: () => { compatibilityOrder.push("validate"); return Object.freeze({ blocks: 11, protectedPaths: 4 }); },
+		get authorityInputs() { compatibilityOrder.push("authority-inputs"); return Object.freeze({}); },
+		validateAuthority: () => { compatibilityOrder.push("validate-authority"); return p07Authority; },
+		runPlan: async (authority) => {
+			compatibilityOrder.push("plan");
+			if (!isDeepStrictEqual(authority, p07Authority)) fail("SELFTEST_P07_COMPATIBILITY_PLAN_AUTHORITY", "drift");
+		},
+		reload: async () => { compatibilityOrder.push("reload"); return base; },
 		write: (line) => { compatibilityOrder.push("write"); compatibilityWrites.push(line); },
 	});
-	const compatibilityLine = "U7 inherited P07 compatibility exact: parent=C6B blocks=11 protected_paths=4 legacy_live_selftest=RETIRED_SUCCESSOR_INCOMPATIBLE";
-	if (compatibilityCandidateCalls !== 1 || !isDeepStrictEqual(compositeResult, { blocks: 11, protectedPaths: 4 }) ||
-		!isDeepStrictEqual(compatibilityWrites, [compatibilityLine]) || !isDeepStrictEqual(compatibilityOrder, ["candidate", "snapshot", "validate", "write"])) {
+	const compatibilityLine = "U7 inherited P07 compatibility exact: parent=C6B blocks=11 protected_paths=4 c3p_plan=FULL_EXPLICIT_C6A_AUTHORITY legacy_live_entrypoints=RETIRED_SUCCESSOR_INCOMPATIBLE";
+	if (compatibilityCandidateCalls !== 2 || compatibilitySnapshots !== 2 ||
+		!isDeepStrictEqual(compositeResult, { blocks: 11, protectedPaths: 4, c3pPlan: "FULL_EXPLICIT_C6A_AUTHORITY" }) ||
+		!isDeepStrictEqual(compatibilityWrites, [compatibilityLine]) || !isDeepStrictEqual(compatibilityOrder, [
+			"snapshot-1", "candidate-1", "compatibility-inputs", "validate", "authority-inputs",
+			"validate-authority", "plan", "candidate-2", "reload", "snapshot-2", "write",
+		])) {
 		fail("SELFTEST_P07_COMPATIBILITY_WRAPPER_OUTPUT", JSON.stringify({ compatibilityCandidateCalls, compositeResult, compatibilityWrites, compatibilityOrder }));
 	}
 	let candidateFailureObserved = false;
 	try {
 		await verifyInheritedP07Compatibility({
 			specification: base, capsule: Object.freeze({ boundary: "U7P" }),
+			snapshot: async () => stableCompositeSnapshot,
 			candidate: async () => { throw new Error("candidate refused"); },
 			get inputs() { fail("SELFTEST_P07_COMPATIBILITY_FAILURE_SNAPSHOT", "candidate refusal"); },
 			validate: () => Object.freeze({ blocks: 11, protectedPaths: 4 }),
@@ -2541,8 +2797,41 @@ export async function selfTest() {
 		else throw error;
 	}
 	if (!candidateFailureObserved) fail("SELFTEST_P07_COMPATIBILITY_FAILURE_FALSE_GREEN", "candidate refusal");
+	let planFailureObserved = false;
+	try {
+		await verifyInheritedP07Compatibility({
+			specification: base, capsule: Object.freeze({ boundary: "U7P" }), snapshot: async () => stableCompositeSnapshot,
+			candidate: async () => {},
+			inputs: Object.freeze({ parentHandoff: "", candidateHandoff: "", parentProtected: new Map(), candidateProtected: new Map() }),
+			validate: () => Object.freeze({ blocks: 11, protectedPaths: 4 }), authorityInputs: Object.freeze({}),
+			validateAuthority: () => p07Authority, runPlan: async () => { throw new Error("plan refused"); },
+			write: () => fail("SELFTEST_P07_COMPATIBILITY_FAILURE_NARRATED", "plan refusal"),
+		});
+	} catch (error) {
+		if (String(error.message) === "plan refused") planFailureObserved = true;
+		else throw error;
+	}
+	if (!planFailureObserved) fail("SELFTEST_P07_COMPATIBILITY_FAILURE_FALSE_GREEN", "plan refusal");
+	let snapshotFailureObserved = false; let reloadIntroducedDrift = false;
+	try {
+		await verifyInheritedP07Compatibility({
+			specification: base, capsule: Object.freeze({ boundary: "U7P" }),
+			snapshot: async () => reloadIntroducedDrift ?
+				Object.freeze({ ...stableCompositeSnapshot, notesTree: "4".repeat(40) }) : stableCompositeSnapshot,
+			candidate: async () => {},
+			inputs: Object.freeze({ parentHandoff: "", candidateHandoff: "", parentProtected: new Map(), candidateProtected: new Map() }),
+			validate: () => Object.freeze({ blocks: 11, protectedPaths: 4 }), authorityInputs: Object.freeze({}),
+			validateAuthority: () => p07Authority, runPlan: async () => {},
+			reload: async () => { reloadIntroducedDrift = true; return base; },
+			write: () => fail("SELFTEST_P07_COMPATIBILITY_FAILURE_NARRATED", "snapshot drift"),
+		});
+	} catch (error) {
+		if (String(error.message).includes("P07_SUCCESSOR_AUTHORITY_CHANGED")) snapshotFailureObserved = true;
+		else throw error;
+	}
+	if (!snapshotFailureObserved) fail("SELFTEST_P07_COMPATIBILITY_FAILURE_FALSE_GREEN", "snapshot drift");
 	const recoveryHostiles = await selfTestFailedAttemptRecovery(base);
-	console.log(`U7 plan contract defensive self-test passed: ${mutations.length} schema/authority mutations, ${intervalHostiles.length} recorded child-process interval refusals, 6 visible phase-capsule mutations, 4 cross-phase receipt refusals, ${pendingSetHostiles.length} pending-projection refusals, 4 inherited-P07 compatibility refusals, 2 compatibility-wrapper cases, ${recoveryHostiles} failed-attempt recovery refusals, exact U7P manifest, and deterministic hermetic-prefix control`);
+	console.log(`U7 plan contract defensive self-test passed: ${mutations.length} schema/authority mutations, ${intervalHostiles.length} recorded child-process interval refusals, 6 visible phase-capsule mutations, 4 cross-phase receipt refusals, ${pendingSetHostiles.length} pending-projection refusals, 4 inherited-P07 compatibility refusals, ${authorityHostiles.length} sealed-C6A authority refusals, 5 legacy-plan call-contract cases, 4 compatibility-wrapper cases, ${recoveryHostiles} failed-attempt recovery refusals, exact U7P/U7M manifests, and deterministic hermetic-prefix control`);
 }
 
 async function main() {

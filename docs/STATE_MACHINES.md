@@ -59,6 +59,8 @@ U7 adds a distinct namespace above the frozen P07/C6 receipt machine. It does no
 C6B_SEALED
   -> U7P_SOURCE_CANDIDATE
   -> U7P_SEALED
+  -> U7M_SOURCE_CANDIDATE
+  -> U7M_SEALED
   -> U7A_SOURCE_CANDIDATE
   -> U7A_SEALED
   -> U7B_SOURCE_CANDIDATE
@@ -72,16 +74,17 @@ C6B_SEALED
 ```
 
 - `C6B_SEALED -> U7P_SOURCE_CANDIDATE` is owner-selected roadmap activation. Sealed P08 supplied only prose direction; the exact topology was not machine-predeclared. The transition is therefore `OWNER_OUT_OF_BAND`, `UNEVIDENCED`, unauthenticated, unsigned, product-authority `NONE`, product-behavior `INHERITED_UNREPROVEN`, and grade-transfer `NONE`.
+- `U7P_SEALED -> U7M_SOURCE_CANDIDATE` is an owner-selected verifier-maintenance amendment after the ordinary C3P wrapper proved ambient-HEAD-coupled and successor-incompatible. The amendment is `OWNER_OUT_OF_BAND`, `OWNER_AUTHORIZED_AUTHORITY_MIGRATION_DEFECT_REPAIR`, `UNEVIDENCED`, unauthenticated, unsigned, product-authority `NONE`, product-behavior `INHERITED_UNREPROVEN`, and grade-transfer `NONE`.
 - Every `*_SOURCE_CANDIDATE -> *_SEALED` edge requires the exact parent-predeclared path roster and ordered command/claim manifest, a stable staged candidate, one root-owned didrun writer, exact commit/note/seal ancestry, explicit-commit strict exit `0`, an exact HTML witness, and a closed commit-addressed ledger archive. The operational writer cannot enter a later fence or mutate repository/evidence state until every yielded wrapper and relevant child is process-terminal. Development evidence and parent grades do not satisfy the edge.
 - The recorded child-process interval serialization gate requires every validated U7 ledger event interval to be finite and nonreversed and each ledger-ordered `started_at` to be at or after the preceding `ended_at`. Current preseal covers its declared command roster; archived U7 ancestry and U7D local evidence also include the final unclaimed note-inspection event. This proves only ordering of didrun's recorded wall-clock intervals around top-level children. It does not prove wrapper, claim, Git, seal, recovery, archive, or detached-descendant nonoverlap; clock monotonicity or authenticity; a cross-process lock; or same-UID ABA resistance. Frozen C6B is not retroactively reprofiled.
-- `U7P_SEALED -> U7A_SOURCE_CANDIDATE` activates product authority only within the exact U7A roster. U7A–U7D remain `CANDIDATE_UNRECEIPTED`; the source state cannot grade itself.
+- `U7M_SEALED -> U7A_SOURCE_CANDIDATE` activates product authority only within the exact U7A roster. U7A–U7D remain `CANDIDATE_UNRECEIPTED`; the source state cannot grade itself.
 - `U7A_SEALED -> U7B_SOURCE_CANDIDATE` admits the HTTP reference study. U7B must complete its own three-run deterministic-versus-fresh reproduction gate before sealing.
 - `U7B_SEALED -> U7C_SOURCE_CANDIDATE` admits the independent CLI decision/contract study. U7C must complete its own three-run gate before sealing and may not route CLI truth through HTTP.
 - `U7C_SEALED -> U7D_SOURCE_CANDIDATE` admits only the exact product-owned cross-domain workflow and frozen-harness process/artifact closure surfaces. It does not reopen frozen study ownership or turn the harness into an independent semantic oracle.
 - `U7D_SEALED -> U7R_RECEIPT_CANDIDATE` requires the exact sealed U7D source note and retained local evidence archive. The U7D receipt remains `ABSENT` through the sealed source edge.
 - `U7R_RECEIPT_CANDIDATE -> U7R_RECEIPT_RECONCILED` is an exact parent-relative pending-block replacement over three receipt paths. It may bind only the sealed source facts and explicit nonclaims; it may not change product, checker, verifier, or study evidence and cannot receipt U7R itself.
 
-Receipt state is monotonic inside this namespace: `ABSENT` for U7P/U7A/U7B/U7C/U7D and `PRESENT` only after U7R. The inherited C3P, C3, and C6A receipts remain `PRESENT` throughout, but they confer no U7 behavior grade.
+Receipt state is monotonic inside this namespace: `ABSENT` for U7P/U7M/U7A/U7B/U7C/U7D and `PRESENT` only after U7R. The inherited C3P, C3, and C6A receipts remain `PRESENT` throughout, but they confer no U7 behavior grade.
 
 ### U7 final-ledger lifecycle
 
@@ -106,7 +109,7 @@ FAILED_POSTCOMMIT:
 
 Every admitted rename is no-follow, owner-private, destination-absent, and same-device before mutation. Each intermediate state is classifiable and rerunnable after interruption. Success requires the exact committed index tree, no unstaged tracked bytes, no untracked bytes, no failed archive, no failed final root, and no exact failed ref before and after rotation; it then reopens the archived note, chain, objects, seal, and claims. Postcommit failure recovery independently validates the failed commit, preserves its tree in the index, creates or revalidates `refs/countershape/failed-attempts/<unit>/<full-commit>`, and uses compare-and-swap rather than an unguarded reset. Same-UID hostile races, crash durability beyond observed rename/ref transitions, directory fsync semantics, and power-loss recovery remain unreceipted.
 
-The inherited P07 full plan self-test and the C3P receipt wrapper's transitive entry into that replay are not part of this live U7 machine. Both are retained historical-only because the fixed C3Q fixture contradicts the sealed C6B post-receipt projection; the ordinary live C3P receipt check remains current. The live successor compatibility state requires exact U7 candidate authority plus byte equality with sealed C6B for 11 visible P07 blocks and four protected P07 checker/spec paths; it does not transfer or synthesize either historical grade.
+The inherited P07 full plan self-test, the C3P wrapper's self-test entrypoint, and the ordinary ambient-HEAD C3P wrapper are not live descendant rows. All three are retained historical-only: the fixed replay fixture contradicts sealed C6B projection, and the ordinary wrapper admits only C6R/C6B ambient subjects. The U7M successor state preserves their bytes while requiring stable U7 candidate authority, exact sealed-C6B P07/C6A projections, exact C6A Git/note identity, and a full unchanged P07 plan pass under explicit sealed C6A authority. It transfers or synthesizes no historical grade.
 
 ## Full-product immutable artifact lineage target
 
