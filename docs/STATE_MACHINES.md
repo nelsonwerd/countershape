@@ -51,6 +51,63 @@ C5V_SEALED
 
 C6A source contains no C6A receipt projection; C6M source authority is not itself the final receipt projection; C6B does not re-run or rewrite the product evidence. A blind critic is a nonauthoritative side observation outside this machine: it may motivate source edits before C6A freezes, but never guards or authorizes an edge.
 
+## U7 repository-evidence lifecycle
+
+U7 adds a distinct namespace above the frozen P07/C6 receipt machine. It does not rewrite the C6A document-epoch block or reuse the P07 receipt capsule:
+
+```text
+C6B_SEALED
+  -> U7P_SOURCE_CANDIDATE
+  -> U7P_SEALED
+  -> U7A_SOURCE_CANDIDATE
+  -> U7A_SEALED
+  -> U7B_SOURCE_CANDIDATE
+  -> U7B_SEALED
+  -> U7C_SOURCE_CANDIDATE
+  -> U7C_SEALED
+  -> U7D_SOURCE_CANDIDATE
+  -> U7D_SEALED
+  -> U7R_RECEIPT_CANDIDATE
+  -> U7R_RECEIPT_RECONCILED
+```
+
+- `C6B_SEALED -> U7P_SOURCE_CANDIDATE` is owner-selected roadmap activation. Sealed P08 supplied only prose direction; the exact topology was not machine-predeclared. The transition is therefore `OWNER_OUT_OF_BAND`, `UNEVIDENCED`, unauthenticated, unsigned, product-authority `NONE`, product-behavior `INHERITED_UNREPROVEN`, and grade-transfer `NONE`.
+- Every `*_SOURCE_CANDIDATE -> *_SEALED` edge requires the exact parent-predeclared path roster and ordered command/claim manifest, a stable staged candidate, one root-owned didrun writer, exact commit/note/seal ancestry, explicit-commit strict exit `0`, an exact HTML witness, and a closed commit-addressed ledger archive. The operational writer cannot enter a later fence or mutate repository/evidence state until every yielded wrapper and relevant child is process-terminal. Development evidence and parent grades do not satisfy the edge.
+- The recorded child-process interval serialization gate requires every validated U7 ledger event interval to be finite and nonreversed and each ledger-ordered `started_at` to be at or after the preceding `ended_at`. Current preseal covers its declared command roster; archived U7 ancestry and U7D local evidence also include the final unclaimed note-inspection event. This proves only ordering of didrun's recorded wall-clock intervals around top-level children. It does not prove wrapper, claim, Git, seal, recovery, archive, or detached-descendant nonoverlap; clock monotonicity or authenticity; a cross-process lock; or same-UID ABA resistance. Frozen C6B is not retroactively reprofiled.
+- `U7P_SEALED -> U7A_SOURCE_CANDIDATE` activates product authority only within the exact U7A roster. U7A–U7D remain `CANDIDATE_UNRECEIPTED`; the source state cannot grade itself.
+- `U7A_SEALED -> U7B_SOURCE_CANDIDATE` admits the HTTP reference study. U7B must complete its own three-run deterministic-versus-fresh reproduction gate before sealing.
+- `U7B_SEALED -> U7C_SOURCE_CANDIDATE` admits the independent CLI decision/contract study. U7C must complete its own three-run gate before sealing and may not route CLI truth through HTTP.
+- `U7C_SEALED -> U7D_SOURCE_CANDIDATE` admits only the exact product-owned cross-domain workflow and frozen-harness process/artifact closure surfaces. It does not reopen frozen study ownership or turn the harness into an independent semantic oracle.
+- `U7D_SEALED -> U7R_RECEIPT_CANDIDATE` requires the exact sealed U7D source note and retained local evidence archive. The U7D receipt remains `ABSENT` through the sealed source edge.
+- `U7R_RECEIPT_CANDIDATE -> U7R_RECEIPT_RECONCILED` is an exact parent-relative pending-block replacement over three receipt paths. It may bind only the sealed source facts and explicit nonclaims; it may not change product, checker, verifier, or study evidence and cannot receipt U7R itself.
+
+Receipt state is monotonic inside this namespace: `ABSENT` for U7P/U7A/U7B/U7C/U7D and `PRESENT` only after U7R. The inherited C3P, C3, and C6A receipts remain `PRESENT` throughout, but they confer no U7 behavior grade.
+
+### U7 final-ledger lifecycle
+
+The generated runbook owns two disjoint terminal machines; failed evidence can never be reclassified as success.
+
+```text
+SUCCESS:
+  LIVE_LEDGER + LIVE_FINAL_ROOT + NO_FAILED_REF_OR_ARCHIVE
+    -> EMPTY_COMMIT_ARCHIVE + LIVE_LEDGER
+    -> COMPLETE_COMMIT_ARCHIVE + NO_LIVE_LEDGER
+
+FAILED_PRECOMMIT:
+  LIVE_OR_NO_LEDGER + LIVE_FINAL_ROOT
+    -> UNIQUE_FAILED_LEDGER_OR_NONE + UNIQUE_FAILED_FINAL_ROOT
+
+FAILED_POSTCOMMIT:
+  LIVE_LEDGER | EMPTY_NORMAL_ARCHIVE | COMPLETE_NORMAL_ARCHIVE
+    -> COMPLETE_FAILED_LEDGER + FAILED_FINAL_ROOT
+    -> EXACT_FAILED_REF
+    -> HEAD_CAS_FAILED_COMMIT_TO_DECLARED_PARENT
+```
+
+Every admitted rename is no-follow, owner-private, destination-absent, and same-device before mutation. Each intermediate state is classifiable and rerunnable after interruption. Success requires the exact committed index tree, no unstaged tracked bytes, no untracked bytes, no failed archive, no failed final root, and no exact failed ref before and after rotation; it then reopens the archived note, chain, objects, seal, and claims. Postcommit failure recovery independently validates the failed commit, preserves its tree in the index, creates or revalidates `refs/countershape/failed-attempts/<unit>/<full-commit>`, and uses compare-and-swap rather than an unguarded reset. Same-UID hostile races, crash durability beyond observed rename/ref transitions, directory fsync semantics, and power-loss recovery remain unreceipted.
+
+The inherited P07 full plan self-test and the C3P receipt wrapper's transitive entry into that replay are not part of this live U7 machine. Both are retained historical-only because the fixed C3Q fixture contradicts the sealed C6B post-receipt projection; the ordinary live C3P receipt check remains current. The live successor compatibility state requires exact U7 candidate authority plus byte equality with sealed C6B for 11 visible P07 blocks and four protected P07 checker/spec paths; it does not transfer or synthesize either historical grade.
+
 ## Full-product immutable artifact lineage target
 
 The full-product happy-path semantic lineage is shown below. Historical U6a could stop at a legacy whole-projection `RULING`. Sealed P07A/U6b adds portable selected-field ruling authority without a new head stage. Accepted P07B-A2.2 compiles the recoverable bundle in memory; sealed P07B-B source adds the terminal `CONTRACT_BUNDLE` residue and optional physical materialization. Later `CONTRACT_EXECUTION` is immutable nonhead evidence, not another lineage stage.

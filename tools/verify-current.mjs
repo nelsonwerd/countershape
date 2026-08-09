@@ -31,6 +31,53 @@ export const sealedC6AArchitectureStepIDs = Object.freeze([
 	"architecture-p07b-c-c6-selftest",
 ]);
 
+const exactU7PhaseCapsuleKeys = Object.freeze([
+	"boundary", "parent", "profile", "state", "receipt", "productAuthority", "productBehavior",
+]);
+export const exactU7PhaseContracts = Object.freeze({
+	U7P: Object.freeze({ boundary: "U7P", parent: "C6B", profile: "SOURCE_FULL", state: "SOURCE_CANDIDATE", receipt: "ABSENT", productAuthority: "NONE", productBehavior: "INHERITED_UNREPROVEN" }),
+	U7A: Object.freeze({ boundary: "U7A", parent: "U7P", profile: "SOURCE_FULL", state: "SOURCE_CANDIDATE", receipt: "ABSENT", productAuthority: "U7_REFERENCE_APPLICATION", productBehavior: "CANDIDATE_UNRECEIPTED" }),
+	U7B: Object.freeze({ boundary: "U7B", parent: "U7A", profile: "SOURCE_FULL", state: "SOURCE_CANDIDATE", receipt: "ABSENT", productAuthority: "U7_REFERENCE_APPLICATION", productBehavior: "CANDIDATE_UNRECEIPTED" }),
+	U7C: Object.freeze({ boundary: "U7C", parent: "U7B", profile: "SOURCE_FULL", state: "SOURCE_CANDIDATE", receipt: "ABSENT", productAuthority: "U7_REFERENCE_APPLICATION", productBehavior: "CANDIDATE_UNRECEIPTED" }),
+	U7D: Object.freeze({ boundary: "U7D", parent: "U7C", profile: "SOURCE_FULL", state: "SOURCE_CANDIDATE", receipt: "ABSENT", productAuthority: "U7_REFERENCE_APPLICATION", productBehavior: "CANDIDATE_UNRECEIPTED" }),
+});
+const exactU7GovernedCounts = Object.freeze({ U7P: 0, U7A: 10, U7B: 19, U7C: 30, U7D: 34 });
+const u7ArchitectureCaseDigest = "713f7893f4dfd1a67ba0d1c30bd88f5ebd4cd92665066f9036f3a5dca11abc83";
+const u7PhaseCapsuleStart = "<!-- U7-PHASE:START -->";
+const u7PhaseCapsuleEnd = "<!-- U7-PHASE:END -->";
+const u7PhaseCapsuleIndexStep = Object.freeze({
+	id: "u7-phase-capsule-index", tool: "git", tools: Object.freeze(["git"]),
+	args: Object.freeze(["--no-replace-objects", "show", ":docs/HANDOFF_MODE_C.md"]),
+});
+
+export function validateU7PhaseCapsule(capsule) {
+	if (capsule === null || typeof capsule !== "object" || Array.isArray(capsule) ||
+		JSON.stringify(Object.keys(capsule)) !== JSON.stringify(exactU7PhaseCapsuleKeys)) {
+		throw new VerificationError("VERIFY_U7_PHASE_CONTRACT", "capsule shape");
+	}
+	const expected = exactU7PhaseContracts[capsule.boundary];
+	if (expected === undefined) {
+		throw new VerificationError("VERIFY_U7_PHASE_UNSUPPORTED", String(capsule.boundary));
+	}
+	if (JSON.stringify(capsule) !== JSON.stringify(expected)) {
+		throw new VerificationError("VERIFY_U7_PHASE_CONTRACT", capsule.boundary);
+	}
+	return capsule.boundary;
+}
+
+export function exactU7ArchitectureOutput(phase) {
+	const governed = exactU7GovernedCounts[phase];
+	if (governed === undefined) throw new VerificationError("VERIFY_U7_PHASE_UNSUPPORTED", String(phase));
+	return `U7_ARCHITECTURE_OK phase=${phase} governed=${governed} protected=67\n`;
+}
+
+export function exactU7ArchitectureSelftestOutput(phase) {
+	if (!Object.hasOwn(exactU7PhaseContracts, phase)) {
+		throw new VerificationError("VERIFY_U7_PHASE_UNSUPPORTED", String(phase));
+	}
+	return `U7 architecture defensive self-test passed: active=${phase} cases=82 clean=6 hostile=76 digest=${u7ArchitectureCaseDigest}\n`;
+}
+
 // Sealed C0 compatibility invariants now enforced by verify-runtime-authority.mjs:
 // GOFLAGS: "-mod=readonly -buildvcs=false -p=1" and review-first VERIFY_STALE_LOCK refusal.
 
@@ -80,8 +127,96 @@ export async function currentStepChildResult(step, admitted, childEnvironment, d
 		: childResult(step, admitted, childEnvironment, dependencies, executionPolicy);
 }
 
+function u7OccurrenceCount(text, value) {
+	return text.split(value).length - 1;
+}
+
+function u7VisibleMarkdownAuthorityBody(body) {
+	const visible = [];
+	let htmlComment = false;
+	let fence;
+	for (const originalLine of body.split("\n")) {
+		if (fence !== undefined) {
+			visible.push("");
+			const close = new RegExp(`^ {0,3}${fence.character === "`" ? "`" : "~"}{${fence.length},}\\s*$`, "u");
+			if (close.test(originalLine)) fence = undefined;
+			continue;
+		}
+		let line = "";
+		let cursor = 0;
+		while (cursor < originalLine.length) {
+			if (htmlComment) {
+				const end = originalLine.indexOf("-->", cursor);
+				if (end === -1) { cursor = originalLine.length; continue; }
+				htmlComment = false;
+				cursor = end + 3;
+				continue;
+			}
+			const start = originalLine.indexOf("<!--", cursor);
+			if (start === -1) { line += originalLine.slice(cursor); cursor = originalLine.length; continue; }
+			line += originalLine.slice(cursor, start);
+			htmlComment = true;
+			cursor = start + 4;
+		}
+		if (/^(?: {4}|\t)/u.test(line)) { visible.push(""); continue; }
+		if (/^ {0,3}<(?:\/?[A-Za-z][A-Za-z0-9-]*(?:\s|\/?>)|\?|![A-Z]|!\[CDATA\[)/u.test(line)) {
+			throw new VerificationError("VERIFY_U7_PHASE_MARKDOWN_RAW_HTML", line.slice(0, 128));
+		}
+		const opening = /^ {0,3}(`{3,}|~{3,})/u.exec(line);
+		if (opening) { fence = { character: opening[1][0], length: opening[1].length }; visible.push(""); continue; }
+		visible.push(line);
+	}
+	if (htmlComment) throw new VerificationError("VERIFY_U7_PHASE_MARKDOWN_HTML_COMMENT", "unterminated");
+	if (fence !== undefined) throw new VerificationError("VERIFY_U7_PHASE_MARKDOWN_FENCE", "unterminated");
+	return visible.join("\n");
+}
+
+export function parseU7PhaseCapsule(text) {
+	if (typeof text !== "string" || u7OccurrenceCount(text, u7PhaseCapsuleStart) !== 1 ||
+		u7OccurrenceCount(text, u7PhaseCapsuleEnd) !== 1) {
+		throw new VerificationError("VERIFY_U7_PHASE_CAPSULE", "one start and one end marker required");
+	}
+	const start = text.indexOf(u7PhaseCapsuleStart);
+	const end = text.indexOf(u7PhaseCapsuleEnd);
+	if (start < 0 || end <= start || (start !== 0 && text[start - 1] !== "\n") ||
+		text[start + u7PhaseCapsuleStart.length] !== "\n" || text[end - 1] !== "\n" ||
+		!["", "\n"].includes(text.slice(end + u7PhaseCapsuleEnd.length, end + u7PhaseCapsuleEnd.length + 1))) {
+		throw new VerificationError("VERIFY_U7_PHASE_CAPSULE", "marker order or line shape");
+	}
+	const heading = "## Current state\n";
+	if (u7OccurrenceCount(text, heading) !== 1) throw new VerificationError("VERIFY_U7_PHASE_CAPSULE", "Current state heading");
+	const sectionStart = text.indexOf(heading) + heading.length;
+	const next = text.indexOf("\n## ", sectionStart);
+	const sectionEnd = next === -1 ? text.length : next + 1;
+	if (start < sectionStart || end >= sectionEnd || !/^\s*$/u.test(text.slice(sectionStart, start))) {
+		throw new VerificationError("VERIFY_U7_PHASE_CAPSULE", "first authority in Current state");
+	}
+	const startSentinel = "COUNTERSHAPE_VISIBLE_U7_PHASE_START";
+	const endSentinel = "COUNTERSHAPE_VISIBLE_U7_PHASE_END";
+	if (text.includes(startSentinel) || text.includes(endSentinel)) throw new VerificationError("VERIFY_U7_PHASE_CAPSULE", "reserved sentinel");
+	const visible = u7VisibleMarkdownAuthorityBody(text.replace(u7PhaseCapsuleStart, startSentinel).replace(u7PhaseCapsuleEnd, endSentinel));
+	if (u7OccurrenceCount(visible, startSentinel) !== 1 || u7OccurrenceCount(visible, endSentinel) !== 1 ||
+		visible.indexOf(startSentinel) >= visible.indexOf(endSentinel)) {
+		throw new VerificationError("VERIFY_U7_PHASE_CAPSULE", "markers must be visible operational Markdown");
+	}
+	const body = text.slice(start, end + u7PhaseCapsuleEnd.length);
+	const match = /^<!-- U7-PHASE:START -->\n### Active U7 phase contract\n\n- \*\*Namespace:\*\* `countershape\/u7-unit-paths\/v1`\n- \*\*Boundary:\*\* `([A-Z0-9]+)`\n- \*\*Parent:\*\* `([A-Z0-9.]+)`\n- \*\*Verification profile:\*\* `(SOURCE_FULL|RECEIPT_RECONCILIATION)`\n- \*\*State:\*\* `(SOURCE_CANDIDATE|RECEIPT_CANDIDATE)`\n- \*\*Topology:\*\* `U7P -> U7A -> U7B -> U7C -> U7D -> U7R`\n- \*\*Inherited receipts:\*\* `C3P=PRESENT; C3=PRESENT; C6A=PRESENT`\n- \*\*Receipt U7D:\*\* `(ABSENT|PRESENT)`\n- \*\*Product authority:\*\* `(NONE|U7_REFERENCE_APPLICATION)`\n- \*\*Product behavior:\*\* `(INHERITED_UNREPROVEN|CANDIDATE_UNRECEIPTED|SOURCE_RECEIPT_RECONCILIATION)`\n<!-- U7-PHASE:END -->$/u.exec(body);
+	if (!match) throw new VerificationError("VERIFY_U7_PHASE_CAPSULE", "exact capsule shape");
+	return Object.freeze({ boundary: match[1], parent: match[2], profile: match[3], state: match[4], receipt: match[5], productAuthority: match[6], productBehavior: match[7] });
+}
+
+export async function loadU7PhaseCapsuleFromIndex(state, runner = currentStepChildResult) {
+	const result = await runner(u7PhaseCapsuleIndexStep, state.admitted, state.childEnvironment);
+	if (result.error || result.signal || result.status !== 0 || result.stderr !== "") {
+		const outcome = result.error?.message ?? (result.signal ? `signal=${result.signal}` : `exit=${result.status}`);
+		throw new VerificationError("VERIFY_U7_PHASE_SOURCE", `${outcome}: stderr=${JSON.stringify(result.stderr)}`);
+	}
+	return parseU7PhaseCapsule(result.stdout);
+}
+
 const goGeneralCommon = Object.freeze(["-mod=readonly", "-buildvcs=false", `-p=${generalJobs}`]);
 const goSerialCommon = Object.freeze(["-mod=readonly", "-buildvcs=false", "-p=1"]);
+const inheritedP07CompatibilityStdout = "U7 inherited P07 compatibility exact: parent=C6B blocks=11 protected_paths=4 legacy_live_selftest=RETIRED_SUCCESSOR_INCOMPATIBLE\n";
 
 export const sensitiveGoPackages = Object.freeze([
 	`${modulePath}/internal/contractexec/runner`,
@@ -103,6 +238,10 @@ export const c5SensitiveGoPackages = Object.freeze([
 
 export const currentSteps = Object.freeze([
 	Object.freeze({ id: "workspace-no-ds-store", kind: "guard" }),
+	Object.freeze({
+		id: "architecture-u7", kind: "u7-phase-architecture", tool: "node", tools: Object.freeze(["node"]),
+		path: "tools/check-u7-architecture.mjs", marker: "U7_ARCHITECTURE_OK phase=",
+	}),
 	Object.freeze({
 		id: "go-package-partition", kind: "package-guard", tool: "go", tools: Object.freeze(["go"]),
 		args: Object.freeze(["list", "-mod=readonly", "-buildvcs=false", "./..."]), marker: "PACKAGE_PARTITION exact",
@@ -318,8 +457,8 @@ export const currentSteps = Object.freeze([
 		marker: "P07B-C C6 cumulative architecture defensive self-test OK (11 metadata cases; 22 Go JSON lifecycle cases)",
 	}),
 	Object.freeze({
-		id: "architecture-p07b-c-plan-selftest", tool: "node", tools: Object.freeze(["node", "git"]), path: "tools/check-p07b-c-plan.mjs",
-		args: Object.freeze(["--self-test"]), marker: "P07B-C evolved plan checker self-test passed:",
+		id: "architecture-p07b-c-inherited-compatibility", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]), path: "tools/check-u7-plan.mjs",
+		args: Object.freeze(["--verify-inherited-p07-compatibility"]), marker: "U7 inherited P07 compatibility exact:", exactStdout: inheritedP07CompatibilityStdout,
 	}),
 	Object.freeze({
 		id: "architecture-p07b-c-unit-scope-selftest", tool: "node", tools: Object.freeze(["node"]), path: "tools/check-p07b-c-unit-scope.mjs",
@@ -330,8 +469,31 @@ export const currentSteps = Object.freeze([
 		marker: "P07B-C C3P receipt check passed: phase-specific source/receipt, scope, Git-note, and documentation authority are coherent",
 	}),
 	Object.freeze({
-		id: "architecture-p07b-c-c3p-receipt-selftest", tool: "node", tools: Object.freeze(["node", "git"]), path: "tools/check-p07b-c-c3p-receipt.mjs",
-		args: Object.freeze(["--self-test"]), marker: "P07B-C C3P receipt checker self-test passed:",
+		id: "architecture-u7-plan-selftest", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
+		path: "tools/check-u7-plan.mjs", args: Object.freeze(["--self-test"]), marker: "U7 plan contract defensive self-test passed:",
+	}),
+	Object.freeze({
+		id: "architecture-u7-scope-selftest", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
+		path: "tools/check-u7-scope.mjs", args: Object.freeze(["--self-test"]), marker: "U7 independent staged-scope defensive self-test passed:",
+	}),
+	Object.freeze({
+		id: "architecture-u7-study-harness-protocol", tool: "node", tools: Object.freeze(["node", "go", "git"]),
+		path: "tools/check-u7-study-harness.mjs", args: Object.freeze(["--protocol-check"]),
+		marker: "U7_STUDY_HARNESS_PROTOCOL_OK protocol=countershape/u7-study-harness/v1 digest=",
+	}),
+	Object.freeze({
+		id: "architecture-u7-study-harness-selftest", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
+		path: "tools/check-u7-study-harness-selftest.mjs", args: Object.freeze(["--phase", "U7P"]),
+		marker: "U7 study harness defensive self-test passed: active=U7P cases=",
+	}),
+	Object.freeze({
+		id: "u7-final-runbook-selftest", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
+		path: "tools/print-u7-final-runbook.mjs", args: Object.freeze(["--self-test"]),
+		marker: "U7 final runbook renderer defensive self-test passed:",
+	}),
+	Object.freeze({
+		id: "architecture-u7-selftest", kind: "u7-phase-architecture-selftest", tool: "node", tools: Object.freeze(["node"]),
+		path: "tools/check-u7-architecture-selftest.mjs", marker: "U7 architecture defensive self-test passed: active=",
 	}),
 	Object.freeze({ id: "workspace-no-ds-store-terminal", kind: "guard" }),
 	Object.freeze({ id: "authority-revalidation", kind: "authority-guard" }),
@@ -351,6 +513,8 @@ export const historicalOnly = Object.freeze([
 	Object.freeze({ id: "mutation-u6-p07a-b", scripts: Object.freeze(["tools/mutate-u6.mjs"]), status: "docs/status/P07A-RULING.md" }),
 	Object.freeze({ id: "mutation-p07b-a1", scripts: Object.freeze(["tools/mutate-p07b.mjs"]), status: "docs/status/P07B-A1-SOURCE.md" }),
 	Object.freeze({ id: "mutation-p07b-a2-1", scripts: Object.freeze(["tools/mutate-p07b-a2-authority.mjs"]), status: "docs/status/P07B-A2-1-AUTHORITY.md" }),
+	Object.freeze({ id: "architecture-p07b-c-plan-selftest", scripts: Object.freeze(["tools/check-p07b-c-plan.mjs"]), status: "docs/status/U7P-AUTHORITY.md" }),
+	Object.freeze({ id: "architecture-p07b-c-c3p-receipt-selftest", scripts: Object.freeze(["tools/check-p07b-c-c3p-receipt.mjs"]), status: "docs/status/U7P-AUTHORITY.md" }),
 ]);
 
 function childToolNames(step) {
@@ -619,7 +783,10 @@ export async function executeCurrentPlan({
 		}
 		writeChildFrames(write, step, "STDOUT", result.stdout);
 		writeChildFrames(write, step, "STDERR", result.stderr);
-		if (!result.error && !result.signal && result.status === 0 && step.marker && !result.stdout.includes(step.marker)) {
+		if (!result.error && !result.signal && result.status === 0 && step.exactStdout !== undefined &&
+			(result.stdout !== step.exactStdout || result.stderr !== "")) {
+			result = { ...result, status: 1, error: new VerificationError("VERIFY_SUCCESS_OUTPUT_MISMATCH", `${step.id}: stdout=${JSON.stringify(result.stdout)} stderr=${JSON.stringify(result.stderr)}`) };
+		} else if (!result.error && !result.signal && result.status === 0 && step.marker && !result.stdout.includes(step.marker)) {
 			result = { ...result, status: 1, error: new VerificationError("VERIFY_SUCCESS_MARKER_MISSING", `${step.id}: ${step.marker}`) };
 		}
 		const duration = Math.max(0, Math.round(clock() - started));
@@ -643,6 +810,41 @@ export async function dispatchCurrentStep(step, state) {
 	if (step.kind === "guard") {
 		await assertNoDSStore(state.finderRoot ?? repositoryRoot);
 		return { status: 0, signal: null, error: null, stdout: "workspace contains no .DS_Store artifacts\n", stderr: "" };
+	}
+	if (step.kind === "u7-phase-architecture") {
+		if (Object.hasOwn(state, "u7Phase") && state.u7Phase !== undefined) {
+			throw new VerificationError("VERIFY_U7_PHASE_ALREADY_ADMITTED", String(state.u7Phase));
+		}
+		const capsule = await (state.loadU7PhaseCapsule ?? (() => loadU7PhaseCapsuleFromIndex(state)))();
+		const phase = validateU7PhaseCapsule(capsule);
+		const dynamicStep = { ...step, args: ["--phase", phase] };
+		const runner = state.currentStepRunner ?? currentStepChildResult;
+		const result = await runner(dynamicStep, state.admitted, state.childEnvironment);
+		if (result.error || result.signal || result.status !== 0) return result;
+		const expected = exactU7ArchitectureOutput(phase);
+		if (result.stdout !== expected || result.stderr !== "") {
+			throw new VerificationError("VERIFY_U7_ARCHITECTURE_OUTPUT", `${phase}: stdout=${JSON.stringify(result.stdout)} stderr=${JSON.stringify(result.stderr)}`);
+		}
+		state.u7Phase = phase;
+		return result;
+	}
+	if (step.kind === "u7-phase-architecture-selftest") {
+		if (typeof state.u7Phase !== "string") {
+			throw new VerificationError("VERIFY_U7_PHASE_EARLY_GATE_MISSING", step.id);
+		}
+		const terminalPhase = validateU7PhaseCapsule(await (state.loadU7PhaseCapsule ?? (() => loadU7PhaseCapsuleFromIndex(state)))());
+		if (terminalPhase !== state.u7Phase) {
+			throw new VerificationError("VERIFY_U7_PHASE_CHANGED", `${state.u7Phase} -> ${terminalPhase}`);
+		}
+		const dynamicStep = { ...step, args: ["--phase", terminalPhase] };
+		const runner = state.currentStepRunner ?? currentStepChildResult;
+		const result = await runner(dynamicStep, state.admitted, state.childEnvironment);
+		if (result.error || result.signal || result.status !== 0) return result;
+		const expected = exactU7ArchitectureSelftestOutput(terminalPhase);
+		if (result.stdout !== expected || result.stderr !== "") {
+			throw new VerificationError("VERIFY_U7_ARCHITECTURE_SELFTEST_OUTPUT", `${terminalPhase}: stdout=${JSON.stringify(result.stdout)} stderr=${JSON.stringify(result.stderr)}`);
+		}
+		return result;
 	}
 	if (step.kind === "package-guard") {
 		const result = await currentStepChildResult(step, state.admitted, state.childEnvironment);
@@ -700,10 +902,10 @@ async function main() {
 		const admitted = await admitTools();
 		roots = await createPrivateRoots(repositoryRoot, admitted);
 		const childEnvironment = buildChildEnvironment(admitted, roots);
-		executionState = {
-			admitted, childEnvironment, finderRoot: repositoryRoot, lock, packagePartition: undefined,
-			resourcesFinalized: false, roots,
-		};
+			executionState = {
+				admitted, childEnvironment, finderRoot: repositoryRoot, lock, packagePartition: undefined,
+				resourcesFinalized: false, roots, u7Phase: undefined,
+			};
 		const status = await executeCurrentPlan({
 			admitted,
 			childEnvironment,

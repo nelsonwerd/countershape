@@ -16,17 +16,24 @@ import {
 	currentSteps,
 	currentStepChildResult,
 	dispatchCurrentStep,
+	exactU7ArchitectureOutput,
+	exactU7ArchitectureSelftestOutput,
+	exactU7PhaseContracts,
 	executeCurrentPlan,
 	historicalOnly,
+	loadU7PhaseCapsuleFromIndex,
 	packageArguments,
+	parseU7PhaseCapsule,
 	partitionGoPackages,
 	revalidatePackagePartition,
 	rootAuthorityForStep,
 	rosterDigest,
 	sealedC6AArchitectureStepIDs,
 	sensitiveGoPackages,
+	validateU7PhaseCapsule,
 	validateRepositoryPlan,
 } from "./verify-current.mjs";
+import { parsePhaseCapsule as parsePlanPhaseCapsule } from "./check-u7-plan.mjs";
 import {
 	VerificationRuntimeError,
 	acquireVerificationLock,
@@ -46,11 +53,13 @@ const selftestPath = fileURLToPath(import.meta.url);
 const verifierPath = resolve(dirname(selftestPath), "verify-current.mjs");
 const runtimePath = resolve(dirname(selftestPath), "verify-runtime-authority.mjs");
 const sealedC6ARunnerPath = resolve(dirname(selftestPath), "check-sealed-c6a-architecture.mjs");
+const u7PlanPath = resolve(dirname(selftestPath), "check-u7-plan.mjs");
 const authorityNames = Object.freeze(["go", "node", "git", "sh", "cc", "cxx"]);
 const sealedC4VHistoricalRosterDigest = "7cf294fcbe8247e7a4de2d8996fb6b960780a35d018a8d00069af15940f0efb8";
 const sealedC4HParentRosterDigest = "0fab61318d55314e3accaeabbaf56cc049aae5755f3c3f41d6a36eba1a6c7af5";
 const sealedCombinedC5RosterDigest = "3821722f937f647ec98f03170cf9efb1e9a51a98e63d361d38dae58ade9ffaed";
-const expectedRosterDigest = "8e751cc66c32e922e1fd0b1a471ce4f2b3fb630105056a4db493363232565b92";
+const expectedRosterDigest = "ffc33c263c231c5ea2f3d427f271d45ab4a7afa445f57d19ef954086c702e51c";
+const expectedHistoricalDigest = "0de1d88c9674a87b096ecdc772d9cc2a0b96fff2cda9fa9ed3eefe78ccec16e2";
 const exactC5StepIDs = Object.freeze([
 	"architecture-p07b-c-c5",
 	"architecture-p07b-c-c5-selftest",
@@ -63,6 +72,15 @@ const exactC5StepIDs = Object.freeze([
 const exactC6StepIDs = Object.freeze([
 	"architecture-p07b-c-c6",
 	"architecture-p07b-c-c6-selftest",
+]);
+const exactU7StepIDs = Object.freeze([
+	"architecture-u7",
+	"architecture-u7-plan-selftest",
+	"architecture-u7-scope-selftest",
+	"architecture-u7-study-harness-protocol",
+	"architecture-u7-study-harness-selftest",
+	"u7-final-runbook-selftest",
+	"architecture-u7-selftest",
 ]);
 const exactExtendedChildTimeoutStepIDs = Object.freeze([
 	"architecture-p07b-c-c5",
@@ -159,10 +177,53 @@ function assertC6Roster(ids) {
 	const positions = exactC6StepIDs.map((id) => ids.indexOf(id));
 	if (start !== ids.indexOf(exactC5StepIDs.at(-1)) + 1 ||
 		positions.some((position, index) => position !== start + index) ||
-		ids[start + exactC6StepIDs.length] !== "architecture-p07b-c-plan-selftest") {
+		ids[start + exactC6StepIDs.length] !== "architecture-p07b-c-inherited-compatibility") {
 		fail("VERIFY_SELFTEST_C6_BLOCK_CONTIGUITY", ids.join(","));
 	}
-	if (ids.length !== 65) fail("VERIFY_SELFTEST_CURRENT_STEP_COUNT", String(ids.length));
+	if (ids.length !== 71) fail("VERIFY_SELFTEST_CURRENT_STEP_COUNT", String(ids.length));
+}
+
+function assertU7Roster(ids) {
+	for (const id of exactU7StepIDs) {
+		if (ids.filter((candidate) => candidate === id).length !== 1) {
+			fail("VERIFY_SELFTEST_U7_CARDINALITY", `${id}:${ids.join(",")}`);
+		}
+	}
+	if (ids[0] !== "workspace-no-ds-store" || ids[1] !== "architecture-u7" || ids[2] !== "go-package-partition") {
+		fail("VERIFY_SELFTEST_U7_EARLY_PLACEMENT", ids.slice(0, 4).join(","));
+	}
+	const late = exactU7StepIDs.slice(1);
+	const lateStart = ids.indexOf(late[0]);
+	if (lateStart !== ids.indexOf("architecture-p07b-c-c3p-receipt") + 1 ||
+		late.some((id, index) => ids[lateStart + index] !== id) ||
+		ids[lateStart + late.length] !== "workspace-no-ds-store-terminal") {
+		fail("VERIFY_SELFTEST_U7_LATE_BLOCK", ids.join(","));
+	}
+}
+
+function assertRetiredP07Rows(currentIDs, historical = historicalOnly) {
+	const expectedRows = [
+		{ id: "architecture-p07b-c-plan-selftest", scripts: ["tools/check-p07b-c-plan.mjs"], status: "docs/status/U7P-AUTHORITY.md" },
+		{ id: "architecture-p07b-c-c3p-receipt-selftest", scripts: ["tools/check-p07b-c-c3p-receipt.mjs"], status: "docs/status/U7P-AUTHORITY.md" },
+	];
+	const historicalIDs = historical.map((row) => row.id);
+	for (const expected of expectedRows) {
+		const matches = historical.filter((candidate) => candidate.id === expected.id);
+		if (matches.length !== 1) fail("VERIFY_SELFTEST_RETIRED_P07_ROW_CARDINALITY", `${expected.id}:${matches.length}`);
+	}
+	for (const expected of expectedRows) {
+		const row = historical.find((candidate) => candidate.id === expected.id);
+		if (JSON.stringify(row.scripts) !== JSON.stringify(expected.scripts) || row.status !== expected.status) {
+			fail("VERIFY_SELFTEST_RETIRED_P07_ROW_DRIFT", expected.id);
+		}
+		if (currentIDs.includes(expected.id)) fail("VERIFY_SELFTEST_RETIRED_P07_ROW_REINTRODUCED", expected.id);
+	}
+	if (JSON.stringify(historicalIDs.slice(-expectedRows.length)) !== JSON.stringify(expectedRows.map((row) => row.id))) {
+		fail("VERIFY_SELFTEST_RETIRED_P07_ROW_ORDER", historicalIDs.join(","));
+	}
+	if (currentIDs.filter((id) => id === "architecture-p07b-c-c3p-receipt").length !== 1) {
+		fail("VERIFY_SELFTEST_LIVE_C3P_RECEIPT_MISSING", currentIDs.join(","));
+	}
 }
 
 function assertFinderGuardRoster(ids) {
@@ -290,6 +351,11 @@ function fakeAuthorities() {
 async function inspectRosters() {
 	const digest = rosterDigest();
 	expect(digest === expectedRosterDigest, "VERIFY_SELFTEST_ROSTER_DRIFT", `${digest} != ${expectedRosterDigest}`);
+	expect(
+		createHash("sha256").update(JSON.stringify(historicalOnly)).digest("hex") === expectedHistoricalDigest,
+		"VERIFY_SELFTEST_HISTORICAL_ROSTER_DRIFT",
+		JSON.stringify(historicalOnly),
+	);
 	expect(digest !== sealedC4VHistoricalRosterDigest, "VERIFY_SELFTEST_C4V_ROSTER_NOT_EVOLVED", digest);
 	expect(digest !== sealedC4HParentRosterDigest, "VERIFY_SELFTEST_C5_ROSTER_NOT_EVOLVED", digest);
 	expect(digest !== sealedCombinedC5RosterDigest, "VERIFY_SELFTEST_C5_SENSITIVE_SPLIT_NOT_EVOLVED", digest);
@@ -297,6 +363,7 @@ async function inspectRosters() {
 	expect(new Set(currentIDs).size === currentIDs.length, "VERIFY_SELFTEST_DUPLICATE_CURRENT", currentIDs.join(","));
 	assertC5Roster(currentIDs, sensitiveGoPackages, c5SensitiveGoPackages);
 	assertC6Roster(currentIDs);
+	assertU7Roster(currentIDs);
 	assertFinderGuardRoster(currentIDs);
 	const sealedRows = currentSteps.filter((step) => rootAuthorityForStep(step) === "SEALED_C6A");
 	expect(
@@ -376,6 +443,28 @@ async function inspectRosters() {
 		() => assertC6Roster([...currentIDs, "unadmitted-extra-stage"]),
 		"VERIFY_SELFTEST_CURRENT_STEP_COUNT",
 	);
+	for (const id of exactU7StepIDs) {
+		expectPlainCode(
+			() => assertU7Roster(currentIDs.filter((candidate) => candidate !== id)),
+			"VERIFY_SELFTEST_U7_CARDINALITY",
+		);
+		const duplicated = [...currentIDs];
+		duplicated.splice(duplicated.indexOf(id), 0, id);
+		expectPlainCode(() => assertU7Roster(duplicated), "VERIFY_SELFTEST_U7_CARDINALITY");
+	}
+	const lateReordered = [...currentIDs];
+	const planIndex = lateReordered.indexOf("architecture-u7-plan-selftest");
+	const scopeIndexU7 = lateReordered.indexOf("architecture-u7-scope-selftest");
+	[lateReordered[planIndex], lateReordered[scopeIndexU7]] = [lateReordered[scopeIndexU7], lateReordered[planIndex]];
+	expectPlainCode(() => assertU7Roster(lateReordered), "VERIFY_SELFTEST_U7_LATE_BLOCK");
+	const earlyMoved = [...currentIDs];
+	const [earlyU7] = earlyMoved.splice(earlyMoved.indexOf("architecture-u7"), 1);
+	earlyMoved.splice(earlyMoved.indexOf("go-build") + 1, 0, earlyU7);
+	expectPlainCode(() => assertU7Roster(earlyMoved), "VERIFY_SELFTEST_U7_EARLY_PLACEMENT");
+	const lateInterposed = [...currentIDs];
+	const [interposition] = lateInterposed.splice(lateInterposed.indexOf("architecture-u6"), 1);
+	lateInterposed.splice(lateInterposed.indexOf("architecture-u7-study-harness-protocol"), 0, interposition);
+	expectPlainCode(() => assertU7Roster(lateInterposed), "VERIFY_SELFTEST_U7_LATE_BLOCK");
 	expectPlainCode(
 		() => assertC5Roster(currentIDs, sensitiveGoPackages.slice(1), c5SensitiveGoPackages),
 		"VERIFY_SELFTEST_INHERITED_SENSITIVE_ROSTER",
@@ -431,7 +520,7 @@ async function inspectRosters() {
 	);
 	const interposedFinderGuard = [...currentIDs];
 	const interposedFinderRow = interposedFinderGuard.splice(
-		interposedFinderGuard.indexOf("architecture-p07b-c-c3p-receipt-selftest"),
+		interposedFinderGuard.indexOf("architecture-p07b-c-c3p-receipt"),
 		1,
 	)[0];
 	interposedFinderGuard.splice(interposedFinderGuard.indexOf("authority-revalidation"), 0, interposedFinderRow);
@@ -461,6 +550,21 @@ async function inspectRosters() {
 	);
 	const historicalIDs = historicalOnly.map((row) => row.id);
 	expect(new Set(historicalIDs).size === historicalIDs.length, "VERIFY_SELFTEST_DUPLICATE_HISTORICAL", historicalIDs.join(","));
+	assertRetiredP07Rows(currentIDs);
+	for (const id of ["architecture-p07b-c-plan-selftest", "architecture-p07b-c-c3p-receipt-selftest"]) {
+		expectPlainCode(() => assertRetiredP07Rows(currentIDs, historicalOnly.filter((row) => row.id !== id)), "VERIFY_SELFTEST_RETIRED_P07_ROW_CARDINALITY");
+		expectPlainCode(() => assertRetiredP07Rows(currentIDs, [...historicalOnly, historicalOnly.find((row) => row.id === id)]), "VERIFY_SELFTEST_RETIRED_P07_ROW_CARDINALITY");
+		expectPlainCode(() => assertRetiredP07Rows([...currentIDs, id]), "VERIFY_SELFTEST_RETIRED_P07_ROW_REINTRODUCED");
+	}
+	const wrongRetiredScript = historicalOnly.map((row) => row.id === "architecture-p07b-c-c3p-receipt-selftest" ? { ...row, scripts: ["tools/check-p07b-c-plan.mjs"] } : row);
+	expectPlainCode(() => assertRetiredP07Rows(currentIDs, wrongRetiredScript), "VERIFY_SELFTEST_RETIRED_P07_ROW_DRIFT");
+	const wrongRetiredStatus = historicalOnly.map((row) => row.id === "architecture-p07b-c-plan-selftest" ? { ...row, status: "docs/status/U1.md" } : row);
+	expectPlainCode(() => assertRetiredP07Rows(currentIDs, wrongRetiredStatus), "VERIFY_SELFTEST_RETIRED_P07_ROW_DRIFT");
+	const reorderedRetired = [...historicalOnly];
+	const penultimateRetired = reorderedRetired.length - 2;
+	[reorderedRetired[penultimateRetired], reorderedRetired[penultimateRetired + 1]] = [reorderedRetired[penultimateRetired + 1], reorderedRetired[penultimateRetired]];
+	expectPlainCode(() => assertRetiredP07Rows(currentIDs, reorderedRetired), "VERIFY_SELFTEST_RETIRED_P07_ROW_ORDER");
+	expectPlainCode(() => assertRetiredP07Rows(currentIDs.filter((id) => id !== "architecture-p07b-c-c3p-receipt")), "VERIFY_SELFTEST_LIVE_C3P_RECEIPT_MISSING");
 	const knownTools = new Set(authorityNames);
 	for (const step of currentSteps.filter((candidate) => candidate.tool)) {
 		const names = step.tools;
@@ -713,12 +817,13 @@ async function inspectRosters() {
 			marker: `P07B-C C3 Go JSON target execution OK (${profile}: ${count} passed, 0 skipped)`,
 		});
 	}
-	exactStep("architecture-p07b-c-plan-selftest", {
+	exactStep("architecture-p07b-c-inherited-compatibility", {
 		tool: "node",
-		tools: ["node", "git"],
-		path: "tools/check-p07b-c-plan.mjs",
-		args: ["--self-test"],
-		marker: "P07B-C evolved plan checker self-test passed:",
+		tools: ["node", "go", "git", "sh", "cc", "cxx"],
+		path: "tools/check-u7-plan.mjs",
+		args: ["--verify-inherited-p07-compatibility"],
+		marker: "U7 inherited P07 compatibility exact:",
+		exactStdout: "U7 inherited P07 compatibility exact: parent=C6B blocks=11 protected_paths=4 legacy_live_selftest=RETIRED_SUCCESSOR_INCOMPATIBLE\n",
 	});
 	exactStep("architecture-p07b-c-c3p-receipt", {
 		tool: "node",
@@ -726,12 +831,54 @@ async function inspectRosters() {
 		path: "tools/check-p07b-c-c3p-receipt.mjs",
 		marker: "P07B-C C3P receipt check passed: phase-specific source/receipt, scope, Git-note, and documentation authority are coherent",
 	});
-	exactStep("architecture-p07b-c-c3p-receipt-selftest", {
+	exactStep("architecture-u7", {
+		kind: "u7-phase-architecture",
 		tool: "node",
-		tools: ["node", "git"],
-		path: "tools/check-p07b-c-c3p-receipt.mjs",
+		tools: ["node"],
+		path: "tools/check-u7-architecture.mjs",
+		marker: "U7_ARCHITECTURE_OK phase=",
+	});
+	exactStep("architecture-u7-plan-selftest", {
+		tool: "node",
+		tools: ["node", "go", "git", "sh", "cc", "cxx"],
+		path: "tools/check-u7-plan.mjs",
 		args: ["--self-test"],
-		marker: "P07B-C C3P receipt checker self-test passed:",
+		marker: "U7 plan contract defensive self-test passed:",
+	});
+	exactStep("architecture-u7-scope-selftest", {
+		tool: "node",
+		tools: ["node", "go", "git", "sh", "cc", "cxx"],
+		path: "tools/check-u7-scope.mjs",
+		args: ["--self-test"],
+		marker: "U7 independent staged-scope defensive self-test passed:",
+	});
+	exactStep("architecture-u7-study-harness-protocol", {
+		tool: "node",
+		tools: ["node", "go", "git"],
+		path: "tools/check-u7-study-harness.mjs",
+		args: ["--protocol-check"],
+		marker: "U7_STUDY_HARNESS_PROTOCOL_OK protocol=countershape/u7-study-harness/v1 digest=",
+	});
+	exactStep("architecture-u7-study-harness-selftest", {
+		tool: "node",
+		tools: ["node", "go", "git", "sh", "cc", "cxx"],
+		path: "tools/check-u7-study-harness-selftest.mjs",
+		args: ["--phase", "U7P"],
+		marker: "U7 study harness defensive self-test passed: active=U7P cases=",
+	});
+	exactStep("u7-final-runbook-selftest", {
+		tool: "node",
+		tools: ["node", "go", "git", "sh", "cc", "cxx"],
+		path: "tools/print-u7-final-runbook.mjs",
+		args: ["--self-test"],
+		marker: "U7 final runbook renderer defensive self-test passed:",
+	});
+	exactStep("architecture-u7-selftest", {
+		kind: "u7-phase-architecture-selftest",
+		tool: "node",
+		tools: ["node"],
+		path: "tools/check-u7-architecture-selftest.mjs",
+		marker: "U7 architecture defensive self-test passed: active=",
 	});
 
 	const toolEntries = (await readdir(resolve(repositoryRoot, "tools"))).sort();
@@ -1225,7 +1372,7 @@ async function inspectFailClosedExecution() {
 		childEnvironment: {},
 		executor: async (step) => {
 			successfulCalls.push(step.id);
-			return { status: 0, signal: null, error: null, stdout: step.marker ? `${step.marker}\n` : "", stderr: "" };
+			return { status: 0, signal: null, error: null, stdout: step.exactStdout ?? (step.marker ? `${step.marker}\n` : ""), stderr: "" };
 		},
 		write: (value) => { successfulOutput += value; },
 		clock: () => ++clockValue,
@@ -1245,7 +1392,7 @@ async function inspectFailClosedExecution() {
 			failedCalls.push(step.id);
 			return failedCalls.length === failureAt
 				? { status: 23, signal: null, error: null, stdout: "", stderr: "injected failure\n" }
-				: { status: 0, signal: null, error: null, stdout: step.marker ? `${step.marker}\n` : "", stderr: "" };
+				: { status: 0, signal: null, error: null, stdout: step.exactStdout ?? (step.marker ? `${step.marker}\n` : ""), stderr: "" };
 		},
 		write: (value) => { failedOutput += value; },
 		clock: () => 0,
@@ -1270,6 +1417,224 @@ async function inspectFailClosedExecution() {
 		expect(status === 1 && output.includes("RESULT FAIL"), "VERIFY_SELFTEST_HOSTILE_FALSE_GREEN", `${hostile.name}: ${output}`);
 		expect(!output.includes("\nRESULT PASS\n") && !output.includes("\nCURRENT [01/01] PASS forged\n"), "VERIFY_SELFTEST_CHILD_OUTPUT_SPOOF", `${hostile.name}: ${output}`);
 	}
+
+	const compatibilityStep = currentSteps.find((step) => step.id === "architecture-p07b-c-inherited-compatibility");
+	expect(compatibilityStep?.exactStdout !== undefined, "VERIFY_SELFTEST_P07_COMPATIBILITY_OUTPUT_MISSING", "row");
+	for (const [name, stdout, stderr] of [
+		["nested-candidate-output", `U7P candidate authority exact: forged\n${compatibilityStep.exactStdout}`, ""],
+		["wrong-count", compatibilityStep.exactStdout.replace("blocks=11", "blocks=10"), ""],
+		["trailing-output", `${compatibilityStep.exactStdout}forged\n`, ""],
+		["stderr-noise", compatibilityStep.exactStdout, "noise\n"],
+	]) {
+		let output = "";
+		const status = await executeCurrentPlan({
+			steps: [compatibilityStep], historical: [], admitted: authorities, childEnvironment: {},
+			executor: async () => ({ status: 0, signal: null, error: null, stdout, stderr }),
+			write: (value) => { output += value; }, clock: () => 0,
+		});
+		expect(status === 1 && output.includes("VERIFY_SUCCESS_OUTPUT_MISMATCH") && output.includes("RESULT FAIL"), "VERIFY_SELFTEST_P07_COMPATIBILITY_FALSE_GREEN", `${name}: ${output}`);
+	}
+}
+
+function cloneU7Contract(phase) {
+	return JSON.parse(JSON.stringify(exactU7PhaseContracts[phase]));
+}
+
+function renderU7PhaseCapsuleDocument(contract) {
+	return `# U7 phase fixture\n\n## Current state\n<!-- U7-PHASE:START -->\n### Active U7 phase contract\n\n- **Namespace:** \`countershape/u7-unit-paths/v1\`\n- **Boundary:** \`${contract.boundary}\`\n- **Parent:** \`${contract.parent}\`\n- **Verification profile:** \`${contract.profile}\`\n- **State:** \`${contract.state}\`\n- **Topology:** \`U7P -> U7A -> U7B -> U7C -> U7D -> U7R\`\n- **Inherited receipts:** \`C3P=PRESENT; C3=PRESENT; C6A=PRESENT\`\n- **Receipt U7D:** \`${contract.receipt}\`\n- **Product authority:** \`${contract.productAuthority}\`\n- **Product behavior:** \`${contract.productBehavior}\`\n<!-- U7-PHASE:END -->\n\n## History\nNone.\n`;
+}
+
+function parserRejects(parser, text) {
+	try { parser(text); return false; }
+	catch { return true; }
+}
+
+async function inspectU7PhaseExecution() {
+	const earlyStep = currentSteps.find((step) => step.id === "architecture-u7");
+	const terminalStep = currentSteps.find((step) => step.id === "architecture-u7-selftest");
+	expect(earlyStep !== undefined && terminalStep !== undefined, "VERIFY_SELFTEST_U7_STEPS_MISSING", "dynamic rows");
+	for (const phase of Object.keys(exactU7PhaseContracts)) {
+		const calls = [];
+		const capsule = cloneU7Contract(phase);
+		const document = renderU7PhaseCapsuleDocument(capsule);
+		expect(
+			JSON.stringify(parseU7PhaseCapsule(document)) === JSON.stringify(parsePlanPhaseCapsule(document)),
+			"VERIFY_SELFTEST_U7_PARSER_PARITY",
+			phase,
+		);
+		const state = {
+			admitted: fakeAuthorities(), childEnvironment: {},
+			loadU7PhaseCapsule: async () => capsule,
+			currentStepRunner: async (step) => {
+				calls.push({ id: step.id, args: [...(step.args ?? [])] });
+				const stdout = step.id === "architecture-u7"
+					? exactU7ArchitectureOutput(phase)
+					: exactU7ArchitectureSelftestOutput(phase);
+				return { status: 0, signal: null, error: null, stdout, stderr: "" };
+			},
+		};
+		const early = await dispatchCurrentStep(earlyStep, state);
+		expect(early.status === 0 && state.u7Phase === phase, "VERIFY_SELFTEST_U7_PHASE_NOT_STORED", phase);
+		const terminal = await dispatchCurrentStep(terminalStep, state);
+		expect(terminal.status === 0 && state.u7Phase === phase, "VERIFY_SELFTEST_U7_TERMINAL_FALSE_RED", phase);
+		expect(
+			JSON.stringify(calls) === JSON.stringify([
+				{ id: "architecture-u7", args: ["--phase", phase] },
+				{ id: "architecture-u7-selftest", args: ["--phase", phase] },
+			]),
+			"VERIFY_SELFTEST_U7_DYNAMIC_ARGUMENTS",
+			`${phase}:${JSON.stringify(calls)}`,
+		);
+	}
+
+	const baselineDocument = renderU7PhaseCapsuleDocument(cloneU7Contract("U7P"));
+	for (const [name, document] of [
+		["fenced", baselineDocument.replace("<!-- U7-PHASE:START -->", "```text\n<!-- U7-PHASE:START -->").replace("<!-- U7-PHASE:END -->", "<!-- U7-PHASE:END -->\n```")],
+		["commented", baselineDocument.replace("<!-- U7-PHASE:START -->", "<!-- wrapper\n<!-- U7-PHASE:START -->").replace("<!-- U7-PHASE:END -->", "<!-- U7-PHASE:END -->\n-->")],
+		["relocated", baselineDocument.replace("## Current state\n", "## Current state\nHistorical text precedes the capsule.\n")],
+		["duplicate-heading", baselineDocument.replace("## History\n", "## Current state\n")],
+		["duplicate-marker", baselineDocument.replace("<!-- U7-PHASE:END -->", "<!-- U7-PHASE:END -->\n<!-- U7-PHASE:START -->")],
+		["shape", baselineDocument.replace("### Active U7 phase contract", "### U7 phase example")],
+	]) {
+		expect(
+			parserRejects(parseU7PhaseCapsule, document) && parserRejects(parsePlanPhaseCapsule, document),
+			"VERIFY_SELFTEST_U7_PARSER_HOSTILE_FALSE_GREEN",
+			name,
+		);
+	}
+	const indexCalls = [];
+	const loaded = await loadU7PhaseCapsuleFromIndex(
+		{ admitted: fakeAuthorities(), childEnvironment: { FIXTURE: "1" } },
+		async (step, admitted, environment) => {
+			indexCalls.push({ id: step.id, tool: step.tool, tools: [...step.tools], args: [...step.args], admitted, environment });
+			return { status: 0, signal: null, error: null, stdout: baselineDocument, stderr: "" };
+		},
+	);
+	expect(
+		JSON.stringify(loaded) === JSON.stringify(cloneU7Contract("U7P")) && indexCalls.length === 1 &&
+		JSON.stringify({ id: indexCalls[0].id, tool: indexCalls[0].tool, tools: indexCalls[0].tools, args: indexCalls[0].args }) ===
+		JSON.stringify({ id: "u7-phase-capsule-index", tool: "git", tools: ["git"], args: ["--no-replace-objects", "show", ":docs/HANDOFF_MODE_C.md"] }),
+		"VERIFY_SELFTEST_U7_INDEX_CAPSULE_AUTHORITY",
+		JSON.stringify(indexCalls),
+	);
+	for (const [name, result, code] of [
+		["nonzero", { status: 9, signal: null, error: null, stdout: "", stderr: "refused\n" }, "VERIFY_U7_PHASE_SOURCE"],
+		["signal", { status: null, signal: "SIGKILL", error: null, stdout: "", stderr: "" }, "VERIFY_U7_PHASE_SOURCE"],
+		["stderr", { status: 0, signal: null, error: null, stdout: baselineDocument, stderr: "noise\n" }, "VERIFY_U7_PHASE_SOURCE"],
+		["hidden", { status: 0, signal: null, error: null, stdout: `\`\`\`text\n${baselineDocument}\`\`\`\n`, stderr: "" }, "VERIFY_U7_PHASE_CAPSULE"],
+	]) {
+		await expectCode(
+			loadU7PhaseCapsuleFromIndex(
+				{ admitted: fakeAuthorities(), childEnvironment: {} },
+				async () => result,
+			),
+			code,
+		);
+		expect(name.length > 0, "VERIFY_SELFTEST_U7_INDEX_CASE_NAME", name);
+	}
+
+	expectPlainCode(() => validateU7PhaseCapsule({ ...cloneU7Contract("U7P"), boundary: "U7R" }), "VERIFY_U7_PHASE_UNSUPPORTED");
+	for (const [field, value] of [
+		["parent", "U7A"],
+		["profile", "RECEIPT_RECONCILIATION"],
+		["state", "RECEIPT_CANDIDATE"],
+		["receipt", "PRESENT"],
+		["productAuthority", "U7_REFERENCE_APPLICATION"],
+		["productBehavior", "CANDIDATE_UNRECEIPTED"],
+	]) {
+		expectPlainCode(
+			() => validateU7PhaseCapsule({ ...cloneU7Contract("U7P"), [field]: value }),
+			"VERIFY_U7_PHASE_CONTRACT",
+		);
+	}
+	const missing = cloneU7Contract("U7P");
+	delete missing.receipt;
+	expectPlainCode(() => validateU7PhaseCapsule(missing), "VERIFY_U7_PHASE_CONTRACT");
+	expectPlainCode(() => validateU7PhaseCapsule({ ...cloneU7Contract("U7P"), extra: true }), "VERIFY_U7_PHASE_CONTRACT");
+	const reordered = { parent: "C6B", boundary: "U7P", profile: "SOURCE_FULL", state: "SOURCE_CANDIDATE", receipt: "ABSENT", productAuthority: "NONE", productBehavior: "INHERITED_UNREPROVEN" };
+	expectPlainCode(() => validateU7PhaseCapsule(reordered), "VERIFY_U7_PHASE_CONTRACT");
+
+	for (const [name, result] of [
+		["nonzero", { status: 17, signal: null, error: null, stdout: "", stderr: "failure\n" }],
+		["signal", { status: null, signal: "SIGKILL", error: null, stdout: "", stderr: "" }],
+		["spawn", { status: null, signal: null, error: new Error("injected"), stdout: "", stderr: "" }],
+	]) {
+		const state = {
+			admitted: fakeAuthorities(), childEnvironment: {},
+			loadU7PhaseCapsule: async () => cloneU7Contract("U7P"),
+			currentStepRunner: async () => result,
+		};
+		const observed = await dispatchCurrentStep(earlyStep, state);
+		expect(observed === result && state.u7Phase === undefined, "VERIFY_SELFTEST_U7_FAILURE_STORED_PHASE", name);
+	}
+	for (const [name, stdout, stderr] of [
+		["wrong", "wrong\n", ""],
+		["trailing", `${exactU7ArchitectureOutput("U7P")}extra\n`, ""],
+		["stderr", exactU7ArchitectureOutput("U7P"), "noise\n"],
+	]) {
+		const state = {
+			admitted: fakeAuthorities(), childEnvironment: {},
+			loadU7PhaseCapsule: async () => cloneU7Contract("U7P"),
+			currentStepRunner: async () => ({ status: 0, signal: null, error: null, stdout, stderr }),
+		};
+		await expectCode(dispatchCurrentStep(earlyStep, state), "VERIFY_U7_ARCHITECTURE_OUTPUT");
+		expect(state.u7Phase === undefined, "VERIFY_SELFTEST_U7_OUTPUT_STORED_PHASE", name);
+	}
+	await expectCode(
+		dispatchCurrentStep(terminalStep, {
+			admitted: fakeAuthorities(), childEnvironment: {},
+			loadU7PhaseCapsule: async () => cloneU7Contract("U7P"), currentStepRunner: async () => { throw new Error("must not run"); },
+		}),
+		"VERIFY_U7_PHASE_EARLY_GATE_MISSING",
+	);
+	let driftRunnerCalls = 0;
+	await expectCode(
+		dispatchCurrentStep(terminalStep, {
+			admitted: fakeAuthorities(), childEnvironment: {}, u7Phase: "U7P",
+			loadU7PhaseCapsule: async () => cloneU7Contract("U7A"),
+			currentStepRunner: async () => { driftRunnerCalls += 1; throw new Error("must not run"); },
+		}),
+		"VERIFY_U7_PHASE_CHANGED",
+	);
+	expect(driftRunnerCalls === 0, "VERIFY_SELFTEST_U7_DRIFT_EXECUTED_CHILD", String(driftRunnerCalls));
+	await expectCode(
+		dispatchCurrentStep(terminalStep, {
+			admitted: fakeAuthorities(), childEnvironment: {}, u7Phase: "U7P",
+			loadU7PhaseCapsule: async () => cloneU7Contract("U7P"),
+			currentStepRunner: async () => ({ status: 0, signal: null, error: null, stdout: "wrong\n", stderr: "" }),
+		}),
+		"VERIFY_U7_ARCHITECTURE_SELFTEST_OUTPUT",
+	);
+	await expectCode(
+		dispatchCurrentStep(earlyStep, {
+			admitted: fakeAuthorities(), childEnvironment: {}, u7Phase: "U7P",
+			loadU7PhaseCapsule: async () => cloneU7Contract("U7P"), currentStepRunner: async () => { throw new Error("must not run"); },
+		}),
+		"VERIFY_U7_PHASE_ALREADY_ADMITTED",
+	);
+
+	const executionCalls = [];
+	let output = "";
+	const executionState = {
+		admitted: fakeAuthorities(), childEnvironment: {},
+		loadU7PhaseCapsule: async () => cloneU7Contract("U7P"),
+		currentStepRunner: async (step) => {
+			executionCalls.push(step.id);
+			return { status: 19, signal: null, error: null, stdout: "", stderr: "injected early refusal\n" };
+		},
+	};
+	const earlyFailure = await executeCurrentPlan({
+		steps: [earlyStep, currentSteps.find((step) => step.id === "go-package-partition")],
+		historical: [], admitted: fakeAuthorities(), childEnvironment: {},
+		executor: async (step) => dispatchCurrentStep(step, executionState),
+		write: (value) => { output += value; }, clock: () => 0,
+	});
+	expect(
+		earlyFailure === 1 && JSON.stringify(executionCalls) === JSON.stringify(["architecture-u7"]) &&
+		!output.includes("START go-package-partition") && executionState.u7Phase === undefined,
+		"VERIFY_SELFTEST_U7_EARLY_FAILURE_EXECUTED_GO",
+		`${executionCalls.join(",")}:${output}`,
+	);
 }
 
 async function inspectFilesystemGuards() {
@@ -1544,6 +1909,7 @@ async function inspectVerificationLockSubprocesses() {
 		await Promise.all([
 			writeFile(join(toolsDirectory, "verify-current.mjs"), await readFile(verifierPath), { mode: 0o600 }),
 			writeFile(join(toolsDirectory, "verify-runtime-authority.mjs"), await readFile(runtimePath), { mode: 0o600 }),
+			writeFile(join(toolsDirectory, "check-u7-plan.mjs"), await readFile(u7PlanPath), { mode: 0o600 }),
 		]);
 		return root;
 	};
@@ -1738,8 +2104,8 @@ async function inspectResourceFinalization() {
 }
 
 async function inspectSourceAndArguments() {
-	const [source, runtimeSource, sealedRunnerSource] = await Promise.all([
-		readFile(verifierPath, "utf8"), readFile(runtimePath, "utf8"), readFile(sealedC6ARunnerPath, "utf8"),
+	const [source, runtimeSource, sealedRunnerSource, u7PlanSource] = await Promise.all([
+		readFile(verifierPath, "utf8"), readFile(runtimePath, "utf8"), readFile(sealedC6ARunnerPath, "utf8"), readFile(u7PlanPath, "utf8"),
 	]);
 	expect(!source.includes("...process.env") && !runtimeSource.includes("...process.env"), "VERIFY_SELFTEST_PROCESS_ENV_SPREAD", "verification runtime modules");
 	expect(!sealedRunnerSource.includes("...process.env") && !sealedRunnerSource.includes("checkout") &&
@@ -1777,6 +2143,7 @@ async function inspectSourceAndArguments() {
 		await Promise.all([
 			writeFile(copiedRuntime, runtimeSource, { mode: 0o600 }),
 			writeFile(copiedVerifier, source, { mode: 0o600 }),
+			writeFile(join(toolsDirectory, "check-u7-plan.mjs"), u7PlanSource, { mode: 0o600 }),
 		]);
 		const inert = spawnSync(process.execPath, [
 			"--input-type=module", "--eval",
@@ -1830,6 +2197,7 @@ async function main() {
 	await inspectPackagePartition();
 	await inspectChildArguments();
 	await inspectFailClosedExecution();
+	await inspectU7PhaseExecution();
 	await inspectFilesystemGuards();
 	await inspectVerificationLock();
 	await inspectVerificationLockSubprocesses();
@@ -1839,8 +2207,9 @@ async function main() {
 		.update(await readFile(verifierPath))
 		.update(await readFile(runtimePath))
 		.update(await readFile(sealedC6ARunnerPath))
+		.update(await readFile(u7PlanPath))
 		.digest("hex");
-	process.stdout.write(`verification runner self-test passed: exact C5 rosters/env/package partition, explicit live/sealed-C6A root authority, bounded-batch raw-blob sealed runner self-test with narrow Darwin diagnostics, fail-closed status/signal/error/marker, bounded tool admission, framed child output, canonical plan/tool paths, private root isolation, exclusive lock integrity plus real subprocess contention/stale recovery, inert verifier imports, noncanonical-entry refusal, cleanup aggregation, historical nonexecution, and artifact refusal (sources sha256:${sourceDigest})\n`);
+	process.stdout.write(`verification runner self-test passed: exact C5/U7 rosters/env/package partition, visible-capsule U7P-D phase authority with pre-Go admission and terminal live recheck, explicit live/sealed-C6A root authority, bounded-batch raw-blob sealed runner self-test with narrow Darwin diagnostics, fail-closed status/signal/error/marker, bounded tool admission, framed child output, canonical plan/tool paths, private root isolation, exclusive lock integrity plus real subprocess contention/stale recovery, inert verifier imports, noncanonical-entry refusal, cleanup aggregation, historical nonexecution, and artifact refusal (sources sha256:${sourceDigest})\n`);
 }
 
 main().catch((error) => {
