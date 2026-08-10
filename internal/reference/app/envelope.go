@@ -1,7 +1,8 @@
 package app
 
 const (
-	CLISchemaVersion = "countershape-cli/v1"
+	CLISchemaVersion               = "countershape-cli/v1"
+	StudyDomainResultSchemaVersion = "countershape/u7-study-domain-result/v1"
 
 	TrustWarning = "Countershape will run trusted repository code with your user permissions and host network access. The temporary directory is for repeatability, not security isolation."
 
@@ -11,6 +12,16 @@ const (
 	ExitRefused  = 4
 	ExitInternal = 70
 )
+
+// StudyDomainResult is deliberately separate from ResponseEnvelope. The
+// frozen U7 harness admits exactly these four fields and no presentation or
+// application-envelope metadata.
+type StudyDomainResult struct {
+	SchemaVersion string `json:"schema_version"`
+	Domain        string `json:"domain"`
+	Ordinal       int    `json:"ordinal"`
+	Status        string `json:"status"`
+}
 
 type FailureView struct {
 	Code   string `json:"code"`

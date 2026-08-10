@@ -35,6 +35,21 @@ func renderJSON(writer io.Writer, response ResponseEnvelope) error {
 	return err
 }
 
+func renderStudyDomainResult(writer io.Writer, domain string, ordinal int) error {
+	exact, err := json.Marshal(StudyDomainResult{
+		SchemaVersion: StudyDomainResultSchemaVersion,
+		Domain:        domain,
+		Ordinal:       ordinal,
+		Status:        "GREEN",
+	})
+	if err != nil {
+		return err
+	}
+	exact = append(exact, '\n')
+	_, err = writer.Write(exact)
+	return err
+}
+
 func renderHuman(writer io.Writer, response ResponseEnvelope, columns int) error {
 	columns = admittedColumns(columns)
 	if response.Command == "help" {
@@ -73,10 +88,6 @@ func renderHuman(writer io.Writer, response ResponseEnvelope, columns int) error
 			lines = appendField(lines, "Candidate ceiling", fmt.Sprintf("%d", response.Source.Budgets.CandidateCount), columns)
 			lines = appendField(lines, "Trial ceiling", fmt.Sprintf("%d", response.Source.Budgets.TotalCandidateTrials), columns)
 		}
-		if response.Warning != nil {
-			lines = append(lines, "", "Execution warning:")
-			lines = appendWrapped(lines, *response.Warning, columns, 2)
-		}
 		if response.Preflight != nil {
 			unresolved := unresolvedAuthorities(*response.Preflight)
 			lines = append(lines,
@@ -86,6 +97,10 @@ func renderHuman(writer io.Writer, response ResponseEnvelope, columns int) error
 				"Unresolved: "+strings.Join(unresolved, ", "),
 			)
 		}
+	}
+	if response.Warning != nil {
+		lines = append(lines, "", "Execution warning:")
+		lines = appendWrapped(lines, *response.Warning, columns, 2)
 	}
 	if response.NextAction != "" {
 		lines = append(lines, "", "Next action:")
@@ -103,10 +118,12 @@ func humanHelp(columns int) string {
 		"  countershape help",
 		"  countershape validate --spec <path|-> [--json]",
 		"  countershape preflight --spec <path|-> [--json]",
+		"  countershape study <domain> --json  (frozen harness only)",
 		"",
 	}
 	lines = appendWrapped(lines, "U7A validates inert source and reports preflight prerequisites.", columns, 0)
 	lines = appendWrapped(lines, "It does not run candidates, resume processes, compare outcomes, or emit contracts.", columns, 0)
+	lines = appendWrapped(lines, "Installed study handlers are the sole exception and execute only through the frozen machine harness route; interactive study requests are refused.", columns, 0)
 	return strings.Join(lines, "\n") + "\n"
 }
 

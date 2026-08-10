@@ -2,15 +2,20 @@ package app
 
 import (
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"unicode"
 	"unicode/utf8"
 )
 
-const maximumSourceBytes = 1 << 20
+const (
+	maximumSourceBytes        = 1 << 20
+	maximumStudyArtifactBytes = 16 << 20
+)
 
 type InputError struct {
 	Code   string
@@ -23,6 +28,155 @@ type sourceInput struct {
 	displayPath string
 	argument    string
 	exact       []byte
+}
+
+// EvidenceWorkspace binds exclusive writes to the already-existing evidence
+// directory admitted by the frozen harness. It never creates, replaces, or
+// removes that root. All child creation is relative, no-overwrite, and private.
+type EvidenceWorkspace struct {
+	mu       sync.Mutex
+	root     *os.Root
+	rootPath string
+	closed   bool
+}
+
+func newEvidenceWorkspace(path string, expected os.FileInfo) (*EvidenceWorkspace, error) {
+	root, err := os.OpenRoot(path)
+	if err != nil {
+		return nil, fmt.Errorf("open evidence workspace: %w", err)
+	}
+	opened, err := root.Lstat(".")
+	if err != nil || !opened.IsDir() || opened.Mode()&os.ModeSymlink != 0 ||
+		opened.Mode().Perm() != 0o700 || hasSpecialMode(opened.Mode()) ||
+		opened.Mode() != expected.Mode() || !os.SameFile(expected, opened) {
+		_ = root.Close()
+		return nil, errors.New("evidence workspace identity changed while opening")
+	}
+	return &EvidenceWorkspace{root: root, rootPath: path}, nil
+}
+
+// CreateDirectory creates exactly one private relative directory. Parents
+// must already exist and must be private, non-link directories.
+func (workspace *EvidenceWorkspace) CreateDirectory(relative string) error {
+	workspace.mu.Lock()
+	defer workspace.mu.Unlock()
+	if err := workspace.readyRelative(relative); err != nil {
+		return err
+	}
+	if err := workspace.requirePrivateParents(relative); err != nil {
+		return err
+	}
+	if err := workspace.root.Mkdir(relative, 0o700); err != nil {
+		return fmt.Errorf("create evidence directory: %w", err)
+	}
+	created, err := workspace.root.Lstat(relative)
+	if err != nil || !created.IsDir() || created.Mode()&os.ModeSymlink != 0 || created.Mode().Perm() != 0o700 ||
+		created.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0 {
+		return errors.New("created evidence directory is not exact and private")
+	}
+	return nil
+}
+
+// WriteFileExclusive writes one bounded artifact without following or
+// replacing a terminal path. A failed write is left in place so the attempt
+// cannot be mistaken for complete evidence.
+func (workspace *EvidenceWorkspace) WriteFileExclusive(relative string, exact []byte) error {
+	workspace.mu.Lock()
+	defer workspace.mu.Unlock()
+	if len(exact) < 1 || len(exact) > maximumStudyArtifactBytes {
+		return errors.New("evidence artifact must contain 1..16777216 bytes")
+	}
+	if err := workspace.readyRelative(relative); err != nil {
+		return err
+	}
+	if err := workspace.requirePrivateParents(relative); err != nil {
+		return err
+	}
+	handle, err := workspace.root.OpenFile(relative, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
+	if err != nil {
+		return fmt.Errorf("create evidence artifact: %w", err)
+	}
+	written, writeErr := handle.Write(exact)
+	if writeErr == nil && written != len(exact) {
+		writeErr = io.ErrShortWrite
+	}
+	if writeErr == nil {
+		writeErr = handle.Sync()
+	}
+	opened, statErr := handle.Stat()
+	closeErr := handle.Close()
+	if writeErr != nil {
+		return fmt.Errorf("write evidence artifact: %w", writeErr)
+	}
+	if statErr != nil || closeErr != nil || !opened.Mode().IsRegular() || opened.Mode().Perm() != 0o600 ||
+		opened.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0 || opened.Size() != int64(len(exact)) {
+		return errors.New("written evidence artifact is not exact and private")
+	}
+	terminal, err := workspace.root.Lstat(relative)
+	if err != nil || terminal.Mode()&os.ModeSymlink != 0 || !terminal.Mode().IsRegular() || !os.SameFile(opened, terminal) {
+		return errors.New("evidence artifact identity changed after writing")
+	}
+	return nil
+}
+
+func (workspace *EvidenceWorkspace) readyRelative(relative string) error {
+	if workspace == nil || workspace.root == nil || workspace.closed {
+		return errors.New("evidence workspace is closed")
+	}
+	if !validWorkspaceRelativePath(relative) {
+		return errors.New("evidence path must be one clean relative path")
+	}
+	return nil
+}
+
+func (workspace *EvidenceWorkspace) requirePrivateParents(relative string) error {
+	parent := filepath.Dir(relative)
+	if parent == "." {
+		return nil
+	}
+	current := ""
+	for _, part := range strings.Split(parent, string(filepath.Separator)) {
+		if current == "" {
+			current = part
+		} else {
+			current = filepath.Join(current, part)
+		}
+		metadata, err := workspace.root.Lstat(current)
+		if err != nil || !metadata.IsDir() || metadata.Mode()&os.ModeSymlink != 0 || metadata.Mode().Perm() != 0o700 ||
+			metadata.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0 {
+			return errors.New("evidence artifact parent is not an existing private directory")
+		}
+	}
+	return nil
+}
+
+func (workspace *EvidenceWorkspace) close() error {
+	workspace.mu.Lock()
+	defer workspace.mu.Unlock()
+	if workspace.closed {
+		return errors.New("evidence workspace was already closed")
+	}
+	workspace.closed = true
+	err := workspace.root.Close()
+	workspace.root = nil
+	return err
+}
+
+func validWorkspaceRelativePath(path string) bool {
+	if path == "" || len(path) > 4096 || !utf8.ValidString(path) || filepath.IsAbs(path) || filepath.Clean(path) != path || strings.Contains(path, "\\") {
+		return false
+	}
+	for _, part := range strings.Split(path, string(filepath.Separator)) {
+		if part == "" || part == "." || part == ".." {
+			return false
+		}
+	}
+	for _, character := range path {
+		if unicode.IsControl(character) || unicode.Is(unicode.Cf, character) || unicode.Is(unicode.Zl, character) || unicode.Is(unicode.Zp, character) {
+			return false
+		}
+	}
+	return true
 }
 
 func readSourceInput(path string, stdin io.Reader, workingDirectory string) (sourceInput, error) {
