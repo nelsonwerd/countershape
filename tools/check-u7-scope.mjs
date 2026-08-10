@@ -11,7 +11,7 @@ import { isDeepStrictEqual } from "node:util";
 const repositoryRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const specificationPath = resolve(repositoryRoot, "spec/verification/u7-unit-paths.json");
 const receiptPath = "spec/verification/u7-receipt.json";
-const unitOrder = Object.freeze(["U7P", "U7A", "U7B", "U7C", "U7D", "U7R"]);
+const unitOrder = Object.freeze(["U7P", "U7M", "U7A", "U7B", "U7C", "U7D", "U7R"]);
 const u7pExactPaths = Object.freeze([
 	"docs/ARCHITECTURE.md",
 	"docs/HANDOFF_MODE_C.md",
@@ -28,6 +28,22 @@ const u7pExactPaths = Object.freeze([
 	"tools/check-u7-study-harness.mjs",
 	"tools/check-u7-study-harness-selftest.mjs",
 	"tools/print-u7-final-runbook.mjs",
+	"tools/verify-current.mjs",
+	"tools/verify-current-selftest.mjs",
+]);
+const u7mExactPaths = Object.freeze([
+	"docs/ARCHITECTURE.md",
+	"docs/HANDOFF_MODE_C.md",
+	"docs/PROMPT_PACK.md",
+	"docs/STATE_MACHINES.md",
+	"docs/VERIFICATION.md",
+	"docs/prompts/P08-U7-CLI-REFERENCE-STUDIES.md",
+	"docs/status/U7M-P07-RECEIPT-SUCCESSOR-COMPATIBILITY.md",
+	"spec/verification/u7-unit-paths.json",
+	"tools/check-u7-architecture.mjs",
+	"tools/check-u7-architecture-selftest.mjs",
+	"tools/check-u7-plan.mjs",
+	"tools/check-u7-scope.mjs",
 	"tools/verify-current.mjs",
 	"tools/verify-current-selftest.mjs",
 ]);
@@ -66,6 +82,22 @@ const exactTransitionAuthority = Object.freeze({
 		preexistence: "DIRECT_PARENT_TREE",
 	}),
 	product_authority: "NONE", product_behavior: "INHERITED_UNREPROVEN", grade_transfer: "NONE",
+});
+const exactTopologyAmendmentAuthority = Object.freeze({
+	boundary: "U7M",
+	source: "OWNER_OUT_OF_BAND",
+	classification: "OWNER_AUTHORIZED_AUTHORITY_MIGRATION_DEFECT_REPAIR",
+	provenance: Object.freeze({
+		kind: "UNEVIDENCED",
+		disclosure: "OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT",
+	}),
+	authentication: "NOT_ESTABLISHED",
+	signed_authorization: "NOT_IMPLEMENTED",
+	predecessor_declaration: Object.freeze({ kind: "NONE" }),
+	defect: "P07_C3P_RECEIPT_LIVE_ENTRYPOINT_REQUIRES_C6R_OR_C6B_HEAD_SUBJECT_AND_REJECTS_ALL_U7_DESCENDANTS",
+	product_authority: "NONE",
+	product_behavior: "INHERITED_UNREPROVEN",
+	grade_transfer: "NONE",
 });
 const exactRuntimeAuthority = Object.freeze({
 	platform: "darwin", architecture: "arm64", node_path: "/opt/homebrew/bin/node", node_major: 25,
@@ -121,7 +153,8 @@ const exactClaimBindingPolicy = Object.freeze({
 });
 const exactUnitIdentity = Object.freeze({
 	U7P: Object.freeze({ parent: "C6B", verification_profile: "SOURCE_FULL", product_authority: "NONE", product_behavior: "INHERITED_UNREPROVEN", u7d_receipt_state: "ABSENT", subject: "chore: lock U7 execution authority", final_root: ".countershape/u7p-final", paths: 17, claims: 13 }),
-	U7A: Object.freeze({ parent: "U7P", verification_profile: "SOURCE_FULL", product_authority: "U7_REFERENCE_APPLICATION", product_behavior: "CANDIDATE_UNRECEIPTED", u7d_receipt_state: "ABSENT", subject: "feat: add U7 reference CLI foundation", final_root: ".countershape/u7a-final", paths: 12, claims: 12 }),
+	U7M: Object.freeze({ parent: "U7P", verification_profile: "SOURCE_FULL", product_authority: "NONE", product_behavior: "INHERITED_UNREPROVEN", u7d_receipt_state: "ABSENT", subject: "fix: adapt inherited P07 receipt verification", final_root: ".countershape/u7m-final", paths: 14, claims: 13 }),
+	U7A: Object.freeze({ parent: "U7M", verification_profile: "SOURCE_FULL", product_authority: "U7_REFERENCE_APPLICATION", product_behavior: "CANDIDATE_UNRECEIPTED", u7d_receipt_state: "ABSENT", subject: "feat: add U7 reference CLI foundation", final_root: ".countershape/u7a-final", paths: 12, claims: 12 }),
 	U7B: Object.freeze({ parent: "U7A", verification_profile: "SOURCE_FULL", product_authority: "U7_REFERENCE_APPLICATION", product_behavior: "CANDIDATE_UNRECEIPTED", u7d_receipt_state: "ABSENT", subject: "feat: add U7 HTTP falsification study", final_root: ".countershape/u7b-final", paths: 16, claims: 12 }),
 	U7C: Object.freeze({ parent: "U7B", verification_profile: "SOURCE_FULL", product_authority: "U7_REFERENCE_APPLICATION", product_behavior: "CANDIDATE_UNRECEIPTED", u7d_receipt_state: "ABSENT", subject: "feat: add U7 CLI decision and contract flow", final_root: ".countershape/u7c-final", paths: 18, claims: 12 }),
 	U7D: Object.freeze({ parent: "U7C", verification_profile: "SOURCE_FULL", product_authority: "U7_REFERENCE_APPLICATION", product_behavior: "CANDIDATE_UNRECEIPTED", u7d_receipt_state: "ABSENT", subject: "test: close U7 reference study evidence", final_root: ".countershape/u7d-final", paths: 15, claims: 13 }),
@@ -129,6 +162,7 @@ const exactUnitIdentity = Object.freeze({
 });
 const exactRosterDigests = Object.freeze({
 	U7P: "4dbeadaf7b0b837a08bf820a545985ede2c41a2d2e5d53d54e2095fa2de8c380",
+	U7M: "9529dd908eea56d86427a39f20fe468f2761545cc5475787116b4efbaa13d362",
 	U7A: "7fcc7c4ca243bc6011cc7fa80aee73729db060165e5ef400d34477c224e10abd",
 	U7B: "591d8b464771d6b68a994d7c314c0e9fd9468d42eaffbb1eb7f8250b6c4f4c64",
 	U7C: "bdd228a731ec2cc51922aa23367f665237d786afe7b298ad5e844d8d10dd3aa4",
@@ -137,7 +171,8 @@ const exactRosterDigests = Object.freeze({
 });
 const exactClaimDigests = Object.freeze({
 	U7P: "5fe42cb7f23964bbe47b1c0e1136e20268f5823de07742d437e2f4cfe721a41c",
-	U7A: "dd89349ecbf9f4dbc4344b334e117fc72d9ec2073d7c9f53a6a14807c9bef476",
+	U7M: "7b395c7c925db55c68313819297971d7a62eb7326208a6e00014d386796c6ea5",
+	U7A: "693db7d250252e09281c688b736fcaa949746278b6448a807a0c87c2cf9c3354",
 	U7B: "b8aa70dde01f17ded108bebfa0560ec18b3c953d1fabb058319b63d999a58ee0",
 	U7C: "1001620a4dac4f8f0acd1b6fa34b4a5bbdaaeb1444ea342e121ef6e566485411",
 	U7D: "5b7a0a8ff21a18504bd84b5b32a77bb570414ef071293c4a83d4fd73fe75bb25",
@@ -325,10 +360,12 @@ async function validateDidrunStaticAuthority(authority) {
 }
 
 function validateScopeSpecification(value) {
-	if (!exactKeys(value, ["schema_version", "transition_authority", "runtime_authority", "inherited_receipts", "receipt_contract", "claim_binding_policy", "sealed_parent", "units"]) ||
-		value.schema_version !== "countershape/u7-unit-paths/v1" || !Array.isArray(value.units) ||
+	if (!exactKeys(value, ["schema_version", "transition_authority", "topology_amendment_authority", "runtime_authority", "inherited_receipts", "receipt_contract", "claim_binding_policy", "sealed_parent", "units"]) ||
+		value.schema_version !== "countershape/u7-unit-paths/v2" || !Array.isArray(value.units) ||
 		!isDeepStrictEqual(value.units.map((unit) => unit?.id), unitOrder) || !isDeepStrictEqual(value.sealed_parent, exactSealedParent) ||
-		!isDeepStrictEqual(value.transition_authority, exactTransitionAuthority) || !isDeepStrictEqual(value.runtime_authority, exactRuntimeAuthority)) fail("SPECIFICATION", "topology, authority, runtime, or sealed parent");
+		!isDeepStrictEqual(value.transition_authority, exactTransitionAuthority) ||
+		!isDeepStrictEqual(value.topology_amendment_authority, exactTopologyAmendmentAuthority) ||
+		!isDeepStrictEqual(value.runtime_authority, exactRuntimeAuthority)) fail("SPECIFICATION", "topology, amendment authority, runtime, or sealed parent");
 	if (!isDeepStrictEqual(value.inherited_receipts, exactInheritedReceipts)) fail("SPECIFICATION_RECEIPTS", "C3P/C3/C6A");
 	if (!isDeepStrictEqual(value.receipt_contract, exactReceiptContract)) fail("SPECIFICATION_RECEIPT_CONTRACT", "U7D evidence and U7R projection");
 	if (!isDeepStrictEqual(value.claim_binding_policy, exactClaimBindingPolicy)) fail("SPECIFICATION_CLAIM_BINDING", "event, pathspec, recorded child-process interval, and operational writer authority");
@@ -346,6 +383,7 @@ function validateScopeSpecification(value) {
 				typeof claim.label !== "string" || !Array.isArray(claim.command) || claim.command.length < 2 || !isAbsolute(claim.command[0]))) fail("SPECIFICATION_CLAIMS", unit.id);
 	}
 	if (!isDeepStrictEqual(value.units[0].allowed_paths, u7pExactPaths) || !isDeepStrictEqual(value.units[0].required_paths, u7pExactPaths)) fail("SPECIFICATION_U7P", "exact roster drift");
+	if (!isDeepStrictEqual(value.units[1].allowed_paths, u7mExactPaths) || !isDeepStrictEqual(value.units[1].required_paths, u7mExactPaths)) fail("SPECIFICATION_U7M", "exact maintenance roster drift");
 	const receipt = value.units.at(-1);
 	if (receipt.verification_profile !== "RECEIPT_RECONCILIATION" || receipt.product_authority !== "NONE" ||
 		!receipt.required_paths.includes(receiptPath)) fail("SPECIFICATION_RECEIPT", "U7R");
@@ -1091,6 +1129,7 @@ export async function selfTest() {
 	await validateC6BAuthority(specification, specification.sealed_parent.commit);
 	const mutations = [
 		["SPECIFICATION", (value) => { value.schema_version = "wrong"; }],
+		["SPECIFICATION", (value) => { value.topology_amendment_authority.authentication = "ESTABLISHED"; }],
 		["SPECIFICATION_RECEIPTS", (value) => { value.inherited_receipts.C3 = "ABSENT"; }],
 		["SPECIFICATION_RECEIPT_CONTRACT", (value) => { value.receipt_contract.study_run_count_per_domain = 2; }],
 		["SPECIFICATION_CLAIM_BINDING", (value) => { value.claim_binding_policy.event_indices = "LATEST"; }],

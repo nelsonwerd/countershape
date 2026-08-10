@@ -1,5 +1,5 @@
 {
-  "schema_version": "countershape/u7-unit-paths/v1",
+  "schema_version": "countershape/u7-unit-paths/v2",
   "transition_authority": {
     "source": "OWNER_OUT_OF_BAND",
     "classification": "OWNER_AUTHORIZED_ROADMAP_ACTIVATION",
@@ -19,6 +19,22 @@
       "artifact_role": "PREDECESSOR_ROADMAP_DIRECTION_ONLY_NOT_EXACT_U7_TOPOLOGY",
       "preexistence": "DIRECT_PARENT_TREE"
     },
+    "product_authority": "NONE",
+    "product_behavior": "INHERITED_UNREPROVEN",
+    "grade_transfer": "NONE"
+  },
+  "topology_amendment_authority": {
+    "boundary": "U7M",
+    "source": "OWNER_OUT_OF_BAND",
+    "classification": "OWNER_AUTHORIZED_AUTHORITY_MIGRATION_DEFECT_REPAIR",
+    "provenance": {
+      "kind": "UNEVIDENCED",
+      "disclosure": "OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT"
+    },
+    "authentication": "NOT_ESTABLISHED",
+    "signed_authorization": "NOT_IMPLEMENTED",
+    "predecessor_declaration": {"kind": "NONE"},
+    "defect": "P07_C3P_RECEIPT_LIVE_ENTRYPOINT_REQUIRES_C6R_OR_C6B_HEAD_SUBJECT_AND_REJECTS_ALL_U7_DESCENDANTS",
     "product_authority": "NONE",
     "product_behavior": "INHERITED_UNREPROVEN",
     "grade_transfer": "NONE"
@@ -231,8 +247,65 @@
       ]
     },
     {
-      "id": "U7A",
+      "id": "U7M",
       "parent": "U7P",
+      "verification_profile": "SOURCE_FULL",
+      "product_authority": "NONE",
+      "product_behavior": "INHERITED_UNREPROVEN",
+      "u7d_receipt_state": "ABSENT",
+      "subject": "fix: adapt inherited P07 receipt verification",
+      "final_root": ".countershape/u7m-final",
+      "allowed_paths": [
+        "docs/ARCHITECTURE.md",
+        "docs/HANDOFF_MODE_C.md",
+        "docs/PROMPT_PACK.md",
+        "docs/STATE_MACHINES.md",
+        "docs/VERIFICATION.md",
+        "docs/prompts/P08-U7-CLI-REFERENCE-STUDIES.md",
+        "docs/status/U7M-P07-RECEIPT-SUCCESSOR-COMPATIBILITY.md",
+        "spec/verification/u7-unit-paths.json",
+        "tools/check-u7-architecture.mjs",
+        "tools/check-u7-architecture-selftest.mjs",
+        "tools/check-u7-plan.mjs",
+        "tools/check-u7-scope.mjs",
+        "tools/verify-current.mjs",
+        "tools/verify-current-selftest.mjs"
+      ],
+      "required_paths": [
+        "docs/ARCHITECTURE.md",
+        "docs/HANDOFF_MODE_C.md",
+        "docs/PROMPT_PACK.md",
+        "docs/STATE_MACHINES.md",
+        "docs/VERIFICATION.md",
+        "docs/prompts/P08-U7-CLI-REFERENCE-STUDIES.md",
+        "docs/status/U7M-P07-RECEIPT-SUCCESSOR-COMPATIBILITY.md",
+        "spec/verification/u7-unit-paths.json",
+        "tools/check-u7-architecture.mjs",
+        "tools/check-u7-architecture-selftest.mjs",
+        "tools/check-u7-plan.mjs",
+        "tools/check-u7-scope.mjs",
+        "tools/verify-current.mjs",
+        "tools/verify-current-selftest.mjs"
+      ],
+      "claims": [
+        {"type": "tests-pass", "label": "U7M candidate plan and sealed-U7P parent authority", "command": ["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--check-candidate", "U7M"]},
+        {"type": "tests-pass", "label": "U7M independent candidate transition and exact staged authority", "command": ["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--unit", "U7M", "--candidate-phase"]},
+        {"type": "tests-pass", "label": "U7M inherited P07 receipt successor compatibility", "command": ["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--verify-inherited-p07-compatibility"]},
+        {"type": "tests-pass", "label": "U7M plan contract defensive self-test", "command": ["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--self-test"]},
+        {"type": "tests-pass", "label": "U7M independent staged-scope defensive self-test", "command": ["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--self-test"]},
+        {"type": "tests-pass", "label": "U7M final runbook renderer defensive self-test", "command": ["/opt/homebrew/bin/node", "tools/print-u7-final-runbook.mjs", "--self-test"]},
+        {"type": "tests-pass", "label": "U7M zero-product-surface architecture conformance", "command": ["/opt/homebrew/bin/node", "tools/check-u7-architecture.mjs", "--phase", "U7M"]},
+        {"type": "tests-pass", "label": "U7M architecture authority defensive self-test", "command": ["/opt/homebrew/bin/node", "tools/check-u7-architecture-selftest.mjs", "--phase", "U7M"]},
+        {"type": "tests-pass", "label": "U7M cumulative verifier defensive self-test", "command": ["/opt/homebrew/bin/node", "tools/verify-current-selftest.mjs"]},
+        {"type": "tests-pass", "label": "U7M cumulative verification on the exact staged maintenance candidate", "command": ["/opt/homebrew/bin/node", "tools/verify-current.mjs"]},
+        {"type": "command-succeeded", "label": "U7M exact fourteen-path staged scope and diff integrity", "command": ["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--unit", "U7M", "--final-gate"]},
+        {"type": "command-succeeded", "label": "U7M scoped staged credential-pattern scan", "command": ["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--unit", "U7M", "--credential-scan"]},
+        {"type": "command-succeeded", "label": "U7M sealed-U7P predecessor and preceding didrun chain integrity", "command": ["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--verify-preseal", "U7M"]}
+      ]
+    },
+    {
+      "id": "U7A",
+      "parent": "U7M",
       "verification_profile": "SOURCE_FULL",
       "product_authority": "U7_REFERENCE_APPLICATION",
       "product_behavior": "CANDIDATE_UNRECEIPTED",
@@ -268,7 +341,7 @@
         "docs/status/U7A-CLI-FOUNDATION.md"
       ],
       "claims": [
-        {"type": "tests-pass", "label": "U7A candidate plan and sealed-U7P parent authority", "command": ["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--check-candidate", "U7A"]},
+        {"type": "tests-pass", "label": "U7A candidate plan and sealed-U7M parent authority", "command": ["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--check-candidate", "U7A"]},
         {"type": "tests-pass", "label": "U7A independent candidate transition and exact staged authority", "command": ["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--unit", "U7A", "--candidate-phase"]},
         {"type": "tests-pass", "label": "U7A plan contract defensive self-test", "command": ["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--self-test"]},
         {"type": "tests-pass", "label": "U7A independent staged-scope defensive self-test", "command": ["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--self-test"]},
@@ -279,7 +352,7 @@
         {"type": "tests-pass", "label": "U7A cumulative verification", "command": ["/opt/homebrew/bin/node", "tools/verify-current.mjs"]},
         {"type": "command-succeeded", "label": "U7A exact staged scope and diff integrity", "command": ["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--unit", "U7A", "--final-gate"]},
         {"type": "command-succeeded", "label": "U7A scoped staged credential-pattern scan", "command": ["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--unit", "U7A", "--credential-scan"]},
-        {"type": "command-succeeded", "label": "U7A sealed-U7P predecessor and preceding didrun chain integrity", "command": ["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--verify-preseal", "U7A"]}
+        {"type": "command-succeeded", "label": "U7A sealed-U7M predecessor and preceding didrun chain integrity", "command": ["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--verify-preseal", "U7A"]}
       ]
     },
     {

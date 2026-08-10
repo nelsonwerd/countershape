@@ -36,13 +36,14 @@ const exactU7PhaseCapsuleKeys = Object.freeze([
 ]);
 export const exactU7PhaseContracts = Object.freeze({
 	U7P: Object.freeze({ boundary: "U7P", parent: "C6B", profile: "SOURCE_FULL", state: "SOURCE_CANDIDATE", receipt: "ABSENT", productAuthority: "NONE", productBehavior: "INHERITED_UNREPROVEN" }),
-	U7A: Object.freeze({ boundary: "U7A", parent: "U7P", profile: "SOURCE_FULL", state: "SOURCE_CANDIDATE", receipt: "ABSENT", productAuthority: "U7_REFERENCE_APPLICATION", productBehavior: "CANDIDATE_UNRECEIPTED" }),
+	U7M: Object.freeze({ boundary: "U7M", parent: "U7P", profile: "SOURCE_FULL", state: "SOURCE_CANDIDATE", receipt: "ABSENT", productAuthority: "NONE", productBehavior: "INHERITED_UNREPROVEN" }),
+	U7A: Object.freeze({ boundary: "U7A", parent: "U7M", profile: "SOURCE_FULL", state: "SOURCE_CANDIDATE", receipt: "ABSENT", productAuthority: "U7_REFERENCE_APPLICATION", productBehavior: "CANDIDATE_UNRECEIPTED" }),
 	U7B: Object.freeze({ boundary: "U7B", parent: "U7A", profile: "SOURCE_FULL", state: "SOURCE_CANDIDATE", receipt: "ABSENT", productAuthority: "U7_REFERENCE_APPLICATION", productBehavior: "CANDIDATE_UNRECEIPTED" }),
 	U7C: Object.freeze({ boundary: "U7C", parent: "U7B", profile: "SOURCE_FULL", state: "SOURCE_CANDIDATE", receipt: "ABSENT", productAuthority: "U7_REFERENCE_APPLICATION", productBehavior: "CANDIDATE_UNRECEIPTED" }),
 	U7D: Object.freeze({ boundary: "U7D", parent: "U7C", profile: "SOURCE_FULL", state: "SOURCE_CANDIDATE", receipt: "ABSENT", productAuthority: "U7_REFERENCE_APPLICATION", productBehavior: "CANDIDATE_UNRECEIPTED" }),
 });
-const exactU7GovernedCounts = Object.freeze({ U7P: 0, U7A: 10, U7B: 19, U7C: 30, U7D: 34 });
-const u7ArchitectureCaseDigest = "713f7893f4dfd1a67ba0d1c30bd88f5ebd4cd92665066f9036f3a5dca11abc83";
+const exactU7GovernedCounts = Object.freeze({ U7P: 0, U7M: 0, U7A: 10, U7B: 19, U7C: 30, U7D: 34 });
+const u7ArchitectureCaseDigest = "1a8963645a8ca9cd389bea4b0075df30b0f11bdcb6e0d063b94f69728ab8d6c7";
 const u7PhaseCapsuleStart = "<!-- U7-PHASE:START -->";
 const u7PhaseCapsuleEnd = "<!-- U7-PHASE:END -->";
 const u7PhaseCapsuleIndexStep = Object.freeze({
@@ -75,7 +76,7 @@ export function exactU7ArchitectureSelftestOutput(phase) {
 	if (!Object.hasOwn(exactU7PhaseContracts, phase)) {
 		throw new VerificationError("VERIFY_U7_PHASE_UNSUPPORTED", String(phase));
 	}
-	return `U7 architecture defensive self-test passed: active=${phase} cases=82 clean=6 hostile=76 digest=${u7ArchitectureCaseDigest}\n`;
+	return `U7 architecture defensive self-test passed: active=${phase} cases=87 clean=7 hostile=80 digest=${u7ArchitectureCaseDigest}\n`;
 }
 
 // Sealed C0 compatibility invariants now enforced by verify-runtime-authority.mjs:
@@ -200,7 +201,7 @@ export function parseU7PhaseCapsule(text) {
 		throw new VerificationError("VERIFY_U7_PHASE_CAPSULE", "markers must be visible operational Markdown");
 	}
 	const body = text.slice(start, end + u7PhaseCapsuleEnd.length);
-	const match = /^<!-- U7-PHASE:START -->\n### Active U7 phase contract\n\n- \*\*Namespace:\*\* `countershape\/u7-unit-paths\/v1`\n- \*\*Boundary:\*\* `([A-Z0-9]+)`\n- \*\*Parent:\*\* `([A-Z0-9.]+)`\n- \*\*Verification profile:\*\* `(SOURCE_FULL|RECEIPT_RECONCILIATION)`\n- \*\*State:\*\* `(SOURCE_CANDIDATE|RECEIPT_CANDIDATE)`\n- \*\*Topology:\*\* `U7P -> U7A -> U7B -> U7C -> U7D -> U7R`\n- \*\*Inherited receipts:\*\* `C3P=PRESENT; C3=PRESENT; C6A=PRESENT`\n- \*\*Receipt U7D:\*\* `(ABSENT|PRESENT)`\n- \*\*Product authority:\*\* `(NONE|U7_REFERENCE_APPLICATION)`\n- \*\*Product behavior:\*\* `(INHERITED_UNREPROVEN|CANDIDATE_UNRECEIPTED|SOURCE_RECEIPT_RECONCILIATION)`\n<!-- U7-PHASE:END -->$/u.exec(body);
+	const match = /^<!-- U7-PHASE:START -->\n### Active U7 phase contract\n\n- \*\*Namespace:\*\* `countershape\/u7-unit-paths\/v2`\n- \*\*Boundary:\*\* `([A-Z0-9]+)`\n- \*\*Parent:\*\* `([A-Z0-9.]+)`\n- \*\*Verification profile:\*\* `(SOURCE_FULL|RECEIPT_RECONCILIATION)`\n- \*\*State:\*\* `(SOURCE_CANDIDATE|RECEIPT_CANDIDATE)`\n- \*\*Topology:\*\* `U7P -> U7M -> U7A -> U7B -> U7C -> U7D -> U7R`\n- \*\*Inherited receipts:\*\* `C3P=PRESENT; C3=PRESENT; C6A=PRESENT`\n- \*\*Receipt U7D:\*\* `(ABSENT|PRESENT)`\n- \*\*Product authority:\*\* `(NONE|U7_REFERENCE_APPLICATION)`\n- \*\*Product behavior:\*\* `(INHERITED_UNREPROVEN|CANDIDATE_UNRECEIPTED|SOURCE_RECEIPT_RECONCILIATION)`\n<!-- U7-PHASE:END -->$/u.exec(body);
 	if (!match) throw new VerificationError("VERIFY_U7_PHASE_CAPSULE", "exact capsule shape");
 	return Object.freeze({ boundary: match[1], parent: match[2], profile: match[3], state: match[4], receipt: match[5], productAuthority: match[6], productBehavior: match[7] });
 }
@@ -216,7 +217,7 @@ export async function loadU7PhaseCapsuleFromIndex(state, runner = currentStepChi
 
 const goGeneralCommon = Object.freeze(["-mod=readonly", "-buildvcs=false", `-p=${generalJobs}`]);
 const goSerialCommon = Object.freeze(["-mod=readonly", "-buildvcs=false", "-p=1"]);
-const inheritedP07CompatibilityStdout = "U7 inherited P07 compatibility exact: parent=C6B blocks=11 protected_paths=4 legacy_live_selftest=RETIRED_SUCCESSOR_INCOMPATIBLE\n";
+const inheritedP07CompatibilityStdout = "U7 inherited P07 compatibility exact: parent=C6B blocks=11 protected_paths=4 c3p_plan=FULL_EXPLICIT_C6A_AUTHORITY legacy_live_entrypoints=RETIRED_SUCCESSOR_INCOMPATIBLE\n";
 
 export const sensitiveGoPackages = Object.freeze([
 	`${modulePath}/internal/contractexec/runner`,
@@ -465,10 +466,6 @@ export const currentSteps = Object.freeze([
 		args: Object.freeze(["--self-test"]), marker: "P07B-C unit scope self-test passed:",
 	}),
 	Object.freeze({
-		id: "architecture-p07b-c-c3p-receipt", tool: "node", tools: Object.freeze(["node", "git"]), path: "tools/check-p07b-c-c3p-receipt.mjs",
-		marker: "P07B-C C3P receipt check passed: phase-specific source/receipt, scope, Git-note, and documentation authority are coherent",
-	}),
-	Object.freeze({
 		id: "architecture-u7-plan-selftest", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
 		path: "tools/check-u7-plan.mjs", args: Object.freeze(["--self-test"]), marker: "U7 plan contract defensive self-test passed:",
 	}),
@@ -515,6 +512,7 @@ export const historicalOnly = Object.freeze([
 	Object.freeze({ id: "mutation-p07b-a2-1", scripts: Object.freeze(["tools/mutate-p07b-a2-authority.mjs"]), status: "docs/status/P07B-A2-1-AUTHORITY.md" }),
 	Object.freeze({ id: "architecture-p07b-c-plan-selftest", scripts: Object.freeze(["tools/check-p07b-c-plan.mjs"]), status: "docs/status/U7P-AUTHORITY.md" }),
 	Object.freeze({ id: "architecture-p07b-c-c3p-receipt-selftest", scripts: Object.freeze(["tools/check-p07b-c-c3p-receipt.mjs"]), status: "docs/status/U7P-AUTHORITY.md" }),
+	Object.freeze({ id: "architecture-p07b-c-c3p-receipt", scripts: Object.freeze(["tools/check-p07b-c-c3p-receipt.mjs"]), status: "docs/status/U7M-P07-RECEIPT-SUCCESSOR-COMPATIBILITY.md" }),
 ]);
 
 function childToolNames(step) {
