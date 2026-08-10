@@ -1,12 +1,12 @@
 # Countershape
 
-**A live, unfinished autonomous build.** An AI agent has been building this repository on its own since July 14 — nearly four weeks, minus a several-day pause at usage limits — under a verification discipline where every claim has to be backed by a recorded command. It is running again as you read this. There is no CLI yet, no interface, and nothing you can install.
+**A live, unfinished autonomous build.** An AI agent has been building this repository on its own since July 14 — nearly four weeks, minus a several-day pause at usage limits — under a verification discipline where every claim has to be backed by a recorded command. It is running again as you read this. The first CLI code sealed August 10, but there is still nothing you can install and no interface you can use.
 
 The repository is public early because the *process* is the interesting part, and process is only interesting if you can inspect it.
 
 > ### Should you clone this?
 >
-> **Not to run it — not yet.** Nothing works from a clone today: there's no CLI, and two files still hardcode absolute paths from the machine it's being built on. Clone it to *read* — the code, the 58 status documents, and the receipts are all worth a look right now.
+> **Not to run it — not yet.** Nothing works from a clone today: the CLI is only just taking shape, and two files still hardcode absolute paths from the machine it's being built on. Clone it to *read* — the code, the 58 status documents, and the receipts are all worth a look right now.
 >
 > **When the build finishes**, the hardcoded paths get fixed, the command-line interface and decision screen land, and this README is replaced with real install and usage instructions. Watch the repo if you want to know when that happens.
 
@@ -37,7 +37,7 @@ The bet is that generating code got cheap and **deciding which behavior you actu
 | | |
 |---|---|
 | Started | 2026-07-14 |
-| Status | **Still building.** Units 0–6 of a 10-unit roadmap sealed and closed; unit 7 — the CLI, the first thing a human will touch — opened August 9 |
+| Status | **Still building.** Units 0–6 of a 10-unit roadmap sealed and closed; unit 7 — the CLI, the first thing a human will touch — opened August 9, and its first product code sealed August 10 |
 | Sealed commits | 79 |
 | Verified claims | 1095 (1064 clean, 30 stale, 1 failed) |
 | Go — product code | ~71,000 lines |
@@ -46,7 +46,7 @@ The bet is that generating code got cheap and **deciding which behavior you actu
 | **Runnable?** | **No.** No CLI, no UI, no install path |
 | Stats as of | 2026-08-10 |
 
-The core engine exists and is sealed: exact Git materialization, isolated execution worlds, CLI and HTTP observation, a bounded reducer, the decision store, the ruling authority, the standalone-test compiler, publication, and execution classification. What does *not* exist yet is everything a human would touch — the command line, the blind decision screen, and packaging. Those are units 7 through 9; unit 7 opened on August 9 with its execution authority sealed, and the CLI is now being built.
+The core engine exists and is sealed: exact Git materialization, isolated execution worlds, CLI and HTTP observation, a bounded reducer, the decision store, the ruling authority, the standalone-test compiler, publication, and execution classification. What does *not* exist yet is everything a human would touch — the command line, the blind decision screen, and packaging. Those are units 7 through 9, and unit 7 is now underway for real: on August 10 the run sealed its first CLI code — `cmd/countershape`, the command's entry point and application shell, plus an HTTP falsification study behind it. It is a foundation, not a usable tool yet.
 
 If you clone this expecting to run something, you will be disappointed. Come back later.
 
@@ -79,7 +79,7 @@ Better you hear them here than discover them and assume something was hidden.
 
 **2. One claim is graded `failed` and thirty are `stale`**, all inside two commits from the first 30 hours. They were never deleted, relabeled, or re-sealed. The status documents quote them verbatim and state plainly that none of those claims supports a capability. The other 77 commits are clean.
 
-**3. There is roughly twice as much checking as there is product.** ~66,000 lines of product Go, against ~60,000 lines of tests and ~91,000 lines of JavaScript that exists solely to check the rest. Put another way: the checker JavaScript alone outweighs the product it verifies. There is also a five-day window in the history where ten milestones sealed and **zero lines of product code were written** — 88% of everything added in that stretch was checker JavaScript. That is not a bug in the log; that is what happened, and it is one of the more interesting things this run has produced.
+**3. There is roughly twice as much checking as there is product.** ~71,000 lines of product Go, against ~60,000 lines of tests and ~91,000 lines of JavaScript that exists solely to check the rest. Put another way: the checker JavaScript alone outweighs the product it verifies. There is also a five-day window in the history where ten milestones sealed and **zero lines of product code were written** — 88% of everything added in that stretch was checker JavaScript. That is not a bug in the log; that is what happened, and it is one of the more interesting things this run has produced.
 
 ---
 
