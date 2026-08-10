@@ -16,26 +16,33 @@
 ### Active U7 phase contract
 
 - **Namespace:** `countershape/u7-unit-paths/v2`
-- **Boundary:** `U7M`
-- **Parent:** `U7P`
+- **Boundary:** `U7A`
+- **Parent:** `U7M`
 - **Verification profile:** `SOURCE_FULL`
 - **State:** `SOURCE_CANDIDATE`
 - **Topology:** `U7P -> U7M -> U7A -> U7B -> U7C -> U7D -> U7R`
 - **Inherited receipts:** `C3P=PRESENT; C3=PRESENT; C6A=PRESENT`
 - **Receipt U7D:** `ABSENT`
-- **Product authority:** `NONE`
-- **Product behavior:** `INHERITED_UNREPROVEN`
+- **Product authority:** `U7_REFERENCE_APPLICATION`
+- **Product behavior:** `CANDIDATE_UNRECEIPTED`
 <!-- U7-PHASE:END -->
 
-#### U7M operator summary
+#### U7A operator summary
 
-- **Status:** active 14-path `SOURCE_FULL` maintenance candidate; all 13 U7M claims are `UNRECEIPTED`. U7M has product authority `NONE`, product behavior `INHERITED_UNREPROVEN`, receipt U7D `ABSENT`, and grade transfer `NONE`.
-- **Parent:** exact sealed U7P commit `05ade5ea9af2ededbc91118c8952631c68e43f36`, tree `372ac1b48b239f6680f8159b7155628d61faaded`, note blob `1d7d764eb465f8b2b1cc35f2919f8aa23c69357b`, `13/13` verbatim `tree-exact` grades, strict exit `0`, HTML `.countershape/evidence/u7p-final-05ade5ea9af2.html` (SHA-256 `0ef35ba6c77c709b64b3affe738ffd154ee5a88a3ffc55859f144415bf02c106`), and archive `.didrun-history/u7p-final-05ade5ea9af2/.didrun`.
-- **Defect and route:** the ordinary live `architecture-p07b-c-c3p-receipt` row invokes the frozen full P07 plan without descendant C6A authority. Its C6B resolver admits only ambient HEAD subjects C6R or C6B, so it deterministically rejects every honest U7 descendant. U7M is the owner-selected non-product repair boundary between U7P and U7A; it does not rewrite sealed U7P or any protected P07 byte.
-- **Authority ceiling:** this topology amendment is `OWNER_OUT_OF_BAND`, `UNEVIDENCED`, unauthenticated, unsigned, and classified `OWNER_AUTHORIZED_AUTHORITY_MIGRATION_DEFECT_REPAIR`. It transfers no grade and establishes no product behavior.
-- **Verifier repair:** the incompatible ordinary C3P entrypoint is retained as the fifteenth historical-only row. The current roster is 70 rows. The existing descendant compatibility row now reruns stable U7 candidate authority; requires exact sealed-C6B equality for all 11 visible P07 blocks, the four protected P07 checker/spec paths, the C6A manifest, receipt, tracked summary, and C6 evidence projection; reopens the exact C6A commit/tree/parent/subject and note; compensates for the legacy injected-authority summary shortcut; and executes the unchanged full P07 plan with explicit sealed C6A authority. Only one exact stdout line, empty stderr, status zero, and terminally stable candidate/notes/spec authority pass.
-- **Preserved failed U7A attempt:** the first U7A final ledger reached event 8 on exact candidate tree `c65753ad3808c71eb8164b0761bf2dcf258226f7`; verifier rows 1–61 passed and row 62 failed with the descendant-subject defect above. The unclaimed ledger is permanently preserved at `.didrun-history/u7a-precommit-failed-20260809T181519Z-cumulative-verifier/.didrun`, its final root is preserved at `.countershape/u7a-final-precommit-failed-20260809T181519Z-cumulative-verifier`, and no event 8 claim exists. The candidate is durably anchored by `refs/countershape/checkpoints/u7a-candidate-pre-u7m` at commit `91a8a74fb4be80582c8fe6f8c09ab705a98a8806`, tree `c65753ad3808c71eb8164b0761bf2dcf258226f7`.
-- **Continuation:** seal U7M first. Then restore only the ten checkpointed U7A product/test paths, regenerate U7A's HANDOFF/status bytes for sealed parent U7M, and restart all twelve U7A events and claims from event zero. No prior event, claim, or grade is reusable.
+- **Status:** active exact 12-path `SOURCE_FULL` application-foundation candidate; all 12 U7A claims are `UNRECEIPTED`. Product authority is `U7_REFERENCE_APPLICATION`, behavior is `CANDIDATE_UNRECEIPTED`, receipt U7D is `ABSENT`, and grade transfer is `NONE`.
+- **Parent:** exact sealed U7M commit `fc70bcaa51fec3991d139796c85495b6c1c75735`, tree `cfc84fca4e32b9d610f3b23458c30ab8dfcf8db1`, subject `fix: adapt inherited P07 receipt verification`, note blob `e53cc6a9712b1ee1e064e43a53e2f355b7017788`, `13/13` verbatim `tree-exact` grades, strict exit `0`, HTML `.countershape/evidence/u7m-final-fc70bcaa51fe.html` (8,865 bytes; SHA-256 `a490d63f79da89f1e3616e2f30a451789d35b98100655e8e674f198b29687bef`), and archive `.didrun-history/u7m-final-fc70bcaa51fe/.didrun`.
+- **Product slice:** U7A supplies only the inert reference CLI foundation: thin composition, strict SourceSpec validation, deterministic help/validate/preflight surfaces, typed ordinary output, stable source-input admission, safe next actions, and compiled-binary tests. It performs no study, candidate execution, observation, comparison, reduction, ruling, contract operation, or receipt.
+- **Restoration authority:** the ten product/test blobs were seeded byte-for-byte from checkpoint ref `refs/countershape/checkpoints/u7a-candidate-pre-u7m` at commit `91a8a74fb4be80582c8fe6f8c09ab705a98a8806`. Its stale U7P-era HANDOFF and status blobs were not reused. Before any fresh ledger, U7A-owned review repaired the renderer/test pair so attacker-controlled diagnostic paths visibly escape terminal controls; both governance documents are regenerated against sealed U7M.
+- **Preserved failed attempt:** the first U7A final ledger reached unclaimed event 8 on candidate tree `c65753ad3808c71eb8164b0761bf2dcf258226f7`; cumulative rows 1–61 passed and row 62 exposed the inherited C3P successor-subject defect later repaired by U7M. The ledger and root remain at `.didrun-history/u7a-precommit-failed-20260809T181519Z-cumulative-verifier/.didrun` and `.countershape/u7a-final-precommit-failed-20260809T181519Z-cumulative-verifier`. It created no event-8 claim, commit, seal, note, strict result, HTML witness, or reusable grade.
+- **Continuation:** this fresh attempt starts at event zero, reruns all twelve commands and claims over all twelve paths, and reuses no prior event, claim, object, or grade. U7B remains blocked until exact U7A commits, seals, and passes explicit-commit strict verification.
+
+#### Sealed U7M operator record
+
+- **Status:** sealed and strict-clean at commit `fc70bcaa51fec3991d139796c85495b6c1c75735`, tree `cfc84fca4e32b9d610f3b23458c30ab8dfcf8db1`, note blob `e53cc6a9712b1ee1e064e43a53e2f355b7017788`, with `13/13` verbatim `tree-exact` grades, strict exit `0`, the 8,865-byte HTML witness above, and commit-addressed archive `.didrun-history/u7m-final-fc70bcaa51fe/.didrun`.
+- **Purpose and ceiling:** U7M is the owner-selected, non-product repair between U7P and U7A for the frozen P07 receipt verifier's descendant-subject defect. It has product authority `NONE`, behavior `INHERITED_UNREPROVEN`, receipt `ABSENT`, and transfers no grade. The topology amendment is `OWNER_OUT_OF_BAND`, `UNEVIDENCED`, unauthenticated, unsigned, and classified `OWNER_AUTHORIZED_AUTHORITY_MIGRATION_DEFECT_REPAIR`.
+- **Verifier repair:** the successor-incompatible ordinary C3P entrypoint is historical-only. The current descendant compatibility gate binds exact sealed-C6B P07 blocks and protected bytes, reconstructs exact C6A source and note authority, compensates for the legacy injected-authority summary shortcut, and executes the unchanged full P07 plan with explicit sealed C6A authority under terminal candidate/notes/spec stability.
+- **Attempt history:** U7M itself first preserved an unclaimed claim-CLI-syntax attempt, then reran all 13 events and claims in a fresh ledger. The earlier failed U7A ledger and its checkpoint remain permanent as recorded above; no evidence crosses attempts or boundaries.
+- **Continuation:** the ten checkpoint-seeded product/test paths carry forward into active U7A, with only the recorded U7A-owned renderer/test repair changing those seed bytes; U7A's two governance blobs are new, parent-bound bytes, and its evidence starts at event zero.
 
 #### Sealed U7P operator record (future routing superseded by U7M)
 
