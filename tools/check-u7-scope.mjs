@@ -11,7 +11,7 @@ import { isDeepStrictEqual } from "node:util";
 const repositoryRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const specificationPath = resolve(repositoryRoot, "spec/verification/u7-unit-paths.json");
 const receiptPath = "spec/verification/u7-receipt.json";
-const unitOrder = Object.freeze(["U7P", "U7M", "U7A", "U7B", "U7C", "U7D", "U7R"]);
+const unitOrder = Object.freeze(["U7P", "U7M", "U7A", "U7B", "U7N", "U7C", "U7D", "U7R"]);
 const u7pExactPaths = Object.freeze([
 	"docs/ARCHITECTURE.md",
 	"docs/HANDOFF_MODE_C.md",
@@ -44,6 +44,24 @@ const u7mExactPaths = Object.freeze([
 	"tools/check-u7-architecture-selftest.mjs",
 	"tools/check-u7-plan.mjs",
 	"tools/check-u7-scope.mjs",
+	"tools/verify-current.mjs",
+	"tools/verify-current-selftest.mjs",
+]);
+const u7nExactPaths = Object.freeze([
+	"docs/ARCHITECTURE.md",
+	"docs/HANDOFF_MODE_C.md",
+	"docs/PROMPT_PACK.md",
+	"docs/STATE_MACHINES.md",
+	"docs/VERIFICATION.md",
+	"docs/prompts/P08-U7-CLI-REFERENCE-STUDIES.md",
+	"docs/status/U7N-CLI-CONTRACT-ALIGNMENT.md",
+	"spec/verification/u7-unit-paths.json",
+	"tools/check-u7-plan.mjs",
+	"tools/check-u7-scope.mjs",
+	"tools/check-u7-architecture.mjs",
+	"tools/check-u7-architecture-selftest.mjs",
+	"tools/check-u7-study-harness.mjs",
+	"tools/check-u7-study-harness-selftest.mjs",
 	"tools/verify-current.mjs",
 	"tools/verify-current-selftest.mjs",
 ]);
@@ -83,22 +101,22 @@ const exactTransitionAuthority = Object.freeze({
 	}),
 	product_authority: "NONE", product_behavior: "INHERITED_UNREPROVEN", grade_transfer: "NONE",
 });
-const exactTopologyAmendmentAuthority = Object.freeze({
-	boundary: "U7M",
-	source: "OWNER_OUT_OF_BAND",
-	classification: "OWNER_AUTHORIZED_AUTHORITY_MIGRATION_DEFECT_REPAIR",
-	provenance: Object.freeze({
-		kind: "UNEVIDENCED",
-		disclosure: "OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT",
+const exactTopologyAmendmentAuthorities = Object.freeze([
+	Object.freeze({
+		boundary: "U7M", source: "OWNER_OUT_OF_BAND", classification: "OWNER_AUTHORIZED_AUTHORITY_MIGRATION_DEFECT_REPAIR",
+		provenance: Object.freeze({ kind: "UNEVIDENCED", disclosure: "OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT" }),
+		authentication: "NOT_ESTABLISHED", signed_authorization: "NOT_IMPLEMENTED", predecessor_declaration: Object.freeze({ kind: "NONE" }),
+		defect: "P07_C3P_RECEIPT_LIVE_ENTRYPOINT_REQUIRES_C6R_OR_C6B_HEAD_SUBJECT_AND_REJECTS_ALL_U7_DESCENDANTS",
+		product_authority: "NONE", product_behavior: "INHERITED_UNREPROVEN", grade_transfer: "NONE",
 	}),
-	authentication: "NOT_ESTABLISHED",
-	signed_authorization: "NOT_IMPLEMENTED",
-	predecessor_declaration: Object.freeze({ kind: "NONE" }),
-	defect: "P07_C3P_RECEIPT_LIVE_ENTRYPOINT_REQUIRES_C6R_OR_C6B_HEAD_SUBJECT_AND_REJECTS_ALL_U7_DESCENDANTS",
-	product_authority: "NONE",
-	product_behavior: "INHERITED_UNREPROVEN",
-	grade_transfer: "NONE",
-});
+	Object.freeze({
+		boundary: "U7N", source: "OWNER_OUT_OF_BAND", classification: "OWNER_AUTHORIZED_CLI_AND_MILESTONE_AUTHORITY_RECONCILIATION",
+		provenance: Object.freeze({ kind: "UNEVIDENCED", disclosure: "OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT" }),
+		authentication: "NOT_ESTABLISHED", signed_authorization: "NOT_IMPLEMENTED", predecessor_declaration: Object.freeze({ kind: "NONE" }),
+		defect: "U7C_EXIT2_AND_EDGE_CLASSIFICATION_CONFLICTS_WITH_EXACT_ENROLLED_CLI_STIMULUS_AND_U7D_OVERSTATES_ABSENT_HTTP_RUN_CLASSIFICATION_AUTHORITY",
+		product_authority: "NONE", product_behavior: "INHERITED_UNREPROVEN", grade_transfer: "NONE",
+	}),
+]);
 const exactRuntimeAuthority = Object.freeze({
 	platform: "darwin", architecture: "arm64", node_path: "/opt/homebrew/bin/node", node_major: 25,
 	go_path: "/opt/homebrew/bin/go", git_path: "/usr/bin/git",
@@ -144,7 +162,7 @@ const exactRuntimeAuthority = Object.freeze({
 	didrun_byte_authority: "LOCAL_RUNTIME_SNAPSHOT_NOT_VENDOR_AUTHENTICATED_OUTER_PROCESS_ENVIRONMENT_STDLIB_DYNAMIC_LOADER_AND_THIRD_PARTY_TRANSITIVE_DEPENDENCIES_UNBOUND",
 });
 const exactInheritedReceipts = Object.freeze({ C3P: "PRESENT", C3: "PRESENT", C6A: "PRESENT" });
-const exactReceiptContract = Object.freeze(JSON.parse(String.raw`{"schema_version":"countershape/u7-receipt/v1","source_boundary":"U7D","study_event_command":["/opt/homebrew/bin/node","tools/check-u7-study-harness.mjs","--phase","U7D"],"study_evidence_schema":"countershape/u7-study-evidence/v1","study_execution_authority":"U7P_FROZEN_HARNESS_DIRECT_PROCESS_GIT_AND_ARTIFACT_OBSERVATION","study_harness":{"protocol":"countershape/u7-study-harness/v1","protocol_sha256":"faca5cac53ce4ca4d4edea3089edd1fad1139ff847da9618115d1e308b717678","path":"tools/check-u7-study-harness.mjs","sha256":"d6a39e44e6a4de43268dab9ff2deac8350b0b4e107b01e254d2767f0692a4121","product_result_schema":"countershape/u7-study-domain-result/v1","trial_schema":"countershape/u7-study-trial/v1","artifact_schema":"countershape/u7-study-artifact/v1","observation_authority":"U7P_FROZEN_HARNESS_DIRECT_PROCESS_GIT_AND_ARTIFACT_OBSERVATION","semantic_ceiling":"ARTIFACT_BYTES_AND_SUBJECT_PROCESS_TOPOLOGY_OBSERVED_PRODUCT_SEMANTICS_AND_FULL_HARNESS_RESOURCES_NOT_INDEPENDENTLY_ESTABLISHED","driver_protocol":"FIXTURE_ONLY_NO_EVIDENCE_ROOT","phase_verdicts":{"U7B":"LOCAL_HTTP_REFERENCE_FUNCTIONAL_GREEN_SUBJECT_RESOURCE_OBSERVED","U7C":"LOCAL_CLI_REFERENCE_FUNCTIONAL_GREEN_SUBJECT_RESOURCE_OBSERVED","U7D":"LOCAL_REFERENCE_MILESTONE_FUNCTIONAL_GREEN_FULL_STUDY_RESOURCE_UNRECEIPTED"},"observer_prefix":["/usr/bin/time","-p","-l","-o"],"driver_by_domain":{"http":"tools/run-u7-http-study.mjs","cli":"tools/run-u7-cli-study.mjs"},"phase_budgets":[{"id":"fixture","per_run_trials":1},{"id":"compile","per_run_trials":1},{"id":"search","per_run_trials":80},{"id":"confirm","per_run_trials":8},{"id":"contract","per_run_trials":10}],"deterministic_artifact_paths":{"source_spec_sha256":"deterministic/source-spec.json","world_plan_sha256":"deterministic/world-plan.json","ruling_sha256":"deterministic/ruling.json","decision_record_sha256":"deterministic/decision-record.json","contract_bundle_sha256":"deterministic/contract-bundle.json"},"fresh_artifact_paths":{"world_instance_sha256":"fresh/world-instance.json","attempts_sha256":"fresh/attempts.json","measurements_sha256":"fresh/measurements.json","captures_sha256":"fresh/captures.json","confirmation_sha256":"fresh/confirmation.json","contract_execution_target_sha256":"fresh/contract-execution-target.json","finalized_contract_run_sha256":"fresh/finalized-contract-run.json","contract_execution_sha256":"fresh/contract-execution.json"}},"study_domains":["http","cli"],"study_run_count_per_domain":3,"study_trial_budget_per_domain":300,"study_subject_process_wall_time_budget_ms_per_domain":900000,"study_subject_process_peak_rss_budget_bytes_per_domain":4294967296,"study_phase_budgets":[{"id":"fixture","trial_count":3,"trial_budget":3},{"id":"compile","trial_count":3,"trial_budget":3},{"id":"search","trial_count":240,"trial_budget":240},{"id":"confirm","trial_count":24,"trial_budget":24},{"id":"contract","trial_count":30,"trial_budget":30}],"deterministic_artifact_fields":["source_spec_sha256","world_plan_sha256","ruling_sha256","decision_record_sha256","contract_bundle_sha256","reference_binary_sha256"],"fresh_run_digest_fields":["world_instance_sha256","attempts_sha256","measurements_sha256","captures_sha256","confirmation_sha256","fixture_invocation_sha256","contract_execution_target_sha256","finalized_contract_run_sha256","contract_execution_sha256"],"html_authority":"LOCAL_SNAPSHOT_NOT_PORTABLE_STRICT_WITNESS","ledger_authority":"LOCAL_SECRET_BEARING_SNAPSHOT_NOT_PORTABLE","projection_paths":["docs/HANDOFF_MODE_C.md","docs/status/U7D-EVIDENCE.md"],"projection_policy":"EXACT_PARENT_RELATIVE_PENDING_BLOCK_REPLACEMENT","self_receipt":"ABSENT","milestone_verdict":"LOCAL_REFERENCE_MILESTONE_FUNCTIONAL_GREEN_FULL_STUDY_RESOURCE_UNRECEIPTED","honest_fallback":"NOT_APPLICABLE_SOURCE_GREEN","unreceipted":["LINUX_UNRUN","WINDOWS_UNRUN","UNRUN_NODE_MAJORS","BROAD_IMPORTED_REPOSITORY_BEHAVIOR_UNVALIDATED","HOSTILE_CONTAINMENT_UNVALIDATED","NETWORK_DENIAL_UNVALIDATED","COMPREHENSION_UNVALIDATED","REVIEW_COMPRESSION_UNVALIDATED","ADOPTION_UNVALIDATED","MAINTAINABILITY_UNVALIDATED","PRODUCTION_READINESS_UNVALIDATED","SECURITY_REVIEW_NOT_PERFORMED","EXTERNAL_PLATFORM_BEHAVIOR_UNVALIDATED","IMPORTED_REPOSITORY_TIMING_UNCLAIMED","FULL_STUDY_RESOURCE_BOUND_UNVALIDATED","U7R_SELF_RECEIPT_ABSENT"]}`));
+const exactReceiptContract = Object.freeze(JSON.parse(String.raw`{"schema_version":"countershape/u7-receipt/v1","source_boundary":"U7D","study_event_command":["/opt/homebrew/bin/node","tools/check-u7-study-harness.mjs","--phase","U7D"],"study_evidence_schema":"countershape/u7-study-evidence/v1","study_execution_authority":"U7P_ORIGIN_U7N_AMENDED_HARNESS_V2_DIRECT_PROCESS_STUDY_EXECUTION","study_harness":{"protocol":"countershape/u7-study-harness/v2","protocol_sha256":"f9e5c6580c85d6603b3064ecd03de2328a8a8bced5107bf11456a07b2c9c40f1","path":"tools/check-u7-study-harness.mjs","sha256":"ba8ed823b8c3740a6af0baf124a32c8663cef68483c1e940b5e1d8ecdb1416fa","product_result_schema":"countershape/u7-study-domain-result/v1","trial_schema":"countershape/u7-study-trial/v1","artifact_schema":"countershape/u7-study-artifact/v1","observation_authority":"U7P_ORIGIN_U7N_AMENDED_HARNESS_V2_DIRECT_PROCESS_GIT_AND_ARTIFACT_OBSERVATION","semantic_ceiling":"ARTIFACT_BYTES_AND_SUBJECT_PROCESS_TOPOLOGY_OBSERVED_PRODUCT_SEMANTICS_AND_FULL_HARNESS_RESOURCES_NOT_INDEPENDENTLY_ESTABLISHED","driver_protocol":"FIXTURE_ONLY_NO_EVIDENCE_ROOT","phase_verdicts":{"U7B":"LOCAL_HTTP_REFERENCE_FUNCTIONAL_GREEN_SUBJECT_RESOURCE_OBSERVED","U7C":"LOCAL_CLI_DECISION_AND_ENROLLED_REFERENCE_EXECUTION_PROCESS_ARTIFACT_GREEN_SUBJECT_RESOURCE_OBSERVED","U7D":"LOCAL_TWO_DOMAIN_PROCESS_ARTIFACT_GREEN_CLI_OFFICIAL_EXECUTION_HTTP_DIRECT_PROCESS_ONLY_FULL_STUDY_RESOURCE_UNRECEIPTED"},"observer_prefix":["/usr/bin/time","-p","-l","-o"],"driver_by_domain":{"http":"tools/run-u7-http-study.mjs","cli":"tools/run-u7-cli-study.mjs"},"phase_budgets":[{"id":"fixture","per_run_trials":1},{"id":"compile","per_run_trials":1},{"id":"search","per_run_trials":80},{"id":"confirm","per_run_trials":8},{"id":"contract","per_run_trials":10}],"deterministic_artifact_paths":{"source_spec_sha256":"deterministic/source-spec.json","world_plan_sha256":"deterministic/world-plan.json","ruling_sha256":"deterministic/ruling.json","decision_record_sha256":"deterministic/decision-record.json","contract_bundle_sha256":"deterministic/contract-bundle.json"},"fresh_artifact_paths":{"world_instance_sha256":"fresh/world-instance.json","attempts_sha256":"fresh/attempts.json","measurements_sha256":"fresh/measurements.json","captures_sha256":"fresh/captures.json","confirmation_sha256":"fresh/confirmation.json","contract_execution_target_sha256":"fresh/contract-execution-target.json","finalized_contract_run_sha256":"fresh/finalized-contract-run.json","contract_execution_sha256":"fresh/contract-execution.json"}},"study_domains":["http","cli"],"study_run_count_per_domain":3,"study_trial_budget_per_domain":300,"study_subject_process_wall_time_budget_ms_per_domain":900000,"study_subject_process_peak_rss_budget_bytes_per_domain":4294967296,"study_phase_budgets":[{"id":"fixture","trial_count":3,"trial_budget":3},{"id":"compile","trial_count":3,"trial_budget":3},{"id":"search","trial_count":240,"trial_budget":240},{"id":"confirm","trial_count":24,"trial_budget":24},{"id":"contract","trial_count":30,"trial_budget":30}],"deterministic_artifact_fields":["source_spec_sha256","world_plan_sha256","ruling_sha256","decision_record_sha256","contract_bundle_sha256","reference_binary_sha256"],"fresh_run_digest_fields":["world_instance_sha256","attempts_sha256","measurements_sha256","captures_sha256","confirmation_sha256","fixture_invocation_sha256","contract_execution_target_sha256","finalized_contract_run_sha256","contract_execution_sha256"],"html_authority":"LOCAL_SNAPSHOT_NOT_PORTABLE_STRICT_WITNESS","ledger_authority":"LOCAL_SECRET_BEARING_SNAPSHOT_NOT_PORTABLE","projection_paths":["docs/HANDOFF_MODE_C.md","docs/status/U7D-EVIDENCE.md"],"projection_policy":"EXACT_PARENT_RELATIVE_PENDING_BLOCK_REPLACEMENT","self_receipt":"ABSENT","milestone_verdict":"LOCAL_TWO_DOMAIN_PROCESS_ARTIFACT_GREEN_CLI_OFFICIAL_EXECUTION_HTTP_DIRECT_PROCESS_ONLY_FULL_STUDY_RESOURCE_UNRECEIPTED","honest_fallback":"ONE_DOMAIN_OFFICIAL_CONTRACT_EXECUTION_PLUS_HTTP_DIRECT_PROCESS_OBSERVATION_ONLY","unreceipted":["LINUX_UNRUN","WINDOWS_UNRUN","UNRUN_NODE_MAJORS","BROAD_IMPORTED_REPOSITORY_BEHAVIOR_UNVALIDATED","HOSTILE_CONTAINMENT_UNVALIDATED","NETWORK_DENIAL_UNVALIDATED","COMPREHENSION_UNVALIDATED","REVIEW_COMPRESSION_UNVALIDATED","ADOPTION_UNVALIDATED","MAINTAINABILITY_UNVALIDATED","PRODUCTION_READINESS_UNVALIDATED","SECURITY_REVIEW_NOT_PERFORMED","EXTERNAL_PLATFORM_BEHAVIOR_UNVALIDATED","IMPORTED_REPOSITORY_TIMING_UNCLAIMED","FULL_STUDY_RESOURCE_BOUND_UNVALIDATED","HTTP_FINALIZED_CONTRACT_RUN_AUTHORITY_ABSENT","HTTP_CONTRACT_EXECUTION_CLASSIFICATION_AUTHORITY_ABSENT","TWO_DOMAIN_TARGET_RUN_CLASSIFICATION_REPRODUCTION_UNMET","CLI_OFFICIAL_EXECUTION_GENERALIZATION_UNVALIDATED","U7R_SELF_RECEIPT_ABSENT"]}`));
 const exactClaimBindingPolicy = Object.freeze({
 	event_indices: "EXPLICIT_ZERO_BASED_EVENT_INDEX_EQUALS_CLAIM_INDEX",
 	pathspecs: "EXACT_UNIT_ALLOWED_PATHS_IN_DECLARED_ORDER",
@@ -156,7 +174,8 @@ const exactUnitIdentity = Object.freeze({
 	U7M: Object.freeze({ parent: "U7P", verification_profile: "SOURCE_FULL", product_authority: "NONE", product_behavior: "INHERITED_UNREPROVEN", u7d_receipt_state: "ABSENT", subject: "fix: adapt inherited P07 receipt verification", final_root: ".countershape/u7m-final", paths: 14, claims: 13 }),
 	U7A: Object.freeze({ parent: "U7M", verification_profile: "SOURCE_FULL", product_authority: "U7_REFERENCE_APPLICATION", product_behavior: "CANDIDATE_UNRECEIPTED", u7d_receipt_state: "ABSENT", subject: "feat: add U7 reference CLI foundation", final_root: ".countershape/u7a-final", paths: 12, claims: 12 }),
 	U7B: Object.freeze({ parent: "U7A", verification_profile: "SOURCE_FULL", product_authority: "U7_REFERENCE_APPLICATION", product_behavior: "CANDIDATE_UNRECEIPTED", u7d_receipt_state: "ABSENT", subject: "feat: add U7 HTTP falsification study", final_root: ".countershape/u7b-final", paths: 16, claims: 12 }),
-	U7C: Object.freeze({ parent: "U7B", verification_profile: "SOURCE_FULL", product_authority: "U7_REFERENCE_APPLICATION", product_behavior: "CANDIDATE_UNRECEIPTED", u7d_receipt_state: "ABSENT", subject: "feat: add U7 CLI decision and contract flow", final_root: ".countershape/u7c-final", paths: 18, claims: 12 }),
+	U7N: Object.freeze({ parent: "U7B", verification_profile: "SOURCE_FULL", product_authority: "NONE", product_behavior: "INHERITED_UNREPROVEN", u7d_receipt_state: "ABSENT", subject: "fix: reconcile U7 CLI and milestone authority", final_root: ".countershape/u7n-final", paths: 16, claims: 15 }),
+	U7C: Object.freeze({ parent: "U7N", verification_profile: "SOURCE_FULL", product_authority: "U7_REFERENCE_APPLICATION", product_behavior: "CANDIDATE_UNRECEIPTED", u7d_receipt_state: "ABSENT", subject: "feat: add U7 CLI decision and contract flow", final_root: ".countershape/u7c-final", paths: 18, claims: 12 }),
 	U7D: Object.freeze({ parent: "U7C", verification_profile: "SOURCE_FULL", product_authority: "U7_REFERENCE_APPLICATION", product_behavior: "CANDIDATE_UNRECEIPTED", u7d_receipt_state: "ABSENT", subject: "test: close U7 reference study evidence", final_root: ".countershape/u7d-final", paths: 15, claims: 13 }),
 	U7R: Object.freeze({ parent: "U7D", verification_profile: "RECEIPT_RECONCILIATION", product_authority: "NONE", product_behavior: "SOURCE_RECEIPT_RECONCILIATION", u7d_receipt_state: "PRESENT", subject: "docs: receipt U7 reference milestone", final_root: ".countershape/u7r-final", paths: 3, claims: 9 }),
 });
@@ -165,6 +184,7 @@ const exactRosterDigests = Object.freeze({
 	U7M: "9529dd908eea56d86427a39f20fe468f2761545cc5475787116b4efbaa13d362",
 	U7A: "7fcc7c4ca243bc6011cc7fa80aee73729db060165e5ef400d34477c224e10abd",
 	U7B: "591d8b464771d6b68a994d7c314c0e9fd9468d42eaffbb1eb7f8250b6c4f4c64",
+	U7N: "92afeeabcc7ccc91dd3a0438c952a82d4e9bc4468f4a35c8ebdb8cb776b07b6a",
 	U7C: "bdd228a731ec2cc51922aa23367f665237d786afe7b298ad5e844d8d10dd3aa4",
 	U7D: "ad9d20d6a493adace402d04849c5e7847d9cb4407faabbcad7c4350d38d9b926",
 	U7R: "2c21933c3e13fe32eedafb1d5ac2fdd5187df514408acf53057016cac153bccb",
@@ -174,7 +194,8 @@ const exactClaimDigests = Object.freeze({
 	U7M: "7b395c7c925db55c68313819297971d7a62eb7326208a6e00014d386796c6ea5",
 	U7A: "693db7d250252e09281c688b736fcaa949746278b6448a807a0c87c2cf9c3354",
 	U7B: "b8aa70dde01f17ded108bebfa0560ec18b3c953d1fabb058319b63d999a58ee0",
-	U7C: "1001620a4dac4f8f0acd1b6fa34b4a5bbdaaeb1444ea342e121ef6e566485411",
+	U7N: "0b275f8d66e1101a6dba78328788bae34be7c709555fc569a166a84a378c1914",
+	U7C: "4b8bb347bb0a3cd7552dd954754f4460a195eff42dae81a0399411dda59c249c",
 	U7D: "5b7a0a8ff21a18504bd84b5b32a77bb570414ef071293c4a83d4fd73fe75bb25",
 	U7R: "4bb6a1f472f7b15e8d1ddbb4edb6271b0d8c08f78b1f546c5b9d3789bfb356d3",
 });
@@ -360,11 +381,11 @@ async function validateDidrunStaticAuthority(authority) {
 }
 
 function validateScopeSpecification(value) {
-	if (!exactKeys(value, ["schema_version", "transition_authority", "topology_amendment_authority", "runtime_authority", "inherited_receipts", "receipt_contract", "claim_binding_policy", "sealed_parent", "units"]) ||
-		value.schema_version !== "countershape/u7-unit-paths/v2" || !Array.isArray(value.units) ||
+	if (!exactKeys(value, ["schema_version", "transition_authority", "topology_amendment_authorities", "runtime_authority", "inherited_receipts", "receipt_contract", "claim_binding_policy", "sealed_parent", "units"]) ||
+		value.schema_version !== "countershape/u7-unit-paths/v3" || !Array.isArray(value.units) ||
 		!isDeepStrictEqual(value.units.map((unit) => unit?.id), unitOrder) || !isDeepStrictEqual(value.sealed_parent, exactSealedParent) ||
 		!isDeepStrictEqual(value.transition_authority, exactTransitionAuthority) ||
-		!isDeepStrictEqual(value.topology_amendment_authority, exactTopologyAmendmentAuthority) ||
+		!isDeepStrictEqual(value.topology_amendment_authorities, exactTopologyAmendmentAuthorities) ||
 		!isDeepStrictEqual(value.runtime_authority, exactRuntimeAuthority)) fail("SPECIFICATION", "topology, amendment authority, runtime, or sealed parent");
 	if (!isDeepStrictEqual(value.inherited_receipts, exactInheritedReceipts)) fail("SPECIFICATION_RECEIPTS", "C3P/C3/C6A");
 	if (!isDeepStrictEqual(value.receipt_contract, exactReceiptContract)) fail("SPECIFICATION_RECEIPT_CONTRACT", "U7D evidence and U7R projection");
@@ -384,6 +405,8 @@ function validateScopeSpecification(value) {
 	}
 	if (!isDeepStrictEqual(value.units[0].allowed_paths, u7pExactPaths) || !isDeepStrictEqual(value.units[0].required_paths, u7pExactPaths)) fail("SPECIFICATION_U7P", "exact roster drift");
 	if (!isDeepStrictEqual(value.units[1].allowed_paths, u7mExactPaths) || !isDeepStrictEqual(value.units[1].required_paths, u7mExactPaths)) fail("SPECIFICATION_U7M", "exact maintenance roster drift");
+	const u7n = value.units.find((unit) => unit.id === "U7N");
+	if (!isDeepStrictEqual(u7n.allowed_paths, u7nExactPaths) || !isDeepStrictEqual(u7n.required_paths, u7nExactPaths)) fail("SPECIFICATION_U7N", "exact authority-reconciliation roster drift");
 	const receipt = value.units.at(-1);
 	if (receipt.verification_profile !== "RECEIPT_RECONCILIATION" || receipt.product_authority !== "NONE" ||
 		!receipt.required_paths.includes(receiptPath)) fail("SPECIFICATION_RECEIPT", "U7R");
@@ -1129,9 +1152,19 @@ export async function selfTest() {
 	await validateC6BAuthority(specification, specification.sealed_parent.commit);
 	const mutations = [
 		["SPECIFICATION", (value) => { value.schema_version = "wrong"; }],
-		["SPECIFICATION", (value) => { value.topology_amendment_authority.authentication = "ESTABLISHED"; }],
+		["SPECIFICATION", (value) => { delete value.topology_amendment_authorities; }],
+		["SPECIFICATION", (value) => { value.topology_amendment_authorities[0].classification += "_ALTERED"; }],
+		["SPECIFICATION", (value) => { value.topology_amendment_authorities[1].authentication = "ESTABLISHED"; }],
+		["SPECIFICATION", (value) => { value.topology_amendment_authorities.reverse(); }],
+		["SPECIFICATION", (value) => { value.topology_amendment_authorities.push(clone(value.topology_amendment_authorities[1])); }],
 		["SPECIFICATION_RECEIPTS", (value) => { value.inherited_receipts.C3 = "ABSENT"; }],
 		["SPECIFICATION_RECEIPT_CONTRACT", (value) => { value.receipt_contract.study_run_count_per_domain = 2; }],
+		["SPECIFICATION_RECEIPT_CONTRACT", (value) => { value.receipt_contract.study_harness.protocol = "countershape/u7-study-harness/v1"; }],
+		["SPECIFICATION_RECEIPT_CONTRACT", (value) => { value.receipt_contract.study_harness.protocol_sha256 = "1".repeat(64); }],
+		["SPECIFICATION_RECEIPT_CONTRACT", (value) => { value.receipt_contract.study_harness.sha256 = "1".repeat(64); }],
+		["SPECIFICATION_RECEIPT_CONTRACT", (value) => { value.receipt_contract.milestone_verdict = "LOCAL_REFERENCE_MILESTONE_FUNCTIONAL_GREEN_FULL_STUDY_RESOURCE_UNRECEIPTED"; }],
+		["SPECIFICATION_RECEIPT_CONTRACT", (value) => { value.receipt_contract.honest_fallback = "NOT_APPLICABLE_SOURCE_GREEN"; }],
+		["SPECIFICATION_RECEIPT_CONTRACT", (value) => { value.receipt_contract.unreceipted.splice(-2, 1); }],
 		["SPECIFICATION_CLAIM_BINDING", (value) => { value.claim_binding_policy.event_indices = "LATEST"; }],
 		["SPECIFICATION_CLAIM_BINDING", (value) => { value.claim_binding_policy.recorded_child_process_intervals = "ALLOW_OVERLAP"; }],
 		["SPECIFICATION_CLAIM_BINDING", (value) => { value.claim_binding_policy.operational_writer_protocol = "MULTI_WRITER"; }],
@@ -1141,6 +1174,12 @@ export async function selfTest() {
 		["SPECIFICATION_UNIT", (value) => { value.units.at(-1).product_authority = "U7_REFERENCE_APPLICATION"; }],
 		["SPECIFICATION_UNIT", (value) => { value.units[2].parent = "U7P"; }],
 		["SPECIFICATION_CLAIMS", (value) => { value.units[3].claims[0].label += " drift"; }],
+		["SPECIFICATION_ROSTER", (value) => { const unit = value.units.find((candidate) => candidate.id === "U7N"); unit.allowed_paths[0] = "docs/U7N-WRONG.md"; unit.required_paths[0] = "docs/U7N-WRONG.md"; }],
+		["SPECIFICATION_UNIT", (value) => { value.units.find((unit) => unit.id === "U7N").product_authority = "U7_REFERENCE_APPLICATION"; }],
+		["SPECIFICATION_CLAIMS", (value) => { value.units.find((unit) => unit.id === "U7N").claims[9].label += " drift"; }],
+		["SPECIFICATION_UNIT", (value) => { value.units.find((unit) => unit.id === "U7C").parent = "U7B"; }],
+		["SPECIFICATION_UNIT", (value) => { value.units.find((unit) => unit.id === "U7D").parent = "U7N"; }],
+		["SPECIFICATION_UNIT", (value) => { value.units.find((unit) => unit.id === "U7R").parent = "U7N"; }],
 	];
 	for (const [token, mutate] of mutations) {
 		const candidate = clone(specification); mutate(candidate); expectRejected(() => validateScopeSpecification(candidate), token);

@@ -58,7 +58,7 @@ const authorityNames = Object.freeze(["go", "node", "git", "sh", "cc", "cxx"]);
 const sealedC4VHistoricalRosterDigest = "7cf294fcbe8247e7a4de2d8996fb6b960780a35d018a8d00069af15940f0efb8";
 const sealedC4HParentRosterDigest = "0fab61318d55314e3accaeabbaf56cc049aae5755f3c3f41d6a36eba1a6c7af5";
 const sealedCombinedC5RosterDigest = "3821722f937f647ec98f03170cf9efb1e9a51a98e63d361d38dae58ade9ffaed";
-const expectedRosterDigest = "a7a90bdd2c356564771b35dd3c2caf26c9cdb67af660e9214a927834dd9b049c";
+const expectedRosterDigest = "2b1475cc43012efe2c497ef6da7b8cbf6fd67510c907f82a313b776df9d56de7";
 const expectedHistoricalDigest = "8e1af0c39a083bfb2b834f6ac3b4ea82964ac1e06bf1698676ee1ee8b61e7817";
 const exactC5StepIDs = Object.freeze([
 	"architecture-p07b-c-c5",
@@ -82,7 +82,7 @@ const exactU7StepIDs = Object.freeze([
 	"u7-final-runbook-selftest",
 	"architecture-u7-selftest",
 ]);
-const exactU7Phases = Object.freeze(["U7P", "U7M", "U7A", "U7B", "U7C", "U7D"]);
+const exactU7Phases = Object.freeze(["U7P", "U7M", "U7A", "U7B", "U7N", "U7C", "U7D"]);
 const exactExtendedChildTimeoutStepIDs = Object.freeze([
 	"architecture-p07b-c-c5",
 	"architecture-p07b-c-c5-selftest",
@@ -852,14 +852,14 @@ async function inspectRosters() {
 		tools: ["node", "go", "git"],
 		path: "tools/check-u7-study-harness.mjs",
 		args: ["--protocol-check"],
-		marker: "U7_STUDY_HARNESS_PROTOCOL_OK protocol=countershape/u7-study-harness/v1 digest=",
+		marker: "U7_STUDY_HARNESS_PROTOCOL_OK protocol=countershape/u7-study-harness/v2 digest=",
 	});
 	exactStep("architecture-u7-study-harness-selftest", {
 		tool: "node",
 		tools: ["node", "go", "git", "sh", "cc", "cxx"],
 		path: "tools/check-u7-study-harness-selftest.mjs",
-		args: ["--phase", "U7P"],
-		marker: "U7 study harness defensive self-test passed: active=U7P cases=",
+		args: ["--phase", "U7N"],
+		marker: "U7 study harness defensive self-test passed: active=U7N cases=",
 	});
 	exactStep("u7-final-runbook-selftest", {
 		tool: "node",
@@ -1438,7 +1438,7 @@ function cloneU7Contract(phase) {
 }
 
 function renderU7PhaseCapsuleDocument(contract) {
-	return `# U7 phase fixture\n\n## Current state\n<!-- U7-PHASE:START -->\n### Active U7 phase contract\n\n- **Namespace:** \`countershape/u7-unit-paths/v2\`\n- **Boundary:** \`${contract.boundary}\`\n- **Parent:** \`${contract.parent}\`\n- **Verification profile:** \`${contract.profile}\`\n- **State:** \`${contract.state}\`\n- **Topology:** \`U7P -> U7M -> U7A -> U7B -> U7C -> U7D -> U7R\`\n- **Inherited receipts:** \`C3P=PRESENT; C3=PRESENT; C6A=PRESENT\`\n- **Receipt U7D:** \`${contract.receipt}\`\n- **Product authority:** \`${contract.productAuthority}\`\n- **Product behavior:** \`${contract.productBehavior}\`\n<!-- U7-PHASE:END -->\n\n## History\nNone.\n`;
+	return `# U7 phase fixture\n\n## Current state\n<!-- U7-PHASE:START -->\n### Active U7 phase contract\n\n- **Namespace:** \`countershape/u7-unit-paths/v3\`\n- **Boundary:** \`${contract.boundary}\`\n- **Parent:** \`${contract.parent}\`\n- **Verification profile:** \`${contract.profile}\`\n- **State:** \`${contract.state}\`\n- **Topology:** \`U7P -> U7M -> U7A -> U7B -> U7N -> U7C -> U7D -> U7R\`\n- **Inherited receipts:** \`C3P=PRESENT; C3=PRESENT; C6A=PRESENT\`\n- **Receipt U7D:** \`${contract.receipt}\`\n- **Product authority:** \`${contract.productAuthority}\`\n- **Product behavior:** \`${contract.productBehavior}\`\n<!-- U7-PHASE:END -->\n\n## History\nNone.\n`;
 }
 
 function parserRejects(parser, text) {
@@ -1497,8 +1497,9 @@ async function inspectU7PhaseExecution() {
 		["duplicate-heading", baselineDocument.replace("## History\n", "## Current state\n")],
 		["duplicate-marker", baselineDocument.replace("<!-- U7-PHASE:END -->", "<!-- U7-PHASE:END -->\n<!-- U7-PHASE:START -->")],
 		["shape", baselineDocument.replace("### Active U7 phase contract", "### U7 phase example")],
-		["legacy-namespace", baselineDocument.replace("countershape/u7-unit-paths/v2", "countershape/u7-unit-paths/v1")],
-		["legacy-topology", baselineDocument.replace("U7P -> U7M -> U7A -> U7B -> U7C -> U7D -> U7R", "U7P -> U7A -> U7B -> U7C -> U7D -> U7R")],
+		["legacy-namespace", baselineDocument.replace("countershape/u7-unit-paths/v3", "countershape/u7-unit-paths/v2")],
+		["legacy-topology", baselineDocument.replace("U7P -> U7M -> U7A -> U7B -> U7N -> U7C -> U7D -> U7R", "U7P -> U7M -> U7A -> U7B -> U7C -> U7D -> U7R")],
+		["legacy-topology-u7m", baselineDocument.replace("U7P -> U7M -> U7A -> U7B -> U7N -> U7C -> U7D -> U7R", "U7P -> U7A -> U7B -> U7N -> U7C -> U7D -> U7R")],
 		["misordered-topology", baselineDocument.replace("U7P -> U7M -> U7A", "U7P -> U7A -> U7M")],
 	]) {
 		expect(
@@ -1541,6 +1542,8 @@ async function inspectU7PhaseExecution() {
 	expectPlainCode(() => validateU7PhaseCapsule({ ...cloneU7Contract("U7P"), boundary: "U7R" }), "VERIFY_U7_PHASE_UNSUPPORTED");
 	expectPlainCode(() => validateU7PhaseCapsule({ ...cloneU7Contract("U7M"), parent: "C6B" }), "VERIFY_U7_PHASE_CONTRACT");
 	expectPlainCode(() => validateU7PhaseCapsule({ ...cloneU7Contract("U7A"), parent: "U7P" }), "VERIFY_U7_PHASE_CONTRACT");
+	expectPlainCode(() => validateU7PhaseCapsule({ ...cloneU7Contract("U7N"), parent: "U7A" }), "VERIFY_U7_PHASE_CONTRACT");
+	expectPlainCode(() => validateU7PhaseCapsule({ ...cloneU7Contract("U7C"), parent: "U7B" }), "VERIFY_U7_PHASE_CONTRACT");
 	for (const [field, value] of [
 		["parent", "U7A"],
 		["profile", "RECEIPT_RECONCILIATION"],
@@ -2216,7 +2219,7 @@ async function main() {
 		.update(await readFile(sealedC6ARunnerPath))
 		.update(await readFile(u7PlanPath))
 		.digest("hex");
-	process.stdout.write(`verification runner self-test passed: exact C5/U7 rosters/env/package partition, visible-capsule U7P-M-A-D phase authority with pre-Go admission and terminal live recheck, explicit live/sealed-C6A root authority, bounded-batch raw-blob sealed runner self-test with narrow Darwin diagnostics, fail-closed status/signal/error/marker, bounded tool admission, framed child output, canonical plan/tool paths, private root isolation, exclusive lock integrity plus real subprocess contention/stale recovery, inert verifier imports, noncanonical-entry refusal, cleanup aggregation, historical nonexecution, and artifact refusal (sources sha256:${sourceDigest})\n`);
+	process.stdout.write(`verification runner self-test passed: exact C5/U7 rosters/env/package partition, visible-capsule U7P/U7M/U7A/U7B/U7N/U7C/U7D phase authority with pre-Go admission and terminal live recheck, explicit live/sealed-C6A root authority, bounded-batch raw-blob sealed runner self-test with narrow Darwin diagnostics, fail-closed status/signal/error/marker, bounded tool admission, framed child output, canonical plan/tool paths, private root isolation, exclusive lock integrity plus real subprocess contention/stale recovery, inert verifier imports, noncanonical-entry refusal, cleanup aggregation, historical nonexecution, and artifact refusal (sources sha256:${sourceDigest})\n`);
 }
 
 main().catch((error) => {

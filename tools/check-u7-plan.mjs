@@ -16,18 +16,18 @@ export const specificationPath = resolve(repositoryRoot, "spec/verification/u7-u
 const handoffPath = resolve(repositoryRoot, "docs/HANDOFF_MODE_C.md");
 const didrunPath = "/opt/homebrew/bin/didrun";
 const gitPath = "/usr/bin/git";
-const unitOrder = Object.freeze(["U7P", "U7M", "U7A", "U7B", "U7C", "U7D", "U7R"]);
-const expectedParents = Object.freeze({ U7P: "C6B", U7M: "U7P", U7A: "U7M", U7B: "U7A", U7C: "U7B", U7D: "U7C", U7R: "U7D" });
+const unitOrder = Object.freeze(["U7P", "U7M", "U7A", "U7B", "U7N", "U7C", "U7D", "U7R"]);
+const expectedParents = Object.freeze({ U7P: "C6B", U7M: "U7P", U7A: "U7M", U7B: "U7A", U7N: "U7B", U7C: "U7N", U7D: "U7C", U7R: "U7D" });
 const expectedProfiles = Object.freeze({
-	U7P: "SOURCE_FULL", U7M: "SOURCE_FULL", U7A: "SOURCE_FULL", U7B: "SOURCE_FULL",
+	U7P: "SOURCE_FULL", U7M: "SOURCE_FULL", U7A: "SOURCE_FULL", U7B: "SOURCE_FULL", U7N: "SOURCE_FULL",
 	U7C: "SOURCE_FULL", U7D: "SOURCE_FULL", U7R: "RECEIPT_RECONCILIATION",
 });
 const expectedProductAuthority = Object.freeze({
-	U7P: "NONE", U7M: "NONE", U7A: "U7_REFERENCE_APPLICATION", U7B: "U7_REFERENCE_APPLICATION",
+	U7P: "NONE", U7M: "NONE", U7A: "U7_REFERENCE_APPLICATION", U7B: "U7_REFERENCE_APPLICATION", U7N: "NONE",
 	U7C: "U7_REFERENCE_APPLICATION", U7D: "U7_REFERENCE_APPLICATION", U7R: "NONE",
 });
 const expectedProductBehavior = Object.freeze({
-	U7P: "INHERITED_UNREPROVEN", U7M: "INHERITED_UNREPROVEN", U7A: "CANDIDATE_UNRECEIPTED", U7B: "CANDIDATE_UNRECEIPTED",
+	U7P: "INHERITED_UNREPROVEN", U7M: "INHERITED_UNREPROVEN", U7A: "CANDIDATE_UNRECEIPTED", U7B: "CANDIDATE_UNRECEIPTED", U7N: "INHERITED_UNREPROVEN",
 	U7C: "CANDIDATE_UNRECEIPTED", U7D: "CANDIDATE_UNRECEIPTED", U7R: "SOURCE_RECEIPT_RECONCILIATION",
 });
 const expectedSubjects = Object.freeze({
@@ -35,16 +35,17 @@ const expectedSubjects = Object.freeze({
 	U7M: "fix: adapt inherited P07 receipt verification",
 	U7A: "feat: add U7 reference CLI foundation",
 	U7B: "feat: add U7 HTTP falsification study",
+	U7N: "fix: reconcile U7 CLI and milestone authority",
 	U7C: "feat: add U7 CLI decision and contract flow",
 	U7D: "test: close U7 reference study evidence",
 	U7R: "docs: receipt U7 reference milestone",
 });
 const expectedFinalRoots = Object.freeze({
 	U7P: ".countershape/u7p-final", U7M: ".countershape/u7m-final", U7A: ".countershape/u7a-final",
-	U7B: ".countershape/u7b-final", U7C: ".countershape/u7c-final",
+	U7B: ".countershape/u7b-final", U7N: ".countershape/u7n-final", U7C: ".countershape/u7c-final",
 	U7D: ".countershape/u7d-final", U7R: ".countershape/u7r-final",
 });
-const expectedClaimCounts = Object.freeze({ U7P: 13, U7M: 13, U7A: 12, U7B: 12, U7C: 12, U7D: 13, U7R: 9 });
+const expectedClaimCounts = Object.freeze({ U7P: 13, U7M: 13, U7A: 12, U7B: 12, U7N: 15, U7C: 12, U7D: 13, U7R: 9 });
 const u7pExactPaths = Object.freeze([
 	"docs/ARCHITECTURE.md",
 	"docs/HANDOFF_MODE_C.md",
@@ -87,22 +88,24 @@ const expectedTransitionAuthority = Object.freeze({
 	product_behavior: "INHERITED_UNREPROVEN",
 	grade_transfer: "NONE",
 });
-const expectedTopologyAmendmentAuthority = Object.freeze({
-	boundary: "U7M",
-	source: "OWNER_OUT_OF_BAND",
-	classification: "OWNER_AUTHORIZED_AUTHORITY_MIGRATION_DEFECT_REPAIR",
-	provenance: Object.freeze({
-		kind: "UNEVIDENCED",
-		disclosure: "OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT",
+const expectedTopologyAmendmentAuthorities = Object.freeze([
+	Object.freeze({
+		boundary: "U7M", source: "OWNER_OUT_OF_BAND", classification: "OWNER_AUTHORIZED_AUTHORITY_MIGRATION_DEFECT_REPAIR",
+		provenance: Object.freeze({ kind: "UNEVIDENCED", disclosure: "OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT" }),
+		authentication: "NOT_ESTABLISHED", signed_authorization: "NOT_IMPLEMENTED",
+		predecessor_declaration: Object.freeze({ kind: "NONE" }),
+		defect: "P07_C3P_RECEIPT_LIVE_ENTRYPOINT_REQUIRES_C6R_OR_C6B_HEAD_SUBJECT_AND_REJECTS_ALL_U7_DESCENDANTS",
+		product_authority: "NONE", product_behavior: "INHERITED_UNREPROVEN", grade_transfer: "NONE",
 	}),
-	authentication: "NOT_ESTABLISHED",
-	signed_authorization: "NOT_IMPLEMENTED",
-	predecessor_declaration: Object.freeze({ kind: "NONE" }),
-	defect: "P07_C3P_RECEIPT_LIVE_ENTRYPOINT_REQUIRES_C6R_OR_C6B_HEAD_SUBJECT_AND_REJECTS_ALL_U7_DESCENDANTS",
-	product_authority: "NONE",
-	product_behavior: "INHERITED_UNREPROVEN",
-	grade_transfer: "NONE",
-});
+	Object.freeze({
+		boundary: "U7N", source: "OWNER_OUT_OF_BAND", classification: "OWNER_AUTHORIZED_CLI_AND_MILESTONE_AUTHORITY_RECONCILIATION",
+		provenance: Object.freeze({ kind: "UNEVIDENCED", disclosure: "OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT" }),
+		authentication: "NOT_ESTABLISHED", signed_authorization: "NOT_IMPLEMENTED",
+		predecessor_declaration: Object.freeze({ kind: "NONE" }),
+		defect: "U7C_EXIT2_AND_EDGE_CLASSIFICATION_CONFLICTS_WITH_EXACT_ENROLLED_CLI_STIMULUS_AND_U7D_OVERSTATES_ABSENT_HTTP_RUN_CLASSIFICATION_AUTHORITY",
+		product_authority: "NONE", product_behavior: "INHERITED_UNREPROVEN", grade_transfer: "NONE",
+	}),
+]);
 const expectedRuntimeAuthority = Object.freeze({
 	platform: "darwin", architecture: "arm64", node_path: "/opt/homebrew/bin/node", node_major: 25,
 	go_path: "/opt/homebrew/bin/go", git_path: "/usr/bin/git",
@@ -148,7 +151,7 @@ const expectedRuntimeAuthority = Object.freeze({
 	didrun_byte_authority: "LOCAL_RUNTIME_SNAPSHOT_NOT_VENDOR_AUTHENTICATED_OUTER_PROCESS_ENVIRONMENT_STDLIB_DYNAMIC_LOADER_AND_THIRD_PARTY_TRANSITIVE_DEPENDENCIES_UNBOUND",
 });
 const expectedInheritedReceipts = Object.freeze({ C3P: "PRESENT", C3: "PRESENT", C6A: "PRESENT" });
-const expectedReceiptContract = Object.freeze(JSON.parse(String.raw`{"schema_version":"countershape/u7-receipt/v1","source_boundary":"U7D","study_event_command":["/opt/homebrew/bin/node","tools/check-u7-study-harness.mjs","--phase","U7D"],"study_evidence_schema":"countershape/u7-study-evidence/v1","study_execution_authority":"U7P_FROZEN_HARNESS_DIRECT_PROCESS_GIT_AND_ARTIFACT_OBSERVATION","study_harness":{"protocol":"countershape/u7-study-harness/v1","protocol_sha256":"faca5cac53ce4ca4d4edea3089edd1fad1139ff847da9618115d1e308b717678","path":"tools/check-u7-study-harness.mjs","sha256":"d6a39e44e6a4de43268dab9ff2deac8350b0b4e107b01e254d2767f0692a4121","product_result_schema":"countershape/u7-study-domain-result/v1","trial_schema":"countershape/u7-study-trial/v1","artifact_schema":"countershape/u7-study-artifact/v1","observation_authority":"U7P_FROZEN_HARNESS_DIRECT_PROCESS_GIT_AND_ARTIFACT_OBSERVATION","semantic_ceiling":"ARTIFACT_BYTES_AND_SUBJECT_PROCESS_TOPOLOGY_OBSERVED_PRODUCT_SEMANTICS_AND_FULL_HARNESS_RESOURCES_NOT_INDEPENDENTLY_ESTABLISHED","driver_protocol":"FIXTURE_ONLY_NO_EVIDENCE_ROOT","phase_verdicts":{"U7B":"LOCAL_HTTP_REFERENCE_FUNCTIONAL_GREEN_SUBJECT_RESOURCE_OBSERVED","U7C":"LOCAL_CLI_REFERENCE_FUNCTIONAL_GREEN_SUBJECT_RESOURCE_OBSERVED","U7D":"LOCAL_REFERENCE_MILESTONE_FUNCTIONAL_GREEN_FULL_STUDY_RESOURCE_UNRECEIPTED"},"observer_prefix":["/usr/bin/time","-p","-l","-o"],"driver_by_domain":{"http":"tools/run-u7-http-study.mjs","cli":"tools/run-u7-cli-study.mjs"},"phase_budgets":[{"id":"fixture","per_run_trials":1},{"id":"compile","per_run_trials":1},{"id":"search","per_run_trials":80},{"id":"confirm","per_run_trials":8},{"id":"contract","per_run_trials":10}],"deterministic_artifact_paths":{"source_spec_sha256":"deterministic/source-spec.json","world_plan_sha256":"deterministic/world-plan.json","ruling_sha256":"deterministic/ruling.json","decision_record_sha256":"deterministic/decision-record.json","contract_bundle_sha256":"deterministic/contract-bundle.json"},"fresh_artifact_paths":{"world_instance_sha256":"fresh/world-instance.json","attempts_sha256":"fresh/attempts.json","measurements_sha256":"fresh/measurements.json","captures_sha256":"fresh/captures.json","confirmation_sha256":"fresh/confirmation.json","contract_execution_target_sha256":"fresh/contract-execution-target.json","finalized_contract_run_sha256":"fresh/finalized-contract-run.json","contract_execution_sha256":"fresh/contract-execution.json"}},"study_domains":["http","cli"],"study_run_count_per_domain":3,"study_trial_budget_per_domain":300,"study_subject_process_wall_time_budget_ms_per_domain":900000,"study_subject_process_peak_rss_budget_bytes_per_domain":4294967296,"study_phase_budgets":[{"id":"fixture","trial_count":3,"trial_budget":3},{"id":"compile","trial_count":3,"trial_budget":3},{"id":"search","trial_count":240,"trial_budget":240},{"id":"confirm","trial_count":24,"trial_budget":24},{"id":"contract","trial_count":30,"trial_budget":30}],"deterministic_artifact_fields":["source_spec_sha256","world_plan_sha256","ruling_sha256","decision_record_sha256","contract_bundle_sha256","reference_binary_sha256"],"fresh_run_digest_fields":["world_instance_sha256","attempts_sha256","measurements_sha256","captures_sha256","confirmation_sha256","fixture_invocation_sha256","contract_execution_target_sha256","finalized_contract_run_sha256","contract_execution_sha256"],"html_authority":"LOCAL_SNAPSHOT_NOT_PORTABLE_STRICT_WITNESS","ledger_authority":"LOCAL_SECRET_BEARING_SNAPSHOT_NOT_PORTABLE","projection_paths":["docs/HANDOFF_MODE_C.md","docs/status/U7D-EVIDENCE.md"],"projection_policy":"EXACT_PARENT_RELATIVE_PENDING_BLOCK_REPLACEMENT","self_receipt":"ABSENT","milestone_verdict":"LOCAL_REFERENCE_MILESTONE_FUNCTIONAL_GREEN_FULL_STUDY_RESOURCE_UNRECEIPTED","honest_fallback":"NOT_APPLICABLE_SOURCE_GREEN","unreceipted":["LINUX_UNRUN","WINDOWS_UNRUN","UNRUN_NODE_MAJORS","BROAD_IMPORTED_REPOSITORY_BEHAVIOR_UNVALIDATED","HOSTILE_CONTAINMENT_UNVALIDATED","NETWORK_DENIAL_UNVALIDATED","COMPREHENSION_UNVALIDATED","REVIEW_COMPRESSION_UNVALIDATED","ADOPTION_UNVALIDATED","MAINTAINABILITY_UNVALIDATED","PRODUCTION_READINESS_UNVALIDATED","SECURITY_REVIEW_NOT_PERFORMED","EXTERNAL_PLATFORM_BEHAVIOR_UNVALIDATED","IMPORTED_REPOSITORY_TIMING_UNCLAIMED","FULL_STUDY_RESOURCE_BOUND_UNVALIDATED","U7R_SELF_RECEIPT_ABSENT"]}`));
+const expectedReceiptContract = Object.freeze(JSON.parse(String.raw`{"schema_version":"countershape/u7-receipt/v1","source_boundary":"U7D","study_event_command":["/opt/homebrew/bin/node","tools/check-u7-study-harness.mjs","--phase","U7D"],"study_evidence_schema":"countershape/u7-study-evidence/v1","study_execution_authority":"U7P_ORIGIN_U7N_AMENDED_HARNESS_V2_DIRECT_PROCESS_STUDY_EXECUTION","study_harness":{"protocol":"countershape/u7-study-harness/v2","protocol_sha256":"f9e5c6580c85d6603b3064ecd03de2328a8a8bced5107bf11456a07b2c9c40f1","path":"tools/check-u7-study-harness.mjs","sha256":"ba8ed823b8c3740a6af0baf124a32c8663cef68483c1e940b5e1d8ecdb1416fa","product_result_schema":"countershape/u7-study-domain-result/v1","trial_schema":"countershape/u7-study-trial/v1","artifact_schema":"countershape/u7-study-artifact/v1","observation_authority":"U7P_ORIGIN_U7N_AMENDED_HARNESS_V2_DIRECT_PROCESS_GIT_AND_ARTIFACT_OBSERVATION","semantic_ceiling":"ARTIFACT_BYTES_AND_SUBJECT_PROCESS_TOPOLOGY_OBSERVED_PRODUCT_SEMANTICS_AND_FULL_HARNESS_RESOURCES_NOT_INDEPENDENTLY_ESTABLISHED","driver_protocol":"FIXTURE_ONLY_NO_EVIDENCE_ROOT","phase_verdicts":{"U7B":"LOCAL_HTTP_REFERENCE_FUNCTIONAL_GREEN_SUBJECT_RESOURCE_OBSERVED","U7C":"LOCAL_CLI_DECISION_AND_ENROLLED_REFERENCE_EXECUTION_PROCESS_ARTIFACT_GREEN_SUBJECT_RESOURCE_OBSERVED","U7D":"LOCAL_TWO_DOMAIN_PROCESS_ARTIFACT_GREEN_CLI_OFFICIAL_EXECUTION_HTTP_DIRECT_PROCESS_ONLY_FULL_STUDY_RESOURCE_UNRECEIPTED"},"observer_prefix":["/usr/bin/time","-p","-l","-o"],"driver_by_domain":{"http":"tools/run-u7-http-study.mjs","cli":"tools/run-u7-cli-study.mjs"},"phase_budgets":[{"id":"fixture","per_run_trials":1},{"id":"compile","per_run_trials":1},{"id":"search","per_run_trials":80},{"id":"confirm","per_run_trials":8},{"id":"contract","per_run_trials":10}],"deterministic_artifact_paths":{"source_spec_sha256":"deterministic/source-spec.json","world_plan_sha256":"deterministic/world-plan.json","ruling_sha256":"deterministic/ruling.json","decision_record_sha256":"deterministic/decision-record.json","contract_bundle_sha256":"deterministic/contract-bundle.json"},"fresh_artifact_paths":{"world_instance_sha256":"fresh/world-instance.json","attempts_sha256":"fresh/attempts.json","measurements_sha256":"fresh/measurements.json","captures_sha256":"fresh/captures.json","confirmation_sha256":"fresh/confirmation.json","contract_execution_target_sha256":"fresh/contract-execution-target.json","finalized_contract_run_sha256":"fresh/finalized-contract-run.json","contract_execution_sha256":"fresh/contract-execution.json"}},"study_domains":["http","cli"],"study_run_count_per_domain":3,"study_trial_budget_per_domain":300,"study_subject_process_wall_time_budget_ms_per_domain":900000,"study_subject_process_peak_rss_budget_bytes_per_domain":4294967296,"study_phase_budgets":[{"id":"fixture","trial_count":3,"trial_budget":3},{"id":"compile","trial_count":3,"trial_budget":3},{"id":"search","trial_count":240,"trial_budget":240},{"id":"confirm","trial_count":24,"trial_budget":24},{"id":"contract","trial_count":30,"trial_budget":30}],"deterministic_artifact_fields":["source_spec_sha256","world_plan_sha256","ruling_sha256","decision_record_sha256","contract_bundle_sha256","reference_binary_sha256"],"fresh_run_digest_fields":["world_instance_sha256","attempts_sha256","measurements_sha256","captures_sha256","confirmation_sha256","fixture_invocation_sha256","contract_execution_target_sha256","finalized_contract_run_sha256","contract_execution_sha256"],"html_authority":"LOCAL_SNAPSHOT_NOT_PORTABLE_STRICT_WITNESS","ledger_authority":"LOCAL_SECRET_BEARING_SNAPSHOT_NOT_PORTABLE","projection_paths":["docs/HANDOFF_MODE_C.md","docs/status/U7D-EVIDENCE.md"],"projection_policy":"EXACT_PARENT_RELATIVE_PENDING_BLOCK_REPLACEMENT","self_receipt":"ABSENT","milestone_verdict":"LOCAL_TWO_DOMAIN_PROCESS_ARTIFACT_GREEN_CLI_OFFICIAL_EXECUTION_HTTP_DIRECT_PROCESS_ONLY_FULL_STUDY_RESOURCE_UNRECEIPTED","honest_fallback":"ONE_DOMAIN_OFFICIAL_CONTRACT_EXECUTION_PLUS_HTTP_DIRECT_PROCESS_OBSERVATION_ONLY","unreceipted":["LINUX_UNRUN","WINDOWS_UNRUN","UNRUN_NODE_MAJORS","BROAD_IMPORTED_REPOSITORY_BEHAVIOR_UNVALIDATED","HOSTILE_CONTAINMENT_UNVALIDATED","NETWORK_DENIAL_UNVALIDATED","COMPREHENSION_UNVALIDATED","REVIEW_COMPRESSION_UNVALIDATED","ADOPTION_UNVALIDATED","MAINTAINABILITY_UNVALIDATED","PRODUCTION_READINESS_UNVALIDATED","SECURITY_REVIEW_NOT_PERFORMED","EXTERNAL_PLATFORM_BEHAVIOR_UNVALIDATED","IMPORTED_REPOSITORY_TIMING_UNCLAIMED","FULL_STUDY_RESOURCE_BOUND_UNVALIDATED","HTTP_FINALIZED_CONTRACT_RUN_AUTHORITY_ABSENT","HTTP_CONTRACT_EXECUTION_CLASSIFICATION_AUTHORITY_ABSENT","TWO_DOMAIN_TARGET_RUN_CLASSIFICATION_REPRODUCTION_UNMET","CLI_OFFICIAL_EXECUTION_GENERALIZATION_UNVALIDATED","U7R_SELF_RECEIPT_ABSENT"]}`));
 const expectedClaimBindingPolicy = Object.freeze({
 	event_indices: "EXPLICIT_ZERO_BASED_EVENT_INDEX_EQUALS_CLAIM_INDEX",
 	pathspecs: "EXACT_UNIT_ALLOWED_PATHS_IN_DECLARED_ORDER",
@@ -222,6 +225,41 @@ const expectedU7MClaims = Object.freeze([
 	Object.freeze({ type: "command-succeeded", label: "U7M exact fourteen-path staged scope and diff integrity", command: Object.freeze(["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--unit", "U7M", "--final-gate"]) }),
 	Object.freeze({ type: "command-succeeded", label: "U7M scoped staged credential-pattern scan", command: Object.freeze(["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--unit", "U7M", "--credential-scan"]) }),
 	Object.freeze({ type: "command-succeeded", label: "U7M sealed-U7P predecessor and preceding didrun chain integrity", command: Object.freeze(["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--verify-preseal", "U7M"]) }),
+]);
+const u7nExactPaths = Object.freeze([
+	"docs/ARCHITECTURE.md",
+	"docs/HANDOFF_MODE_C.md",
+	"docs/PROMPT_PACK.md",
+	"docs/STATE_MACHINES.md",
+	"docs/VERIFICATION.md",
+	"docs/prompts/P08-U7-CLI-REFERENCE-STUDIES.md",
+	"docs/status/U7N-CLI-CONTRACT-ALIGNMENT.md",
+	"spec/verification/u7-unit-paths.json",
+	"tools/check-u7-plan.mjs",
+	"tools/check-u7-scope.mjs",
+	"tools/check-u7-architecture.mjs",
+	"tools/check-u7-architecture-selftest.mjs",
+	"tools/check-u7-study-harness.mjs",
+	"tools/check-u7-study-harness-selftest.mjs",
+	"tools/verify-current.mjs",
+	"tools/verify-current-selftest.mjs",
+]);
+const expectedU7NClaims = Object.freeze([
+	Object.freeze({ type: "tests-pass", label: "U7N candidate plan and sealed-U7B parent authority", command: Object.freeze(["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--check-candidate", "U7N"]) }),
+	Object.freeze({ type: "tests-pass", label: "U7N independent candidate transition and exact staged authority", command: Object.freeze(["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--unit", "U7N", "--candidate-phase"]) }),
+	Object.freeze({ type: "tests-pass", label: "U7N inherited P07 receipt successor compatibility", command: Object.freeze(["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--verify-inherited-p07-compatibility"]) }),
+	Object.freeze({ type: "tests-pass", label: "U7N plan contract defensive self-test", command: Object.freeze(["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--self-test"]) }),
+	Object.freeze({ type: "tests-pass", label: "U7N independent staged-scope defensive self-test", command: Object.freeze(["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--self-test"]) }),
+	Object.freeze({ type: "tests-pass", label: "U7N final runbook renderer defensive self-test", command: Object.freeze(["/opt/homebrew/bin/node", "tools/print-u7-final-runbook.mjs", "--self-test"]) }),
+	Object.freeze({ type: "tests-pass", label: "U7N zero-product-surface architecture conformance", command: Object.freeze(["/opt/homebrew/bin/node", "tools/check-u7-architecture.mjs", "--phase", "U7N"]) }),
+	Object.freeze({ type: "tests-pass", label: "U7N architecture authority defensive self-test", command: Object.freeze(["/opt/homebrew/bin/node", "tools/check-u7-architecture-selftest.mjs", "--phase", "U7N"]) }),
+	Object.freeze({ type: "tests-pass", label: "U7N amended study-harness v2 protocol conformance", command: Object.freeze(["/opt/homebrew/bin/node", "tools/check-u7-study-harness.mjs", "--protocol-check"]) }),
+	Object.freeze({ type: "tests-pass", label: "U7N amended study-harness v2 protocol defensive self-test", command: Object.freeze(["/opt/homebrew/bin/node", "tools/check-u7-study-harness-selftest.mjs", "--phase", "U7N"]) }),
+	Object.freeze({ type: "tests-pass", label: "U7N cumulative verifier defensive self-test", command: Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current-selftest.mjs"]) }),
+	Object.freeze({ type: "tests-pass", label: "U7N cumulative verification on the exact staged maintenance candidate", command: Object.freeze(["/opt/homebrew/bin/node", "tools/verify-current.mjs"]) }),
+	Object.freeze({ type: "command-succeeded", label: "U7N exact sixteen-path staged scope and diff integrity", command: Object.freeze(["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--unit", "U7N", "--final-gate"]) }),
+	Object.freeze({ type: "command-succeeded", label: "U7N scoped staged credential-pattern scan", command: Object.freeze(["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--unit", "U7N", "--credential-scan"]) }),
+	Object.freeze({ type: "command-succeeded", label: "U7N sealed-U7B predecessor and preceding didrun chain integrity", command: Object.freeze(["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--verify-preseal", "U7N"]) }),
 ]);
 const capsuleStart = "<!-- U7-PHASE:START -->";
 const capsuleEnd = "<!-- U7-PHASE:END -->";
@@ -372,17 +410,17 @@ function sectionBounds(body, heading) {
 }
 
 export function validateSpecification(value) {
-	if (!exactKeys(value, ["schema_version", "transition_authority", "topology_amendment_authority", "runtime_authority", "inherited_receipts", "receipt_contract", "claim_binding_policy", "sealed_parent", "units"])) fail("SPEC_KEYS", "top-level keys");
-	if (value.schema_version !== "countershape/u7-unit-paths/v2") fail("SCHEMA", String(value.schema_version));
+	if (!exactKeys(value, ["schema_version", "transition_authority", "topology_amendment_authorities", "runtime_authority", "inherited_receipts", "receipt_contract", "claim_binding_policy", "sealed_parent", "units"])) fail("SPEC_KEYS", "top-level keys");
+	if (value.schema_version !== "countershape/u7-unit-paths/v3") fail("SCHEMA", String(value.schema_version));
 	if (!isDeepStrictEqual(value.transition_authority, expectedTransitionAuthority)) fail("AUTHORITY", "transition authority must remain exact and explicitly unevidenced");
-	if (!isDeepStrictEqual(value.topology_amendment_authority, expectedTopologyAmendmentAuthority)) fail("AMENDMENT_AUTHORITY", "U7M successor-compatibility repair authority must remain exact and explicitly unevidenced");
+	if (!isDeepStrictEqual(value.topology_amendment_authorities, expectedTopologyAmendmentAuthorities)) fail("AMENDMENT_AUTHORITY", "ordered U7M and U7N amendment authorities must remain exact and explicitly unevidenced");
 	if (!isDeepStrictEqual(value.runtime_authority, expectedRuntimeAuthority)) fail("RUNTIME_AUTHORITY", "Darwin arm64 and Node major 25 tool epoch must remain exact");
 	if (!isDeepStrictEqual(value.inherited_receipts, expectedInheritedReceipts)) fail("INHERITED_RECEIPTS", "C3P/C3/C6A must remain PRESENT");
 	if (!isDeepStrictEqual(value.receipt_contract, expectedReceiptContract)) fail("RECEIPT_CONTRACT", "U7D study evidence and U7R projection authority must remain exact");
 	if (!isDeepStrictEqual(value.claim_binding_policy, expectedClaimBindingPolicy)) fail("CLAIM_BINDING_POLICY", "event, pathspec, recorded child-process interval, and operational writer authority must remain explicit");
 	if (!isDeepStrictEqual(value.sealed_parent, expectedSealedParent)) fail("SEALED_PARENT", "C6B identity drift");
 	if (!Array.isArray(value.units) || value.units.length !== unitOrder.length ||
-		!isDeepStrictEqual(value.units.map((unit) => unit?.id), unitOrder)) fail("UNIT_ORDER", "expected U7P,U7M,U7A,U7B,U7C,U7D,U7R");
+		!isDeepStrictEqual(value.units.map((unit) => unit?.id), unitOrder)) fail("UNIT_ORDER", "expected U7P,U7M,U7A,U7B,U7N,U7C,U7D,U7R");
 
 	for (const unit of value.units) {
 		if (!exactKeys(unit, ["id", "parent", "verification_profile", "product_authority", "product_behavior", "u7d_receipt_state", "subject", "final_root", "allowed_paths", "required_paths", "claims"])) {
@@ -415,6 +453,9 @@ export function validateSpecification(value) {
 	const u7m = value.units[1];
 	if (!isDeepStrictEqual(u7m.allowed_paths, u7mExactPaths) || !isDeepStrictEqual(u7m.required_paths, u7mExactPaths) ||
 		!isDeepStrictEqual(normalizeClaims(u7m.claims), normalizeClaims(expectedU7MClaims))) fail("U7M_CONTRACT", "exact U7M scope or claims drift");
+	const u7n = value.units.find((unit) => unit.id === "U7N");
+	if (!isDeepStrictEqual(u7n.allowed_paths, u7nExactPaths) || !isDeepStrictEqual(u7n.required_paths, u7nExactPaths) ||
+		!isDeepStrictEqual(normalizeClaims(u7n.claims), normalizeClaims(expectedU7NClaims))) fail("U7N_CONTRACT", "exact U7N scope or claims drift");
 	for (const unit of value.units.slice(2)) {
 		for (const protectedPath of [
 			"spec/verification/u7-unit-paths.json", "tools/check-u7-plan.mjs", "tools/check-u7-scope.mjs",
@@ -422,7 +463,9 @@ export function validateSpecification(value) {
 			"tools/check-u7-study-harness.mjs", "tools/check-u7-study-harness-selftest.mjs",
 			"tools/print-u7-final-runbook.mjs", "tools/verify-current.mjs", "tools/verify-current-selftest.mjs",
 		]) {
-			if (unit.allowed_paths.includes(protectedPath)) fail("FUTURE_CONTROL_PLANE_OWNERSHIP", `${unit.id}:${protectedPath}`);
+			if (unit.allowed_paths.includes(protectedPath) && !(unit.id === "U7N" && u7nExactPaths.includes(protectedPath))) {
+				fail("FUTURE_CONTROL_PLANE_OWNERSHIP", `${unit.id}:${protectedPath}`);
+			}
 		}
 	}
 	return value;
@@ -625,7 +668,7 @@ export function parsePhaseCapsule(text) {
 	if (start < currentState.start || end >= currentState.end || !/^\s*$/u.test(text.slice(currentState.start, start))) fail("CAPSULE_JURISDICTION", "first authority in Current state");
 	requireVisibleMarkers(text, capsuleStart, capsuleEnd, "U7_PHASE");
 	const body = text.slice(start, end + capsuleEnd.length);
-	const match = /^<!-- U7-PHASE:START -->\n### Active U7 phase contract\n\n- \*\*Namespace:\*\* `countershape\/u7-unit-paths\/v2`\n- \*\*Boundary:\*\* `([A-Z0-9]+)`\n- \*\*Parent:\*\* `([A-Z0-9.]+)`\n- \*\*Verification profile:\*\* `(SOURCE_FULL|RECEIPT_RECONCILIATION)`\n- \*\*State:\*\* `(SOURCE_CANDIDATE|RECEIPT_CANDIDATE)`\n- \*\*Topology:\*\* `U7P -> U7M -> U7A -> U7B -> U7C -> U7D -> U7R`\n- \*\*Inherited receipts:\*\* `C3P=PRESENT; C3=PRESENT; C6A=PRESENT`\n- \*\*Receipt U7D:\*\* `(ABSENT|PRESENT)`\n- \*\*Product authority:\*\* `(NONE|U7_REFERENCE_APPLICATION)`\n- \*\*Product behavior:\*\* `(INHERITED_UNREPROVEN|CANDIDATE_UNRECEIPTED|SOURCE_RECEIPT_RECONCILIATION)`\n<!-- U7-PHASE:END -->$/u.exec(body);
+	const match = /^<!-- U7-PHASE:START -->\n### Active U7 phase contract\n\n- \*\*Namespace:\*\* `countershape\/u7-unit-paths\/v3`\n- \*\*Boundary:\*\* `([A-Z0-9]+)`\n- \*\*Parent:\*\* `([A-Z0-9.]+)`\n- \*\*Verification profile:\*\* `(SOURCE_FULL|RECEIPT_RECONCILIATION)`\n- \*\*State:\*\* `(SOURCE_CANDIDATE|RECEIPT_CANDIDATE)`\n- \*\*Topology:\*\* `U7P -> U7M -> U7A -> U7B -> U7N -> U7C -> U7D -> U7R`\n- \*\*Inherited receipts:\*\* `C3P=PRESENT; C3=PRESENT; C6A=PRESENT`\n- \*\*Receipt U7D:\*\* `(ABSENT|PRESENT)`\n- \*\*Product authority:\*\* `(NONE|U7_REFERENCE_APPLICATION)`\n- \*\*Product behavior:\*\* `(INHERITED_UNREPROVEN|CANDIDATE_UNRECEIPTED|SOURCE_RECEIPT_RECONCILIATION)`\n<!-- U7-PHASE:END -->$/u.exec(body);
 	if (!match) fail("CAPSULE_SHAPE", body.slice(0, 512));
 	return Object.freeze({ boundary: match[1], parent: match[2], profile: match[3], state: match[4], receipt: match[5], productAuthority: match[6], productBehavior: match[7] });
 }
@@ -1648,7 +1691,7 @@ function validateReceiptPhase(unitID, handoffText) {
 	const receiptEnds = occurrenceCount(handoffText, receiptBlockEnd);
 	const pendingStarts = occurrenceCount(handoffText, pendingReceiptBlockStart);
 	const pendingEnds = occurrenceCount(handoffText, pendingReceiptBlockEnd);
-	if (["U7P", "U7M", "U7A", "U7B", "U7C"].includes(unitID) ? receiptStarts + receiptEnds + pendingStarts + pendingEnds !== 0 :
+	if (["U7P", "U7M", "U7A", "U7B", "U7N", "U7C"].includes(unitID) ? receiptStarts + receiptEnds + pendingStarts + pendingEnds !== 0 :
 		unitID === "U7D" ? receiptStarts !== 0 || receiptEnds !== 0 || pendingStarts !== 1 || pendingEnds !== 1 :
 		unitID === "U7R" ? receiptStarts !== 1 || receiptEnds !== 1 || pendingStarts !== 0 || pendingEnds !== 0 : true) {
 		fail("RECEIPT_PHASE", `${unitID}:${receiptStarts}:${receiptEnds}:${pendingStarts}:${pendingEnds}`);
@@ -2560,14 +2603,26 @@ export async function selfTest() {
 	const mutations = [
 		["SPEC_KEYS", (value) => { value.extra = true; }],
 		["AUTHORITY", (value) => { value.transition_authority.provenance = "CITED_UNAUTHENTICATED"; }],
-		["AMENDMENT_AUTHORITY", (value) => { value.topology_amendment_authority.authentication = "ESTABLISHED"; }],
+		["SPEC_KEYS", (value) => { delete value.topology_amendment_authorities; }],
+		["AMENDMENT_AUTHORITY", (value) => { value.topology_amendment_authorities[0].classification += "_ALTERED"; }],
+		["AMENDMENT_AUTHORITY", (value) => { value.topology_amendment_authorities[1].authentication = "ESTABLISHED"; }],
+		["AMENDMENT_AUTHORITY", (value) => { value.topology_amendment_authorities.reverse(); }],
+		["AMENDMENT_AUTHORITY", (value) => { value.topology_amendment_authorities.push(clone(value.topology_amendment_authorities[1])); }],
 		["RECEIPT_CONTRACT", (value) => { value.receipt_contract.study_run_count_per_domain = 2; }],
+		["RECEIPT_CONTRACT", (value) => { value.receipt_contract.study_harness.protocol = "countershape/u7-study-harness/v1"; }],
+		["RECEIPT_CONTRACT", (value) => { value.receipt_contract.study_harness.protocol_sha256 = "1".repeat(64); }],
+		["RECEIPT_CONTRACT", (value) => { value.receipt_contract.study_harness.sha256 = "1".repeat(64); }],
+		["RECEIPT_CONTRACT", (value) => { value.receipt_contract.milestone_verdict = "LOCAL_REFERENCE_MILESTONE_FUNCTIONAL_GREEN_FULL_STUDY_RESOURCE_UNRECEIPTED"; }],
+		["RECEIPT_CONTRACT", (value) => { value.receipt_contract.honest_fallback = "NOT_APPLICABLE_SOURCE_GREEN"; }],
+		["RECEIPT_CONTRACT", (value) => { value.receipt_contract.unreceipted.splice(-2, 1); }],
 		["CLAIM_BINDING_POLICY", (value) => { value.claim_binding_policy.pathspecs = "EMPTY"; }],
 		["CLAIM_BINDING_POLICY", (value) => { value.claim_binding_policy.recorded_child_process_intervals = "ALLOW_OVERLAP"; }],
 		["CLAIM_BINDING_POLICY", (value) => { value.claim_binding_policy.operational_writer_protocol = "MULTI_WRITER"; }],
 		["SEALED_PARENT", (value) => { value.sealed_parent.tree = "0".repeat(40); }],
 		["UNIT_ORDER", (value) => { [value.units[1], value.units[2]] = [value.units[2], value.units[1]]; }],
 		["UNIT_IDENTITY", (value) => { value.units[1].parent = "C6B"; }],
+		["UNIT_IDENTITY", (value) => { value.units.find((unit) => unit.id === "U7C").parent = "U7B"; }],
+		["UNIT_IDENTITY", (value) => { value.units.find((unit) => unit.id === "U7N").product_authority = "U7_REFERENCE_APPLICATION"; }],
 		["UNIT_IDENTITY", (value) => { value.units[0].product_authority = "U7_REFERENCE_APPLICATION"; }],
 		["UNIT_PATHS", (value) => { value.units[0].allowed_paths.push(value.units[0].allowed_paths[0]); }],
 		["UNIT_PATHS", (value) => { value.units[1].allowed_paths[0] = "../escape"; }],
@@ -2583,6 +2638,12 @@ export async function selfTest() {
 		}],
 		["U7P_CONTRACT", (value) => { value.units[0].claims[7].label += " altered"; }],
 		["U7M_CONTRACT", (value) => { value.units[1].claims[2].label += " altered"; }],
+		["U7N_CONTRACT", (value) => {
+			const unit = value.units.find((candidate) => candidate.id === "U7N");
+			[unit.allowed_paths[0], unit.allowed_paths[1]] = [unit.allowed_paths[1], unit.allowed_paths[0]];
+			[unit.required_paths[0], unit.required_paths[1]] = [unit.required_paths[1], unit.required_paths[0]];
+		}],
+		["U7N_CONTRACT", (value) => { value.units.find((unit) => unit.id === "U7N").claims[9].label += " altered"; }],
 		["FUTURE_CONTROL_PLANE_OWNERSHIP", (value) => {
 			value.units[2].allowed_paths.push("tools/verify-current.mjs");
 			value.units[2].required_paths.push("tools/verify-current.mjs");
@@ -2607,7 +2668,7 @@ export async function selfTest() {
 		catch (error) { if (String(error.message).includes(token)) continue; fail("SELFTEST_INTERVAL_WRONG_REJECTION", `${token}:${error.message}`); }
 		fail("SELFTEST_INTERVAL_FALSE_NEGATIVE", token);
 	}
-	const capsuleBlock = `${capsuleStart}\n### Active U7 phase contract\n\n- **Namespace:** \`countershape/u7-unit-paths/v2\`\n- **Boundary:** \`U7P\`\n- **Parent:** \`C6B\`\n- **Verification profile:** \`SOURCE_FULL\`\n- **State:** \`SOURCE_CANDIDATE\`\n- **Topology:** \`U7P -> U7M -> U7A -> U7B -> U7C -> U7D -> U7R\`\n- **Inherited receipts:** \`C3P=PRESENT; C3=PRESENT; C6A=PRESENT\`\n- **Receipt U7D:** \`ABSENT\`\n- **Product authority:** \`NONE\`\n- **Product behavior:** \`INHERITED_UNREPROVEN\`\n${capsuleEnd}`;
+	const capsuleBlock = `${capsuleStart}\n### Active U7 phase contract\n\n- **Namespace:** \`countershape/u7-unit-paths/v3\`\n- **Boundary:** \`U7P\`\n- **Parent:** \`C6B\`\n- **Verification profile:** \`SOURCE_FULL\`\n- **State:** \`SOURCE_CANDIDATE\`\n- **Topology:** \`U7P -> U7M -> U7A -> U7B -> U7N -> U7C -> U7D -> U7R\`\n- **Inherited receipts:** \`C3P=PRESENT; C3=PRESENT; C6A=PRESENT\`\n- **Receipt U7D:** \`ABSENT\`\n- **Product authority:** \`NONE\`\n- **Product behavior:** \`INHERITED_UNREPROVEN\`\n${capsuleEnd}`;
 	const capsule = `# U7 fixture\n\n## Current state\n\n${capsuleBlock}\n\nFrozen compatibility follows.\n\n## History\n\nNone.\n`;
 	if (!isDeepStrictEqual(parsePhaseCapsule(capsule), {
 		boundary: "U7P", parent: "C6B", profile: "SOURCE_FULL", state: "SOURCE_CANDIDATE", receipt: "ABSENT",
@@ -2618,8 +2679,15 @@ export async function selfTest() {
 		boundary: "U7M", parent: "U7P", profile: "SOURCE_FULL", state: "SOURCE_CANDIDATE", receipt: "ABSENT",
 		productAuthority: "NONE", productBehavior: "INHERITED_UNREPROVEN",
 	})) fail("SELFTEST_CAPSULE", "U7M positive");
+	const u7nCapsule = capsule.replace("- **Boundary:** `U7P`", "- **Boundary:** `U7N`").replace("- **Parent:** `C6B`", "- **Parent:** `U7B`");
+	if (!isDeepStrictEqual(parsePhaseCapsule(u7nCapsule), {
+		boundary: "U7N", parent: "U7B", profile: "SOURCE_FULL", state: "SOURCE_CANDIDATE", receipt: "ABSENT",
+		productAuthority: "NONE", productBehavior: "INHERITED_UNREPROVEN",
+	})) fail("SELFTEST_CAPSULE", "U7N positive");
 	for (const hostile of [
 		capsule.replace("SOURCE_FULL", "SOURCE_PARTIAL"), `${capsule}\n${capsuleBlock}`,
+		capsule.replace("countershape/u7-unit-paths/v3", "countershape/u7-unit-paths/v2"),
+		capsule.replace("U7P -> U7M -> U7A -> U7B -> U7N -> U7C -> U7D -> U7R", "U7P -> U7M -> U7A -> U7B -> U7C -> U7D -> U7R"),
 		capsule.replace("SOURCE_CANDIDATE", "SEALED"),
 		capsule.replace(capsuleBlock, `\`\`\`markdown\n${capsuleBlock}\n\`\`\``),
 		capsule.replace(capsuleBlock, `<!--\n${capsuleBlock}\n-->`),
@@ -2630,6 +2698,7 @@ export async function selfTest() {
 	}
 	validateReceiptPhase("U7P", capsule);
 	validateReceiptPhase("U7M", u7mCapsule);
+	validateReceiptPhase("U7N", u7nCapsule);
 	const u7dReceiptFixture = `# U7D\n\n## Current state\n\n${pendingReceiptBlock}\n\n## History\n\nFrozen.\n`;
 	const u7dStatusFixture = `# U7D evidence\n\n## Source receipt\n\n${pendingReceiptBlock}\n`;
 	const u7rReceiptFixture = u7dReceiptFixture.replace(pendingReceiptBlock, `${receiptBlockStart}\nsealed\n${receiptBlockEnd}`);
@@ -2637,7 +2706,7 @@ export async function selfTest() {
 	validateReceiptPhase("U7R", u7rReceiptFixture);
 	validatePendingProjectionDocuments(base, new Map([["docs/HANDOFF_MODE_C.md", u7dReceiptFixture], ["docs/status/U7D-EVIDENCE.md", u7dStatusFixture]]));
 	for (const [unitID, hostile] of [
-		["U7C", u7dReceiptFixture], ["U7D", capsule], ["U7D", u7rReceiptFixture], ["U7R", u7dReceiptFixture],
+		["U7N", u7dReceiptFixture], ["U7C", u7dReceiptFixture], ["U7D", capsule], ["U7D", u7rReceiptFixture], ["U7R", u7dReceiptFixture],
 	]) {
 		try { validateReceiptPhase(unitID, hostile); }
 		catch (error) { if (String(error.message).includes("RECEIPT_PHASE")) continue; throw error; }
@@ -2831,7 +2900,7 @@ export async function selfTest() {
 	}
 	if (!snapshotFailureObserved) fail("SELFTEST_P07_COMPATIBILITY_FAILURE_FALSE_GREEN", "snapshot drift");
 	const recoveryHostiles = await selfTestFailedAttemptRecovery(base);
-	console.log(`U7 plan contract defensive self-test passed: ${mutations.length} schema/authority mutations, ${intervalHostiles.length} recorded child-process interval refusals, 6 visible phase-capsule mutations, 4 cross-phase receipt refusals, ${pendingSetHostiles.length} pending-projection refusals, 4 inherited-P07 compatibility refusals, ${authorityHostiles.length} sealed-C6A authority refusals, 5 legacy-plan call-contract cases, 4 compatibility-wrapper cases, ${recoveryHostiles} failed-attempt recovery refusals, exact U7P/U7M manifests, and deterministic hermetic-prefix control`);
+	console.log(`U7 plan contract defensive self-test passed: ${mutations.length} schema/authority mutations, ${intervalHostiles.length} recorded child-process interval refusals, 8 visible phase-capsule mutations, 5 cross-phase receipt refusals, ${pendingSetHostiles.length} pending-projection refusals, 4 inherited-P07 compatibility refusals, ${authorityHostiles.length} sealed-C6A authority refusals, 5 legacy-plan call-contract cases, 4 compatibility-wrapper cases, ${recoveryHostiles} failed-attempt recovery refusals, exact U7P/U7M/U7N manifests, and deterministic hermetic-prefix control`);
 }
 
 async function main() {

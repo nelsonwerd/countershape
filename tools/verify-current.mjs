@@ -39,11 +39,12 @@ export const exactU7PhaseContracts = Object.freeze({
 	U7M: Object.freeze({ boundary: "U7M", parent: "U7P", profile: "SOURCE_FULL", state: "SOURCE_CANDIDATE", receipt: "ABSENT", productAuthority: "NONE", productBehavior: "INHERITED_UNREPROVEN" }),
 	U7A: Object.freeze({ boundary: "U7A", parent: "U7M", profile: "SOURCE_FULL", state: "SOURCE_CANDIDATE", receipt: "ABSENT", productAuthority: "U7_REFERENCE_APPLICATION", productBehavior: "CANDIDATE_UNRECEIPTED" }),
 	U7B: Object.freeze({ boundary: "U7B", parent: "U7A", profile: "SOURCE_FULL", state: "SOURCE_CANDIDATE", receipt: "ABSENT", productAuthority: "U7_REFERENCE_APPLICATION", productBehavior: "CANDIDATE_UNRECEIPTED" }),
-	U7C: Object.freeze({ boundary: "U7C", parent: "U7B", profile: "SOURCE_FULL", state: "SOURCE_CANDIDATE", receipt: "ABSENT", productAuthority: "U7_REFERENCE_APPLICATION", productBehavior: "CANDIDATE_UNRECEIPTED" }),
+	U7N: Object.freeze({ boundary: "U7N", parent: "U7B", profile: "SOURCE_FULL", state: "SOURCE_CANDIDATE", receipt: "ABSENT", productAuthority: "NONE", productBehavior: "INHERITED_UNREPROVEN" }),
+	U7C: Object.freeze({ boundary: "U7C", parent: "U7N", profile: "SOURCE_FULL", state: "SOURCE_CANDIDATE", receipt: "ABSENT", productAuthority: "U7_REFERENCE_APPLICATION", productBehavior: "CANDIDATE_UNRECEIPTED" }),
 	U7D: Object.freeze({ boundary: "U7D", parent: "U7C", profile: "SOURCE_FULL", state: "SOURCE_CANDIDATE", receipt: "ABSENT", productAuthority: "U7_REFERENCE_APPLICATION", productBehavior: "CANDIDATE_UNRECEIPTED" }),
 });
-const exactU7GovernedCounts = Object.freeze({ U7P: 0, U7M: 0, U7A: 10, U7B: 19, U7C: 30, U7D: 34 });
-const u7ArchitectureCaseDigest = "1a8963645a8ca9cd389bea4b0075df30b0f11bdcb6e0d063b94f69728ab8d6c7";
+const exactU7GovernedCounts = Object.freeze({ U7P: 0, U7M: 0, U7A: 10, U7B: 19, U7N: 19, U7C: 30, U7D: 34 });
+const u7ArchitectureCaseDigest = "da362a62ba6afde90fcb2464e8d7cbb8d191145f45a18458c807179ccfaa5bb9";
 const u7PhaseCapsuleStart = "<!-- U7-PHASE:START -->";
 const u7PhaseCapsuleEnd = "<!-- U7-PHASE:END -->";
 const u7PhaseCapsuleIndexStep = Object.freeze({
@@ -76,7 +77,7 @@ export function exactU7ArchitectureSelftestOutput(phase) {
 	if (!Object.hasOwn(exactU7PhaseContracts, phase)) {
 		throw new VerificationError("VERIFY_U7_PHASE_UNSUPPORTED", String(phase));
 	}
-	return `U7 architecture defensive self-test passed: active=${phase} cases=87 clean=7 hostile=80 digest=${u7ArchitectureCaseDigest}\n`;
+	return `U7 architecture defensive self-test passed: active=${phase} cases=100 clean=8 hostile=92 digest=${u7ArchitectureCaseDigest}\n`;
 }
 
 // Sealed C0 compatibility invariants now enforced by verify-runtime-authority.mjs:
@@ -201,7 +202,7 @@ export function parseU7PhaseCapsule(text) {
 		throw new VerificationError("VERIFY_U7_PHASE_CAPSULE", "markers must be visible operational Markdown");
 	}
 	const body = text.slice(start, end + u7PhaseCapsuleEnd.length);
-	const match = /^<!-- U7-PHASE:START -->\n### Active U7 phase contract\n\n- \*\*Namespace:\*\* `countershape\/u7-unit-paths\/v2`\n- \*\*Boundary:\*\* `([A-Z0-9]+)`\n- \*\*Parent:\*\* `([A-Z0-9.]+)`\n- \*\*Verification profile:\*\* `(SOURCE_FULL|RECEIPT_RECONCILIATION)`\n- \*\*State:\*\* `(SOURCE_CANDIDATE|RECEIPT_CANDIDATE)`\n- \*\*Topology:\*\* `U7P -> U7M -> U7A -> U7B -> U7C -> U7D -> U7R`\n- \*\*Inherited receipts:\*\* `C3P=PRESENT; C3=PRESENT; C6A=PRESENT`\n- \*\*Receipt U7D:\*\* `(ABSENT|PRESENT)`\n- \*\*Product authority:\*\* `(NONE|U7_REFERENCE_APPLICATION)`\n- \*\*Product behavior:\*\* `(INHERITED_UNREPROVEN|CANDIDATE_UNRECEIPTED|SOURCE_RECEIPT_RECONCILIATION)`\n<!-- U7-PHASE:END -->$/u.exec(body);
+	const match = /^<!-- U7-PHASE:START -->\n### Active U7 phase contract\n\n- \*\*Namespace:\*\* `countershape\/u7-unit-paths\/v3`\n- \*\*Boundary:\*\* `([A-Z0-9]+)`\n- \*\*Parent:\*\* `([A-Z0-9.]+)`\n- \*\*Verification profile:\*\* `(SOURCE_FULL|RECEIPT_RECONCILIATION)`\n- \*\*State:\*\* `(SOURCE_CANDIDATE|RECEIPT_CANDIDATE)`\n- \*\*Topology:\*\* `U7P -> U7M -> U7A -> U7B -> U7N -> U7C -> U7D -> U7R`\n- \*\*Inherited receipts:\*\* `C3P=PRESENT; C3=PRESENT; C6A=PRESENT`\n- \*\*Receipt U7D:\*\* `(ABSENT|PRESENT)`\n- \*\*Product authority:\*\* `(NONE|U7_REFERENCE_APPLICATION)`\n- \*\*Product behavior:\*\* `(INHERITED_UNREPROVEN|CANDIDATE_UNRECEIPTED|SOURCE_RECEIPT_RECONCILIATION)`\n<!-- U7-PHASE:END -->$/u.exec(body);
 	if (!match) throw new VerificationError("VERIFY_U7_PHASE_CAPSULE", "exact capsule shape");
 	return Object.freeze({ boundary: match[1], parent: match[2], profile: match[3], state: match[4], receipt: match[5], productAuthority: match[6], productBehavior: match[7] });
 }
@@ -476,12 +477,12 @@ export const currentSteps = Object.freeze([
 	Object.freeze({
 		id: "architecture-u7-study-harness-protocol", tool: "node", tools: Object.freeze(["node", "go", "git"]),
 		path: "tools/check-u7-study-harness.mjs", args: Object.freeze(["--protocol-check"]),
-		marker: "U7_STUDY_HARNESS_PROTOCOL_OK protocol=countershape/u7-study-harness/v1 digest=",
+		marker: "U7_STUDY_HARNESS_PROTOCOL_OK protocol=countershape/u7-study-harness/v2 digest=",
 	}),
 	Object.freeze({
 		id: "architecture-u7-study-harness-selftest", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
-		path: "tools/check-u7-study-harness-selftest.mjs", args: Object.freeze(["--phase", "U7P"]),
-		marker: "U7 study harness defensive self-test passed: active=U7P cases=",
+		path: "tools/check-u7-study-harness-selftest.mjs", args: Object.freeze(["--phase", "U7N"]),
+		marker: "U7 study harness defensive self-test passed: active=U7N cases=",
 	}),
 	Object.freeze({
 		id: "u7-final-runbook-selftest", tool: "node", tools: Object.freeze(["node", "go", "git", "sh", "cc", "cxx"]),
