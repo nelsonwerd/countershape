@@ -6,7 +6,7 @@ The repository is public early because the *process* is the interesting part, an
 
 > ### Should you clone this?
 >
-> **Not to run it — not yet.** Nothing works from a clone today: the CLI is only just taking shape, and two files still hardcode absolute paths from the machine it's being built on. Clone it to *read* — the code, the 58 status documents, and the receipts are all worth a look right now.
+> **Not to run it — not yet.** Nothing works from a clone today: the CLI is only just taking shape, and two files still hardcode absolute paths from the machine it's being built on. Clone it to *read* — the code, the 59 status documents, and the receipts are all worth a look right now.
 >
 > **When the build finishes**, the hardcoded paths get fixed, the command-line interface and decision screen land, and this README is replaced with real install and usage instructions. Watch the repo if you want to know when that happens.
 
@@ -38,13 +38,13 @@ The bet is that generating code got cheap and **deciding which behavior you actu
 |---|---|
 | Started | 2026-07-14 |
 | Status | **Still building.** Units 0–6 of a 10-unit roadmap sealed and closed; unit 7 — the CLI, the first thing a human will touch — opened August 9, and its first product code sealed August 10 |
-| Sealed commits | 79 |
-| Verified claims | 1095 (1064 clean, 30 stale, 1 failed) |
+| Sealed commits | 80 |
+| Verified claims | 1110 (1079 clean, 30 stale, 1 failed) |
 | Go — product code | ~71,000 lines |
 | Go — tests | ~60,000 lines |
-| JavaScript — checkers | ~91,000 lines |
+| JavaScript — checkers | ~92,000 lines |
 | **Runnable?** | **No.** No CLI, no UI, no install path |
-| Stats as of | 2026-08-10 |
+| Stats as of | 2026-08-11 |
 
 The core engine exists and is sealed: exact Git materialization, isolated execution worlds, CLI and HTTP observation, a bounded reducer, the decision store, the ruling authority, the standalone-test compiler, publication, and execution classification. What does *not* exist yet is everything a human would touch — the command line, the blind decision screen, and packaging. Those are units 7 through 9, and unit 7 is now underway for real: on August 10 the run sealed its first CLI code — `cmd/countershape`, the command's entry point and application shell, plus an HTTP falsification study behind it. It is a foundation, not a usable tool yet.
 
@@ -75,11 +75,11 @@ Receipts are produced by [didrun](https://github.com/nelsonwerd/didrun), a separ
 
 Better you hear them here than discover them and assume something was hidden.
 
-**1. 78 of 79 seals record `secrets_override: true`.** This looks like the credential scanner was bypassed 78 times. It was — and every single firing was a false positive from one string. The scanner's OpenAI-key pattern is `/sk-(?:proj-)?[A-Za-z0-9_-]{20,}/`, unanchored, with the hyphen inside the character class. A diagnostic directory named `...c4-umask-diagnosis-red-<digest>` contains the substring `sk-diagnosis-red-...` — because **the word "umask" ends in "sk."** An independent audit replayed the exact regex over all 1,978 objects in the repository's history and found exactly two matches, both from that one directory name, and zero real credentials anywhere.
+**1. 79 of 80 seals record `secrets_override: true`.** This looks like the credential scanner was bypassed 79 times. It was — and every single firing was a false positive from one string. The scanner's OpenAI-key pattern is `/sk-(?:proj-)?[A-Za-z0-9_-]{20,}/`, unanchored, with the hyphen inside the character class. A diagnostic directory named `...c4-umask-diagnosis-red-<digest>` contains the substring `sk-diagnosis-red-...` — because **the word "umask" ends in "sk."** An independent audit replayed the exact regex over all 1,978 objects in the repository's history and found exactly two matches, both from that one directory name, and zero real credentials anywhere.
 
-**2. One claim is graded `failed` and thirty are `stale`**, all inside two commits from the first 30 hours. They were never deleted, relabeled, or re-sealed. The status documents quote them verbatim and state plainly that none of those claims supports a capability. The other 77 commits are clean.
+**2. One claim is graded `failed` and thirty are `stale`**, all inside two commits from the first 30 hours. They were never deleted, relabeled, or re-sealed. The status documents quote them verbatim and state plainly that none of those claims supports a capability. The other 78 commits are clean.
 
-**3. There is roughly twice as much checking as there is product.** ~71,000 lines of product Go, against ~60,000 lines of tests and ~91,000 lines of JavaScript that exists solely to check the rest. Put another way: the checker JavaScript alone outweighs the product it verifies. There is also a five-day window in the history where ten milestones sealed and **zero lines of product code were written** — 88% of everything added in that stretch was checker JavaScript. That is not a bug in the log; that is what happened, and it is one of the more interesting things this run has produced.
+**3. There is roughly twice as much checking as there is product.** ~71,000 lines of product Go, against ~60,000 lines of tests and ~92,000 lines of JavaScript that exists solely to check the rest. Put another way: the checker JavaScript alone outweighs the product it verifies. There is also a five-day window in the history where ten milestones sealed and **zero lines of product code were written** — 88% of everything added in that stretch was checker JavaScript. That is not a bug in the log; that is what happened, and it is one of the more interesting things this run has produced.
 
 ---
 
@@ -98,7 +98,7 @@ One prompt, then no human steering. The build is driven by [idea-to-ship](https:
 
 Verification runs through [didrun](https://github.com/nelsonwerd/didrun).
 
-The `docs/status/` directory contains a status document for every sealed milestone — 58 of them — each declaring exactly what it claims and what it explicitly does not. `docs/HANDOFF_MODE_C.md` is the live cursor showing where the run currently is.
+The `docs/status/` directory contains a status document for every sealed milestone — 59 of them — each declaring exactly what it claims and what it explicitly does not. `docs/HANDOFF_MODE_C.md` is the live cursor showing where the run currently is.
 
 ---
 
