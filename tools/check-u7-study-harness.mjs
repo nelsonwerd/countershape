@@ -51,15 +51,24 @@ const freshArtifactPaths = Object.freeze({
 const productResultSchema = "countershape/u7-study-domain-result/v1";
 const trialSchema = "countershape/u7-study-trial/v1";
 const artifactSchema = "countershape/u7-study-artifact/v1";
-const harnessProtocol = "countershape/u7-study-harness/v1";
-const observationAuthority = "U7P_FROZEN_HARNESS_DIRECT_PROCESS_GIT_AND_ARTIFACT_OBSERVATION";
+const harnessProtocol = "countershape/u7-study-harness/v2";
+const studyExecutionAuthority = "U7P_ORIGIN_U7N_AMENDED_HARNESS_V2_DIRECT_PROCESS_STUDY_EXECUTION";
+const observationAuthority = "U7P_ORIGIN_U7N_AMENDED_HARNESS_V2_DIRECT_PROCESS_GIT_AND_ARTIFACT_OBSERVATION";
 const semanticCeiling = "ARTIFACT_BYTES_AND_SUBJECT_PROCESS_TOPOLOGY_OBSERVED_PRODUCT_SEMANTICS_AND_FULL_HARNESS_RESOURCES_NOT_INDEPENDENTLY_ESTABLISHED";
 const driverProtocol = "FIXTURE_ONLY_NO_EVIDENCE_ROOT";
 const phaseVerdicts = Object.freeze({
 	U7B: "LOCAL_HTTP_REFERENCE_FUNCTIONAL_GREEN_SUBJECT_RESOURCE_OBSERVED",
-	U7C: "LOCAL_CLI_REFERENCE_FUNCTIONAL_GREEN_SUBJECT_RESOURCE_OBSERVED",
-	U7D: "LOCAL_REFERENCE_MILESTONE_FUNCTIONAL_GREEN_FULL_STUDY_RESOURCE_UNRECEIPTED",
+	U7C: "LOCAL_CLI_DECISION_AND_ENROLLED_REFERENCE_EXECUTION_PROCESS_ARTIFACT_GREEN_SUBJECT_RESOURCE_OBSERVED",
+	U7D: "LOCAL_TWO_DOMAIN_PROCESS_ARTIFACT_GREEN_CLI_OFFICIAL_EXECUTION_HTTP_DIRECT_PROCESS_ONLY_FULL_STUDY_RESOURCE_UNRECEIPTED",
 });
+const honestFallback = "ONE_DOMAIN_OFFICIAL_CONTRACT_EXECUTION_PLUS_HTTP_DIRECT_PROCESS_OBSERVATION_ONLY";
+const requiredUnreceiptedSuffix = Object.freeze([
+	"HTTP_FINALIZED_CONTRACT_RUN_AUTHORITY_ABSENT",
+	"HTTP_CONTRACT_EXECUTION_CLASSIFICATION_AUTHORITY_ABSENT",
+	"TWO_DOMAIN_TARGET_RUN_CLASSIFICATION_REPRODUCTION_UNMET",
+	"CLI_OFFICIAL_EXECUTION_GENERALIZATION_UNVALIDATED",
+	"U7R_SELF_RECEIPT_ABSENT",
+]);
 const maxOutputBytes = 2 * 1024 * 1024;
 const maxArtifactBytes = 16 * 1024 * 1024;
 const commandTimeoutMs = 20 * 60 * 1000;
@@ -75,10 +84,13 @@ export const protocolAuthority = Object.freeze({
 	product_result_schema: productResultSchema,
 	trial_schema: trialSchema,
 	artifact_schema: artifactSchema,
+	study_execution_authority: studyExecutionAuthority,
 	observation_authority: observationAuthority,
 	semantic_ceiling: semanticCeiling,
 	driver_protocol: driverProtocol,
 	phase_verdicts: phaseVerdicts,
+	honest_fallback: honestFallback,
+	required_unreceipted_suffix: requiredUnreceiptedSuffix,
 	observer_prefix: Object.freeze([timePath, "-p", "-l", "-o"]),
 	domains_by_phase: domainsByPhase,
 	driver_by_domain: driverByDomain,
@@ -532,7 +544,11 @@ async function loadSpecification() {
 	catch { fail("SPECIFICATION", "JSON"); }
 	const contract = specification?.receipt_contract;
 	const harness = contract?.study_harness;
-	if (!exactKeys(harness, ["protocol", "protocol_sha256", "path", "sha256", "product_result_schema", "trial_schema", "artifact_schema", "observation_authority", "semantic_ceiling", "driver_protocol", "phase_verdicts", "observer_prefix", "driver_by_domain", "phase_budgets", "deterministic_artifact_paths", "fresh_artifact_paths"]) ||
+	const unreceipted = contract?.unreceipted;
+	const exactLimitationSuffix = Array.isArray(unreceipted) && unreceipted.length >= requiredUnreceiptedSuffix.length &&
+		isDeepStrictEqual(unreceipted.slice(-requiredUnreceiptedSuffix.length), requiredUnreceiptedSuffix);
+	if (contract?.study_execution_authority !== studyExecutionAuthority || contract?.milestone_verdict !== phaseVerdicts.U7D || contract?.honest_fallback !== honestFallback ||
+		!exactLimitationSuffix || !exactKeys(harness, ["protocol", "protocol_sha256", "path", "sha256", "product_result_schema", "trial_schema", "artifact_schema", "observation_authority", "semantic_ceiling", "driver_protocol", "phase_verdicts", "observer_prefix", "driver_by_domain", "phase_budgets", "deterministic_artifact_paths", "fresh_artifact_paths"]) ||
 		harness.protocol !== harnessProtocol || harness.path !== harnessRelativePath || !validDigest(harness.sha256) ||
 		!validDigest(harness.protocol_sha256) || harness.protocol_sha256 !== sha256(canonicalJSONLine(protocolAuthority)) ||
 		harness.product_result_schema !== productResultSchema || harness.trial_schema !== trialSchema || harness.artifact_schema !== artifactSchema ||

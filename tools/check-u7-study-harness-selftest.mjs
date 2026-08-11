@@ -21,22 +21,40 @@ const timePath = "/usr/bin/time";
 const timeDigest = "d2210b72e8c978748a0f0ac7d0819dda4dd411bb7a2e9730476038b0d695e7a2";
 const nodeDigest = "87989003817c5347d6bad48e46897e1b6509328bb7e8295d83cb6b40af836b9c";
 const goDigest = "3f947495f00cb7f8088a5cfd694da8dc43869b33f5e7377b048fb18922ffb7e0";
-const harnessProtocol = "countershape/u7-study-harness/v1";
+const harnessProtocol = "countershape/u7-study-harness/v2";
 const productResultSchema = "countershape/u7-study-domain-result/v1";
 const trialSchema = "countershape/u7-study-trial/v1";
 const artifactSchema = "countershape/u7-study-artifact/v1";
-const observationAuthority = "U7P_FROZEN_HARNESS_DIRECT_PROCESS_GIT_AND_ARTIFACT_OBSERVATION";
+const studyExecutionAuthority = "U7P_ORIGIN_U7N_AMENDED_HARNESS_V2_DIRECT_PROCESS_STUDY_EXECUTION";
+const observationAuthority = "U7P_ORIGIN_U7N_AMENDED_HARNESS_V2_DIRECT_PROCESS_GIT_AND_ARTIFACT_OBSERVATION";
 const semanticCeiling = "ARTIFACT_BYTES_AND_SUBJECT_PROCESS_TOPOLOGY_OBSERVED_PRODUCT_SEMANTICS_AND_FULL_HARNESS_RESOURCES_NOT_INDEPENDENTLY_ESTABLISHED";
 const driverProtocol = "FIXTURE_ONLY_NO_EVIDENCE_ROOT";
-const phaseVerdicts = Object.freeze({ U7B: "LOCAL_HTTP_REFERENCE_FUNCTIONAL_GREEN_SUBJECT_RESOURCE_OBSERVED", U7C: "LOCAL_CLI_REFERENCE_FUNCTIONAL_GREEN_SUBJECT_RESOURCE_OBSERVED", U7D: "LOCAL_REFERENCE_MILESTONE_FUNCTIONAL_GREEN_FULL_STUDY_RESOURCE_UNRECEIPTED" });
+const phaseVerdicts = Object.freeze({ U7B: "LOCAL_HTTP_REFERENCE_FUNCTIONAL_GREEN_SUBJECT_RESOURCE_OBSERVED", U7C: "LOCAL_CLI_DECISION_AND_ENROLLED_REFERENCE_EXECUTION_PROCESS_ARTIFACT_GREEN_SUBJECT_RESOURCE_OBSERVED", U7D: "LOCAL_TWO_DOMAIN_PROCESS_ARTIFACT_GREEN_CLI_OFFICIAL_EXECUTION_HTTP_DIRECT_PROCESS_ONLY_FULL_STUDY_RESOURCE_UNRECEIPTED" });
+const honestFallback = "ONE_DOMAIN_OFFICIAL_CONTRACT_EXECUTION_PLUS_HTTP_DIRECT_PROCESS_OBSERVATION_ONLY";
+const requiredUnreceiptedSuffix = Object.freeze([
+	"HTTP_FINALIZED_CONTRACT_RUN_AUTHORITY_ABSENT",
+	"HTTP_CONTRACT_EXECUTION_CLASSIFICATION_AUTHORITY_ABSENT",
+	"TWO_DOMAIN_TARGET_RUN_CLASSIFICATION_REPRODUCTION_UNMET",
+	"CLI_OFFICIAL_EXECUTION_GENERALIZATION_UNVALIDATED",
+	"U7R_SELF_RECEIPT_ABSENT",
+]);
 
 export const requiredCaseIDs = Object.freeze([
 	"live-protocol",
 	"clean-u7b",
 	"clean-u7c",
 	"clean-u7d",
+	"protocol-old-id",
+	"protocol-old-study-execution-authority",
+	"protocol-old-observation-authority",
+	"protocol-old-u7d-verdict",
+	"protocol-old-honest-fallback",
+	"protocol-missing-unreceipted-limitation",
+	"protocol-stale-sha256",
+	"protocol-stale-harness-sha256",
 	"args-missing",
 	"args-u7a",
+	"args-u7n",
 	"args-trailing",
 	"wrong-tmpdir",
 	"repeat-root",
@@ -86,8 +104,12 @@ export const requiredCaseIDs = Object.freeze([
 	"evidence-wrong-trial",
 	"output-root-extra",
 	"output-harness-sha",
+	"output-harness-protocol",
+	"output-harness-protocol-sha",
+	"output-observation-authority",
 	"output-phase",
 	"output-verdict",
+	"output-honest-fallback",
 	"output-process-argv",
 	"output-prepare-executable-digest",
 	"output-compile-executable-digest",
@@ -102,7 +124,7 @@ export const requiredCaseIDs = Object.freeze([
 	"output-fixture-gitdir",
 	"output-aggregate-wall",
 ]);
-const requiredCaseDigest = "b84c42cbe93af59387c4fe0395ff474e8581124b8e84ab14f95201b99ce3c10a";
+const requiredCaseDigest = "088df37bd893da368108693845852a608fee2e5f75da814d0dc47535621fc81b";
 
 function fail(code, detail) {
 	throw new Error(`U7_STUDY_HARNESS_SELFTEST_${code}: ${detail}`);
@@ -212,7 +234,7 @@ function validateHarnessEvidence(value, phase, rawLine, repository, driverDigest
 	if (!canonicalJSONLine(value).equals(Buffer.from(rawLine, "utf8"))) fail("OUTPUT", `${phase}:canonical`);
 	if (!exactKeys(value, ["schema_version", "phase", "harness_authority", "environment", "studies", "milestone_verdict", "honest_fallback", "unreceipted"]) ||
 		value.schema_version !== "countershape/u7-study-evidence/v1" || value.phase !== phase || value.milestone_verdict !== phaseVerdicts[phase] ||
-		value.honest_fallback !== "NOT_APPLICABLE_SOURCE_GREEN" || !isDeepStrictEqual(value.unreceipted, ["SYNTHETIC_SELFTEST_ONLY"])) fail("OUTPUT", `${phase}:root`);
+		value.honest_fallback !== honestFallback || !isDeepStrictEqual(value.unreceipted, ["SYNTHETIC_SELFTEST_ONLY", ...requiredUnreceiptedSuffix])) fail("OUTPUT", `${phase}:root`);
 	const authority = value.harness_authority;
 	if (!exactKeys(authority, ["protocol", "path", "sha256", "protocol_sha256", "observation_authority", "semantic_ceiling"]) ||
 		authority.protocol !== harnessProtocol || authority.path !== checkerRelative || authority.sha256 !== checkerDigest || authority.protocol_sha256 !== sha256(canonicalJSONLine(protocolAuthority)) ||
@@ -452,15 +474,16 @@ async function writeSyntheticSpecification(root, harnessDigest) {
 			],
 		},
 		receipt_contract: {
+			study_execution_authority: studyExecutionAuthority,
 			study_harness: studyHarness,
 			study_evidence_schema: "countershape/u7-study-evidence/v1",
 			study_run_count_per_domain: 3,
 			study_trial_budget_per_domain: 300,
 			study_subject_process_wall_time_budget_ms_per_domain: 900000,
 			study_subject_process_peak_rss_budget_bytes_per_domain: 4294967296,
-			milestone_verdict: "LOCAL_REFERENCE_MILESTONE_FUNCTIONAL_GREEN_FULL_STUDY_RESOURCE_UNRECEIPTED",
-			honest_fallback: "NOT_APPLICABLE_SOURCE_GREEN",
-			unreceipted: ["SYNTHETIC_SELFTEST_ONLY"],
+			milestone_verdict: phaseVerdicts.U7D,
+			honest_fallback: honestFallback,
+			unreceipted: ["SYNTHETIC_SELFTEST_ONLY", ...requiredUnreceiptedSuffix],
 		},
 	};
 	const path = resolve(root, "spec/verification/u7-unit-paths.json");
@@ -577,12 +600,12 @@ function validateCaseAuthority() {
 }
 
 export async function selfTest(phase) {
-	if (phase !== "U7P") fail("USAGE", phase);
+	if (phase !== "U7N") fail("USAGE", phase);
 	validateCaseAuthority();
-	const liveTmp = resolve(repositoryRoot, ".countershape/u7p-final/tmp");
+	const liveTmp = resolve(repositoryRoot, ".countershape/u7n-final/tmp");
 	const liveEnvironment = cleanEnvironment(liveTmp);
 	const live = invoke(checkerPath, ["--protocol-check"], repositoryRoot, liveEnvironment);
-	if (live.status !== 0 || !/^U7_STUDY_HARNESS_PROTOCOL_OK protocol=countershape\/u7-study-harness\/v1 digest=[0-9a-f]{64}\n$/u.test(live.stdout) || live.stderr !== "") {
+	if (live.status !== 0 || !/^U7_STUDY_HARNESS_PROTOCOL_OK protocol=countershape\/u7-study-harness\/v2 digest=[0-9a-f]{64}\n$/u.test(live.stdout) || live.stderr !== "") {
 		fail("LIVE_PROTOCOL", JSON.stringify(live));
 	}
 
@@ -605,8 +628,12 @@ export async function selfTest(phase) {
 	const outputHostiles = [
 		["output-root-extra", (value) => { value.extra = true; }],
 		["output-harness-sha", (value) => { value.harness_authority.sha256 = "1".repeat(64); }],
+		["output-harness-protocol", (value) => { value.harness_authority.protocol = "countershape/u7-study-harness/v1"; }],
+		["output-harness-protocol-sha", (value) => { value.harness_authority.protocol_sha256 = "1".repeat(64); }],
+		["output-observation-authority", (value) => { value.harness_authority.observation_authority = "U7P_FROZEN_HARNESS_DIRECT_PROCESS_GIT_AND_ARTIFACT_OBSERVATION"; }],
 		["output-phase", (value) => { value.phase = "U7C"; }],
 		["output-verdict", (value) => { value.milestone_verdict = "WRONG"; }],
+		["output-honest-fallback", (value) => { value.honest_fallback = "NOT_APPLICABLE_SOURCE_GREEN"; }],
 		["output-process-argv", (value) => { value.studies[0].runs[0].processes.prepare.observer_argv.pop(); }],
 		["output-prepare-executable-digest", (value) => { value.studies[0].runs[0].processes.prepare.executable_sha256 = "1".repeat(64); }],
 		["output-compile-executable-digest", (value) => { value.studies[0].runs[0].processes.compile.executable_sha256 = "1".repeat(64); }],
@@ -630,12 +657,36 @@ export async function selfTest(phase) {
 		if (observed === undefined || !observed.startsWith("U7_STUDY_HARNESS_SELFTEST_OUTPUT:")) fail("HOSTILE", `${id}:${observed ?? "accepted"}`);
 	}
 
+	const protocolHostiles = [
+		["protocol-old-id", (value) => { value.receipt_contract.study_harness.protocol = "countershape/u7-study-harness/v1"; }, "SPECIFICATION"],
+		["protocol-old-study-execution-authority", (value) => { value.receipt_contract.study_execution_authority = "U7P_FROZEN_HARNESS_DIRECT_PROCESS_GIT_AND_ARTIFACT_OBSERVATION"; }, "SPECIFICATION"],
+		["protocol-old-observation-authority", (value) => { value.receipt_contract.study_harness.observation_authority = "U7P_FROZEN_HARNESS_DIRECT_PROCESS_GIT_AND_ARTIFACT_OBSERVATION"; }, "SPECIFICATION"],
+		["protocol-old-u7d-verdict", (value) => { value.receipt_contract.study_harness.phase_verdicts.U7D = "LOCAL_REFERENCE_MILESTONE_FUNCTIONAL_GREEN_FULL_STUDY_RESOURCE_UNRECEIPTED"; }, "SPECIFICATION"],
+		["protocol-old-honest-fallback", (value) => { value.receipt_contract.honest_fallback = "NOT_APPLICABLE_SOURCE_GREEN"; }, "SPECIFICATION"],
+		["protocol-missing-unreceipted-limitation", (value) => { value.receipt_contract.unreceipted.splice(-2, 1); }, "SPECIFICATION"],
+		["protocol-stale-sha256", (value) => { value.receipt_contract.study_harness.protocol_sha256 = "1".repeat(64); }, "SPECIFICATION"],
+		["protocol-stale-harness-sha256", (value) => { value.receipt_contract.study_harness.sha256 = "1".repeat(64); }, "HARNESS_IDENTITY"],
+	];
+	for (const [id, mutate, code] of protocolHostiles) {
+		const fixture = await createSynthetic();
+		try {
+			const prepared = await prepareEnvironment(fixture.root, "U7B");
+			const specificationPath = resolve(fixture.root, "spec/verification/u7-unit-paths.json");
+			const specification = JSON.parse(await readFile(specificationPath, "utf8"));
+			mutate(specification);
+			await writeFile(specificationPath, `${JSON.stringify(specification, null, 2)}\n`, { mode: 0o600 });
+			const result = invoke(fixture.checker, ["--protocol-check"], fixture.root, prepared.environment);
+			if (result.status !== 1 || result.stdout !== "" || !result.stderr.startsWith(`U7_STUDY_HARNESS_${code}:`)) fail("MUTATION", `${id}:${JSON.stringify(result)}`);
+		} finally { await rm(fixture.root, { recursive: true, force: true }); }
+	}
+
 	const usage = "U7_STUDY_HARNESS_USAGE: check-u7-study-harness.mjs --protocol-check | --phase U7B|U7C|U7D\n";
 	const argsFixture = await createSynthetic();
 	try {
 		const prepared = await prepareEnvironment(argsFixture.root, "U7B");
 		assertResult("args-missing", invoke(argsFixture.checker, [], argsFixture.root, prepared.environment), 2, "", usage);
 		assertResult("args-u7a", invoke(argsFixture.checker, ["--phase", "U7A"], argsFixture.root, prepared.environment), 2, "", usage);
+		assertResult("args-u7n", invoke(argsFixture.checker, ["--phase", "U7N"], argsFixture.root, prepared.environment), 2, "", usage);
 		assertResult("args-trailing", invoke(argsFixture.checker, ["--phase", "U7B", "extra"], argsFixture.root, prepared.environment), 2, "", usage);
 		const wrong = { ...prepared.environment, TMPDIR: resolve(argsFixture.root, "wrong") };
 		assertResult("wrong-tmpdir", invoke(argsFixture.checker, ["--phase", "U7B"], argsFixture.root, wrong), 1, "", `U7_STUDY_HARNESS_TMPDIR: ${wrong.TMPDIR}\n`);
@@ -708,11 +759,11 @@ export async function selfTest(phase) {
 	expectThrow("product-result-domain", "PRODUCT_RESULT", () => validateProductResult({ ...baseResult, domain: "cli" }, "http", 1));
 	expectThrow("product-result-extra", "PRODUCT_RESULT", () => validateProductResult({ ...baseResult, extra: true }, "http", 1));
 
-	process.stdout.write(`U7 study harness defensive self-test passed: active=U7P cases=${requiredCaseIDs.length} digest=${requiredCaseDigest} synthetic_phases=U7B,U7C,U7D direct_binary_observer=/usr/bin/time\n`);
+	process.stdout.write(`U7 study harness defensive self-test passed: active=${phase} cases=${requiredCaseIDs.length} digest=${requiredCaseDigest} synthetic_phases=U7B,U7C,U7D direct_binary_observer=/usr/bin/time\n`);
 }
 
 async function main() {
-	if (process.argv.length !== 4 || process.argv[2] !== "--phase" || process.argv[3] !== "U7P") fail("USAGE", "check-u7-study-harness-selftest.mjs --phase U7P");
+	if (process.argv.length !== 4 || process.argv[2] !== "--phase" || process.argv[3] !== "U7N") fail("USAGE", "check-u7-study-harness-selftest.mjs --phase U7N");
 	await selfTest(process.argv[3]);
 }
 

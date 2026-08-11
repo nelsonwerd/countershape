@@ -1,5 +1,5 @@
 {
-  "schema_version": "countershape/u7-unit-paths/v2",
+  "schema_version": "countershape/u7-unit-paths/v3",
   "transition_authority": {
     "source": "OWNER_OUT_OF_BAND",
     "classification": "OWNER_AUTHORIZED_ROADMAP_ACTIVATION",
@@ -23,22 +23,40 @@
     "product_behavior": "INHERITED_UNREPROVEN",
     "grade_transfer": "NONE"
   },
-  "topology_amendment_authority": {
-    "boundary": "U7M",
-    "source": "OWNER_OUT_OF_BAND",
-    "classification": "OWNER_AUTHORIZED_AUTHORITY_MIGRATION_DEFECT_REPAIR",
-    "provenance": {
-      "kind": "UNEVIDENCED",
-      "disclosure": "OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT"
+  "topology_amendment_authorities": [
+    {
+      "boundary": "U7M",
+      "source": "OWNER_OUT_OF_BAND",
+      "classification": "OWNER_AUTHORIZED_AUTHORITY_MIGRATION_DEFECT_REPAIR",
+      "provenance": {
+        "kind": "UNEVIDENCED",
+        "disclosure": "OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT"
+      },
+      "authentication": "NOT_ESTABLISHED",
+      "signed_authorization": "NOT_IMPLEMENTED",
+      "predecessor_declaration": {"kind": "NONE"},
+      "defect": "P07_C3P_RECEIPT_LIVE_ENTRYPOINT_REQUIRES_C6R_OR_C6B_HEAD_SUBJECT_AND_REJECTS_ALL_U7_DESCENDANTS",
+      "product_authority": "NONE",
+      "product_behavior": "INHERITED_UNREPROVEN",
+      "grade_transfer": "NONE"
     },
-    "authentication": "NOT_ESTABLISHED",
-    "signed_authorization": "NOT_IMPLEMENTED",
-    "predecessor_declaration": {"kind": "NONE"},
-    "defect": "P07_C3P_RECEIPT_LIVE_ENTRYPOINT_REQUIRES_C6R_OR_C6B_HEAD_SUBJECT_AND_REJECTS_ALL_U7_DESCENDANTS",
-    "product_authority": "NONE",
-    "product_behavior": "INHERITED_UNREPROVEN",
-    "grade_transfer": "NONE"
-  },
+    {
+      "boundary": "U7N",
+      "source": "OWNER_OUT_OF_BAND",
+      "classification": "OWNER_AUTHORIZED_CLI_AND_MILESTONE_AUTHORITY_RECONCILIATION",
+      "provenance": {
+        "kind": "UNEVIDENCED",
+        "disclosure": "OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT"
+      },
+      "authentication": "NOT_ESTABLISHED",
+      "signed_authorization": "NOT_IMPLEMENTED",
+      "predecessor_declaration": {"kind": "NONE"},
+      "defect": "U7C_EXIT2_AND_EDGE_CLASSIFICATION_CONFLICTS_WITH_EXACT_ENROLLED_CLI_STIMULUS_AND_U7D_OVERSTATES_ABSENT_HTTP_RUN_CLASSIFICATION_AUTHORITY",
+      "product_authority": "NONE",
+      "product_behavior": "INHERITED_UNREPROVEN",
+      "grade_transfer": "NONE"
+    }
+  ],
   "runtime_authority": {
     "platform": "darwin",
     "architecture": "arm64",
@@ -102,19 +120,19 @@
     "source_boundary": "U7D",
     "study_event_command": ["/opt/homebrew/bin/node", "tools/check-u7-study-harness.mjs", "--phase", "U7D"],
     "study_evidence_schema": "countershape/u7-study-evidence/v1",
-    "study_execution_authority": "U7P_FROZEN_HARNESS_DIRECT_PROCESS_GIT_AND_ARTIFACT_OBSERVATION",
+    "study_execution_authority": "U7P_ORIGIN_U7N_AMENDED_HARNESS_V2_DIRECT_PROCESS_STUDY_EXECUTION",
     "study_harness": {
-      "protocol": "countershape/u7-study-harness/v1",
-      "protocol_sha256": "faca5cac53ce4ca4d4edea3089edd1fad1139ff847da9618115d1e308b717678",
+      "protocol": "countershape/u7-study-harness/v2",
+      "protocol_sha256": "f9e5c6580c85d6603b3064ecd03de2328a8a8bced5107bf11456a07b2c9c40f1",
       "path": "tools/check-u7-study-harness.mjs",
-      "sha256": "d6a39e44e6a4de43268dab9ff2deac8350b0b4e107b01e254d2767f0692a4121",
+      "sha256": "ba8ed823b8c3740a6af0baf124a32c8663cef68483c1e940b5e1d8ecdb1416fa",
       "product_result_schema": "countershape/u7-study-domain-result/v1",
       "trial_schema": "countershape/u7-study-trial/v1",
       "artifact_schema": "countershape/u7-study-artifact/v1",
-      "observation_authority": "U7P_FROZEN_HARNESS_DIRECT_PROCESS_GIT_AND_ARTIFACT_OBSERVATION",
+      "observation_authority": "U7P_ORIGIN_U7N_AMENDED_HARNESS_V2_DIRECT_PROCESS_GIT_AND_ARTIFACT_OBSERVATION",
       "semantic_ceiling": "ARTIFACT_BYTES_AND_SUBJECT_PROCESS_TOPOLOGY_OBSERVED_PRODUCT_SEMANTICS_AND_FULL_HARNESS_RESOURCES_NOT_INDEPENDENTLY_ESTABLISHED",
       "driver_protocol": "FIXTURE_ONLY_NO_EVIDENCE_ROOT",
-      "phase_verdicts": {"U7B": "LOCAL_HTTP_REFERENCE_FUNCTIONAL_GREEN_SUBJECT_RESOURCE_OBSERVED", "U7C": "LOCAL_CLI_REFERENCE_FUNCTIONAL_GREEN_SUBJECT_RESOURCE_OBSERVED", "U7D": "LOCAL_REFERENCE_MILESTONE_FUNCTIONAL_GREEN_FULL_STUDY_RESOURCE_UNRECEIPTED"},
+      "phase_verdicts": {"U7B": "LOCAL_HTTP_REFERENCE_FUNCTIONAL_GREEN_SUBJECT_RESOURCE_OBSERVED", "U7C": "LOCAL_CLI_DECISION_AND_ENROLLED_REFERENCE_EXECUTION_PROCESS_ARTIFACT_GREEN_SUBJECT_RESOURCE_OBSERVED", "U7D": "LOCAL_TWO_DOMAIN_PROCESS_ARTIFACT_GREEN_CLI_OFFICIAL_EXECUTION_HTTP_DIRECT_PROCESS_ONLY_FULL_STUDY_RESOURCE_UNRECEIPTED"},
       "observer_prefix": ["/usr/bin/time", "-p", "-l", "-o"],
       "driver_by_domain": {"http": "tools/run-u7-http-study.mjs", "cli": "tools/run-u7-cli-study.mjs"},
       "phase_budgets": [
@@ -146,9 +164,9 @@
     "projection_paths": ["docs/HANDOFF_MODE_C.md", "docs/status/U7D-EVIDENCE.md"],
     "projection_policy": "EXACT_PARENT_RELATIVE_PENDING_BLOCK_REPLACEMENT",
     "self_receipt": "ABSENT",
-    "milestone_verdict": "LOCAL_REFERENCE_MILESTONE_FUNCTIONAL_GREEN_FULL_STUDY_RESOURCE_UNRECEIPTED",
-    "honest_fallback": "NOT_APPLICABLE_SOURCE_GREEN",
-    "unreceipted": ["LINUX_UNRUN", "WINDOWS_UNRUN", "UNRUN_NODE_MAJORS", "BROAD_IMPORTED_REPOSITORY_BEHAVIOR_UNVALIDATED", "HOSTILE_CONTAINMENT_UNVALIDATED", "NETWORK_DENIAL_UNVALIDATED", "COMPREHENSION_UNVALIDATED", "REVIEW_COMPRESSION_UNVALIDATED", "ADOPTION_UNVALIDATED", "MAINTAINABILITY_UNVALIDATED", "PRODUCTION_READINESS_UNVALIDATED", "SECURITY_REVIEW_NOT_PERFORMED", "EXTERNAL_PLATFORM_BEHAVIOR_UNVALIDATED", "IMPORTED_REPOSITORY_TIMING_UNCLAIMED", "FULL_STUDY_RESOURCE_BOUND_UNVALIDATED", "U7R_SELF_RECEIPT_ABSENT"]
+    "milestone_verdict": "LOCAL_TWO_DOMAIN_PROCESS_ARTIFACT_GREEN_CLI_OFFICIAL_EXECUTION_HTTP_DIRECT_PROCESS_ONLY_FULL_STUDY_RESOURCE_UNRECEIPTED",
+    "honest_fallback": "ONE_DOMAIN_OFFICIAL_CONTRACT_EXECUTION_PLUS_HTTP_DIRECT_PROCESS_OBSERVATION_ONLY",
+    "unreceipted": ["LINUX_UNRUN", "WINDOWS_UNRUN", "UNRUN_NODE_MAJORS", "BROAD_IMPORTED_REPOSITORY_BEHAVIOR_UNVALIDATED", "HOSTILE_CONTAINMENT_UNVALIDATED", "NETWORK_DENIAL_UNVALIDATED", "COMPREHENSION_UNVALIDATED", "REVIEW_COMPRESSION_UNVALIDATED", "ADOPTION_UNVALIDATED", "MAINTAINABILITY_UNVALIDATED", "PRODUCTION_READINESS_UNVALIDATED", "SECURITY_REVIEW_NOT_PERFORMED", "EXTERNAL_PLATFORM_BEHAVIOR_UNVALIDATED", "IMPORTED_REPOSITORY_TIMING_UNCLAIMED", "FULL_STUDY_RESOURCE_BOUND_UNVALIDATED", "HTTP_FINALIZED_CONTRACT_RUN_AUTHORITY_ABSENT", "HTTP_CONTRACT_EXECUTION_CLASSIFICATION_AUTHORITY_ABSENT", "TWO_DOMAIN_TARGET_RUN_CLASSIFICATION_REPRODUCTION_UNMET", "CLI_OFFICIAL_EXECUTION_GENERALIZATION_UNVALIDATED", "U7R_SELF_RECEIPT_ABSENT"]
   },
   "claim_binding_policy": {
     "event_indices": "EXPLICIT_ZERO_BASED_EVENT_INDEX_EQUALS_CLAIM_INDEX",
@@ -416,8 +434,71 @@
       ]
     },
     {
-      "id": "U7C",
+      "id": "U7N",
       "parent": "U7B",
+      "verification_profile": "SOURCE_FULL",
+      "product_authority": "NONE",
+      "product_behavior": "INHERITED_UNREPROVEN",
+      "u7d_receipt_state": "ABSENT",
+      "subject": "fix: reconcile U7 CLI and milestone authority",
+      "final_root": ".countershape/u7n-final",
+      "allowed_paths": [
+        "docs/ARCHITECTURE.md",
+        "docs/HANDOFF_MODE_C.md",
+        "docs/PROMPT_PACK.md",
+        "docs/STATE_MACHINES.md",
+        "docs/VERIFICATION.md",
+        "docs/prompts/P08-U7-CLI-REFERENCE-STUDIES.md",
+        "docs/status/U7N-CLI-CONTRACT-ALIGNMENT.md",
+        "spec/verification/u7-unit-paths.json",
+        "tools/check-u7-plan.mjs",
+        "tools/check-u7-scope.mjs",
+        "tools/check-u7-architecture.mjs",
+        "tools/check-u7-architecture-selftest.mjs",
+        "tools/check-u7-study-harness.mjs",
+        "tools/check-u7-study-harness-selftest.mjs",
+        "tools/verify-current.mjs",
+        "tools/verify-current-selftest.mjs"
+      ],
+      "required_paths": [
+        "docs/ARCHITECTURE.md",
+        "docs/HANDOFF_MODE_C.md",
+        "docs/PROMPT_PACK.md",
+        "docs/STATE_MACHINES.md",
+        "docs/VERIFICATION.md",
+        "docs/prompts/P08-U7-CLI-REFERENCE-STUDIES.md",
+        "docs/status/U7N-CLI-CONTRACT-ALIGNMENT.md",
+        "spec/verification/u7-unit-paths.json",
+        "tools/check-u7-plan.mjs",
+        "tools/check-u7-scope.mjs",
+        "tools/check-u7-architecture.mjs",
+        "tools/check-u7-architecture-selftest.mjs",
+        "tools/check-u7-study-harness.mjs",
+        "tools/check-u7-study-harness-selftest.mjs",
+        "tools/verify-current.mjs",
+        "tools/verify-current-selftest.mjs"
+      ],
+      "claims": [
+        {"type": "tests-pass", "label": "U7N candidate plan and sealed-U7B parent authority", "command": ["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--check-candidate", "U7N"]},
+        {"type": "tests-pass", "label": "U7N independent candidate transition and exact staged authority", "command": ["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--unit", "U7N", "--candidate-phase"]},
+        {"type": "tests-pass", "label": "U7N inherited P07 receipt successor compatibility", "command": ["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--verify-inherited-p07-compatibility"]},
+        {"type": "tests-pass", "label": "U7N plan contract defensive self-test", "command": ["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--self-test"]},
+        {"type": "tests-pass", "label": "U7N independent staged-scope defensive self-test", "command": ["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--self-test"]},
+        {"type": "tests-pass", "label": "U7N final runbook renderer defensive self-test", "command": ["/opt/homebrew/bin/node", "tools/print-u7-final-runbook.mjs", "--self-test"]},
+        {"type": "tests-pass", "label": "U7N zero-product-surface architecture conformance", "command": ["/opt/homebrew/bin/node", "tools/check-u7-architecture.mjs", "--phase", "U7N"]},
+        {"type": "tests-pass", "label": "U7N architecture authority defensive self-test", "command": ["/opt/homebrew/bin/node", "tools/check-u7-architecture-selftest.mjs", "--phase", "U7N"]},
+        {"type": "tests-pass", "label": "U7N amended study-harness v2 protocol conformance", "command": ["/opt/homebrew/bin/node", "tools/check-u7-study-harness.mjs", "--protocol-check"]},
+        {"type": "tests-pass", "label": "U7N amended study-harness v2 protocol defensive self-test", "command": ["/opt/homebrew/bin/node", "tools/check-u7-study-harness-selftest.mjs", "--phase", "U7N"]},
+        {"type": "tests-pass", "label": "U7N cumulative verifier defensive self-test", "command": ["/opt/homebrew/bin/node", "tools/verify-current-selftest.mjs"]},
+        {"type": "tests-pass", "label": "U7N cumulative verification on the exact staged maintenance candidate", "command": ["/opt/homebrew/bin/node", "tools/verify-current.mjs"]},
+        {"type": "command-succeeded", "label": "U7N exact sixteen-path staged scope and diff integrity", "command": ["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--unit", "U7N", "--final-gate"]},
+        {"type": "command-succeeded", "label": "U7N scoped staged credential-pattern scan", "command": ["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--unit", "U7N", "--credential-scan"]},
+        {"type": "command-succeeded", "label": "U7N sealed-U7B predecessor and preceding didrun chain integrity", "command": ["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--verify-preseal", "U7N"]}
+      ]
+    },
+    {
+      "id": "U7C",
+      "parent": "U7N",
       "verification_profile": "SOURCE_FULL",
       "product_authority": "U7_REFERENCE_APPLICATION",
       "product_behavior": "CANDIDATE_UNRECEIPTED",
@@ -465,7 +546,7 @@
         "docs/status/U7C-CLI-DECISION-CONTRACT.md"
       ],
       "claims": [
-        {"type": "tests-pass", "label": "U7C candidate plan and sealed-U7B parent authority", "command": ["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--check-candidate", "U7C"]},
+        {"type": "tests-pass", "label": "U7C candidate plan and sealed-U7N parent authority", "command": ["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--check-candidate", "U7C"]},
         {"type": "tests-pass", "label": "U7C independent candidate transition and exact staged authority", "command": ["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--unit", "U7C", "--candidate-phase"]},
         {"type": "tests-pass", "label": "U7C plan contract defensive self-test", "command": ["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--self-test"]},
         {"type": "tests-pass", "label": "U7C independent staged-scope defensive self-test", "command": ["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--self-test"]},
@@ -476,7 +557,7 @@
         {"type": "tests-pass", "label": "U7C cumulative verification", "command": ["/opt/homebrew/bin/node", "tools/verify-current.mjs"]},
         {"type": "command-succeeded", "label": "U7C exact staged scope and diff integrity", "command": ["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--unit", "U7C", "--final-gate"]},
         {"type": "command-succeeded", "label": "U7C scoped staged credential-pattern scan", "command": ["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--unit", "U7C", "--credential-scan"]},
-        {"type": "command-succeeded", "label": "U7C sealed-U7B predecessor and preceding didrun chain integrity", "command": ["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--verify-preseal", "U7C"]}
+        {"type": "command-succeeded", "label": "U7C sealed-U7N predecessor and preceding didrun chain integrity", "command": ["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--verify-preseal", "U7C"]}
       ]
     },
     {

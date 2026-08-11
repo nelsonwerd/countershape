@@ -12,7 +12,18 @@ const modulePath = fileURLToPath(import.meta.url);
 export const repositoryRoot = resolve(dirname(modulePath), "..");
 const specificationPath = resolve(repositoryRoot, "spec/verification/u7-unit-paths.json");
 const modulePrefix = "github.com/nelsonwerd/countershape/";
-const phases = Object.freeze(["U7P", "U7M", "U7A", "U7B", "U7C", "U7D"]);
+const phases = Object.freeze(["U7P", "U7M", "U7A", "U7B", "U7N", "U7C", "U7D"]);
+const u7nExactPaths = Object.freeze([
+	"docs/ARCHITECTURE.md", "docs/HANDOFF_MODE_C.md", "docs/PROMPT_PACK.md", "docs/STATE_MACHINES.md", "docs/VERIFICATION.md",
+	"docs/prompts/P08-U7-CLI-REFERENCE-STUDIES.md", "docs/status/U7N-CLI-CONTRACT-ALIGNMENT.md", "spec/verification/u7-unit-paths.json",
+	"tools/check-u7-plan.mjs", "tools/check-u7-scope.mjs", "tools/check-u7-architecture.mjs", "tools/check-u7-architecture-selftest.mjs",
+	"tools/check-u7-study-harness.mjs", "tools/check-u7-study-harness-selftest.mjs", "tools/verify-current.mjs", "tools/verify-current-selftest.mjs",
+]);
+const exactAmendmentAuthorities = Object.freeze([
+	Object.freeze({ boundary: "U7M", source: "OWNER_OUT_OF_BAND", classification: "OWNER_AUTHORIZED_AUTHORITY_MIGRATION_DEFECT_REPAIR", provenance: Object.freeze({ kind: "UNEVIDENCED", disclosure: "OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT" }), authentication: "NOT_ESTABLISHED", signed_authorization: "NOT_IMPLEMENTED", predecessor_declaration: Object.freeze({ kind: "NONE" }), defect: "P07_C3P_RECEIPT_LIVE_ENTRYPOINT_REQUIRES_C6R_OR_C6B_HEAD_SUBJECT_AND_REJECTS_ALL_U7_DESCENDANTS", product_authority: "NONE", product_behavior: "INHERITED_UNREPROVEN", grade_transfer: "NONE" }),
+	Object.freeze({ boundary: "U7N", source: "OWNER_OUT_OF_BAND", classification: "OWNER_AUTHORIZED_CLI_AND_MILESTONE_AUTHORITY_RECONCILIATION", provenance: Object.freeze({ kind: "UNEVIDENCED", disclosure: "OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT" }), authentication: "NOT_ESTABLISHED", signed_authorization: "NOT_IMPLEMENTED", predecessor_declaration: Object.freeze({ kind: "NONE" }), defect: "U7C_EXIT2_AND_EDGE_CLASSIFICATION_CONFLICTS_WITH_EXACT_ENROLLED_CLI_STIMULUS_AND_U7D_OVERSTATES_ABSENT_HTTP_RUN_CLASSIFICATION_AUTHORITY", product_authority: "NONE", product_behavior: "INHERITED_UNREPROVEN", grade_transfer: "NONE" }),
+]);
+const sealedU7BRowSHA256 = "76adecf8f35ea4a2c8320a3465701218a90e81db594f0ff38d1918de8b937b82";
 
 const governedRoots = Object.freeze([
 	"cmd/countershape",
@@ -56,6 +67,7 @@ const declaredSurfaceByPhase = Object.freeze({
 		"testkit/reference/http_test.go",
 		"tools/run-u7-http-study.mjs",
 	]),
+	U7N: Object.freeze([]),
 	U7C: Object.freeze([
 		"cmd/countershape/main.go",
 		"internal/reference/app/command.go",
@@ -92,7 +104,8 @@ const phaseIdentity = Object.freeze({
 	U7M: Object.freeze({ parent: "U7P", profile: "SOURCE_FULL", productAuthority: "NONE", productBehavior: "INHERITED_UNREPROVEN", receipt: "ABSENT" }),
 	U7A: Object.freeze({ parent: "U7M", profile: "SOURCE_FULL", productAuthority: "U7_REFERENCE_APPLICATION", productBehavior: "CANDIDATE_UNRECEIPTED", receipt: "ABSENT" }),
 	U7B: Object.freeze({ parent: "U7A", profile: "SOURCE_FULL", productAuthority: "U7_REFERENCE_APPLICATION", productBehavior: "CANDIDATE_UNRECEIPTED", receipt: "ABSENT" }),
-	U7C: Object.freeze({ parent: "U7B", profile: "SOURCE_FULL", productAuthority: "U7_REFERENCE_APPLICATION", productBehavior: "CANDIDATE_UNRECEIPTED", receipt: "ABSENT" }),
+	U7N: Object.freeze({ parent: "U7B", profile: "SOURCE_FULL", productAuthority: "NONE", productBehavior: "INHERITED_UNREPROVEN", receipt: "ABSENT" }),
+	U7C: Object.freeze({ parent: "U7N", profile: "SOURCE_FULL", productAuthority: "U7_REFERENCE_APPLICATION", productBehavior: "CANDIDATE_UNRECEIPTED", receipt: "ABSENT" }),
 	U7D: Object.freeze({ parent: "U7C", profile: "SOURCE_FULL", productAuthority: "U7_REFERENCE_APPLICATION", productBehavior: "CANDIDATE_UNRECEIPTED", receipt: "ABSENT" }),
 });
 
@@ -221,6 +234,7 @@ const requiredMainImportsByPhase = Object.freeze({
 	U7M: Object.freeze([]),
 	U7A: Object.freeze([`${modulePrefix}internal/reference/app`]),
 	U7B: Object.freeze([`${modulePrefix}internal/reference/app`, `${modulePrefix}internal/reference/httpstudy`]),
+	U7N: Object.freeze([`${modulePrefix}internal/reference/app`, `${modulePrefix}internal/reference/httpstudy`]),
 	U7C: Object.freeze([`${modulePrefix}internal/reference/app`, `${modulePrefix}internal/reference/httpstudy`, `${modulePrefix}internal/reference/clistudy`]),
 	U7D: Object.freeze([`${modulePrefix}internal/reference/app`, `${modulePrefix}internal/reference/httpstudy`, `${modulePrefix}internal/reference/clistudy`, `${modulePrefix}internal/reference/reproduce`]),
 });
@@ -533,10 +547,11 @@ function isGovernedPath(path) {
 }
 
 function validateSpecificationSurface(value) {
-	if (!value || typeof value !== "object" || value.schema_version !== "countershape/u7-unit-paths/v2" || !Array.isArray(value.units)) {
+	if (!value || typeof value !== "object" || value.schema_version !== "countershape/u7-unit-paths/v3" || !Array.isArray(value.units) ||
+		!isDeepStrictEqual(value.topology_amendment_authorities, exactAmendmentAuthorities)) {
 		throw new ArchitectureError("U7_ARCH_SPECIFICATION", "schema");
 	}
-	if (!isDeepStrictEqual(value.units.map((unit) => unit.id), ["U7P", "U7M", "U7A", "U7B", "U7C", "U7D", "U7R"])) {
+	if (!isDeepStrictEqual(value.units.map((unit) => unit.id), ["U7P", "U7M", "U7A", "U7B", "U7N", "U7C", "U7D", "U7R"])) {
 		throw new ArchitectureError("U7_ARCH_SPECIFICATION", "unit order");
 	}
 	for (const phase of phases) {
@@ -549,14 +564,34 @@ function validateSpecificationSurface(value) {
 			throw new ArchitectureError("U7_ARCH_SPECIFICATION", phase);
 		}
 	}
-	const u7p = value.units[0];
-	const u7m = value.units[1];
-	for (const path of ["tools/check-u7-architecture.mjs", "tools/check-u7-architecture-selftest.mjs"]) {
+	const u7n = value.units.find((unit) => unit.id === "U7N");
+	if (u7n.subject !== "fix: reconcile U7 CLI and milestone authority" || u7n.final_root !== ".countershape/u7n-final" ||
+		!isDeepStrictEqual(u7n.allowed_paths, u7nExactPaths) || !isDeepStrictEqual(u7n.required_paths, u7nExactPaths)) {
+		throw new ArchitectureError("U7_ARCH_SPECIFICATION", "U7N exact control roster");
+	}
+	const u7b = value.units.find((unit) => unit.id === "U7B");
+	if (sha256(Buffer.from(JSON.stringify(u7b), "utf8")) !== sealedU7BRowSHA256) throw new ArchitectureError("U7_ARCH_SPECIFICATION", "sealed U7B row");
+	const u7r = value.units.find((unit) => unit.id === "U7R");
+	if (!u7r || u7r.parent !== "U7D" || u7r.verification_profile !== "RECEIPT_RECONCILIATION" || u7r.product_authority !== "NONE" ||
+		u7r.product_behavior !== "SOURCE_RECEIPT_RECONCILIATION" || u7r.u7d_receipt_state !== "PRESENT") {
+		throw new ArchitectureError("U7_ARCH_SPECIFICATION", "U7R");
+	}
+	const controlOwners = Object.freeze({
+		"spec/verification/u7-unit-paths.json": Object.freeze(["U7P", "U7M", "U7N"]),
+		"tools/check-u7-plan.mjs": Object.freeze(["U7P", "U7M", "U7N"]),
+		"tools/check-u7-scope.mjs": Object.freeze(["U7P", "U7M", "U7N"]),
+		"tools/check-u7-architecture.mjs": Object.freeze(["U7P", "U7M", "U7N"]),
+		"tools/check-u7-architecture-selftest.mjs": Object.freeze(["U7P", "U7M", "U7N"]),
+		"tools/check-u7-study-harness.mjs": Object.freeze(["U7P", "U7N"]),
+		"tools/check-u7-study-harness-selftest.mjs": Object.freeze(["U7P", "U7N"]),
+		"tools/verify-current.mjs": Object.freeze(["U7P", "U7M", "U7N"]),
+		"tools/verify-current-selftest.mjs": Object.freeze(["U7P", "U7M", "U7N"]),
+		"tools/print-u7-final-runbook.mjs": Object.freeze(["U7P"]),
+	});
+	for (const [path, expectedOwners] of Object.entries(controlOwners)) {
 		const ownerUnits = value.units.filter((unit) => unit.allowed_paths.includes(path));
 		const owners = ownerUnits.map((unit) => unit.id);
-		if (!isDeepStrictEqual(owners, ["U7P", "U7M"]) || ownerUnits.some((unit) => unit.allowed_paths.filter((ownedPath) => ownedPath === path).length !== 1) ||
-			!u7p.allowed_paths.includes(path) || !u7m.allowed_paths.includes(path) ||
-			value.units.slice(2).some((unit) => unit.allowed_paths.includes(path))) {
+		if (!isDeepStrictEqual(owners, expectedOwners) || ownerUnits.some((unit) => unit.allowed_paths.filter((ownedPath) => ownedPath === path).length !== 1)) {
 			throw new ArchitectureError("U7_ARCH_SPECIFICATION", `oracle ownership ${path}`);
 		}
 	}
@@ -565,6 +600,10 @@ function validateSpecificationSurface(value) {
 		["U7P", "U7P architecture authority defensive self-test", ["/opt/homebrew/bin/node", "tools/check-u7-architecture-selftest.mjs", "--phase", "U7P"]],
 		["U7M", "U7M zero-product-surface architecture conformance", ["/opt/homebrew/bin/node", "tools/check-u7-architecture.mjs", "--phase", "U7M"]],
 		["U7M", "U7M architecture authority defensive self-test", ["/opt/homebrew/bin/node", "tools/check-u7-architecture-selftest.mjs", "--phase", "U7M"]],
+		["U7N", "U7N zero-product-surface architecture conformance", ["/opt/homebrew/bin/node", "tools/check-u7-architecture.mjs", "--phase", "U7N"]],
+		["U7N", "U7N architecture authority defensive self-test", ["/opt/homebrew/bin/node", "tools/check-u7-architecture-selftest.mjs", "--phase", "U7N"]],
+		["U7N", "U7N amended study-harness v2 protocol conformance", ["/opt/homebrew/bin/node", "tools/check-u7-study-harness.mjs", "--protocol-check"]],
+		["U7N", "U7N amended study-harness v2 protocol defensive self-test", ["/opt/homebrew/bin/node", "tools/check-u7-study-harness-selftest.mjs", "--phase", "U7N"]],
 		["U7D", "U7D two-domain architecture boundary", ["/opt/homebrew/bin/node", "tools/check-u7-architecture.mjs", "--phase", "U7D"]],
 		["U7D", "U7D two-domain architecture defensive self-test", ["/opt/homebrew/bin/node", "tools/check-u7-architecture-selftest.mjs", "--phase", "U7D"]],
 	];
