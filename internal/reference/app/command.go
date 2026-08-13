@@ -1,17 +1,119 @@
 package app
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"io"
 	"os"
 	"sort"
 	"strings"
+	"sync"
 )
 
 // StudyHandler is the domain-neutral application seam for one frozen study
 // route. Domain packages implement the handler; app owns admission, dispatch,
 // presentation, and the process-wide success protocol.
 type StudyHandler func(StudyRequest) error
+
+// StudyTerminalCommit publishes only inert facts prepared by a successful
+// StudyTerminalCheck. App invokes it at most once, and only after the Node
+// runner is terminal, the checked evidence bytes have been re-read unchanged,
+// and every application gate preceding the commit has succeeded.
+type StudyTerminalCommit func() error
+
+// StudyTerminalCheck consumes a defensive byte snapshot only after the
+// installed domain handler has completed and its Node runner is terminal. The
+// check may validate transport shape and joins, but must defer state mutation
+// to its returned commit. App remains the owner of the evidence-root capability
+// and the four-field process result.
+type StudyTerminalCheck func(StudyRequest, StudyEvidenceSnapshot) (StudyTerminalCommit, error)
+
+type studyTerminalCommitContextKey struct{}
+
+type studyTerminalCommitCoordinator struct {
+	mu     sync.Mutex
+	staged StudyTerminalCommit
+	taken  bool
+}
+
+func (coordinator *studyTerminalCommitCoordinator) stage(commit StudyTerminalCommit) error {
+	if coordinator == nil || commit == nil {
+		return errors.New("terminal evidence commit coordinator is invalid")
+	}
+	coordinator.mu.Lock()
+	defer coordinator.mu.Unlock()
+	if coordinator.staged != nil || coordinator.taken {
+		return errors.New("terminal evidence commit was already staged")
+	}
+	coordinator.staged = commit
+	return nil
+}
+
+func (coordinator *studyTerminalCommitCoordinator) take() StudyTerminalCommit {
+	if coordinator == nil {
+		return nil
+	}
+	coordinator.mu.Lock()
+	defer coordinator.mu.Unlock()
+	if coordinator.taken {
+		return nil
+	}
+	coordinator.taken = true
+	commit := coordinator.staged
+	coordinator.staged = nil
+	return commit
+}
+
+func terminalCommitCoordinator(ctx context.Context) *studyTerminalCommitCoordinator {
+	if ctx == nil {
+		return nil
+	}
+	coordinator, _ := ctx.Value(studyTerminalCommitContextKey{}).(*studyTerminalCommitCoordinator)
+	return coordinator
+}
+
+// CloseStudy adds one domain-neutral terminal-evidence gate to a study
+// handler. Invalid composition returns nil so completeRuntime rejects it as an
+// unavailable implementation before any study execution begins.
+func CloseStudy(handler StudyHandler, check StudyTerminalCheck) StudyHandler {
+	if handler == nil || check == nil {
+		return nil
+	}
+	return func(request StudyRequest) error {
+		coordinator := terminalCommitCoordinator(request.Context)
+		if coordinator == nil {
+			return &InputError{Code: "STUDY_EVIDENCE_CLOSURE_REFUSED", Detail: "the terminal evidence check is outside the admitted application route"}
+		}
+		if err := handler(request); err != nil {
+			return err
+		}
+		if request.Context == nil || request.Context.Err() != nil {
+			return &InputError{Code: "STUDY_CONTEXT_CANCELED", Detail: "the admitted study context ended before terminal evidence closure"}
+		}
+		if request.Workspace == nil {
+			return &InputError{Code: "STUDY_EVIDENCE_INCOMPLETE", Detail: "the handler returned without an admitted evidence workspace"}
+		}
+		if err := request.closeNodeTestRunner(); err != nil {
+			return &InputError{Code: "STUDY_PROCESS_TERMINALITY_REFUSED", Detail: "the study process authority did not close before terminal evidence validation"}
+		}
+		snapshot, err := request.Workspace.SnapshotEvidence()
+		if err != nil {
+			return &InputError{Code: "STUDY_EVIDENCE_INVALID", Detail: "the terminal evidence tree could not be closed as exact private bytes"}
+		}
+		commit, err := check(request, snapshot)
+		if err != nil {
+			return err
+		}
+		if commit == nil {
+			return &InputError{Code: "STUDY_EVIDENCE_CLOSURE_REFUSED", Detail: "the terminal evidence check returned no deferred commit"}
+		}
+		if err := request.Workspace.bindValidatedSnapshot(snapshot, func() error { return coordinator.stage(commit) }); err != nil {
+			return &InputError{Code: "STUDY_EVIDENCE_CLOSURE_REFUSED", Detail: "the validated terminal evidence snapshot could not be retained"}
+		}
+		return nil
+	}
+}
 
 type Runtime struct {
 	Stdin                   io.Reader
@@ -51,7 +153,7 @@ func Run(args []string, runtime Runtime) int {
 			response = preflightSourceCommand(parsed.specPath, runtime)
 		case "study":
 			if parsed.json {
-				return runMachineStudy(parsed.studyDomain, runtime)
+				return runMachineStudyWithTerminalCommit(parsed.studyDomain, runtime)
 			}
 			response = humanStudyRefusal(parsed.studyDomain, runtime.Studies)
 		default:
@@ -71,6 +173,57 @@ func Run(args []string, runtime Runtime) int {
 		renderErr = renderHuman(writer, response, runtime.Columns)
 	}
 	if renderErr != nil {
+		return ExitInternal
+	}
+	return response.ExitCode
+}
+
+func runMachineStudyWithTerminalCommit(domain string, runtime Runtime) int {
+	coordinator := &studyTerminalCommitCoordinator{}
+	buffered := runtime
+	var output bytes.Buffer
+	buffered.Stdout = &output
+	buffered.Context = context.WithValue(runtime.Context, studyTerminalCommitContextKey{}, coordinator)
+
+	code := runMachineStudy(domain, buffered)
+	if code != ExitOK {
+		_ = coordinator.take()
+		return flushMachineStudyOutput(runtime.Stdout, output.Bytes(), code)
+	}
+	commit := coordinator.take()
+	if commit != nil {
+		if runtime.Context.Err() != nil {
+			return renderTerminalStudyRefusal(runtime.Stdout, &InputError{Code: "STUDY_CONTEXT_CANCELED", Detail: "the admitted study context ended before terminal evidence publication"})
+		}
+		if err := invokeStudyTerminalCommit(commit); err != nil {
+			return renderTerminalStudyRefusal(runtime.Stdout, &InputError{Code: "STUDY_EVIDENCE_CLOSURE_REFUSED", Detail: "the terminal evidence commit was refused"})
+		}
+	}
+	if runtime.Context.Err() != nil {
+		return renderTerminalStudyRefusal(runtime.Stdout, &InputError{Code: "STUDY_CONTEXT_CANCELED", Detail: "the admitted study context ended during terminal evidence publication"})
+	}
+	// The commit describes only terminal artifact-byte facts. A later writer
+	// failure still returns ExitInternal and conveys no stdout or process-result
+	// authority to the collector.
+	return flushMachineStudyOutput(runtime.Stdout, output.Bytes(), ExitOK)
+}
+
+func flushMachineStudyOutput(writer io.Writer, exact []byte, code int) int {
+	written, err := writer.Write(exact)
+	if err != nil || written != len(exact) {
+		return ExitInternal
+	}
+	return code
+}
+
+func renderTerminalStudyRefusal(writer io.Writer, err error) int {
+	response := failureEnvelope("study", err)
+	var input *InputError
+	if errors.As(err, &input) {
+		response.ExitCode = ExitRefused
+	}
+	response.NextAction = "Leave this attempt unclaimed, repair the frozen study boundary, and rerun it only through the repository harness."
+	if renderErr := renderJSON(writer, response); renderErr != nil {
 		return ExitInternal
 	}
 	return response.ExitCode
