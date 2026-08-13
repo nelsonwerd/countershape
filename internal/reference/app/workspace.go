@@ -1,11 +1,14 @@
 package app
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"unicode"
@@ -109,14 +112,216 @@ func (workspace *EvidenceWorkspace) WriteFileExclusive(relative string, exact []
 		return fmt.Errorf("write evidence artifact: %w", writeErr)
 	}
 	if statErr != nil || closeErr != nil || !opened.Mode().IsRegular() || opened.Mode().Perm() != 0o600 ||
-		opened.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0 || opened.Size() != int64(len(exact)) {
+		opened.Mode()&(os.ModeSetuid|os.ModeSetgid|os.ModeSticky) != 0 || !singleLink(opened) || opened.Size() != int64(len(exact)) {
 		return errors.New("written evidence artifact is not exact and private")
 	}
 	terminal, err := workspace.root.Lstat(relative)
-	if err != nil || terminal.Mode()&os.ModeSymlink != 0 || !terminal.Mode().IsRegular() || !os.SameFile(opened, terminal) {
+	if err != nil || terminal.Mode()&os.ModeSymlink != 0 || !terminal.Mode().IsRegular() || !singleLink(terminal) || !os.SameFile(opened, terminal) {
 		return errors.New("evidence artifact identity changed after writing")
 	}
 	return nil
+}
+
+// VerifyExactManifest independently reopens the complete terminal workspace
+// as raw bytes. It verifies only private filesystem shape and byte identity;
+// it does not parse artifacts or manufacture study-semantic authority.
+func (workspace *EvidenceWorkspace) VerifyExactManifest(manifest EvidenceManifest) error {
+	if workspace == nil {
+		return errors.New("evidence workspace is closed")
+	}
+	workspace.mu.Lock()
+	defer workspace.mu.Unlock()
+	if workspace.root == nil || workspace.closed {
+		return errors.New("evidence workspace is closed")
+	}
+	expectedDirectories, expectedFiles, err := validateEvidenceManifest(manifest)
+	if err != nil {
+		return err
+	}
+	observedDirectories, observedFiles, err := workspace.inspectEvidenceTree()
+	if err != nil {
+		return err
+	}
+	if !equalStrings(observedDirectories, expectedDirectories) || !equalStrings(observedFiles, sortedEvidenceFilePaths(expectedFiles)) {
+		return errors.New("evidence workspace terminal roster differs from the exact manifest")
+	}
+	openedFiles := make([]os.FileInfo, 0, len(expectedFiles))
+	for _, expected := range expectedFiles {
+		opened, err := workspace.verifyEvidenceFile(expected)
+		if err != nil {
+			return err
+		}
+		for _, previous := range openedFiles {
+			if os.SameFile(previous, opened) {
+				return errors.New("evidence manifest files must not be hard-link aliases")
+			}
+		}
+		openedFiles = append(openedFiles, opened)
+	}
+	terminalDirectories, terminalFiles, err := workspace.inspectEvidenceTree()
+	if err != nil {
+		return err
+	}
+	if !equalStrings(terminalDirectories, expectedDirectories) || !equalStrings(terminalFiles, sortedEvidenceFilePaths(expectedFiles)) {
+		return errors.New("evidence workspace changed after manifest verification")
+	}
+	return nil
+}
+
+func validateEvidenceManifest(manifest EvidenceManifest) ([]string, []EvidenceFile, error) {
+	directories := append([]string(nil), manifest.Directories...)
+	files := append([]EvidenceFile(nil), manifest.Files...)
+	if len(files) == 0 {
+		return nil, nil, errors.New("evidence manifest must contain at least one file")
+	}
+	seen := make(map[string]struct{}, len(directories)+len(files))
+	for _, directory := range directories {
+		if !validWorkspaceRelativePath(directory) {
+			return nil, nil, errors.New("evidence manifest directory path is invalid")
+		}
+		if _, duplicate := seen[directory]; duplicate {
+			return nil, nil, errors.New("evidence manifest paths must be unique")
+		}
+		seen[directory] = struct{}{}
+	}
+	for _, file := range files {
+		if !validWorkspaceRelativePath(file.Path) || file.Bytes < 1 || file.Bytes > maximumStudyArtifactBytes || !validEvidenceSHA256(file.SHA256) {
+			return nil, nil, errors.New("evidence manifest file identity is invalid")
+		}
+		if _, duplicate := seen[file.Path]; duplicate {
+			return nil, nil, errors.New("evidence manifest paths must be unique")
+		}
+		seen[file.Path] = struct{}{}
+	}
+	sort.Strings(directories)
+	sort.Slice(files, func(left, right int) bool { return files[left].Path < files[right].Path })
+	return directories, files, nil
+}
+
+func validEvidenceSHA256(value string) bool {
+	if len(value) != sha256.Size*2 {
+		return false
+	}
+	decoded, err := hex.DecodeString(value)
+	return err == nil && hex.EncodeToString(decoded) == value
+}
+
+func (workspace *EvidenceWorkspace) inspectEvidenceTree() ([]string, []string, error) {
+	root, err := workspace.root.Lstat(".")
+	if err != nil || !root.IsDir() || root.Mode()&os.ModeSymlink != 0 || root.Mode().Perm() != 0o700 || hasSpecialMode(root.Mode()) {
+		return nil, nil, errors.New("evidence workspace root is not exact and private")
+	}
+	var directories, files []string
+	var walk func(string) error
+	walk = func(relative string) error {
+		handle, err := workspace.root.Open(relative)
+		if err != nil {
+			return fmt.Errorf("open evidence directory: %w", err)
+		}
+		opened, statErr := handle.Stat()
+		entries, readErr := handle.ReadDir(-1)
+		openedAfter, afterErr := handle.Stat()
+		closeErr := handle.Close()
+		terminal, terminalErr := workspace.root.Lstat(relative)
+		if statErr != nil || readErr != nil || afterErr != nil || closeErr != nil || terminalErr != nil ||
+			!opened.IsDir() || opened.Mode().Perm() != 0o700 || hasSpecialMode(opened.Mode()) ||
+			!os.SameFile(opened, openedAfter) || !os.SameFile(openedAfter, terminal) ||
+			!terminal.IsDir() || terminal.Mode().Perm() != 0o700 || hasSpecialMode(terminal.Mode()) ||
+			opened.Mode() != openedAfter.Mode() || openedAfter.Mode() != terminal.Mode() ||
+			opened.ModTime() != openedAfter.ModTime() || openedAfter.ModTime() != terminal.ModTime() {
+			return errors.New("evidence directory identity changed during inspection")
+		}
+		sort.Slice(entries, func(left, right int) bool { return entries[left].Name() < entries[right].Name() })
+		for _, entry := range entries {
+			child := entry.Name()
+			if relative != "." {
+				child = filepath.Join(relative, child)
+			}
+			if !validWorkspaceRelativePath(child) {
+				return errors.New("evidence workspace contains an invalid path")
+			}
+			metadata, err := workspace.root.Lstat(child)
+			if err != nil || metadata.Mode()&os.ModeSymlink != 0 {
+				return errors.New("evidence workspace contains a link or unreadable path")
+			}
+			switch {
+			case metadata.IsDir():
+				if metadata.Mode().Perm() != 0o700 || hasSpecialMode(metadata.Mode()) {
+					return errors.New("evidence directory is not exact and private")
+				}
+				directories = append(directories, child)
+				if err := walk(child); err != nil {
+					return err
+				}
+			case metadata.Mode().IsRegular():
+				if metadata.Mode().Perm() != 0o600 || hasSpecialMode(metadata.Mode()) {
+					return errors.New("evidence file is not exact and private")
+				}
+				files = append(files, child)
+			default:
+				return errors.New("evidence workspace contains a special file")
+			}
+		}
+		return nil
+	}
+	if err := walk("."); err != nil {
+		return nil, nil, err
+	}
+	sort.Strings(directories)
+	sort.Strings(files)
+	return directories, files, nil
+}
+
+func (workspace *EvidenceWorkspace) verifyEvidenceFile(expected EvidenceFile) (os.FileInfo, error) {
+	before, err := workspace.root.Lstat(expected.Path)
+	if err != nil || before.Mode()&os.ModeSymlink != 0 || !before.Mode().IsRegular() || before.Mode().Perm() != 0o600 ||
+		hasSpecialMode(before.Mode()) || !singleLink(before) || before.Size() != expected.Bytes {
+		return nil, fmt.Errorf("evidence file identity differs from manifest: %s", expected.Path)
+	}
+	handle, err := workspace.root.Open(expected.Path)
+	if err != nil {
+		return nil, fmt.Errorf("open evidence file: %w", err)
+	}
+	opened, statErr := handle.Stat()
+	digest := sha256.New()
+	observedBytes, readErr := io.Copy(digest, io.LimitReader(handle, maximumStudyArtifactBytes+1))
+	openedAfter, afterErr := handle.Stat()
+	closeErr := handle.Close()
+	terminal, terminalErr := workspace.root.Lstat(expected.Path)
+	if statErr != nil || readErr != nil || afterErr != nil || closeErr != nil || terminalErr != nil ||
+		!opened.Mode().IsRegular() || opened.Mode().Perm() != 0o600 || hasSpecialMode(opened.Mode()) ||
+		!singleLink(opened) || !singleLink(openedAfter) || !singleLink(terminal) ||
+		!os.SameFile(before, opened) || !os.SameFile(opened, openedAfter) || !os.SameFile(openedAfter, terminal) ||
+		!terminal.Mode().IsRegular() || terminal.Mode().Perm() != 0o600 || hasSpecialMode(terminal.Mode()) ||
+		opened.Mode() != openedAfter.Mode() || openedAfter.Mode() != terminal.Mode() ||
+		opened.ModTime() != openedAfter.ModTime() || openedAfter.ModTime() != terminal.ModTime() ||
+		observedBytes != expected.Bytes || terminal.Size() != expected.Bytes {
+		return nil, fmt.Errorf("evidence file changed during inspection: %s", expected.Path)
+	}
+	if hex.EncodeToString(digest.Sum(nil)) != expected.SHA256 {
+		return nil, fmt.Errorf("evidence file digest differs from manifest: %s", expected.Path)
+	}
+	return terminal, nil
+}
+
+func sortedEvidenceFilePaths(files []EvidenceFile) []string {
+	paths := make([]string, len(files))
+	for index, file := range files {
+		paths[index] = file.Path
+	}
+	return paths
+}
+
+func equalStrings(left, right []string) bool {
+	if len(left) != len(right) {
+		return false
+	}
+	for index := range left {
+		if left[index] != right[index] {
+			return false
+		}
+	}
+	return true
 }
 
 func (workspace *EvidenceWorkspace) readyRelative(relative string) error {

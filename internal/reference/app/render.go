@@ -53,7 +53,7 @@ func renderStudyDomainResult(writer io.Writer, domain string, ordinal int) error
 func renderHuman(writer io.Writer, response ResponseEnvelope, columns int) error {
 	columns = admittedColumns(columns)
 	if response.Command == "help" {
-		_, err := io.WriteString(writer, humanHelp(columns))
+		_, err := io.WriteString(writer, humanHelp(response, columns))
 		return err
 	}
 	var lines []string
@@ -110,20 +110,35 @@ func renderHuman(writer io.Writer, response ResponseEnvelope, columns int) error
 	return err
 }
 
-func humanHelp(columns int) string {
+func humanHelp(response ResponseEnvelope, columns int) string {
 	lines := []string{
 		"Countershape reference CLI",
 		"",
 		"Usage:",
-		"  countershape help",
-		"  countershape validate --spec <path|-> [--json]",
-		"  countershape preflight --spec <path|-> [--json]",
-		"  countershape study <domain> --json  (frozen harness only)",
-		"",
+	}
+	usage := "countershape <help|validate|preflight|study>"
+	commands := []string{
+		"validate --spec <path|-> [--json]",
+		"preflight --spec <path|-> [--json]",
+		"study <domain> --json (frozen harness only)",
+	}
+	if response.Help != nil {
+		usage = response.Help.Usage
+		commands = response.Help.Commands
+	}
+	lines = appendWrapped(lines, usage, columns, 2)
+	lines = append(lines, "", "Commands:")
+	lines = appendWrapped(lines, "countershape help", columns, 2)
+	for _, command := range commands {
+		lines = appendWrapped(lines, "countershape "+command, columns, 2)
+	}
+	lines = append(lines, "")
+	if response.Message != "" {
+		lines = appendWrapped(lines, response.Message, columns, 0)
 	}
 	lines = appendWrapped(lines, "U7A validates inert source and reports preflight prerequisites.", columns, 0)
 	lines = appendWrapped(lines, "It does not run candidates, resume processes, compare outcomes, or emit contracts.", columns, 0)
-	lines = appendWrapped(lines, "Installed study handlers are the sole exception and execute only through the frozen machine harness route; interactive study requests are refused.", columns, 0)
+	lines = appendWrapped(lines, "Installed study handlers execute only through their exact frozen machine harness routes; interactive study requests are refused.", columns, 0)
 	return strings.Join(lines, "\n") + "\n"
 }
 
