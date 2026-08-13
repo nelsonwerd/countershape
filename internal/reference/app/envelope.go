@@ -23,6 +23,22 @@ type StudyDomainResult struct {
 	Status        string `json:"status"`
 }
 
+// EvidenceFile is a caller-supplied raw-byte identity for one terminal study
+// artifact. It carries no parsed JSON, semantic classification, or authority.
+type EvidenceFile struct {
+	Path   string
+	Bytes  int64
+	SHA256 string
+}
+
+// EvidenceManifest is the complete expected private tree beneath one admitted
+// evidence workspace. The workspace verifies this transport shape; the owning
+// study remains responsible for every semantic meaning of the bytes.
+type EvidenceManifest struct {
+	Directories []string
+	Files       []EvidenceFile
+}
+
 type FailureView struct {
 	Code   string `json:"code"`
 	Path   string `json:"path"`

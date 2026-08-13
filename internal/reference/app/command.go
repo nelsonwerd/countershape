@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"os"
+	"sort"
 	"strings"
 )
 
@@ -31,8 +32,9 @@ type invocation struct {
 	json        bool
 }
 
-// Run is the composition shell used by cmd/countershape. U7A deliberately
-// installs no candidate or study handler: validate and preflight are inert.
+// Run is the domain-neutral composition shell used by cmd/countershape.
+// Validate and preflight remain inert; installed studies are reachable only
+// through their exact frozen machine routes.
 func Run(args []string, runtime Runtime) int {
 	runtime = completeRuntime(runtime)
 	parsed, err := parseInvocation(args)
@@ -42,7 +44,7 @@ func Run(args []string, runtime Runtime) int {
 	} else {
 		switch parsed.command {
 		case "help":
-			response = helpEnvelope()
+			response = helpEnvelope(runtime.Studies)
 		case "validate":
 			response = validateSourceCommand(parsed.specPath, runtime)
 		case "preflight":
@@ -51,7 +53,7 @@ func Run(args []string, runtime Runtime) int {
 			if parsed.json {
 				return runMachineStudy(parsed.studyDomain, runtime)
 			}
-			response = humanStudyRefusal(parsed.studyDomain)
+			response = humanStudyRefusal(parsed.studyDomain, runtime.Studies)
 		default:
 			response = failureEnvelope(parsed.command, &InputError{Code: "COMMAND_UNKNOWN", Detail: "the command is not available in this reference boundary"})
 			response.ExitCode = ExitUsage
@@ -188,20 +190,49 @@ func commandName(args []string) string {
 	return args[0]
 }
 
-func helpEnvelope() ResponseEnvelope {
-	response := baseEnvelope("help", "AVAILABLE", "U7A validation and preflight commands plus installed frozen study routes are available.", "", ExitOK)
+func helpEnvelope(studies map[string]StudyHandler) ResponseEnvelope {
+	domains := installedStudyDomains(studies)
+	message := "Inert validation and preflight commands are available. No study handlers are installed in this composition."
+	commands := []string{
+		"validate --spec <path|-> [--json]",
+		"preflight --spec <path|-> [--json]",
+	}
+	if len(domains) == 0 {
+		commands = append(commands, "study <domain> --json (frozen harness only)")
+	} else {
+		message = "Inert validation and preflight commands plus installed frozen study machine routes are available: " + strings.Join(domains, ", ") + "."
+		for _, domain := range domains {
+			commands = append(commands, "study "+domain+" --json (frozen harness only)")
+		}
+	}
+	response := baseEnvelope("help", "AVAILABLE", message, "", ExitOK)
 	response.Help = &HelpView{
-		Usage: "countershape <help|validate|preflight|study>",
-		Commands: []string{
-			"validate --spec <path|-> [--json]",
-			"preflight --spec <path|-> [--json]",
-			"study <domain> --json (frozen harness only)",
-		},
+		Usage:    "countershape <help|validate|preflight|study>",
+		Commands: commands,
 	}
 	return response
 }
 
-func humanStudyRefusal(domain string) ResponseEnvelope {
+func installedStudyDomains(studies map[string]StudyHandler) []string {
+	domains := make([]string, 0, len(studies))
+	for domain, handler := range studies {
+		if validStudyDomain(domain) && handler != nil {
+			domains = append(domains, domain)
+		}
+	}
+	sort.Strings(domains)
+	return domains
+}
+
+func humanStudyRefusal(domain string, studies map[string]StudyHandler) ResponseEnvelope {
+	handler, installed := studies[domain]
+	if !installed || handler == nil {
+		err := &InputError{Code: "STUDY_HANDLER_UNAVAILABLE", Detail: "no installed handler owns the requested study domain"}
+		response := failureEnvelope("study", err)
+		response.ExitCode = ExitRefused
+		response.NextAction = "Run `countershape help` and choose one installed study domain. No study execution occurred."
+		return response
+	}
 	err := &InputError{Code: "STUDY_HARNESS_ONLY", Detail: "a study cannot execute from the human-facing command route"}
 	response := failureEnvelope("study", err)
 	response.ExitCode = ExitRefused
