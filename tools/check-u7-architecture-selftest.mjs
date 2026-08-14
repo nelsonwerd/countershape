@@ -12,7 +12,7 @@ const modulePath = fileURLToPath(import.meta.url);
 const sourceRoot = resolve(dirname(modulePath), "..");
 const checkerRelative = "tools/check-u7-architecture.mjs";
 const checkerPath = resolve(sourceRoot, checkerRelative);
-const phases = Object.freeze(["U7P", "U7M", "U7A", "U7B", "U7N", "U7C", "U7D", "U7Q"]);
+const phases = Object.freeze(["U7P", "U7M", "U7A", "U7B", "U7N", "U7C", "U7D", "U7Q", "U7S"]);
 const modulePrefix = "github.com/nelsonwerd/countershape/";
 
 const protectedCopyPaths = Object.freeze([
@@ -93,6 +93,7 @@ const declaredSurfaceByPhase = Object.freeze({
 		"internal/reference/app/exitcodes_test.go",
 	]),
 	U7Q: Object.freeze([]),
+	U7S: Object.freeze([]),
 });
 
 export const requiredCaseIDs = Object.freeze([
@@ -104,6 +105,7 @@ export const requiredCaseIDs = Object.freeze([
 	"clean-u7c",
 	"clean-u7d",
 	"clean-u7q",
+	"clean-u7s",
 	"camouflage-control",
 	"args-missing",
 	"args-u7r",
@@ -154,6 +156,11 @@ export const requiredCaseIDs = Object.freeze([
 	"spec-u7q-projection-policy-drift",
 	"spec-u7q-harness-ownership",
 	"spec-u7q-runbook-ownership",
+	"spec-u7s-amendment-drift",
+	"spec-u7s-parent-drift",
+	"spec-u7s-roster-drift",
+	"spec-u7s-claim-drift",
+	"spec-u7s-subject-path-drift",
 	"spec-u7c-parent-drift",
 	"spec-u7r-parent-drift",
 	"spec-u7b-row-drift",
@@ -209,7 +216,7 @@ export const requiredCaseIDs = Object.freeze([
 	"fixture-domain-coercion",
 	"fixture-test-domain-coercion",
 ]);
-const requiredCaseDigest = "6ce2779059ed01f6dfe66b28e9f23d38118f07b26f128fba6a3fd211b77159b7";
+const requiredCaseDigest = "6d038f94d4099de1469b281b1d3743fccfc70000564bfd512d2094caa60fa8cf";
 
 function fail(code, detail) {
 	throw new Error(`U7_ARCH_SELFTEST_${code}: ${detail}`);
@@ -344,7 +351,7 @@ async function mutateJSON(root, path, mutate) {
 	await writeFile(absolute, `${JSON.stringify(value, null, 2)}\n`, { mode: 0o644 });
 }
 
-const usage = "U7_ARCH_USAGE: check-u7-architecture.mjs --phase U7P|U7M|U7A|U7B|U7N|U7C|U7D|U7Q\n";
+const usage = "U7_ARCH_USAGE: check-u7-architecture.mjs --phase U7P|U7M|U7A|U7B|U7N|U7C|U7D|U7Q|U7S\n";
 
 const cases = Object.freeze([
 	...phases.map((phase) => Object.freeze({
@@ -410,8 +417,13 @@ const cases = Object.freeze([
 	Object.freeze({ id: "spec-u7q-projection-policy-drift", phase: "U7Q", status: 1, stdout: "", stderr: "U7_ARCH_SPECIFICATION: U7 receipt source and projection policy\n", mutate: (root) => mutateJSON(root, "spec/verification/u7-unit-paths.json", (value) => { value.receipt_contract.projection_policy += "_DRIFT"; }) }),
 	Object.freeze({ id: "spec-u7q-harness-ownership", phase: "U7Q", status: 1, stdout: "", stderr: "U7_ARCH_SPECIFICATION: U7Q exact control roster\n", mutate: (root) => mutateJSON(root, "spec/verification/u7-unit-paths.json", (value) => { const unit = value.units.find((candidate) => candidate.id === "U7Q"); unit.allowed_paths[0] = "tools/check-u7-study-harness.mjs"; unit.required_paths[0] = "tools/check-u7-study-harness.mjs"; }) }),
 	Object.freeze({ id: "spec-u7q-runbook-ownership", phase: "U7Q", status: 1, stdout: "", stderr: "U7_ARCH_SPECIFICATION: U7Q exact control roster\n", mutate: (root) => mutateJSON(root, "spec/verification/u7-unit-paths.json", (value) => { const unit = value.units.find((candidate) => candidate.id === "U7Q"); unit.allowed_paths[0] = "tools/print-u7-final-runbook.mjs"; unit.required_paths[0] = "tools/print-u7-final-runbook.mjs"; }) }),
+	Object.freeze({ id: "spec-u7s-amendment-drift", phase: "U7S", status: 1, stdout: "", stderr: "U7_ARCH_SPECIFICATION: schema\n", mutate: (root) => mutateJSON(root, "spec/verification/u7-unit-paths.json", (value) => { value.topology_amendment_authorities[3].authentication = "ESTABLISHED"; }) }),
+	Object.freeze({ id: "spec-u7s-parent-drift", phase: "U7S", status: 1, stdout: "", stderr: "U7_ARCH_SPECIFICATION: U7S\n", mutate: (root) => mutateJSON(root, "spec/verification/u7-unit-paths.json", (value) => { value.units.find((unit) => unit.id === "U7S").parent = "U7D"; }) }),
+	Object.freeze({ id: "spec-u7s-roster-drift", phase: "U7S", status: 1, stdout: "", stderr: "U7_ARCH_SPECIFICATION: U7S exact control roster\n", mutate: (root) => mutateJSON(root, "spec/verification/u7-unit-paths.json", (value) => { const unit = value.units.find((candidate) => candidate.id === "U7S"); unit.allowed_paths[0] = "docs/U7S-WRONG.md"; unit.required_paths[0] = "docs/U7S-WRONG.md"; }) }),
+	Object.freeze({ id: "spec-u7s-claim-drift", phase: "U7S", status: 1, stdout: "", stderr: "U7_ARCH_SPECIFICATION: claim U7S zero-product-surface architecture conformance\n", mutate: (root) => mutateJSON(root, "spec/verification/u7-unit-paths.json", (value) => { value.units.find((unit) => unit.id === "U7S").claims.find((claim) => claim.label === "U7S zero-product-surface architecture conformance").command[3] = "U7Q"; }) }),
+	Object.freeze({ id: "spec-u7s-subject-path-drift", phase: "U7S", status: 1, stdout: "", stderr: "U7_ARCH_SPECIFICATION: U7 receipt source and projection policy\n", mutate: (root) => mutateJSON(root, "spec/verification/u7-unit-paths.json", (value) => { value.receipt_contract.study_subject_path = "/opt/homebrew/bin:/usr/bin:/bin"; }) }),
 	Object.freeze({ id: "spec-u7c-parent-drift", phase: "U7N", status: 1, stdout: "", stderr: "U7_ARCH_SPECIFICATION: U7C\n", mutate: (root) => mutateJSON(root, "spec/verification/u7-unit-paths.json", (value) => { value.units.find((unit) => unit.id === "U7C").parent = "U7B"; }) }),
-	Object.freeze({ id: "spec-u7r-parent-drift", phase: "U7Q", status: 1, stdout: "", stderr: "U7_ARCH_SPECIFICATION: U7R\n", mutate: (root) => mutateJSON(root, "spec/verification/u7-unit-paths.json", (value) => { value.units.find((unit) => unit.id === "U7R").parent = "U7D"; }) }),
+	Object.freeze({ id: "spec-u7r-parent-drift", phase: "U7S", status: 1, stdout: "", stderr: "U7_ARCH_SPECIFICATION: U7R\n", mutate: (root) => mutateJSON(root, "spec/verification/u7-unit-paths.json", (value) => { value.units.find((unit) => unit.id === "U7R").parent = "U7Q"; }) }),
 	Object.freeze({ id: "spec-u7b-row-drift", phase: "U7N", status: 1, stdout: "", stderr: "U7_ARCH_SPECIFICATION: sealed U7B row\n", mutate: (root) => mutateJSON(root, "spec/verification/u7-unit-paths.json", (value) => { value.units.find((unit) => unit.id === "U7B").subject += " drift"; }) }),
 	Object.freeze({ id: "app-adapter-import", phase: "U7A", status: 1, stdout: "", stderr: `U7_ARCH_APP_EDGE: internal/reference/app/command.go: ${modulePrefix}internal/adapters/cli\n`, mutate: (root) => writeGo(root, "internal/reference/app/command.go", `import "${modulePrefix}internal/adapters/cli"\n`) }),
 	Object.freeze({ id: "http-cli-cross", phase: "U7B", status: 1, stdout: "", stderr: `U7_ARCH_HTTP_EDGE: internal/reference/httpstudy/study.go: ${modulePrefix}internal/reference/clistudy\n`, mutate: (root) => writeGo(root, "internal/reference/httpstudy/study.go", `import "${modulePrefix}internal/reference/clistudy"\n`) }),
@@ -512,12 +524,12 @@ export async function selfTest(phase) {
 		fail("LIVE", `status=${live.status} stdout=${JSON.stringify(live.stdout)} stderr=${JSON.stringify(live.stderr)}`);
 	}
 	for (const testCase of cases) await runCase(testCase);
-	process.stdout.write(`U7 architecture defensive self-test passed: active=${phase} cases=${cases.length} clean=9 hostile=${cases.length - 9} digest=${requiredCaseDigest}\n`);
+	process.stdout.write(`U7 architecture defensive self-test passed: active=${phase} cases=${cases.length} clean=10 hostile=${cases.length - 10} digest=${requiredCaseDigest}\n`);
 }
 
 async function main() {
 	if (process.argv.length !== 4 || process.argv[2] !== "--phase" || !phases.includes(process.argv[3])) {
-		fail("USAGE", "check-u7-architecture-selftest.mjs --phase U7P|U7M|U7A|U7B|U7N|U7C|U7D|U7Q");
+		fail("USAGE", "check-u7-architecture-selftest.mjs --phase U7P|U7M|U7A|U7B|U7N|U7C|U7D|U7Q|U7S");
 	}
 	await selfTest(process.argv[3]);
 }

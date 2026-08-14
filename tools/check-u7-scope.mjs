@@ -11,7 +11,7 @@ import { isDeepStrictEqual } from "node:util";
 const repositoryRoot = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const specificationPath = resolve(repositoryRoot, "spec/verification/u7-unit-paths.json");
 const receiptPath = "spec/verification/u7-receipt.json";
-const unitOrder = Object.freeze(["U7P", "U7M", "U7A", "U7B", "U7N", "U7C", "U7D", "U7Q", "U7R"]);
+const unitOrder = Object.freeze(["U7P", "U7M", "U7A", "U7B", "U7N", "U7C", "U7D", "U7Q", "U7S", "U7R"]);
 const u7pExactPaths = Object.freeze([
 	"docs/ARCHITECTURE.md",
 	"docs/HANDOFF_MODE_C.md",
@@ -82,6 +82,23 @@ const u7qExactPaths = Object.freeze([
 	"tools/verify-current.mjs",
 	"tools/verify-current-selftest.mjs",
 ]);
+const u7sExactPaths = Object.freeze([
+	"docs/ARCHITECTURE.md",
+	"docs/CONCEPT_BRIEF.md",
+	"docs/HANDOFF_MODE_C.md",
+	"docs/PROMPT_PACK.md",
+	"docs/STATE_MACHINES.md",
+	"docs/VERIFICATION.md",
+	"docs/prompts/P08-U7-CLI-REFERENCE-STUDIES.md",
+	"docs/status/U7S-STUDY-ENVIRONMENT-ALIGNMENT.md",
+	"spec/verification/u7-unit-paths.json",
+	"tools/check-u7-plan.mjs",
+	"tools/check-u7-scope.mjs",
+	"tools/check-u7-architecture.mjs",
+	"tools/check-u7-architecture-selftest.mjs",
+	"tools/verify-current.mjs",
+	"tools/verify-current-selftest.mjs",
+]);
 const exactC6BCommit = "4cef12b38cfcd857593a21db5952f2dfb2dfc274";
 const exactSealedParent = Object.freeze({
 	boundary: "C6B", commit: exactC6BCommit, tree: "b50aee79f41c3f498524d89d425d6dd8f4009702",
@@ -140,6 +157,13 @@ const exactTopologyAmendmentAuthorities = Object.freeze([
 		defect: "U7R_PHASE_CAPSULE_TRANSITION_CONFLICTS_WITH_EXACT_PARENT_RELATIVE_PENDING_BLOCK_REPLACEMENT_RECEIPT_SOURCE_VALIDATION_ASSUMES_U7D_IS_AMBIENT_HEAD_AND_EXTERNAL_HOMEBREW_UPGRADE_INVALIDATED_DECLARED_DIDRUN_PYTHON_LAUNCHER_EPOCH",
 		product_authority: "NONE", product_behavior: "INHERITED_UNREPROVEN", grade_transfer: "NONE",
 	}),
+	Object.freeze({
+		boundary: "U7S", source: "OWNER_OUT_OF_BAND", classification: "OWNER_AUTHORIZED_SOURCE_STUDY_ENVIRONMENT_AUTHORITY_REPAIR",
+		provenance: Object.freeze({ kind: "UNEVIDENCED", disclosure: "OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT" }),
+		authentication: "NOT_ESTABLISHED", signed_authorization: "NOT_IMPLEMENTED", predecessor_declaration: Object.freeze({ kind: "NONE" }),
+		defect: "SEALED_U7D_STUDY_PROCESS_ENVIRONMENT_DIGEST_USES_HARNESS_PATH_OVERRIDE_WHILE_U7R_PLAN_AND_SCOPE_RECONSTRUCT_FROM_UNOVERRIDDEN_HERMETIC_PREFIX",
+		product_authority: "NONE", product_behavior: "INHERITED_UNREPROVEN", grade_transfer: "NONE",
+	}),
 ]);
 const exactRuntimeAuthority = Object.freeze({
 	platform: "darwin", architecture: "arm64", node_path: "/opt/homebrew/bin/node", node_major: 25,
@@ -189,6 +213,8 @@ const exactInheritedReceipts = Object.freeze({ C3P: "PRESENT", C3: "PRESENT", C6
 const exactReceiptContract = Object.freeze(JSON.parse(String.raw`{"schema_version":"countershape/u7-receipt/v1","source_boundary":"U7D","study_event_command":["/opt/homebrew/bin/node","tools/check-u7-study-harness.mjs","--phase","U7D"],"study_evidence_schema":"countershape/u7-study-evidence/v1","study_execution_authority":"U7P_ORIGIN_U7N_AMENDED_HARNESS_V2_DIRECT_PROCESS_STUDY_EXECUTION","study_harness":{"protocol":"countershape/u7-study-harness/v2","protocol_sha256":"f9e5c6580c85d6603b3064ecd03de2328a8a8bced5107bf11456a07b2c9c40f1","path":"tools/check-u7-study-harness.mjs","sha256":"ba8ed823b8c3740a6af0baf124a32c8663cef68483c1e940b5e1d8ecdb1416fa","product_result_schema":"countershape/u7-study-domain-result/v1","trial_schema":"countershape/u7-study-trial/v1","artifact_schema":"countershape/u7-study-artifact/v1","observation_authority":"U7P_ORIGIN_U7N_AMENDED_HARNESS_V2_DIRECT_PROCESS_GIT_AND_ARTIFACT_OBSERVATION","semantic_ceiling":"ARTIFACT_BYTES_AND_SUBJECT_PROCESS_TOPOLOGY_OBSERVED_PRODUCT_SEMANTICS_AND_FULL_HARNESS_RESOURCES_NOT_INDEPENDENTLY_ESTABLISHED","driver_protocol":"FIXTURE_ONLY_NO_EVIDENCE_ROOT","phase_verdicts":{"U7B":"LOCAL_HTTP_REFERENCE_FUNCTIONAL_GREEN_SUBJECT_RESOURCE_OBSERVED","U7C":"LOCAL_CLI_DECISION_AND_ENROLLED_REFERENCE_EXECUTION_PROCESS_ARTIFACT_GREEN_SUBJECT_RESOURCE_OBSERVED","U7D":"LOCAL_TWO_DOMAIN_PROCESS_ARTIFACT_GREEN_CLI_OFFICIAL_EXECUTION_HTTP_DIRECT_PROCESS_ONLY_FULL_STUDY_RESOURCE_UNRECEIPTED"},"observer_prefix":["/usr/bin/time","-p","-l","-o"],"driver_by_domain":{"http":"tools/run-u7-http-study.mjs","cli":"tools/run-u7-cli-study.mjs"},"phase_budgets":[{"id":"fixture","per_run_trials":1},{"id":"compile","per_run_trials":1},{"id":"search","per_run_trials":80},{"id":"confirm","per_run_trials":8},{"id":"contract","per_run_trials":10}],"deterministic_artifact_paths":{"source_spec_sha256":"deterministic/source-spec.json","world_plan_sha256":"deterministic/world-plan.json","ruling_sha256":"deterministic/ruling.json","decision_record_sha256":"deterministic/decision-record.json","contract_bundle_sha256":"deterministic/contract-bundle.json"},"fresh_artifact_paths":{"world_instance_sha256":"fresh/world-instance.json","attempts_sha256":"fresh/attempts.json","measurements_sha256":"fresh/measurements.json","captures_sha256":"fresh/captures.json","confirmation_sha256":"fresh/confirmation.json","contract_execution_target_sha256":"fresh/contract-execution-target.json","finalized_contract_run_sha256":"fresh/finalized-contract-run.json","contract_execution_sha256":"fresh/contract-execution.json"}},"study_domains":["http","cli"],"study_run_count_per_domain":3,"study_trial_budget_per_domain":300,"study_subject_process_wall_time_budget_ms_per_domain":900000,"study_subject_process_peak_rss_budget_bytes_per_domain":4294967296,"study_phase_budgets":[{"id":"fixture","trial_count":3,"trial_budget":3},{"id":"compile","trial_count":3,"trial_budget":3},{"id":"search","trial_count":240,"trial_budget":240},{"id":"confirm","trial_count":24,"trial_budget":24},{"id":"contract","trial_count":30,"trial_budget":30}],"deterministic_artifact_fields":["source_spec_sha256","world_plan_sha256","ruling_sha256","decision_record_sha256","contract_bundle_sha256","reference_binary_sha256"],"fresh_run_digest_fields":["world_instance_sha256","attempts_sha256","measurements_sha256","captures_sha256","confirmation_sha256","fixture_invocation_sha256","contract_execution_target_sha256","finalized_contract_run_sha256","contract_execution_sha256"],"html_authority":"LOCAL_SNAPSHOT_NOT_PORTABLE_STRICT_WITNESS","ledger_authority":"LOCAL_SECRET_BEARING_SNAPSHOT_NOT_PORTABLE","projection_paths":["docs/HANDOFF_MODE_C.md","docs/status/U7D-EVIDENCE.md"],"projection_policy":"HANDOFF_EXACT_PARENT_RELATIVE_U7Q_TO_U7R_CAPSULE_AND_PENDING_BLOCK_REPLACEMENT_STATUS_EXACT_PARENT_RELATIVE_PENDING_BLOCK_REPLACEMENT","self_receipt":"ABSENT","milestone_verdict":"LOCAL_TWO_DOMAIN_PROCESS_ARTIFACT_GREEN_CLI_OFFICIAL_EXECUTION_HTTP_DIRECT_PROCESS_ONLY_FULL_STUDY_RESOURCE_UNRECEIPTED","honest_fallback":"ONE_DOMAIN_OFFICIAL_CONTRACT_EXECUTION_PLUS_HTTP_DIRECT_PROCESS_OBSERVATION_ONLY","unreceipted":["LINUX_UNRUN","WINDOWS_UNRUN","UNRUN_NODE_MAJORS","BROAD_IMPORTED_REPOSITORY_BEHAVIOR_UNVALIDATED","HOSTILE_CONTAINMENT_UNVALIDATED","NETWORK_DENIAL_UNVALIDATED","COMPREHENSION_UNVALIDATED","REVIEW_COMPRESSION_UNVALIDATED","ADOPTION_UNVALIDATED","MAINTAINABILITY_UNVALIDATED","PRODUCTION_READINESS_UNVALIDATED","SECURITY_REVIEW_NOT_PERFORMED","EXTERNAL_PLATFORM_BEHAVIOR_UNVALIDATED","IMPORTED_REPOSITORY_TIMING_UNCLAIMED","FULL_STUDY_RESOURCE_BOUND_UNVALIDATED","HTTP_FINALIZED_CONTRACT_RUN_AUTHORITY_ABSENT","HTTP_CONTRACT_EXECUTION_CLASSIFICATION_AUTHORITY_ABSENT","TWO_DOMAIN_TARGET_RUN_CLASSIFICATION_REPRODUCTION_UNMET","CLI_OFFICIAL_EXECUTION_GENERALIZATION_UNVALIDATED","U7R_SELF_RECEIPT_ABSENT"]}`));
 const exactReceiptContractWithSourceRuntime = Object.freeze({
 	...exactReceiptContract,
+	study_subject_path: "/usr/bin:/bin:/opt/homebrew/bin",
+	projection_policy: "HANDOFF_EXACT_PARENT_RELATIVE_U7S_TO_U7R_CAPSULE_AND_PENDING_BLOCK_REPLACEMENT_STATUS_EXACT_PARENT_RELATIVE_PENDING_BLOCK_REPLACEMENT",
 	source_runtime_authority_sha256: "3d99267f2063b9108467f5149233efc64624804fdecb7aa8dd658dbc292bbbe7",
 });
 const exactClaimBindingPolicy = Object.freeze({
@@ -206,7 +232,8 @@ const exactUnitIdentity = Object.freeze({
 	U7C: Object.freeze({ parent: "U7N", verification_profile: "SOURCE_FULL", product_authority: "U7_REFERENCE_APPLICATION", product_behavior: "CANDIDATE_UNRECEIPTED", u7d_receipt_state: "ABSENT", subject: "feat: add U7 CLI decision and contract flow", final_root: ".countershape/u7c-final", paths: 18, claims: 12 }),
 	U7D: Object.freeze({ parent: "U7C", verification_profile: "SOURCE_FULL", product_authority: "U7_REFERENCE_APPLICATION", product_behavior: "CANDIDATE_UNRECEIPTED", u7d_receipt_state: "ABSENT", subject: "test: close U7 reference study evidence", final_root: ".countershape/u7d-final", paths: 15, claims: 13 }),
 	U7Q: Object.freeze({ parent: "U7D", verification_profile: "SOURCE_FULL", product_authority: "NONE", product_behavior: "INHERITED_UNREPROVEN", u7d_receipt_state: "ABSENT", subject: "fix: reconcile U7 receipt transition controls", final_root: ".countershape/u7q-final", paths: 15, claims: 13 }),
-	U7R: Object.freeze({ parent: "U7Q", verification_profile: "RECEIPT_RECONCILIATION", product_authority: "NONE", product_behavior: "SOURCE_RECEIPT_RECONCILIATION", u7d_receipt_state: "PRESENT", subject: "docs: receipt U7 reference milestone", final_root: ".countershape/u7r-final", paths: 3, claims: 9 }),
+	U7S: Object.freeze({ parent: "U7Q", verification_profile: "SOURCE_FULL", product_authority: "NONE", product_behavior: "INHERITED_UNREPROVEN", u7d_receipt_state: "ABSENT", subject: "fix: align U7 source study environment authority", final_root: ".countershape/u7s-final", paths: 15, claims: 13 }),
+	U7R: Object.freeze({ parent: "U7S", verification_profile: "RECEIPT_RECONCILIATION", product_authority: "NONE", product_behavior: "SOURCE_RECEIPT_RECONCILIATION", u7d_receipt_state: "PRESENT", subject: "docs: receipt U7 reference milestone", final_root: ".countershape/u7r-final", paths: 3, claims: 9 }),
 });
 const exactRosterDigests = Object.freeze({
 	U7P: "4dbeadaf7b0b837a08bf820a545985ede2c41a2d2e5d53d54e2095fa2de8c380",
@@ -217,6 +244,7 @@ const exactRosterDigests = Object.freeze({
 	U7C: "bdd228a731ec2cc51922aa23367f665237d786afe7b298ad5e844d8d10dd3aa4",
 	U7D: "ad9d20d6a493adace402d04849c5e7847d9cb4407faabbcad7c4350d38d9b926",
 	U7Q: "0d236996c21bf4869a4a6932ad116041da3f0b6b45b7b0ee04016c9f45bef015",
+	U7S: "2ba78d9f5b33a1e16cbcaabf3e0bb73ee8f1b4ba45cfa4605525111748ffd74c",
 	U7R: "2c21933c3e13fe32eedafb1d5ac2fdd5187df514408acf53057016cac153bccb",
 });
 const exactClaimDigests = Object.freeze({
@@ -228,7 +256,8 @@ const exactClaimDigests = Object.freeze({
 	U7C: "4b8bb347bb0a3cd7552dd954754f4460a195eff42dae81a0399411dda59c249c",
 	U7D: "5b7a0a8ff21a18504bd84b5b32a77bb570414ef071293c4a83d4fd73fe75bb25",
 	U7Q: "1b83c27fb422efbee59dc0840ef2489eee44f46ab373c1fc073d147bd02bcdee",
-	U7R: "767e431fe974108eef67405cce078a3477c922bc6a06d561ad187691b7088e44",
+	U7S: "d3dd282b7a640f6e6894e016787d13be771d2cbe7bc73aa1a0403cc1950f6dc8",
+	U7R: "d9ae40051a78c7d02b44852e3919d19e9f684598b0c8a5bca5a8bbe057304b87",
 });
 const credentialPatterns = Object.freeze([
 	Object.freeze({ name: "pem-private-key", expression: /-----BEGIN (?:[A-Z0-9 ]+ )?PRIVATE KEY-----/u }),
@@ -419,7 +448,7 @@ function validateScopeSpecification(value) {
 		!isDeepStrictEqual(value.topology_amendment_authorities, exactTopologyAmendmentAuthorities) ||
 		!isDeepStrictEqual(value.runtime_authority, exactRuntimeAuthority)) fail("SPECIFICATION", "topology, amendment authority, runtime, or sealed parent");
 	if (!isDeepStrictEqual(value.inherited_receipts, exactInheritedReceipts)) fail("SPECIFICATION_RECEIPTS", "C3P/C3/C6A");
-	if (!isDeepStrictEqual(value.receipt_contract, exactReceiptContractWithSourceRuntime)) fail("SPECIFICATION_RECEIPT_CONTRACT", "U7D evidence, source runtime epoch, and U7R projection");
+	if (!isDeepStrictEqual(value.receipt_contract, exactReceiptContractWithSourceRuntime)) fail("SPECIFICATION_RECEIPT_CONTRACT", "U7D evidence, source runtime epoch, subject PATH, and U7R projection");
 	if (!isDeepStrictEqual(value.claim_binding_policy, exactClaimBindingPolicy)) fail("SPECIFICATION_CLAIM_BINDING", "event, pathspec, recorded child-process interval, and operational writer authority");
 	for (const unit of value.units) {
 		const identity = exactUnitIdentity[unit.id];
@@ -440,6 +469,8 @@ function validateScopeSpecification(value) {
 	if (!isDeepStrictEqual(u7n.allowed_paths, u7nExactPaths) || !isDeepStrictEqual(u7n.required_paths, u7nExactPaths)) fail("SPECIFICATION_U7N", "exact authority-reconciliation roster drift");
 	const u7q = value.units.find((unit) => unit.id === "U7Q");
 	if (!isDeepStrictEqual(u7q.allowed_paths, u7qExactPaths) || !isDeepStrictEqual(u7q.required_paths, u7qExactPaths)) fail("SPECIFICATION_U7Q", "exact receipt-transition-control roster drift");
+	const u7s = value.units.find((unit) => unit.id === "U7S");
+	if (!isDeepStrictEqual(u7s.allowed_paths, u7sExactPaths) || !isDeepStrictEqual(u7s.required_paths, u7sExactPaths)) fail("SPECIFICATION_U7S", "exact study-environment-control roster drift");
 	const receipt = value.units.at(-1);
 	if (receipt.verification_profile !== "RECEIPT_RECONCILIATION" || receipt.product_authority !== "NONE" ||
 		!receipt.required_paths.includes(receiptPath)) fail("SPECIFICATION_RECEIPT", "U7R");
@@ -970,7 +1001,7 @@ function scopeStudyEnvironmentDigest(specification, study, run, name) {
 	const admitted = ["PATH", "LANG", "LC_ALL", "TZ", "NO_COLOR", "HOME", "TMPDIR", "GOTMPDIR", "GOCACHE", "GOPATH", "GOMODCACHE", "GOFLAGS", "GOMAXPROCS", "CGO_ENABLED", "COUNTERSHAPE_NODE", "COUNTERSHAPE_GO", "COUNTERSHAPE_GIT", "COUNTERSHAPE_SH", "COUNTERSHAPE_GOFMT", "COUNTERSHAPE_CC", "COUNTERSHAPE_CXX", "CC", "CXX"];
 	const environment = Object.fromEntries(admitted.map((key) => [key, assignments.get(key)]));
 	const runRoot = resolve(repositoryRoot, row.final_root, "tmp/studies", study.id, `run-${run.ordinal}`);
-	Object.assign(environment, { HOME: resolve(runRoot, "home"), TMPDIR: resolve(runRoot, "tmp"), COUNTERSHAPE_STUDY_DOMAIN: study.id, COUNTERSHAPE_STUDY_ORDINAL: String(run.ordinal), NODE_OPTIONS: "", NODE_PATH: "", GIT_CONFIG_NOSYSTEM: "1", GIT_CONFIG_GLOBAL: "/dev/null", GIT_NO_LAZY_FETCH: "1", GIT_OPTIONAL_LOCKS: "0", GIT_TERMINAL_PROMPT: "0", GIT_NO_REPLACE_OBJECTS: "1" });
+	Object.assign(environment, { PATH: specification.receipt_contract.study_subject_path, HOME: resolve(runRoot, "home"), TMPDIR: resolve(runRoot, "tmp"), COUNTERSHAPE_STUDY_DOMAIN: study.id, COUNTERSHAPE_STUDY_ORDINAL: String(run.ordinal), NODE_OPTIONS: "", NODE_PATH: "", GIT_CONFIG_NOSYSTEM: "1", GIT_CONFIG_GLOBAL: "/dev/null", GIT_NO_LAZY_FETCH: "1", GIT_OPTIONAL_LOCKS: "0", GIT_TERMINAL_PROMPT: "0", GIT_NO_REPLACE_OBJECTS: "1" });
 	if (name === "execute") environment.COUNTERSHAPE_EVIDENCE_ROOT = resolve(runRoot, "evidence");
 	return sha256(Buffer.from(`${Object.keys(environment).sort().map((key) => `${key}=${environment[key]}`).join("\n")}\n`, "utf8"));
 }
@@ -1125,7 +1156,7 @@ async function runSourceAuthorityGate(specification, id) {
 	const declaration = await loadStagedReceipt(specification);
 	{
 		const sourceRow = unitByID(specification, "U7D");
-		const commit = gitLine(["rev-parse", "--verify", `${snapshot.head}^`], "U7D source commit");
+		const commit = gitLine(["rev-parse", "--verify", `${snapshot.head}^^`], "U7D source commit");
 		const tree = gitLine(["rev-parse", "--verify", `${commit}^{tree}`], "U7D source tree");
 		const parent = gitLine(["show", "-s", "--format=%P", commit], "U7D source parent");
 		const subject = gitLine(["show", "-s", "--format=%s", commit], "U7D source subject");
@@ -1189,6 +1220,7 @@ export async function selfTest() {
 		["SPECIFICATION", (value) => { value.topology_amendment_authorities[0].classification += "_ALTERED"; }],
 		["SPECIFICATION", (value) => { value.topology_amendment_authorities[1].authentication = "ESTABLISHED"; }],
 		["SPECIFICATION", (value) => { value.topology_amendment_authorities[2].defect += "_ALTERED"; }],
+		["SPECIFICATION", (value) => { value.topology_amendment_authorities[3].classification += "_ALTERED"; }],
 		["SPECIFICATION", (value) => { value.topology_amendment_authorities.reverse(); }],
 		["SPECIFICATION", (value) => { value.topology_amendment_authorities.push(clone(value.topology_amendment_authorities[2])); }],
 		["SPECIFICATION_RECEIPTS", (value) => { value.inherited_receipts.C3 = "ABSENT"; }],
@@ -1196,6 +1228,7 @@ export async function selfTest() {
 		["SPECIFICATION_RECEIPT_CONTRACT", (value) => { value.receipt_contract.study_harness.protocol = "countershape/u7-study-harness/v1"; }],
 		["SPECIFICATION_RECEIPT_CONTRACT", (value) => { value.receipt_contract.study_harness.protocol_sha256 = "1".repeat(64); }],
 		["SPECIFICATION_RECEIPT_CONTRACT", (value) => { value.receipt_contract.study_harness.sha256 = "1".repeat(64); }],
+		["SPECIFICATION_RECEIPT_CONTRACT", (value) => { value.receipt_contract.study_subject_path = "/opt/homebrew/bin:/usr/bin:/bin"; }],
 		["SPECIFICATION_RECEIPT_CONTRACT", (value) => { value.receipt_contract.source_runtime_authority_sha256 = "1".repeat(64); }],
 		["SPECIFICATION_RECEIPT_CONTRACT", (value) => { value.receipt_contract.milestone_verdict = "LOCAL_REFERENCE_MILESTONE_FUNCTIONAL_GREEN_FULL_STUDY_RESOURCE_UNRECEIPTED"; }],
 		["SPECIFICATION_RECEIPT_CONTRACT", (value) => { value.receipt_contract.honest_fallback = "NOT_APPLICABLE_SOURCE_GREEN"; }],
@@ -1218,7 +1251,10 @@ export async function selfTest() {
 		["SPECIFICATION_UNIT", (value) => { value.units.find((unit) => unit.id === "U7Q").product_authority = "U7_REFERENCE_APPLICATION"; }],
 		["SPECIFICATION_ROSTER", (value) => { const unit = value.units.find((candidate) => candidate.id === "U7Q"); unit.allowed_paths[0] = "docs/U7Q-WRONG.md"; unit.required_paths[0] = "docs/U7Q-WRONG.md"; }],
 		["SPECIFICATION_CLAIMS", (value) => { value.units.find((unit) => unit.id === "U7Q").claims[6].label += " drift"; }],
-		["SPECIFICATION_UNIT", (value) => { value.units.find((unit) => unit.id === "U7R").parent = "U7D"; }],
+		["SPECIFICATION_UNIT", (value) => { value.units.find((unit) => unit.id === "U7S").parent = "U7D"; }],
+		["SPECIFICATION_ROSTER", (value) => { const unit = value.units.find((candidate) => candidate.id === "U7S"); unit.allowed_paths[0] = "docs/U7S-WRONG.md"; unit.required_paths[0] = "docs/U7S-WRONG.md"; }],
+		["SPECIFICATION_CLAIMS", (value) => { value.units.find((unit) => unit.id === "U7S").claims[6].label += " drift"; }],
+		["SPECIFICATION_UNIT", (value) => { value.units.find((unit) => unit.id === "U7R").parent = "U7Q"; }],
 	];
 	for (const [token, mutate] of mutations) {
 		const candidate = clone(specification); mutate(candidate); expectRejected(() => validateScopeSpecification(candidate), token);

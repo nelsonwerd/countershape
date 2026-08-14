@@ -12,7 +12,7 @@ const modulePath = fileURLToPath(import.meta.url);
 export const repositoryRoot = resolve(dirname(modulePath), "..");
 const specificationPath = resolve(repositoryRoot, "spec/verification/u7-unit-paths.json");
 const modulePrefix = "github.com/nelsonwerd/countershape/";
-const phases = Object.freeze(["U7P", "U7M", "U7A", "U7B", "U7N", "U7C", "U7D", "U7Q"]);
+const phases = Object.freeze(["U7P", "U7M", "U7A", "U7B", "U7N", "U7C", "U7D", "U7Q", "U7S"]);
 const u7nExactPaths = Object.freeze([
 	"docs/ARCHITECTURE.md", "docs/HANDOFF_MODE_C.md", "docs/PROMPT_PACK.md", "docs/STATE_MACHINES.md", "docs/VERIFICATION.md",
 	"docs/prompts/P08-U7-CLI-REFERENCE-STUDIES.md", "docs/status/U7N-CLI-CONTRACT-ALIGNMENT.md", "spec/verification/u7-unit-paths.json",
@@ -25,10 +25,17 @@ const u7qExactPaths = Object.freeze([
 	"spec/verification/u7-unit-paths.json", "tools/check-u7-plan.mjs", "tools/check-u7-scope.mjs", "tools/check-u7-architecture.mjs",
 	"tools/check-u7-architecture-selftest.mjs", "tools/verify-current.mjs", "tools/verify-current-selftest.mjs",
 ]);
+const u7sExactPaths = Object.freeze([
+	"docs/ARCHITECTURE.md", "docs/CONCEPT_BRIEF.md", "docs/HANDOFF_MODE_C.md", "docs/PROMPT_PACK.md", "docs/STATE_MACHINES.md",
+	"docs/VERIFICATION.md", "docs/prompts/P08-U7-CLI-REFERENCE-STUDIES.md", "docs/status/U7S-STUDY-ENVIRONMENT-ALIGNMENT.md",
+	"spec/verification/u7-unit-paths.json", "tools/check-u7-plan.mjs", "tools/check-u7-scope.mjs", "tools/check-u7-architecture.mjs",
+	"tools/check-u7-architecture-selftest.mjs", "tools/verify-current.mjs", "tools/verify-current-selftest.mjs",
+]);
 const exactAmendmentAuthorities = Object.freeze([
 	Object.freeze({ boundary: "U7M", source: "OWNER_OUT_OF_BAND", classification: "OWNER_AUTHORIZED_AUTHORITY_MIGRATION_DEFECT_REPAIR", provenance: Object.freeze({ kind: "UNEVIDENCED", disclosure: "OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT" }), authentication: "NOT_ESTABLISHED", signed_authorization: "NOT_IMPLEMENTED", predecessor_declaration: Object.freeze({ kind: "NONE" }), defect: "P07_C3P_RECEIPT_LIVE_ENTRYPOINT_REQUIRES_C6R_OR_C6B_HEAD_SUBJECT_AND_REJECTS_ALL_U7_DESCENDANTS", product_authority: "NONE", product_behavior: "INHERITED_UNREPROVEN", grade_transfer: "NONE" }),
 	Object.freeze({ boundary: "U7N", source: "OWNER_OUT_OF_BAND", classification: "OWNER_AUTHORIZED_CLI_AND_MILESTONE_AUTHORITY_RECONCILIATION", provenance: Object.freeze({ kind: "UNEVIDENCED", disclosure: "OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT" }), authentication: "NOT_ESTABLISHED", signed_authorization: "NOT_IMPLEMENTED", predecessor_declaration: Object.freeze({ kind: "NONE" }), defect: "U7C_EXIT2_AND_EDGE_CLASSIFICATION_CONFLICTS_WITH_EXACT_ENROLLED_CLI_STIMULUS_AND_U7D_OVERSTATES_ABSENT_HTTP_RUN_CLASSIFICATION_AUTHORITY", product_authority: "NONE", product_behavior: "INHERITED_UNREPROVEN", grade_transfer: "NONE" }),
 	Object.freeze({ boundary: "U7Q", source: "OWNER_OUT_OF_BAND", classification: "OWNER_AUTHORIZED_RECEIPT_TRANSITION_AND_RECORDER_RUNTIME_EPOCH_CONTROL_REPAIR", provenance: Object.freeze({ kind: "UNEVIDENCED", disclosure: "OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT" }), authentication: "NOT_ESTABLISHED", signed_authorization: "NOT_IMPLEMENTED", predecessor_declaration: Object.freeze({ kind: "NONE" }), defect: "U7R_PHASE_CAPSULE_TRANSITION_CONFLICTS_WITH_EXACT_PARENT_RELATIVE_PENDING_BLOCK_REPLACEMENT_RECEIPT_SOURCE_VALIDATION_ASSUMES_U7D_IS_AMBIENT_HEAD_AND_EXTERNAL_HOMEBREW_UPGRADE_INVALIDATED_DECLARED_DIDRUN_PYTHON_LAUNCHER_EPOCH", product_authority: "NONE", product_behavior: "INHERITED_UNREPROVEN", grade_transfer: "NONE" }),
+	Object.freeze({ boundary: "U7S", source: "OWNER_OUT_OF_BAND", classification: "OWNER_AUTHORIZED_SOURCE_STUDY_ENVIRONMENT_AUTHORITY_REPAIR", provenance: Object.freeze({ kind: "UNEVIDENCED", disclosure: "OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT" }), authentication: "NOT_ESTABLISHED", signed_authorization: "NOT_IMPLEMENTED", predecessor_declaration: Object.freeze({ kind: "NONE" }), defect: "SEALED_U7D_STUDY_PROCESS_ENVIRONMENT_DIGEST_USES_HARNESS_PATH_OVERRIDE_WHILE_U7R_PLAN_AND_SCOPE_RECONSTRUCT_FROM_UNOVERRIDDEN_HERMETIC_PREFIX", product_authority: "NONE", product_behavior: "INHERITED_UNREPROVEN", grade_transfer: "NONE" }),
 ]);
 const sealedU7BRowSHA256 = "76adecf8f35ea4a2c8320a3465701218a90e81db594f0ff38d1918de8b937b82";
 
@@ -105,6 +112,7 @@ const declaredSurfaceByPhase = Object.freeze({
 		"internal/reference/app/exitcodes_test.go",
 	]),
 	U7Q: Object.freeze([]),
+	U7S: Object.freeze([]),
 });
 
 const phaseIdentity = Object.freeze({
@@ -116,6 +124,7 @@ const phaseIdentity = Object.freeze({
 	U7C: Object.freeze({ parent: "U7N", profile: "SOURCE_FULL", productAuthority: "U7_REFERENCE_APPLICATION", productBehavior: "CANDIDATE_UNRECEIPTED", receipt: "ABSENT" }),
 	U7D: Object.freeze({ parent: "U7C", profile: "SOURCE_FULL", productAuthority: "U7_REFERENCE_APPLICATION", productBehavior: "CANDIDATE_UNRECEIPTED", receipt: "ABSENT" }),
 	U7Q: Object.freeze({ parent: "U7D", profile: "SOURCE_FULL", productAuthority: "NONE", productBehavior: "INHERITED_UNREPROVEN", receipt: "ABSENT" }),
+	U7S: Object.freeze({ parent: "U7Q", profile: "SOURCE_FULL", productAuthority: "NONE", productBehavior: "INHERITED_UNREPROVEN", receipt: "ABSENT" }),
 });
 
 const protectedRoots = Object.freeze([
@@ -247,6 +256,7 @@ const requiredMainImportsByPhase = Object.freeze({
 	U7C: Object.freeze([`${modulePrefix}internal/reference/app`, `${modulePrefix}internal/reference/httpstudy`, `${modulePrefix}internal/reference/clistudy`]),
 	U7D: Object.freeze([`${modulePrefix}internal/reference/app`, `${modulePrefix}internal/reference/httpstudy`, `${modulePrefix}internal/reference/clistudy`, `${modulePrefix}internal/reference/reproduce`]),
 	U7Q: Object.freeze([`${modulePrefix}internal/reference/app`, `${modulePrefix}internal/reference/httpstudy`, `${modulePrefix}internal/reference/clistudy`, `${modulePrefix}internal/reference/reproduce`]),
+	U7S: Object.freeze([`${modulePrefix}internal/reference/app`, `${modulePrefix}internal/reference/httpstudy`, `${modulePrefix}internal/reference/clistudy`, `${modulePrefix}internal/reference/reproduce`]),
 });
 
 const javascriptASTProgram = String.raw`
@@ -561,7 +571,7 @@ function validateSpecificationSurface(value) {
 		!isDeepStrictEqual(value.topology_amendment_authorities, exactAmendmentAuthorities)) {
 		throw new ArchitectureError("U7_ARCH_SPECIFICATION", "schema");
 	}
-	if (!isDeepStrictEqual(value.units.map((unit) => unit.id), ["U7P", "U7M", "U7A", "U7B", "U7N", "U7C", "U7D", "U7Q", "U7R"])) {
+	if (!isDeepStrictEqual(value.units.map((unit) => unit.id), ["U7P", "U7M", "U7A", "U7B", "U7N", "U7C", "U7D", "U7Q", "U7S", "U7R"])) {
 		throw new ArchitectureError("U7_ARCH_SPECIFICATION", "unit order");
 	}
 	for (const phase of phases) {
@@ -584,29 +594,35 @@ function validateSpecificationSurface(value) {
 		!isDeepStrictEqual(u7q.allowed_paths, u7qExactPaths) || !isDeepStrictEqual(u7q.required_paths, u7qExactPaths)) {
 		throw new ArchitectureError("U7_ARCH_SPECIFICATION", "U7Q exact control roster");
 	}
+	const u7s = value.units.find((unit) => unit.id === "U7S");
+	if (u7s.subject !== "fix: align U7 source study environment authority" || u7s.final_root !== ".countershape/u7s-final" ||
+		!isDeepStrictEqual(u7s.allowed_paths, u7sExactPaths) || !isDeepStrictEqual(u7s.required_paths, u7sExactPaths)) {
+		throw new ArchitectureError("U7_ARCH_SPECIFICATION", "U7S exact control roster");
+	}
 	const u7b = value.units.find((unit) => unit.id === "U7B");
 	if (sha256(Buffer.from(JSON.stringify(u7b), "utf8")) !== sealedU7BRowSHA256) throw new ArchitectureError("U7_ARCH_SPECIFICATION", "sealed U7B row");
 	const u7r = value.units.find((unit) => unit.id === "U7R");
-	if (!u7r || u7r.parent !== "U7Q" || u7r.verification_profile !== "RECEIPT_RECONCILIATION" || u7r.product_authority !== "NONE" ||
+	if (!u7r || u7r.parent !== "U7S" || u7r.verification_profile !== "RECEIPT_RECONCILIATION" || u7r.product_authority !== "NONE" ||
 		u7r.product_behavior !== "SOURCE_RECEIPT_RECONCILIATION" || u7r.u7d_receipt_state !== "PRESENT") {
 		throw new ArchitectureError("U7_ARCH_SPECIFICATION", "U7R");
 	}
 	if (value.receipt_contract?.source_boundary !== "U7D" ||
 		value.receipt_contract?.source_runtime_authority_sha256 !== "3d99267f2063b9108467f5149233efc64624804fdecb7aa8dd658dbc292bbbe7" ||
+		value.receipt_contract?.study_subject_path !== "/usr/bin:/bin:/opt/homebrew/bin" ||
 		!isDeepStrictEqual(value.receipt_contract?.projection_paths, ["docs/HANDOFF_MODE_C.md", "docs/status/U7D-EVIDENCE.md"]) ||
-		value.receipt_contract?.projection_policy !== "HANDOFF_EXACT_PARENT_RELATIVE_U7Q_TO_U7R_CAPSULE_AND_PENDING_BLOCK_REPLACEMENT_STATUS_EXACT_PARENT_RELATIVE_PENDING_BLOCK_REPLACEMENT") {
+		value.receipt_contract?.projection_policy !== "HANDOFF_EXACT_PARENT_RELATIVE_U7S_TO_U7R_CAPSULE_AND_PENDING_BLOCK_REPLACEMENT_STATUS_EXACT_PARENT_RELATIVE_PENDING_BLOCK_REPLACEMENT") {
 		throw new ArchitectureError("U7_ARCH_SPECIFICATION", "U7 receipt source and projection policy");
 	}
 	const controlOwners = Object.freeze({
-		"spec/verification/u7-unit-paths.json": Object.freeze(["U7P", "U7M", "U7N", "U7Q"]),
-		"tools/check-u7-plan.mjs": Object.freeze(["U7P", "U7M", "U7N", "U7Q"]),
-		"tools/check-u7-scope.mjs": Object.freeze(["U7P", "U7M", "U7N", "U7Q"]),
-		"tools/check-u7-architecture.mjs": Object.freeze(["U7P", "U7M", "U7N", "U7Q"]),
-		"tools/check-u7-architecture-selftest.mjs": Object.freeze(["U7P", "U7M", "U7N", "U7Q"]),
+		"spec/verification/u7-unit-paths.json": Object.freeze(["U7P", "U7M", "U7N", "U7Q", "U7S"]),
+		"tools/check-u7-plan.mjs": Object.freeze(["U7P", "U7M", "U7N", "U7Q", "U7S"]),
+		"tools/check-u7-scope.mjs": Object.freeze(["U7P", "U7M", "U7N", "U7Q", "U7S"]),
+		"tools/check-u7-architecture.mjs": Object.freeze(["U7P", "U7M", "U7N", "U7Q", "U7S"]),
+		"tools/check-u7-architecture-selftest.mjs": Object.freeze(["U7P", "U7M", "U7N", "U7Q", "U7S"]),
 		"tools/check-u7-study-harness.mjs": Object.freeze(["U7P", "U7N"]),
 		"tools/check-u7-study-harness-selftest.mjs": Object.freeze(["U7P", "U7N"]),
-		"tools/verify-current.mjs": Object.freeze(["U7P", "U7M", "U7N", "U7Q"]),
-		"tools/verify-current-selftest.mjs": Object.freeze(["U7P", "U7M", "U7N", "U7Q"]),
+		"tools/verify-current.mjs": Object.freeze(["U7P", "U7M", "U7N", "U7Q", "U7S"]),
+		"tools/verify-current-selftest.mjs": Object.freeze(["U7P", "U7M", "U7N", "U7Q", "U7S"]),
 		"tools/print-u7-final-runbook.mjs": Object.freeze(["U7P"]),
 	});
 	for (const [path, expectedOwners] of Object.entries(controlOwners)) {
@@ -629,6 +645,8 @@ function validateSpecificationSurface(value) {
 		["U7D", "U7D two-domain architecture defensive self-test", ["/opt/homebrew/bin/node", "tools/check-u7-architecture-selftest.mjs", "--phase", "U7D"]],
 		["U7Q", "U7Q zero-product-surface architecture conformance", ["/opt/homebrew/bin/node", "tools/check-u7-architecture.mjs", "--phase", "U7Q"]],
 		["U7Q", "U7Q architecture authority defensive self-test", ["/opt/homebrew/bin/node", "tools/check-u7-architecture-selftest.mjs", "--phase", "U7Q"]],
+		["U7S", "U7S zero-product-surface architecture conformance", ["/opt/homebrew/bin/node", "tools/check-u7-architecture.mjs", "--phase", "U7S"]],
+		["U7S", "U7S architecture authority defensive self-test", ["/opt/homebrew/bin/node", "tools/check-u7-architecture-selftest.mjs", "--phase", "U7S"]],
 	];
 	for (const [phase, label, command] of exactArchitectureClaims) {
 		const unit = value.units.find((candidate) => candidate.id === phase);
