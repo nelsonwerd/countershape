@@ -37,7 +37,7 @@ The bet is that generating code got cheap and **deciding which behavior you actu
 | | |
 |---|---|
 | Started | 2026-07-14 |
-| Status | **Still building.** Units 0–6 of a 10-unit roadmap sealed and closed; unit 7 — the CLI, the first thing a human will touch — opened August 9 and has sealed three product milestones since, most recently the CLI decision flow on August 13 |
+| Status | **Still building.** Units 0–7 of a 10-unit roadmap sealed and closed; unit 8 — the blind decision screen, delivered as a local web app — is now being built. Nothing in unit 8 is sealed yet |
 | Sealed commits | 85 |
 | Verified claims | 1170 (1139 clean, 30 stale, 1 failed) |
 | Go — product code | ~79,000 lines |
@@ -46,7 +46,7 @@ The bet is that generating code got cheap and **deciding which behavior you actu
 | **Runnable?** | **No.** No CLI, no UI, no install path |
 | Stats as of | 2026-08-14 |
 
-The core engine exists and is sealed: exact Git materialization, isolated execution worlds, CLI and HTTP observation, a bounded reducer, the decision store, the ruling authority, the standalone-test compiler, publication, and execution classification. What does *not* exist yet is everything a human would touch — the command line, the blind decision screen, and packaging. Those are units 7 through 9, and unit 7 is well underway: the run has sealed the CLI's entry point and application shell (`cmd/countershape`), an HTTP falsification study, and — on August 13 — the CLI decision flow, the first sealed code on the path to the blind decision screen. It is still a foundation, not a usable tool.
+The core engine exists and is sealed: exact Git materialization, isolated execution worlds, CLI and HTTP observation, a bounded reducer, the decision store, the ruling authority, the standalone-test compiler, publication, and execution classification. Unit 7 is now closed too — the CLI's entry point and application shell (`cmd/countershape`), an HTTP falsification study, and the CLI decision flow all sealed and receipted, with the unit's evidence closed on August 14. What does *not* exist yet is the rest of what a human would touch: the blind decision screen and packaging (units 8 and 9). Unit 8 is in progress right now as `countershape studio` — a local-loopback web app (React/TypeScript on a Go server) that will show the blind decision bench in a browser — but none of it is sealed, and it is not something you can run.
 
 If you clone this expecting to run something, you will be disappointed. Come back later.
 
@@ -81,7 +81,7 @@ Better you hear them here than discover them and assume something was hidden.
 
 **3. There is roughly twice as much checking as there is product.** ~79,000 lines of product Go, against ~67,000 lines of tests and ~92,000 lines of JavaScript that exists solely to check the rest. Put another way: the checker JavaScript alone outweighs the product it verifies. There is also a five-day window in the history where ten milestones sealed and **zero lines of product code were written** — 88% of everything added in that stretch was checker JavaScript. That is not a bug in the log; that is what happened, and it is one of the more interesting things this run has produced.
 
-**4. There is a fully green seal that was thrown away.** On August 12 the run sealed the CLI decision milestone and verified it 12/12 `tree-exact` — every command passed, the witness report was generated. Then it voided the whole thing: one of the thirteen recorded events had run under a different recorder environment fingerprint than the other twelve. Not a code failure, not a test failure — an inconsistency in the evidence *about* the code. The passing seal was demoted to permanent failed-attempt history, and the milestone re-ran every event from zero against a rebuilt tree and re-sealed clean the next day. The discarded receipt is still in the notes ref, keyed to commit `9ed68ae2`, which this branch intentionally no longer contains — which is why a raw count of receipts comes to 82 while this README counts 81. The full account of both attempts is in `docs/status/U7C-CLI-DECISION-CONTRACT.md`.
+**4. There is a fully green seal that was thrown away.** On August 12 the run sealed the CLI decision milestone and verified it 12/12 `tree-exact` — every command passed, the witness report was generated. Then it voided the whole thing: one of the thirteen recorded events had run under a different recorder environment fingerprint than the other twelve. Not a code failure, not a test failure — an inconsistency in the evidence *about* the code. The passing seal was demoted to permanent failed-attempt history, and the milestone re-ran every event from zero against a rebuilt tree and re-sealed clean the next day. The discarded receipt is still in the notes ref, keyed to commit `9ed68ae2`, which this branch intentionally no longer contains — which is why a raw count of receipts comes to 86 while this README counts 85. The full account of both attempts is in `docs/status/U7C-CLI-DECISION-CONTRACT.md`.
 
 ---
 
