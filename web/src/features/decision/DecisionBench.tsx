@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type {
   BenchResponse,
   BlindField,
@@ -37,13 +37,23 @@ export function DecisionBench({ bench, draft, setDraft, pending, notice, mutate 
   const [annotation, setAnnotation] = useState("");
   const reviewed = useMemo(() => new Set(bench.reviewed_surfaces), [bench.reviewed_surfaces]);
   const allPreRevealReviewed = preRevealSurfaces.every((surface) => reviewed.has(surface));
+  const headingRef = useRef<HTMLHeadingElement>(null);
+  const transitionKey = `${bench.presentation_state}:${bench.session_state}:${bench.result ? "result" : bench.reveal ? "reveal" : "blind"}`;
+  const previousTransition = useRef(transitionKey);
+
+  useEffect(() => {
+    if (previousTransition.current !== transitionKey) {
+      previousTransition.current = transitionKey;
+      headingRef.current?.focus();
+    }
+  }, [transitionKey]);
 
   return (
     <>
       <section className="page-heading">
         <div>
           <p className="eyebrow">CLI precedence · exact-witness comparison</p>
-          <h1>{titleFor(bench)}</h1>
+          <h1 ref={headingRef} tabIndex={-1}>{titleFor(bench)}</h1>
           <p className="lede">{bench.summary}</p>
         </div>
         <div className="state-stack" aria-label="Package-issued states">
@@ -58,6 +68,7 @@ export function DecisionBench({ bench, draft, setDraft, pending, notice, mutate 
         <div><strong>Trusted code boundary</strong><p>{bench.trust_warning}</p></div>
       </div>
       {notice && <div className="mutation-refusal" role="alert"><strong>{humanToken(notice.code)}</strong><span>{notice.message}</span></div>}
+      <div className="sr-only" aria-live="polite">{pending ? "Checking the requested package transition." : ""}</div>
 
       {bench.blind ? (
         <div className="decision-layout">
@@ -87,6 +98,7 @@ export function DecisionBench({ bench, draft, setDraft, pending, notice, mutate 
               />
             )}
           </aside>
+          {!bench.result && <a className="mobile-action-dock" href="#ruling-editor"><span>Review ruling</span><strong>{actionReadiness(bench, allPreRevealReviewed)}</strong></a>}
         </div>
       ) : (
         <StaticState bench={bench} />
@@ -124,6 +136,7 @@ function StatePill({ label, value }: { label: string; value: string }) {
 }
 
 function BlindCandidates({ bench, draft, setDraft, revealed }: Pick<Props, "bench" | "draft" | "setDraft"> & { revealed: boolean }) {
+  const [activeCard, setActiveCard] = useState(0);
   const revealByAlias = new Map((bench.reveal?.groups ?? []).map((group) => [group.alias, group.candidates]));
   const selected = new Set(draft.allowed_aliases);
   const maySelect = draft.action === "ALLOW_OBSERVED";
@@ -134,11 +147,21 @@ function BlindCandidates({ bench, draft, setDraft, revealed }: Pick<Props, "benc
         <span className="privacy-badge">{revealed ? "Identity revealed" : "Provenance hidden"}</span>
       </div>
       <p className="section-intro">Cards are ordered by package-derived projection identity—not candidate order, popularity, or support count.</p>
+      <div className="outcome-switcher" aria-label="Outcome to inspect">
+        {(bench.blind?.cards ?? []).map((card, index) => (
+          <button
+            type="button"
+            key={card.alias}
+            aria-pressed={activeCard === index}
+            onClick={() => setActiveCard(index)}
+          >Outcome {String.fromCharCode(65 + index)}</button>
+        ))}
+      </div>
       <div className="candidate-grid">
         {(bench.blind?.cards ?? []).map((card, index) => {
           const isSelected = selected.has(card.alias);
           return (
-            <article className={`candidate-card ${isSelected ? "selected" : ""}`} key={card.alias}>
+            <article className={`candidate-card ${isSelected ? "selected" : ""} ${activeCard === index ? "mobile-active" : ""}`} key={card.alias}>
               <div className="candidate-topline">
                 <span className="candidate-letter" aria-hidden="true">{String.fromCharCode(65 + index)}</span>
                 <div><p>Outcome card</p><code>{shortAlias(card.alias)}</code></div>
@@ -248,7 +271,7 @@ function RulingEditor(props: {
   ));
   const canPropose = allPreRevealReviewed && draftShapeReady && bench.session_state === "BLIND_OPEN";
   return (
-    <div className="sticky-decision">
+    <div className="sticky-decision" id="ruling-editor">
       <p className="eyebrow">Local ruling</p>
       <h2>Record your interpretation</h2>
       <p className="panel-intro">The package enforces the transition. This interface does not decide which outcome is “correct.”</p>
@@ -411,6 +434,14 @@ function titleFor(bench: BenchResponse): string {
   if (bench.reveal) return "Identity reveal & affirmation";
   if (bench.blind) return "Decision-ready evidence";
   return humanToken(bench.presentation_state);
+}
+
+function actionReadiness(bench: BenchResponse, allPreRevealReviewed: boolean): string {
+  if (!allPreRevealReviewed) return "Evidence review required";
+  if (bench.session_state === "PROVISIONAL_RECORDED") return "Reveal provenance";
+  if (bench.session_state === "REVEALED") return "Affirm or revise";
+  if (bench.session_state === "POST_REVEAL_RECORDED") return "Finalize ruling";
+  return "Complete the exact predicate";
 }
 
 function humanToken(value: string): string {
