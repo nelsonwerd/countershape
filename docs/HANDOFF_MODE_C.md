@@ -27,6 +27,16 @@
 - **Product behavior:** `SOURCE_RECEIPT_RECONCILIATION`
 <!-- U7-PHASE:END -->
 
+#### U8 P09 functional/security candidate
+
+- **Parent:** exact sealed U7R commit `9bf3b243d69f4253bfcdf706995e99e2edd63e67`, tree `725fbeeb685726ffe8b066d2b3962f8a7fa08a3d`, subject `docs: receipt U7 reference milestone`, with `9/9` sealed `TREE-EXACT` claims. Its local archive/note/HTML remain the inherited source boundary; U8 neither edits nor reuses a U7 study run.
+- **Status:** candidate implementation of the authenticated loopback Studio and blind-first decision bench. No U8 event, claim, commit, seal, strict result, HTML, archive, receipt, security-completeness grade, or visual-quality grade is asserted by this tracked paragraph. The post-commit didrun note and strict artifacts, if they close successfully, are external receipt authority and cannot be self-named inside the same commit.
+- **Functional boundary:** `countershape studio` owns a literal ephemeral `127.0.0.1` listener, private fragment bearer, exact Host/bearer/Origin/CSRF/content-type/CAS checks, no CORS, closed security headers, typed package-owned choice transitions, and zero browser-facing executable emission. Candidate code remains trusted local code with user and host-network permissions; the temporary directory is not a sandbox.
+- **Decision flow:** the server parses one exact checked-in portable Choicepoint and projects only package-issued blind/reveal/decision facts. The browser shows authored jurisdiction, original/minimized/derivation/budget facts, equal-weight blind outcome cards, no preselected outcome or field, complete-tuple allow-many/custom/reject/defer paths, provenance reveal, final local caller attribution, and an explicit Captured → Projection → Operations boundary.
+- **Development diagnostics only:** normal and race server suites, web typecheck/lint/unit/build, a 13-test real-binary Playwright/axe/security suite, mobile evidence parity, keyboard reject completion, stale two-tab CAS, and hostile-candidate rendering are green on Darwin/arm64. These are unreceipted until rerun on the final tree through didrun and truthfully claimed.
+- **P10 inputs:** five sanitized deterministic PNGs and their hashes are recorded in `evidence/ui/p09-inputs/MANIFEST.md`. They contain no bearer, fragment, private path, captured user body, credential, or user-authored private data. Their byte repetition is a capture property, not a visual-quality or comprehension claim.
+- **Continuation:** P10 may begin only after this P09 tree commits, seals, passes strict verification, emits its commit-addressed HTML, and archives its ledger. P10 owns the three-pass visual/responsive/accessibility craft loop and real different-provider screenshot critic; it must not use polish to weaken P09 auth, CAS, package truth, or hostile-content tests.
+
 #### U7S operator summary
 
 - **Status:** active exact 15-path, 13-claim `SOURCE_FULL` zero-product source-study environment-authority repair with subject `fix: align U7 source study environment authority`. Product authority is `NONE`, behavior is `INHERITED_UNREPROVEN`, receipt U7D remains `ABSENT`, and every U7S claim is `UNRECEIPTED` until a fresh final ledger closes.
