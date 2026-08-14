@@ -39,6 +39,52 @@ type EvidenceManifest struct {
 	Files       []EvidenceFile
 }
 
+// StudyEvidenceEntry is one inert terminal artifact snapshot. Its fields are
+// private so consumers cannot relabel or mutate the captured bytes in place;
+// every accessor returns a scalar or a defensive copy. The entry carries no
+// parsed payload or study-semantic authority.
+type StudyEvidenceEntry struct {
+	path   string
+	mode   string
+	bytes  int64
+	sha256 string
+	exact  []byte
+}
+
+func (entry StudyEvidenceEntry) Path() string   { return entry.path }
+func (entry StudyEvidenceEntry) Mode() string   { return entry.mode }
+func (entry StudyEvidenceEntry) Bytes() int64   { return entry.bytes }
+func (entry StudyEvidenceEntry) SHA256() string { return entry.sha256 }
+
+func (entry StudyEvidenceEntry) ExactBytes() []byte {
+	return append([]byte(nil), entry.exact...)
+}
+
+// StudyEvidenceSnapshot is an exact private-tree byte projection produced by
+// EvidenceWorkspace after a successful domain handler returns. It is roster
+// agnostic: the consuming reproduction layer, not app, owns any domain-specific
+// path, count, wrapper, or semantic checks.
+type StudyEvidenceSnapshot struct {
+	directories []string
+	files       []StudyEvidenceEntry
+	totalBytes  int64
+}
+
+func (snapshot StudyEvidenceSnapshot) Directories() []string {
+	return append([]string(nil), snapshot.directories...)
+}
+
+func (snapshot StudyEvidenceSnapshot) Files() []StudyEvidenceEntry {
+	result := make([]StudyEvidenceEntry, len(snapshot.files))
+	for index, entry := range snapshot.files {
+		result[index] = entry
+		result[index].exact = append([]byte(nil), entry.exact...)
+	}
+	return result
+}
+
+func (snapshot StudyEvidenceSnapshot) TotalBytes() int64 { return snapshot.totalBytes }
+
 type FailureView struct {
 	Code   string `json:"code"`
 	Path   string `json:"path"`

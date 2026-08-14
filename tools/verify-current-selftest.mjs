@@ -82,7 +82,7 @@ const exactU7StepIDs = Object.freeze([
 	"u7-final-runbook-selftest",
 	"architecture-u7-selftest",
 ]);
-const exactU7Phases = Object.freeze(["U7P", "U7M", "U7A", "U7B", "U7N", "U7C", "U7D"]);
+const exactU7Phases = Object.freeze(["U7P", "U7M", "U7A", "U7B", "U7N", "U7C", "U7D", "U7Q", "U7S"]);
 const exactExtendedChildTimeoutStepIDs = Object.freeze([
 	"architecture-p07b-c-c5",
 	"architecture-p07b-c-c5-selftest",
@@ -1438,7 +1438,7 @@ function cloneU7Contract(phase) {
 }
 
 function renderU7PhaseCapsuleDocument(contract) {
-	return `# U7 phase fixture\n\n## Current state\n<!-- U7-PHASE:START -->\n### Active U7 phase contract\n\n- **Namespace:** \`countershape/u7-unit-paths/v3\`\n- **Boundary:** \`${contract.boundary}\`\n- **Parent:** \`${contract.parent}\`\n- **Verification profile:** \`${contract.profile}\`\n- **State:** \`${contract.state}\`\n- **Topology:** \`U7P -> U7M -> U7A -> U7B -> U7N -> U7C -> U7D -> U7R\`\n- **Inherited receipts:** \`C3P=PRESENT; C3=PRESENT; C6A=PRESENT\`\n- **Receipt U7D:** \`${contract.receipt}\`\n- **Product authority:** \`${contract.productAuthority}\`\n- **Product behavior:** \`${contract.productBehavior}\`\n<!-- U7-PHASE:END -->\n\n## History\nNone.\n`;
+	return `# U7 phase fixture\n\n## Current state\n<!-- U7-PHASE:START -->\n### Active U7 phase contract\n\n- **Namespace:** \`countershape/u7-unit-paths/v3\`\n- **Boundary:** \`${contract.boundary}\`\n- **Parent:** \`${contract.parent}\`\n- **Verification profile:** \`${contract.profile}\`\n- **State:** \`${contract.state}\`\n- **Topology:** \`U7P -> U7M -> U7A -> U7B -> U7N -> U7C -> U7D -> U7Q -> U7S -> U7R\`\n- **Inherited receipts:** \`C3P=PRESENT; C3=PRESENT; C6A=PRESENT\`\n- **Receipt U7D:** \`${contract.receipt}\`\n- **Product authority:** \`${contract.productAuthority}\`\n- **Product behavior:** \`${contract.productBehavior}\`\n<!-- U7-PHASE:END -->\n\n## History\nNone.\n`;
 }
 
 function parserRejects(parser, text) {
@@ -1498,8 +1498,10 @@ async function inspectU7PhaseExecution() {
 		["duplicate-marker", baselineDocument.replace("<!-- U7-PHASE:END -->", "<!-- U7-PHASE:END -->\n<!-- U7-PHASE:START -->")],
 		["shape", baselineDocument.replace("### Active U7 phase contract", "### U7 phase example")],
 		["legacy-namespace", baselineDocument.replace("countershape/u7-unit-paths/v3", "countershape/u7-unit-paths/v2")],
-		["legacy-topology", baselineDocument.replace("U7P -> U7M -> U7A -> U7B -> U7N -> U7C -> U7D -> U7R", "U7P -> U7M -> U7A -> U7B -> U7C -> U7D -> U7R")],
-		["legacy-topology-u7m", baselineDocument.replace("U7P -> U7M -> U7A -> U7B -> U7N -> U7C -> U7D -> U7R", "U7P -> U7A -> U7B -> U7N -> U7C -> U7D -> U7R")],
+		["legacy-topology-u7s", baselineDocument.replace("U7P -> U7M -> U7A -> U7B -> U7N -> U7C -> U7D -> U7Q -> U7S -> U7R", "U7P -> U7M -> U7A -> U7B -> U7N -> U7C -> U7D -> U7Q -> U7R")],
+		["legacy-topology-u7q", baselineDocument.replace("U7P -> U7M -> U7A -> U7B -> U7N -> U7C -> U7D -> U7Q -> U7S -> U7R", "U7P -> U7M -> U7A -> U7B -> U7N -> U7C -> U7D -> U7R")],
+		["legacy-topology-u7n", baselineDocument.replace("U7P -> U7M -> U7A -> U7B -> U7N -> U7C -> U7D -> U7Q -> U7S -> U7R", "U7P -> U7M -> U7A -> U7B -> U7C -> U7D -> U7Q -> U7S -> U7R")],
+		["legacy-topology-u7m", baselineDocument.replace("U7P -> U7M -> U7A -> U7B -> U7N -> U7C -> U7D -> U7Q -> U7S -> U7R", "U7P -> U7A -> U7B -> U7N -> U7C -> U7D -> U7Q -> U7S -> U7R")],
 		["misordered-topology", baselineDocument.replace("U7P -> U7M -> U7A", "U7P -> U7A -> U7M")],
 	]) {
 		expect(
@@ -1544,6 +1546,8 @@ async function inspectU7PhaseExecution() {
 	expectPlainCode(() => validateU7PhaseCapsule({ ...cloneU7Contract("U7A"), parent: "U7P" }), "VERIFY_U7_PHASE_CONTRACT");
 	expectPlainCode(() => validateU7PhaseCapsule({ ...cloneU7Contract("U7N"), parent: "U7A" }), "VERIFY_U7_PHASE_CONTRACT");
 	expectPlainCode(() => validateU7PhaseCapsule({ ...cloneU7Contract("U7C"), parent: "U7B" }), "VERIFY_U7_PHASE_CONTRACT");
+	expectPlainCode(() => validateU7PhaseCapsule({ ...cloneU7Contract("U7Q"), parent: "U7C" }), "VERIFY_U7_PHASE_CONTRACT");
+	expectPlainCode(() => validateU7PhaseCapsule({ ...cloneU7Contract("U7S"), parent: "U7D" }), "VERIFY_U7_PHASE_CONTRACT");
 	for (const [field, value] of [
 		["parent", "U7A"],
 		["profile", "RECEIPT_RECONCILIATION"],
@@ -2219,7 +2223,7 @@ async function main() {
 		.update(await readFile(sealedC6ARunnerPath))
 		.update(await readFile(u7PlanPath))
 		.digest("hex");
-	process.stdout.write(`verification runner self-test passed: exact C5/U7 rosters/env/package partition, visible-capsule U7P/U7M/U7A/U7B/U7N/U7C/U7D phase authority with pre-Go admission and terminal live recheck, explicit live/sealed-C6A root authority, bounded-batch raw-blob sealed runner self-test with narrow Darwin diagnostics, fail-closed status/signal/error/marker, bounded tool admission, framed child output, canonical plan/tool paths, private root isolation, exclusive lock integrity plus real subprocess contention/stale recovery, inert verifier imports, noncanonical-entry refusal, cleanup aggregation, historical nonexecution, and artifact refusal (sources sha256:${sourceDigest})\n`);
+	process.stdout.write(`verification runner self-test passed: exact C5/U7 rosters/env/package partition, visible-capsule U7P/U7M/U7A/U7B/U7N/U7C/U7D/U7Q/U7S phase authority with pre-Go admission and terminal live recheck, explicit live/sealed-C6A root authority, bounded-batch raw-blob sealed runner self-test with narrow Darwin diagnostics, fail-closed status/signal/error/marker, bounded tool admission, framed child output, canonical plan/tool paths, private root isolation, exclusive lock integrity plus real subprocess contention/stale recovery, inert verifier imports, noncanonical-entry refusal, cleanup aggregation, historical nonexecution, and artifact refusal (sources sha256:${sourceDigest})\n`);
 }
 
 main().catch((error) => {

@@ -55,6 +55,38 @@
       "product_authority": "NONE",
       "product_behavior": "INHERITED_UNREPROVEN",
       "grade_transfer": "NONE"
+    },
+    {
+      "boundary": "U7Q",
+      "source": "OWNER_OUT_OF_BAND",
+      "classification": "OWNER_AUTHORIZED_RECEIPT_TRANSITION_AND_RECORDER_RUNTIME_EPOCH_CONTROL_REPAIR",
+      "provenance": {
+        "kind": "UNEVIDENCED",
+        "disclosure": "OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT"
+      },
+      "authentication": "NOT_ESTABLISHED",
+      "signed_authorization": "NOT_IMPLEMENTED",
+      "predecessor_declaration": {"kind": "NONE"},
+      "defect": "U7R_PHASE_CAPSULE_TRANSITION_CONFLICTS_WITH_EXACT_PARENT_RELATIVE_PENDING_BLOCK_REPLACEMENT_RECEIPT_SOURCE_VALIDATION_ASSUMES_U7D_IS_AMBIENT_HEAD_AND_EXTERNAL_HOMEBREW_UPGRADE_INVALIDATED_DECLARED_DIDRUN_PYTHON_LAUNCHER_EPOCH",
+      "product_authority": "NONE",
+      "product_behavior": "INHERITED_UNREPROVEN",
+      "grade_transfer": "NONE"
+    },
+    {
+      "boundary": "U7S",
+      "source": "OWNER_OUT_OF_BAND",
+      "classification": "OWNER_AUTHORIZED_SOURCE_STUDY_ENVIRONMENT_AUTHORITY_REPAIR",
+      "provenance": {
+        "kind": "UNEVIDENCED",
+        "disclosure": "OWNER_ATTRIBUTED_SESSION_INSTRUCTION_ONLY_NO_QUALIFYING_PREEXISTING_ARTIFACT"
+      },
+      "authentication": "NOT_ESTABLISHED",
+      "signed_authorization": "NOT_IMPLEMENTED",
+      "predecessor_declaration": {"kind": "NONE"},
+      "defect": "SEALED_U7D_STUDY_PROCESS_ENVIRONMENT_DIGEST_USES_HARNESS_PATH_OVERRIDE_WHILE_U7R_PLAN_AND_SCOPE_RECONSTRUCT_FROM_UNOVERRIDDEN_HERMETIC_PREFIX",
+      "product_authority": "NONE",
+      "product_behavior": "INHERITED_UNREPROVEN",
+      "grade_transfer": "NONE"
     }
   ],
   "runtime_authority": {
@@ -82,7 +114,7 @@
     "didrun_entrypoint_shim_sha256": "7cede7d470d120011dacf0e0172c1651db2c5aadfe2143215d691b7f380fb29f",
     "didrun_python_entrypoint": "/Users/drewnelson/.venvs/didrun/bin/python",
     "didrun_python_realpath": "/opt/homebrew/Cellar/python@3.14/3.14.5/Frameworks/Python.framework/Versions/3.14/bin/python3.14",
-    "didrun_python_launcher_sha256": "2477b47fa3ae65b9574eb18a15edb364e96948eaa1875ad3f1c80d780efc9c12",
+    "didrun_python_launcher_sha256": "a533f0d1060b48834eaf7bb41a77d71c9c1f611b31a0a3997ee5a521314bda9d",
     "didrun_pyvenv_config_path": "/Users/drewnelson/.venvs/didrun/pyvenv.cfg",
     "didrun_pyvenv_config_bytes": 300,
     "didrun_pyvenv_config_sha256": "3569f574a4bda54d4292ecec2bbee396d27fa0ac71b616277e012ece75bb8af3",
@@ -118,6 +150,7 @@
   "receipt_contract": {
     "schema_version": "countershape/u7-receipt/v1",
     "source_boundary": "U7D",
+    "source_runtime_authority_sha256": "3d99267f2063b9108467f5149233efc64624804fdecb7aa8dd658dbc292bbbe7",
     "study_event_command": ["/opt/homebrew/bin/node", "tools/check-u7-study-harness.mjs", "--phase", "U7D"],
     "study_evidence_schema": "countershape/u7-study-evidence/v1",
     "study_execution_authority": "U7P_ORIGIN_U7N_AMENDED_HARNESS_V2_DIRECT_PROCESS_STUDY_EXECUTION",
@@ -145,6 +178,7 @@
       "deterministic_artifact_paths": {"source_spec_sha256": "deterministic/source-spec.json", "world_plan_sha256": "deterministic/world-plan.json", "ruling_sha256": "deterministic/ruling.json", "decision_record_sha256": "deterministic/decision-record.json", "contract_bundle_sha256": "deterministic/contract-bundle.json"},
       "fresh_artifact_paths": {"world_instance_sha256": "fresh/world-instance.json", "attempts_sha256": "fresh/attempts.json", "measurements_sha256": "fresh/measurements.json", "captures_sha256": "fresh/captures.json", "confirmation_sha256": "fresh/confirmation.json", "contract_execution_target_sha256": "fresh/contract-execution-target.json", "finalized_contract_run_sha256": "fresh/finalized-contract-run.json", "contract_execution_sha256": "fresh/contract-execution.json"}
     },
+    "study_subject_path": "/usr/bin:/bin:/opt/homebrew/bin",
     "study_domains": ["http", "cli"],
     "study_run_count_per_domain": 3,
     "study_trial_budget_per_domain": 300,
@@ -162,7 +196,7 @@
     "html_authority": "LOCAL_SNAPSHOT_NOT_PORTABLE_STRICT_WITNESS",
     "ledger_authority": "LOCAL_SECRET_BEARING_SNAPSHOT_NOT_PORTABLE",
     "projection_paths": ["docs/HANDOFF_MODE_C.md", "docs/status/U7D-EVIDENCE.md"],
-    "projection_policy": "EXACT_PARENT_RELATIVE_PENDING_BLOCK_REPLACEMENT",
+    "projection_policy": "HANDOFF_EXACT_PARENT_RELATIVE_U7S_TO_U7R_CAPSULE_AND_PENDING_BLOCK_REPLACEMENT_STATUS_EXACT_PARENT_RELATIVE_PENDING_BLOCK_REPLACEMENT",
     "self_receipt": "ABSENT",
     "milestone_verdict": "LOCAL_TWO_DOMAIN_PROCESS_ARTIFACT_GREEN_CLI_OFFICIAL_EXECUTION_HTTP_DIRECT_PROCESS_ONLY_FULL_STUDY_RESOURCE_UNRECEIPTED",
     "honest_fallback": "ONE_DOMAIN_OFFICIAL_CONTRACT_EXECUTION_PLUS_HTTP_DIRECT_PROCESS_OBSERVATION_ONLY",
@@ -620,8 +654,126 @@
       ]
     },
     {
-      "id": "U7R",
+      "id": "U7Q",
       "parent": "U7D",
+      "verification_profile": "SOURCE_FULL",
+      "product_authority": "NONE",
+      "product_behavior": "INHERITED_UNREPROVEN",
+      "u7d_receipt_state": "ABSENT",
+      "subject": "fix: reconcile U7 receipt transition controls",
+      "final_root": ".countershape/u7q-final",
+      "allowed_paths": [
+        "docs/ARCHITECTURE.md",
+        "docs/CONCEPT_BRIEF.md",
+        "docs/HANDOFF_MODE_C.md",
+        "docs/PROMPT_PACK.md",
+        "docs/STATE_MACHINES.md",
+        "docs/VERIFICATION.md",
+        "docs/prompts/P08-U7-CLI-REFERENCE-STUDIES.md",
+        "docs/status/U7Q-RECEIPT-TRANSITION-ALIGNMENT.md",
+        "spec/verification/u7-unit-paths.json",
+        "tools/check-u7-plan.mjs",
+        "tools/check-u7-scope.mjs",
+        "tools/check-u7-architecture.mjs",
+        "tools/check-u7-architecture-selftest.mjs",
+        "tools/verify-current.mjs",
+        "tools/verify-current-selftest.mjs"
+      ],
+      "required_paths": [
+        "docs/ARCHITECTURE.md",
+        "docs/CONCEPT_BRIEF.md",
+        "docs/HANDOFF_MODE_C.md",
+        "docs/PROMPT_PACK.md",
+        "docs/STATE_MACHINES.md",
+        "docs/VERIFICATION.md",
+        "docs/prompts/P08-U7-CLI-REFERENCE-STUDIES.md",
+        "docs/status/U7Q-RECEIPT-TRANSITION-ALIGNMENT.md",
+        "spec/verification/u7-unit-paths.json",
+        "tools/check-u7-plan.mjs",
+        "tools/check-u7-scope.mjs",
+        "tools/check-u7-architecture.mjs",
+        "tools/check-u7-architecture-selftest.mjs",
+        "tools/verify-current.mjs",
+        "tools/verify-current-selftest.mjs"
+      ],
+      "claims": [
+        {"type": "tests-pass", "label": "U7Q candidate plan and sealed-U7D parent authority", "command": ["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--check-candidate", "U7Q"]},
+        {"type": "tests-pass", "label": "U7Q independent candidate transition and exact staged authority", "command": ["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--unit", "U7Q", "--candidate-phase"]},
+        {"type": "tests-pass", "label": "U7Q inherited P07 receipt successor compatibility", "command": ["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--verify-inherited-p07-compatibility"]},
+        {"type": "tests-pass", "label": "U7Q plan contract defensive self-test", "command": ["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--self-test"]},
+        {"type": "tests-pass", "label": "U7Q independent staged-scope defensive self-test", "command": ["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--self-test"]},
+        {"type": "tests-pass", "label": "U7Q final runbook renderer defensive self-test", "command": ["/opt/homebrew/bin/node", "tools/print-u7-final-runbook.mjs", "--self-test"]},
+        {"type": "tests-pass", "label": "U7Q zero-product-surface architecture conformance", "command": ["/opt/homebrew/bin/node", "tools/check-u7-architecture.mjs", "--phase", "U7Q"]},
+        {"type": "tests-pass", "label": "U7Q architecture authority defensive self-test", "command": ["/opt/homebrew/bin/node", "tools/check-u7-architecture-selftest.mjs", "--phase", "U7Q"]},
+        {"type": "tests-pass", "label": "U7Q cumulative verifier defensive self-test", "command": ["/opt/homebrew/bin/node", "tools/verify-current-selftest.mjs"]},
+        {"type": "tests-pass", "label": "U7Q cumulative verification on the exact staged maintenance candidate", "command": ["/opt/homebrew/bin/node", "tools/verify-current.mjs"]},
+        {"type": "command-succeeded", "label": "U7Q exact fifteen-path staged scope and diff integrity", "command": ["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--unit", "U7Q", "--final-gate"]},
+        {"type": "command-succeeded", "label": "U7Q scoped staged credential-pattern scan", "command": ["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--unit", "U7Q", "--credential-scan"]},
+        {"type": "command-succeeded", "label": "U7Q sealed-U7D predecessor and preceding didrun chain integrity", "command": ["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--verify-preseal", "U7Q"]}
+      ]
+    },
+    {
+      "id": "U7S",
+      "parent": "U7Q",
+      "verification_profile": "SOURCE_FULL",
+      "product_authority": "NONE",
+      "product_behavior": "INHERITED_UNREPROVEN",
+      "u7d_receipt_state": "ABSENT",
+      "subject": "fix: align U7 source study environment authority",
+      "final_root": ".countershape/u7s-final",
+      "allowed_paths": [
+        "docs/ARCHITECTURE.md",
+        "docs/CONCEPT_BRIEF.md",
+        "docs/HANDOFF_MODE_C.md",
+        "docs/PROMPT_PACK.md",
+        "docs/STATE_MACHINES.md",
+        "docs/VERIFICATION.md",
+        "docs/prompts/P08-U7-CLI-REFERENCE-STUDIES.md",
+        "docs/status/U7S-STUDY-ENVIRONMENT-ALIGNMENT.md",
+        "spec/verification/u7-unit-paths.json",
+        "tools/check-u7-plan.mjs",
+        "tools/check-u7-scope.mjs",
+        "tools/check-u7-architecture.mjs",
+        "tools/check-u7-architecture-selftest.mjs",
+        "tools/verify-current.mjs",
+        "tools/verify-current-selftest.mjs"
+      ],
+      "required_paths": [
+        "docs/ARCHITECTURE.md",
+        "docs/CONCEPT_BRIEF.md",
+        "docs/HANDOFF_MODE_C.md",
+        "docs/PROMPT_PACK.md",
+        "docs/STATE_MACHINES.md",
+        "docs/VERIFICATION.md",
+        "docs/prompts/P08-U7-CLI-REFERENCE-STUDIES.md",
+        "docs/status/U7S-STUDY-ENVIRONMENT-ALIGNMENT.md",
+        "spec/verification/u7-unit-paths.json",
+        "tools/check-u7-plan.mjs",
+        "tools/check-u7-scope.mjs",
+        "tools/check-u7-architecture.mjs",
+        "tools/check-u7-architecture-selftest.mjs",
+        "tools/verify-current.mjs",
+        "tools/verify-current-selftest.mjs"
+      ],
+      "claims": [
+        {"type": "tests-pass", "label": "U7S candidate plan and sealed-U7Q parent authority", "command": ["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--check-candidate", "U7S"]},
+        {"type": "tests-pass", "label": "U7S independent candidate transition and exact staged authority", "command": ["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--unit", "U7S", "--candidate-phase"]},
+        {"type": "tests-pass", "label": "U7S inherited P07 receipt successor compatibility", "command": ["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--verify-inherited-p07-compatibility"]},
+        {"type": "tests-pass", "label": "U7S plan contract defensive self-test", "command": ["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--self-test"]},
+        {"type": "tests-pass", "label": "U7S independent staged-scope defensive self-test", "command": ["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--self-test"]},
+        {"type": "tests-pass", "label": "U7S final runbook renderer defensive self-test", "command": ["/opt/homebrew/bin/node", "tools/print-u7-final-runbook.mjs", "--self-test"]},
+        {"type": "tests-pass", "label": "U7S zero-product-surface architecture conformance", "command": ["/opt/homebrew/bin/node", "tools/check-u7-architecture.mjs", "--phase", "U7S"]},
+        {"type": "tests-pass", "label": "U7S architecture authority defensive self-test", "command": ["/opt/homebrew/bin/node", "tools/check-u7-architecture-selftest.mjs", "--phase", "U7S"]},
+        {"type": "tests-pass", "label": "U7S cumulative verifier defensive self-test", "command": ["/opt/homebrew/bin/node", "tools/verify-current-selftest.mjs"]},
+        {"type": "tests-pass", "label": "U7S cumulative verification on the exact staged maintenance candidate", "command": ["/opt/homebrew/bin/node", "tools/verify-current.mjs"]},
+        {"type": "command-succeeded", "label": "U7S exact fifteen-path staged scope and diff integrity", "command": ["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--unit", "U7S", "--final-gate"]},
+        {"type": "command-succeeded", "label": "U7S scoped staged credential-pattern scan", "command": ["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--unit", "U7S", "--credential-scan"]},
+        {"type": "command-succeeded", "label": "U7S sealed-U7Q predecessor and preceding didrun chain integrity", "command": ["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--verify-preseal", "U7S"]}
+      ]
+    },
+    {
+      "id": "U7R",
+      "parent": "U7S",
       "verification_profile": "RECEIPT_RECONCILIATION",
       "product_authority": "NONE",
       "product_behavior": "SOURCE_RECEIPT_RECONCILIATION",
@@ -647,7 +799,7 @@
         {"type": "command-succeeded", "label": "U7R receipt-only Go build", "command": ["/opt/homebrew/bin/go", "build", "-mod=readonly", "-buildvcs=false", "-p=1", "./..."]},
         {"type": "command-succeeded", "label": "U7R exact three-path staged scope and diff integrity", "command": ["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--unit", "U7R", "--receipt-final-gate"]},
         {"type": "command-succeeded", "label": "U7R scoped staged credential-pattern scan", "command": ["/opt/homebrew/bin/node", "tools/check-u7-scope.mjs", "--unit", "U7R", "--credential-scan"]},
-        {"type": "command-succeeded", "label": "U7R sealed-U7D predecessor and preceding didrun chain integrity", "command": ["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--verify-preseal", "U7R"]}
+        {"type": "command-succeeded", "label": "U7R sealed-U7S predecessor and preceding didrun chain integrity", "command": ["/opt/homebrew/bin/node", "tools/check-u7-plan.mjs", "--verify-preseal", "U7R"]}
       ]
     }
   ]

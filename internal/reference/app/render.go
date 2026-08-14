@@ -138,7 +138,8 @@ func humanHelp(response ResponseEnvelope, columns int) string {
 	}
 	lines = appendWrapped(lines, "U7A validates inert source and reports preflight prerequisites.", columns, 0)
 	lines = appendWrapped(lines, "It does not run candidates, resume processes, compare outcomes, or emit contracts.", columns, 0)
-	lines = appendWrapped(lines, "Installed study handlers execute only through their exact frozen machine harness routes; interactive study requests are refused.", columns, 0)
+	lines = appendWrapped(lines, "Installed study handlers and their terminal evidence checks execute only through exact frozen machine harness routes; interactive study requests are refused.", columns, 0)
+	lines = appendWrapped(lines, "Each machine process closes one domain run. The repository harness, not this process output, owns three-run and cross-domain aggregation.", columns, 0)
 	return strings.Join(lines, "\n") + "\n"
 }
 

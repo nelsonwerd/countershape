@@ -1,6 +1,7 @@
 package app
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -18,6 +19,9 @@ import (
 const (
 	maximumSourceBytes        = 1 << 20
 	maximumStudyArtifactBytes = 16 << 20
+	maximumStudyEvidenceBytes = 64 << 20
+	maximumStudyEvidenceFiles = 4096
+	maximumStudyEvidenceDirs  = 1024
 )
 
 type InputError struct {
@@ -37,10 +41,16 @@ type sourceInput struct {
 // directory admitted by the frozen harness. It never creates, replaces, or
 // removes that root. All child creation is relative, no-overwrite, and private.
 type EvidenceWorkspace struct {
-	mu       sync.Mutex
-	root     *os.Root
-	rootPath string
-	closed   bool
+	mu         sync.Mutex
+	root       *os.Root
+	rootPath   string
+	closed     bool
+	validation *studyEvidenceValidation
+}
+
+type studyEvidenceValidation struct {
+	snapshot StudyEvidenceSnapshot
+	commit   StudyTerminalCommit
 }
 
 func newEvidenceWorkspace(path string, expected os.FileInfo) (*EvidenceWorkspace, error) {
@@ -168,6 +178,172 @@ func (workspace *EvidenceWorkspace) VerifyExactManifest(manifest EvidenceManifes
 	return nil
 }
 
+// SnapshotEvidence captures the complete terminal tree through the retained
+// os.Root capability. It is deliberately ignorant of the frozen 111-file
+// domain protocol: it establishes only bounded private filesystem shape, raw
+// bytes, and byte identities for a stricter consumer to interpret.
+func (workspace *EvidenceWorkspace) SnapshotEvidence() (StudyEvidenceSnapshot, error) {
+	if workspace == nil {
+		return StudyEvidenceSnapshot{}, errors.New("evidence workspace is closed")
+	}
+	workspace.mu.Lock()
+	defer workspace.mu.Unlock()
+	if workspace.root == nil || workspace.closed {
+		return StudyEvidenceSnapshot{}, errors.New("evidence workspace is closed")
+	}
+	return workspace.snapshotEvidenceLocked()
+}
+
+func (workspace *EvidenceWorkspace) snapshotEvidenceLocked() (StudyEvidenceSnapshot, error) {
+	directories, files, err := workspace.inspectEvidenceTree()
+	if err != nil {
+		return StudyEvidenceSnapshot{}, err
+	}
+	if len(files) == 0 || len(files) > maximumStudyEvidenceFiles || len(directories) > maximumStudyEvidenceDirs {
+		return StudyEvidenceSnapshot{}, errors.New("evidence workspace entry count is outside the bounded snapshot protocol")
+	}
+	entries := make([]StudyEvidenceEntry, 0, len(files))
+	openedFiles := make([]os.FileInfo, 0, len(files))
+	var totalBytes int64
+	for _, relative := range files {
+		entry, opened, readErr := workspace.snapshotEvidenceFile(relative)
+		if readErr != nil {
+			return StudyEvidenceSnapshot{}, readErr
+		}
+		if totalBytes > maximumStudyEvidenceBytes-entry.bytes {
+			return StudyEvidenceSnapshot{}, errors.New("evidence workspace exceeds the bounded snapshot byte budget")
+		}
+		for _, previous := range openedFiles {
+			if os.SameFile(previous, opened) {
+				return StudyEvidenceSnapshot{}, errors.New("evidence workspace files must not be hard-link aliases")
+			}
+		}
+		totalBytes += entry.bytes
+		entries = append(entries, entry)
+		openedFiles = append(openedFiles, opened)
+	}
+	terminalDirectories, terminalFiles, err := workspace.inspectEvidenceTree()
+	if err != nil {
+		return StudyEvidenceSnapshot{}, err
+	}
+	if !equalStrings(directories, terminalDirectories) || !equalStrings(files, terminalFiles) {
+		return StudyEvidenceSnapshot{}, errors.New("evidence workspace changed after terminal snapshot")
+	}
+	terminalFilesInfo := make([]os.FileInfo, 0, len(entries))
+	for _, entry := range entries {
+		opened, verifyErr := workspace.verifyEvidenceFile(EvidenceFile{
+			Path: entry.path, Bytes: entry.bytes, SHA256: entry.sha256,
+		})
+		if verifyErr != nil {
+			return StudyEvidenceSnapshot{}, verifyErr
+		}
+		for _, previous := range terminalFilesInfo {
+			if os.SameFile(previous, opened) {
+				return StudyEvidenceSnapshot{}, errors.New("evidence workspace files must not be hard-link aliases")
+			}
+		}
+		terminalFilesInfo = append(terminalFilesInfo, opened)
+	}
+	closedDirectories, closedFiles, err := workspace.inspectEvidenceTree()
+	if err != nil {
+		return StudyEvidenceSnapshot{}, err
+	}
+	if !equalStrings(directories, closedDirectories) || !equalStrings(files, closedFiles) {
+		return StudyEvidenceSnapshot{}, errors.New("evidence workspace changed during terminal byte verification")
+	}
+	return StudyEvidenceSnapshot{
+		directories: append([]string(nil), directories...),
+		files:       cloneStudyEvidenceEntries(entries),
+		totalBytes:  totalBytes,
+	}, nil
+}
+
+func (workspace *EvidenceWorkspace) bindValidatedSnapshot(snapshot StudyEvidenceSnapshot, commit StudyTerminalCommit) error {
+	if workspace == nil {
+		return errors.New("evidence workspace is closed")
+	}
+	workspace.mu.Lock()
+	defer workspace.mu.Unlock()
+	if workspace.root == nil || workspace.closed {
+		return errors.New("evidence workspace is closed")
+	}
+	if commit == nil {
+		return errors.New("terminal evidence commit is absent")
+	}
+	if workspace.validation != nil {
+		return errors.New("terminal evidence snapshot was already bound")
+	}
+	workspace.validation = &studyEvidenceValidation{
+		snapshot: cloneStudyEvidenceSnapshot(snapshot),
+		commit:   commit,
+	}
+	return nil
+}
+
+func (workspace *EvidenceWorkspace) snapshotEvidenceFile(relative string) (StudyEvidenceEntry, os.FileInfo, error) {
+	before, err := workspace.root.Lstat(relative)
+	if err != nil || before.Mode()&os.ModeSymlink != 0 || !before.Mode().IsRegular() || before.Mode().Perm() != 0o600 ||
+		hasSpecialMode(before.Mode()) || !singleLink(before) || before.Size() < 1 || before.Size() > maximumStudyArtifactBytes {
+		return StudyEvidenceEntry{}, nil, fmt.Errorf("evidence file is not exact and private: %s", relative)
+	}
+	handle, err := workspace.root.Open(relative)
+	if err != nil {
+		return StudyEvidenceEntry{}, nil, fmt.Errorf("open evidence file: %w", err)
+	}
+	opened, statErr := handle.Stat()
+	exact, readErr := io.ReadAll(io.LimitReader(handle, maximumStudyArtifactBytes+1))
+	openedAfter, afterErr := handle.Stat()
+	closeErr := handle.Close()
+	terminal, terminalErr := workspace.root.Lstat(relative)
+	if statErr != nil || readErr != nil || afterErr != nil || closeErr != nil || terminalErr != nil ||
+		!opened.Mode().IsRegular() || opened.Mode().Perm() != 0o600 || hasSpecialMode(opened.Mode()) ||
+		!singleLink(opened) || !singleLink(openedAfter) || !singleLink(terminal) ||
+		!os.SameFile(before, opened) || !os.SameFile(opened, openedAfter) || !os.SameFile(openedAfter, terminal) ||
+		!terminal.Mode().IsRegular() || terminal.Mode().Perm() != 0o600 || hasSpecialMode(terminal.Mode()) ||
+		opened.Mode() != openedAfter.Mode() || openedAfter.Mode() != terminal.Mode() ||
+		opened.ModTime() != openedAfter.ModTime() || openedAfter.ModTime() != terminal.ModTime() ||
+		int64(len(exact)) != before.Size() || terminal.Size() != before.Size() {
+		return StudyEvidenceEntry{}, nil, fmt.Errorf("evidence file changed during snapshot: %s", relative)
+	}
+	digest := sha256.Sum256(exact)
+	return StudyEvidenceEntry{
+		path: relative, mode: "0600", bytes: int64(len(exact)),
+		sha256: hex.EncodeToString(digest[:]), exact: append([]byte(nil), exact...),
+	}, terminal, nil
+}
+
+func cloneStudyEvidenceEntries(entries []StudyEvidenceEntry) []StudyEvidenceEntry {
+	result := make([]StudyEvidenceEntry, len(entries))
+	for index, entry := range entries {
+		result[index] = entry
+		result[index].exact = append([]byte(nil), entry.exact...)
+	}
+	return result
+}
+
+func cloneStudyEvidenceSnapshot(snapshot StudyEvidenceSnapshot) StudyEvidenceSnapshot {
+	return StudyEvidenceSnapshot{
+		directories: append([]string(nil), snapshot.directories...),
+		files:       cloneStudyEvidenceEntries(snapshot.files),
+		totalBytes:  snapshot.totalBytes,
+	}
+}
+
+func sameStudyEvidenceSnapshot(left, right StudyEvidenceSnapshot) bool {
+	if left.totalBytes != right.totalBytes || !equalStrings(left.directories, right.directories) || len(left.files) != len(right.files) {
+		return false
+	}
+	for index := range left.files {
+		leftEntry := left.files[index]
+		rightEntry := right.files[index]
+		if leftEntry.path != rightEntry.path || leftEntry.mode != rightEntry.mode || leftEntry.bytes != rightEntry.bytes ||
+			leftEntry.sha256 != rightEntry.sha256 || !bytes.Equal(leftEntry.exact, rightEntry.exact) {
+			return false
+		}
+	}
+	return true
+}
+
 func validateEvidenceManifest(manifest EvidenceManifest) ([]string, []EvidenceFile, error) {
 	directories := append([]string(nil), manifest.Directories...)
 	files := append([]EvidenceFile(nil), manifest.Files...)
@@ -250,6 +426,9 @@ func (workspace *EvidenceWorkspace) inspectEvidenceTree() ([]string, []string, e
 					return errors.New("evidence directory is not exact and private")
 				}
 				directories = append(directories, child)
+				if len(directories) > maximumStudyEvidenceDirs {
+					return errors.New("evidence workspace contains too many directories")
+				}
 				if err := walk(child); err != nil {
 					return err
 				}
@@ -258,6 +437,9 @@ func (workspace *EvidenceWorkspace) inspectEvidenceTree() ([]string, []string, e
 					return errors.New("evidence file is not exact and private")
 				}
 				files = append(files, child)
+				if len(files) > maximumStudyEvidenceFiles {
+					return errors.New("evidence workspace contains too many files")
+				}
 			default:
 				return errors.New("evidence workspace contains a special file")
 			}
@@ -357,14 +539,49 @@ func (workspace *EvidenceWorkspace) requirePrivateParents(relative string) error
 
 func (workspace *EvidenceWorkspace) close() error {
 	workspace.mu.Lock()
-	defer workspace.mu.Unlock()
 	if workspace.closed {
+		workspace.mu.Unlock()
 		return errors.New("evidence workspace was already closed")
 	}
+	var validationErr error
+	var commit StudyTerminalCommit
+	if workspace.validation != nil {
+		terminal, err := workspace.snapshotEvidenceLocked()
+		if err != nil || !sameStudyEvidenceSnapshot(workspace.validation.snapshot, terminal) {
+			validationErr = &InputError{
+				Code:   "STUDY_EVIDENCE_CLOSURE_REFUSED",
+				Detail: "the evidence tree changed after its validated terminal snapshot",
+			}
+		} else {
+			commit = workspace.validation.commit
+		}
+	}
 	workspace.closed = true
-	err := workspace.root.Close()
+	closeErr := workspace.root.Close()
 	workspace.root = nil
-	return err
+	workspace.validation = nil
+	workspace.mu.Unlock()
+	if validationErr == nil && closeErr == nil && commit != nil {
+		if err := invokeStudyTerminalCommit(commit); err != nil {
+			validationErr = &InputError{
+				Code:   "STUDY_EVIDENCE_CLOSURE_REFUSED",
+				Detail: "the terminal evidence commit could not be staged",
+			}
+		}
+	}
+	return errors.Join(validationErr, closeErr)
+}
+
+func invokeStudyTerminalCommit(commit StudyTerminalCommit) (returnErr error) {
+	defer func() {
+		if recover() != nil {
+			returnErr = errors.New("terminal evidence commit panicked")
+		}
+	}()
+	if commit == nil {
+		return errors.New("terminal evidence commit is absent")
+	}
+	return commit()
 }
 
 func validWorkspaceRelativePath(path string) bool {

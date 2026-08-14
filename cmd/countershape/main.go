@@ -4,8 +4,9 @@ import (
 	"os"
 
 	"github.com/nelsonwerd/countershape/internal/reference/app"
-	"github.com/nelsonwerd/countershape/internal/reference/clistudy"
-	"github.com/nelsonwerd/countershape/internal/reference/httpstudy"
+	_ "github.com/nelsonwerd/countershape/internal/reference/clistudy"
+	_ "github.com/nelsonwerd/countershape/internal/reference/httpstudy"
+	"github.com/nelsonwerd/countershape/internal/reference/reproduce"
 )
 
 func main() {
@@ -14,9 +15,6 @@ func main() {
 		Stdout:  os.Stdout,
 		Stderr:  os.Stderr,
 		Columns: app.TerminalColumns(os.Getenv("COLUMNS")),
-		Studies: map[string]app.StudyHandler{
-			"cli":  clistudy.Handler(),
-			"http": httpstudy.Handler(),
-		},
+		Studies: reproduce.Studies(),
 	}))
 }
