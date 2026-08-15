@@ -1,0 +1,125 @@
+{
+  "schema_version": "countershape/u9-performance/v1",
+  "status": "COMPLETE_MEASURED_PROFILE",
+  "host": {
+    "model": "Mac14,13",
+    "chip": "Apple M2 Max",
+    "cores": 12,
+    "memory_gb": 32,
+    "os": "macOS 26.5.2 (25F84)",
+    "architecture": "arm64"
+  },
+  "tools": {
+    "go": "1.26.5",
+    "node": "25.2.1",
+    "git": "2.50.1 (Apple Git-155)",
+    "clang": "17.0.0"
+  },
+  "measurements": [
+    {
+      "id": "release-build",
+      "profile": "native Darwin arm64 release-shaped build including web production build",
+      "repetitions": 3,
+      "wall_seconds": [4.66, 3.55, 3.83],
+      "didrun_event": 1
+    },
+    {
+      "id": "default-report-export",
+      "profile": "copied release binary, default-minimized export, exclusive mode-0600 output",
+      "repetitions": 3,
+      "wall_seconds": [3.83, 3.73, 3.67],
+      "output_sha256": "9f1f031de797f4da00bf8a487a48dfc951206a900ec975b115136f40e49645c0",
+      "didrun_event": 1
+    },
+    {
+      "id": "clean-package-smoke",
+      "profile": "copied binary in a fresh private Git root; help, version, export, loopback studio, authenticated asset fetch, shutdown",
+      "repetitions": 3,
+      "wall_seconds": [7.05, 7.05, 7.22],
+      "didrun_event": 1
+    },
+    {
+      "id": "fresh-reference-study-reproduction",
+      "profile": "U7D harness v2, three fresh repositories and 300 trials per domain",
+      "candidate_tree": "332a6d720845ded9e2ec763d9c9fca2de99a0c2f",
+      "didrun_event": 3,
+      "verdict": "LOCAL_TWO_DOMAIN_PROCESS_ARTIFACT_GREEN_CLI_OFFICIAL_EXECUTION_HTTP_DIRECT_PROCESS_ONLY_FULL_STUDY_RESOURCE_UNRECEIPTED",
+      "honest_fallback": "ONE_DOMAIN_OFFICIAL_CONTRACT_EXECUTION_PLUS_HTTP_DIRECT_PROCESS_OBSERVATION_ONLY",
+      "domains": [
+        {
+          "id": "http",
+          "repetitions": 3,
+          "trials_per_run": 100,
+          "wall_ms": [195280, 177450, 179600],
+          "aggregate_wall_ms": 552330,
+          "aggregate_budget_ms": 900000,
+          "peak_rss_bytes": 297861120,
+          "deterministic_artifacts": {
+            "source_spec_sha256": "de29534e41d55b4ae739d6ae9ca8e0f5fefd0bbb021305fd7ac7f1c956034763",
+            "world_plan_sha256": "f05cd426a0545787d7b363b08944265cead25f31d6a2401989af8d772b87dc53",
+            "ruling_sha256": "929ccfe41a1f0dbc0041dced5d4153158dc8e8599182d752bad8bac0c17ea615",
+            "decision_record_sha256": "6d38d06e73ef0441f0b36830ca875a66f55f0706f5c746ae2dfb212dfee2edf6",
+            "contract_bundle_sha256": "a66c07d4376b30d2899467d329b3c0a252e8c11947cdef2a45429e6bb1a2bab3"
+          }
+        },
+        {
+          "id": "cli",
+          "repetitions": 3,
+          "trials_per_run": 100,
+          "wall_ms": [259650, 268930, 276840],
+          "aggregate_wall_ms": 805420,
+          "aggregate_budget_ms": 900000,
+          "peak_rss_bytes": 267976704,
+          "deterministic_artifacts": {
+            "source_spec_sha256": "89ee1685bf55e8846b7e0ba39eed0ce9950275c430084ae4caa4b6143f20b222",
+            "world_plan_sha256": "8138ad7df417a39ec769bcfa3d5dea3f8e66537571476a7337436614624f73e1",
+            "ruling_sha256": "4e458c994d8ef6e80d19d5dd19d1dc6a1e941b4ae5805cf755b25838bce2ce94",
+            "decision_record_sha256": "a862e9a6368c91dc5707c56d1d007ef075a2325c2186b74ab111e6cde32a3f13",
+            "contract_bundle_sha256": "cbcb5ab31792fa45a944f6ff6a4fcec3bd3ba0d5d59cafea9885b9e6d9fd78a2"
+          }
+        }
+      ],
+      "freshness": "all world-instance, attempts, measurements, captures, confirmation, target, finalized-run, classification, fixture invocation, fixture Git directory, and evidence-manifest authorities were distinct across runs and disjoint from deterministic authorities"
+    }
+  ],
+  "verification_observations": [
+    {
+      "id": "full-go-repository",
+      "didrun_event": 6,
+      "candidate_tree": "3a4655a9d032eab8cc1846ed2979f0b9f047fec9",
+      "wall_seconds": 2484.886,
+      "result": "PASS"
+    },
+    {
+      "id": "universal-race-attempt",
+      "didrun_event": 7,
+      "candidate_tree": "3a4655a9d032eab8cc1846ed2979f0b9f047fec9",
+      "wall_seconds": 8998.027,
+      "result": "FAILED_RUNTIME_BUDGET_NO_RACE_REPORT_OBSERVED",
+      "claim_ceiling": "FULL_REPOSITORY_RACE_FREEDOM_UNESTABLISHED"
+    },
+    {
+      "id": "bounded-u9-and-repair-race",
+      "didrun_event": 8,
+      "candidate_tree": "3a4655a9d032eab8cc1846ed2979f0b9f047fec9",
+      "wall_seconds": 407.021,
+      "result": "PASS"
+    },
+    {
+      "id": "repaired-web-matrix",
+      "didrun_event": 10,
+      "candidate_tree": "450a5acdad1bb35462d941b7a3afcc356d0d50f0",
+      "wall_seconds": 52.043,
+      "result": "PASS",
+      "dependency_repair": "@vitejs/plugin-react 5.1.4 -> 6.0.2 for declared Vite 8 support"
+    },
+    {
+      "id": "dependency-package-linux-compile-inventory",
+      "didrun_event": 12,
+      "candidate_tree": "450a5acdad1bb35462d941b7a3afcc356d0d50f0",
+      "wall_seconds": 22.850,
+      "result": "PASS",
+      "claim_ceiling": "LOCAL_INVENTORY_ONLY_NOT_SBOM_REVIEW_SIGNATURE_PROVENANCE_OR_LINUX_RUNTIME"
+    }
+  ]
+}

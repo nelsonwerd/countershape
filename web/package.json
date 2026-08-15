@@ -12,10 +12,10 @@
     "capture:p09": "playwright test --config playwright.p09.config.ts"
   },
   "dependencies": {
-    "@vitejs/plugin-react": "5.1.4",
-    "vite": "8.2.1",
+    "@vitejs/plugin-react": "6.0.2",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "vite": "8.2.1"
   },
   "devDependencies": {
     "@axe-core/playwright": "4.13.0",

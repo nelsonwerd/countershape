@@ -1,0 +1,17 @@
+{
+  "schema_version": "countershape/release-profile/v1",
+  "product": "countershape",
+  "platform": "darwin",
+  "architecture": "arm64",
+  "binary": "countershape",
+  "license": "Apache-2.0",
+  "embedded_assets": [
+    "assets/studio.css",
+    "assets/studio.js",
+    "index.html"
+  ],
+  "runtime_claim": "EXACT_NATIVE_DARWIN_HOST_ONLY",
+  "linux_claim": "CROSS_COMPILE_ONLY_UNRECEIPTED",
+  "signing": "UNSIGNED_LOCAL_REFERENCE_PACKAGE",
+  "distribution": "LOCAL_ONLY_NOT_PUBLISHED"
+}
