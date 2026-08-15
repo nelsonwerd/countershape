@@ -1,6 +1,6 @@
 # U9 hardening ledger
 
-Status: `FINAL_CANDIDATE_VERIFIED_PENDING_SEAL`
+Status: `EVIDENCE_CLOSURE_RETRY_IN_PROGRESS`
 
 ## Pass 1 — export confidentiality and injection
 
@@ -32,6 +32,14 @@ Status: `FINAL_CANDIDATE_VERIFIED_PENDING_SEAL`
 - The in-app Browser rejected direct `file://` navigation before it could load the generated report. No alternate browser, raw DevTools connection, or local-server workaround was used to bypass that policy. The report's structural/injection/CSP/responsive/print checks are automated; manual local report visual inspection remains `UNRECEIPTED`.
 
 The final restaged integrity gate, didrun claims, commit, seal, and explicit-commit strict report remain pending. The inherited-U7R cumulative verifier and unsupported inventory/security tools remain `UNRECEIPTED`.
+
+## First permanent failed postcommit evidence attempt
+
+Product commit `f49f4bf4ee28c27511809701b64e86a8c46af07c`, tree `b57ac80e3f91f28482f7633a20092b6008563807`, direct parent `ed58cb6dd6f50fd1f2a889b2e3d6b728a43cd3b0`, and subject `feat: add U9 export and packaging hardening` preserves the complete U9 implementation. Its note blob is `23a9cc50d7821852ec32164cb27cdb43e45ae8d6` (body SHA-256 `514bb0e6b29f5cdc4e0b0384a4a6b3c500a9a12da3c64c960e3c3f9790217a05`) and discloses `secrets_override: true` after the separately claimed zero-finding structured scan.
+
+That first seal was not strict-clean: six claims were declared against earlier candidate trees with pathspecs that omitted later documentation/repair files, so strict verification exited `1` with `1/7` `TREE-EXACT` and six `STALE` grades. The exact HTML is `.countershape/evidence/u9-final-f49f4bf4ee28.html` (9,452 bytes, SHA-256 `5376a8f467455ab9aa09c4b7821e804ab30bbdf0f01d8abffad8fa51fc171004`); the private failed ledger is preserved at `.didrun-history/u9-postcommit-failed-f49f4bf4ee28/.didrun`. Neither `STALE` grade is relabeled or transferred.
+
+The repair is evidence-only: this child candidate changes only the tracked U9 handoff/ledger chronology, then reruns the seven successful U9 gates on one stable staged tree before any claim or commit. It changes no product, dependency, test, package, fixture, performance result, or limitation. U9 is not complete until that child seals with every declared claim `TREE-EXACT` and explicit-commit strict verification exits zero.
 
 ## Cross-unit edits
 
