@@ -1,0 +1,32 @@
+{
+  "schema_version": "countershape/final-environment-matrix/v1",
+  "observed_native_host": {
+    "machine": "Mac Studio Mac14,13 Apple M2 Max 12 cores 32 GB RAM",
+    "os": "macOS 26.5.2 (25F84)",
+    "architecture": "arm64",
+    "go": "go1.26.5 darwin/arm64",
+    "node": "v25.2.1",
+    "git": "2.50.1 Apple Git-155",
+    "clang": "Apple clang 17.0.0 clang-1700.6.3.2",
+    "google_chrome_observed_unreceipted": "151.0.7922.138",
+    "codex_cli": "0.147.0-alpha.6.5",
+    "didrun": "0.1.0"
+  },
+  "claims": [
+    { "surface": "Darwin arm64 native build and runtime", "status": "RECORDED_EXACT_COMMAND_EVIDENCE", "source": "U9 events 0, 2, 4, and 5; P12 candidate events 5, 8, 9, and 10" },
+    { "surface": "Go 1.26.5 darwin/arm64", "status": "RECORDED_EXACT_COMMAND_EVIDENCE", "source": "U9 complete Go and package events; P12 candidate events 5, 6, 8, 9, and 10" },
+    { "surface": "Node 25.2.1 fixture and generated-contract runtime", "status": "RECORDED_EXACT_COMMAND_EVIDENCE", "source": "U7D event 8; U9 reproduction; P12 candidate event 9" },
+    { "surface": "Playwright bundled Chromium automated viewports", "status": "RECORDED_EXACT_COMMAND_EVIDENCE", "source": "U8 events 4 and 5; U9 event 4; P12 candidate event 8" },
+    { "surface": "Google Chrome 151 manual behavior", "status": "UNRECEIPTED" },
+    { "surface": "Linux amd64 compilation", "status": "RECORDED_EXACT_COMMAND_EVIDENCE", "source": "U9 event 5; P12 candidate event 10" },
+    { "surface": "Linux amd64 runtime", "status": "UNRECEIPTED" },
+    { "surface": "Windows runtime", "status": "UNRECEIPTED" },
+    { "surface": "Intel macOS runtime", "status": "UNRECEIPTED" },
+    { "surface": "Other Node majors", "status": "UNRECEIPTED" },
+    { "surface": "Firefox and WebKit", "status": "UNRECEIPTED" },
+    { "surface": "VoiceOver and independent accessibility review", "status": "UNRECEIPTED" },
+    { "surface": "Independent security review", "status": "UNRECEIPTED" },
+    { "surface": "Signed notarized release and provenance attestation", "status": "UNRECEIPTED" }
+  ],
+  "ceiling": "EXACT_LOCAL_COMMAND_AND_ARTIFACT_OBSERVATIONS_ONLY_NO_PORTABILITY_CAPACITY_SECURITY_OR_MARKET_AUTHORITY"
+}
