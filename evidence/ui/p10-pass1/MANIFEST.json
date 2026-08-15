@@ -1,0 +1,292 @@
+{
+  "schema": "countershape/u8-p10-sanitized-visual-matrix/v1",
+  "pass": "pass1",
+  "states": [
+    "empty",
+    "preparing",
+    "active",
+    "partial",
+    "error",
+    "unstable",
+    "uncomparable",
+    "discovered",
+    "decision-ready",
+    "predicate-editing",
+    "identity-reveal",
+    "resolved",
+    "reject-all-resolved",
+    "deferred",
+    "stale",
+    "invalidated",
+    "incomplete",
+    "completed"
+  ],
+  "viewports": [
+    {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900
+    },
+    {
+      "name": "mobile",
+      "width": 375,
+      "height": 812
+    }
+  ],
+  "sanitized_fixture_only": true,
+  "authority": "PIXEL_CAPTURE_ROSTER_AND_BYTES_ONLY_NO_VISUAL_QUALITY_COMPREHENSION_OR_SECURITY_AUTHORITY",
+  "images": [
+    {
+      "name": "pass1-active-desktop.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 120515,
+      "sha256": "ebc22dfdc0334e5b86efd9f311b305b97646ce59f72c09b32ad1a3df5c40626b"
+    },
+    {
+      "name": "pass1-active-mobile.png",
+      "width": 375,
+      "height": 812,
+      "bytes": 58986,
+      "sha256": "9a20bd00c54d2e509b1a6c4bb8e9416a637f71f243d3ecf80a658be2ca1998ca"
+    },
+    {
+      "name": "pass1-completed-desktop.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 123320,
+      "sha256": "e777ac4976bef4c1054fa2e0e8ab2fd9c61726ec89c6bb3602928898ede81472"
+    },
+    {
+      "name": "pass1-completed-mobile.png",
+      "width": 375,
+      "height": 812,
+      "bytes": 61625,
+      "sha256": "584d112084c0dbe8c0204b9eba3ac64f4c60ae26e7831f2eecc1cbdab01ef87e"
+    },
+    {
+      "name": "pass1-decision-ready-desktop.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 164235,
+      "sha256": "eb91fecebc5fd2a574a84c2df960c923b2d2984c898ed0f38135afa8c17bb3f0"
+    },
+    {
+      "name": "pass1-decision-ready-mobile.png",
+      "width": 375,
+      "height": 812,
+      "bytes": 64892,
+      "sha256": "3cfc8737b8daff9b5e97a339c3264f6d11892c493887eed76f863e795d7b326e"
+    },
+    {
+      "name": "pass1-deferred-desktop.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 143718,
+      "sha256": "4d74ab388b29115dd11f49a68ad528ac213a4a76477417d81ebc6fa1383389e1"
+    },
+    {
+      "name": "pass1-deferred-mobile.png",
+      "width": 375,
+      "height": 812,
+      "bytes": 60703,
+      "sha256": "0e80db14f2cbe666b945c2765125661f04af01fa83475c5106073251a5ba84da"
+    },
+    {
+      "name": "pass1-discovered-desktop.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 121815,
+      "sha256": "a29cd9c66a5b869940e4aa7262d7b3c87e1e2e05f526dfb0be558fdbd094039d"
+    },
+    {
+      "name": "pass1-discovered-mobile.png",
+      "width": 375,
+      "height": 812,
+      "bytes": 61749,
+      "sha256": "95cf4fd7fbf7ce2ad3d30ad0ed78922d22280bfdc74c8e16f3092215b8e021ec"
+    },
+    {
+      "name": "pass1-empty-desktop.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 113272,
+      "sha256": "fd92423e9ff8a35ce7261a5fc8dfcafe08472a315901eee21afa51a122f19ebf"
+    },
+    {
+      "name": "pass1-empty-mobile.png",
+      "width": 375,
+      "height": 812,
+      "bytes": 54381,
+      "sha256": "d2603d7b0a185e70b8e1d34138b7c009aca8f8076c5ed19f2776f1296c42079f"
+    },
+    {
+      "name": "pass1-error-desktop.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 114643,
+      "sha256": "f29118d91b46f2a4be46574f4ddaf0633e574e3d507097d8a8d7a4beb52827b6"
+    },
+    {
+      "name": "pass1-error-mobile.png",
+      "width": 375,
+      "height": 812,
+      "bytes": 55738,
+      "sha256": "6b6b3a92eb07d49c7ca9562fc816883e1db99cb91ba3eb9acc7b1dc7cf4dd087"
+    },
+    {
+      "name": "pass1-identity-reveal-desktop.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 164211,
+      "sha256": "b05d533357a5a173d71ecfa4cc6cdb3d4cc7b33989ac1a71a7569d9057da415e"
+    },
+    {
+      "name": "pass1-identity-reveal-mobile.png",
+      "width": 375,
+      "height": 812,
+      "bytes": 64479,
+      "sha256": "71c9448c0aebcad5bb028beb3e1d19153081c53793d877a8e0de41f684b21295"
+    },
+    {
+      "name": "pass1-incomplete-desktop.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 117372,
+      "sha256": "362f786bb73726e14da4232549ef1fde2de2bc57f7ba2196df1b34189408f2e8"
+    },
+    {
+      "name": "pass1-incomplete-mobile.png",
+      "width": 375,
+      "height": 812,
+      "bytes": 57041,
+      "sha256": "c166aab7da6e26e3752d9f313fc9707eb8f2ab2592c93c6ebc5017387cb64c78"
+    },
+    {
+      "name": "pass1-invalidated-desktop.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 118528,
+      "sha256": "33edd4466db13e7bc9a54d1fe978f23a4e56cf501e884649b1b59e75ac2694a4"
+    },
+    {
+      "name": "pass1-invalidated-mobile.png",
+      "width": 375,
+      "height": 812,
+      "bytes": 58643,
+      "sha256": "2407c265243ffb5d7d24421243268b49b1c88536b4abb76122051c3b1f1f6179"
+    },
+    {
+      "name": "pass1-partial-desktop.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 115806,
+      "sha256": "b66f434b9f16f1097bd14109c434183f5fd04489e23204f77c49ceb0bb0dc2f8"
+    },
+    {
+      "name": "pass1-partial-mobile.png",
+      "width": 375,
+      "height": 812,
+      "bytes": 56451,
+      "sha256": "612e00b898d60c0548653ebb25b488f5395c7643537f0a2a6560dc4a48232ce6"
+    },
+    {
+      "name": "pass1-predicate-editing-desktop.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 164561,
+      "sha256": "05b2862014c13eb3c2334e405e62daa1c3c0e46760a1cdfa3af2d79f30b85df9"
+    },
+    {
+      "name": "pass1-predicate-editing-mobile.png",
+      "width": 375,
+      "height": 812,
+      "bytes": 65443,
+      "sha256": "acf4cff838cb4552233851cc870d8895d545991ab6ffbb0a79dce404abcf81f9"
+    },
+    {
+      "name": "pass1-preparing-desktop.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 118484,
+      "sha256": "4bf58b6a8d679f7ccd9bc0944cf412a12f1a53db66afd780279371678ef8ca08"
+    },
+    {
+      "name": "pass1-preparing-mobile.png",
+      "width": 375,
+      "height": 812,
+      "bytes": 58370,
+      "sha256": "ed39a2b435e6aeed5bd607e923bae38577060cadef8f8ba177583226aeea1266"
+    },
+    {
+      "name": "pass1-reject-all-resolved-desktop.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 145963,
+      "sha256": "dc69cb6af9a82a106755ce6973dad46c3c2c1a70b5c15e66f48bc2bfe456b28b"
+    },
+    {
+      "name": "pass1-reject-all-resolved-mobile.png",
+      "width": 375,
+      "height": 812,
+      "bytes": 60295,
+      "sha256": "451fd7b77501152c2388b963f8bd581de6361b29130d5b863838f07280c0eebc"
+    },
+    {
+      "name": "pass1-resolved-desktop.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 148199,
+      "sha256": "17af68b65f9eace25366ecfbbbbb2e3f71e64cee788d518b607215eb48f6c5cf"
+    },
+    {
+      "name": "pass1-resolved-mobile.png",
+      "width": 375,
+      "height": 812,
+      "bytes": 60134,
+      "sha256": "493bf150053427bad8d79b4d2b16b64b2205879bf0e94044d0ec4916bc715076"
+    },
+    {
+      "name": "pass1-stale-desktop.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 115157,
+      "sha256": "729feeb49f8083b75fcfbccfecec8648d958a170515f0db01446b71086296ab0"
+    },
+    {
+      "name": "pass1-stale-mobile.png",
+      "width": 375,
+      "height": 812,
+      "bytes": 56387,
+      "sha256": "1c4333752b06101ec963ddc30e38de4f816186776cd0c9943edf801367a0209a"
+    },
+    {
+      "name": "pass1-uncomparable-desktop.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 124631,
+      "sha256": "87b5aae0b77b5afbbb15c81ee9ce7cf66f1482975f9b83280ae6b347fc96903c"
+    },
+    {
+      "name": "pass1-uncomparable-mobile.png",
+      "width": 375,
+      "height": 812,
+      "bytes": 60891,
+      "sha256": "27f0505bdb83f16141cc50131e811c0c904d6a43f75f7c3d70fd3e926421d4e2"
+    },
+    {
+      "name": "pass1-unstable-desktop.png",
+      "width": 1440,
+      "height": 900,
+      "bytes": 117448,
+      "sha256": "99491ad50bbad08a53d970a05082091e57521c2336b245432b246866b783cf17"
+    },
+    {
+      "name": "pass1-unstable-mobile.png",
+      "width": 375,
+      "height": 812,
+      "bytes": 57659,
+      "sha256": "3e8fb1c07a1600a3fa9f6b899a3121c0d3b2ee856550535a2c7200f6f743f52b"
+    }
+  ]
+}

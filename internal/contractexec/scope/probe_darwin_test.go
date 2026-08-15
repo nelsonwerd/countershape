@@ -97,6 +97,15 @@ func TestC5InventoryBindsReferenceFixtureAndRejectsSymlink(t *testing.T) {
 				if statErr != nil {
 					t.Fatal(statErr)
 				}
+				// A private TMPDIR can inherit group wheel on Darwin. chmod(2)
+				// then reports success while silently clearing setgid for an
+				// unprivileged owner outside that group. Rebind only this hostile
+				// target to the test process group so the intended bit exists.
+				if special.mode == os.ModeSetgid {
+					if chownErr := os.Chown(hostilePath, -1, os.Getgid()); chownErr != nil {
+						t.Fatal(chownErr)
+					}
+				}
 				if chmodErr := os.Chmod(hostilePath, before.Mode().Perm()|special.mode); chmodErr != nil {
 					t.Fatal(chmodErr)
 				}

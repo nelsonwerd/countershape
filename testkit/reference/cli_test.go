@@ -310,6 +310,15 @@ func TestCLIFixtureRefusesMalformedCrossDomainAndSharedRoot(t *testing.T) {
 			if mutation.make {
 				writeCLIFile(t, path, []byte("binary"), 0o700)
 			}
+			// Darwin silently clears setgid when a private TMPDIR inherits a
+			// group the current user does not belong to. Bind these hostile
+			// targets to the process group so the requested special bit is
+			// actually present before fixture admission inspects it.
+			if mutation.mode&os.ModeSetgid != 0 {
+				if err := os.Chown(path, -1, os.Getgid()); err != nil {
+					t.Fatal(err)
+				}
+			}
 			if err := os.Chmod(path, mutation.mode); err != nil {
 				t.Fatal(err)
 			}
